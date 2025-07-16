@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(240, 10%, 3.9%);
+  --muted: hsl(240, 4.8%, 95.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(240, 10%, 3.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(240, 10%, 3.9%);
+  --border: hsl(240, 5.9%, 90%);
+  --input: hsl(240, 5.9%, 90%);
+  --primary: hsl(221, 83%, 53%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(42, 87%, 55%);
+  --secondary-foreground: hsl(26, 83%, 14%);
+  --accent: hsl(240, 4.8%, 95.9%);
+  --accent-foreground: hsl(240, 5.9%, 10%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(221, 83%, 53%);
+  --radius: 0.5rem;
+  
+  /* Custom colors for UYP Basketball */
+  --player-accent: hsl(167, 85%, 45%);
+  --parent-accent: hsl(244, 58%, 51%);
+  --neutral-50: hsl(210, 40%, 98%);
+  --neutral-500: hsl(215, 20%, 65%);
+  --neutral-900: hsl(222, 84%, 5%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(221, 83%, 53%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 63%, 31%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 84%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(240, 4.8%, 95.9%);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(240, 5%, 64.9%);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(240, 5.9%, 10%);
+  }
+}
+
+@layer components {
+  /* Player interface specific styles */
+  .player-gradient {
+    background: linear-gradient(135deg, hsl(167, 85%, 45%), hsl(221, 83%, 53%));
+  }
+
+  .player-card {
+    @apply bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200;
+  }
+
+  .player-button {
+    @apply bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white font-semibold rounded-xl transform hover:scale-105 transition-all duration-200;
+  }
+
+  /* Parent interface specific styles */
+  .parent-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Badge styles */
+  .badge-earned {
+    @apply bg-gradient-to-r from-yellow-500 to-orange-400;
+  }
+
+  .badge-team-player {
+    @apply bg-gradient-to-r from-green-500 to-blue-400;
+  }
+
+  .badge-mvp {
+    @apply bg-gradient-to-r from-purple-500 to-pink-400;
+  }
+
+  .badge-attendance {
+    @apply bg-gradient-to-r from-blue-500 to-indigo-400;
+  }
+
+  /* Animation utilities */
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s infinite;
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  /* Team color utilities */
+  .team-lightning-bolts {
+    background-color: hsl(167, 85%, 45%);
+  }
+
+  .team-thunder-stars {
+    background-color: hsl(42, 87%, 55%);
+  }
+
+  .team-fire-dragons {
+    background-color: hsl(0, 84%, 60%);
+  }
+
+  .team-blue-hawks {
+    background-color: hsl(221, 83%, 53%);
+  }
+
+  /* QR Code modal styles */
+  .qr-modal-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center;
+  }
+
+  .qr-modal-content {
+    @apply bg-white rounded-3xl p-8 max-w-sm mx-4 text-center shadow-2xl;
+  }
+
+  /* Calendar event indicators */
+  .calendar-event-dot {
+    @apply w-2 h-2 rounded-full absolute bottom-1 left-1/2 transform -translate-x-1/2;
+  }
+
+  .calendar-event-today {
+    @apply bg-primary text-white rounded-lg;
+  }
+
+  /* Chat message styles */
+  .chat-message-own {
+    @apply bg-primary text-primary-foreground rounded-lg px-3 py-2 max-w-xs;
+  }
+
+  .chat-message-other {
+    @apply bg-gray-100 text-gray-900 rounded-lg px-3 py-2 max-w-xs;
+  }
+
+  /* Loading states */
+  .loading-skeleton {
+    @apply bg-gray-200 animate-pulse rounded;
+  }
+
+  /* Mobile-first responsive utilities */
+  .mobile-container {
+    @apply max-w-md mx-auto px-6;
+  }
+
+  .desktop-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* PWA specific styles */
+  .pwa-install-prompt {
+    @apply fixed bottom-4 left-4 right-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-lg z-50;
+  }
+
+  /* Accessibility improvements */
+  .focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .card {
+      @apply border-2 border-gray-800;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-spin,
+    .animate-bounce,
+    .animate-bounce-subtle {
+      animation: none;
+    }
+    
+    .transition-all,
+    .transition-colors,
+    .transition-shadow,
+    .transition-transform {
+      transition: none;
+    }
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}

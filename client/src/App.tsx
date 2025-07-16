@@ -55,7 +55,7 @@ function Router() {
 
   // Route based on user type
   const getDashboardComponent = () => {
-    switch (user?.userType) {
+    switch (user?.role) {
       case "admin":
         return AdminDashboard;
       case "player":

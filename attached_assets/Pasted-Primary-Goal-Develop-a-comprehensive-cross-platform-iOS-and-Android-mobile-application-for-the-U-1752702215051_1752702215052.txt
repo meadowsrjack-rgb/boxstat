@@ -1,0 +1,127 @@
+Primary Goal:
+Develop a comprehensive, cross-platform (iOS and Android) mobile application for the UYP Basketball youth league based in Costa Mesa, CA. The app must serve two distinct user groups—Parents and Players (kids)—with tailored features and user interfaces for each. A key function is a QR code-based check-in system for physical entry at our primary venue, Momentous Sports Center.
+
+Core Design Philosophy:
+
+Dual-Audience UI/UX: The Parent interface should be clean, professional, and information-dense, prioritizing efficiency and management. The Player interface should be vibrant, engaging, simple to navigate, and gamified to encourage regular use.
+
+Centralized Communication: The app should be the single source of truth for all league-related information, eliminating the need for scattered emails, texts, and paper flyers.
+
+Security & Privacy: All user data, especially for minors, must be handled with the highest level of security. Chat features must be moderated, and personal contact information must be appropriately firewalled.
+
+**Detailed Feature Requirements:
+1. User Accounts & Authentication
+
+Parent Account (Primary):
+
+Registration via email, password, and phone number.
+
+Parents register first and then create linked Player accounts for their children from within the app.
+
+Ability to manage multiple children from a single parent login.
+
+Player Account (Linked):
+
+Created by the parent, who sets a simple username and password for the child.
+
+Linked directly to the parent account.
+
+Features a simplified, kid-friendly interface.
+
+2. QR Code Gym Check-In System
+
+Function: For tracking attendance and secure entry at Momentous Sports Center.
+
+Implementation:
+
+Each Player profile contains a unique, static QR code.
+
+The Player's app home screen must have a large, easy-to-access button labeled "My Check-In Pass".
+
+Tapping the button displays the QR code full-screen for easy scanning by league staff.
+
+The backend system will log the player's name, team, date, and time of check-in.
+
+3. Scheduling & Event Management
+
+Parent View: A master calendar that aggregates schedules for all their children. Events should be color-coded by child for clarity.
+
+Player View: A simplified timeline view showing only their own upcoming practices and games.
+
+Features:
+
+View event details: time, duration, location, and opponent.
+
+Map Integration: Tapping an event location should open the address in the user's default map app (Google/Apple Maps).
+
+"Add to Calendar" functionality to sync events with the phone's native calendar.
+
+Real-time push notifications for schedule changes, cancellations, or reminders.
+
+4. Team Hub
+
+Team Roster: View player names and jersey numbers. For privacy, full names and photos should only be visible to logged-in members of the same team.
+
+Coach's Corner: A profile for the coach with their name, a brief bio, and a secure in-app messaging button.
+
+Shared Media Gallery: A private, team-only space where parents and coaches can upload photos and short videos from games and practices.
+
+Carpool Coordination: A simple, opt-in feature where parents on a team can indicate if they can offer a ride or need a ride for a specific event, facilitating communication within a secure channel.
+
+5. Communication
+
+League-Wide Announcements: A main news feed where administrators can post updates.
+
+Team-Specific Announcements: A channel for coaches to post messages to their specific team.
+
+Secure In-App Chat:
+
+Parent/Coach Channel: For logistical discussions.
+
+Player Channel: A kid-safe, heavily moderated chat with emoji/GIF support and potentially pre-set phrases to encourage positive communication.
+
+Push Notifications: Granular notifications for announcements, chat messages, event reminders, and score updates.
+
+6. Player Development & Engagement (Player-Facing)
+
+Skill Tracking: A simple interface where coaches can provide feedback or players can track personal goals (e.g., free throws made, drills completed).
+
+Drill Library: A section with short video clips of fundamental basketball drills (dribbling, shooting, defense) that players can practice at home.
+
+Gamification:
+
+Badges & Achievements: Award digital badges for milestones like "Perfect Attendance," "Team Player," "Most Improved," etc.
+
+Attendance Leaderboard: A fun, optional leaderboard showing which players have the best attendance records.
+
+7. Parent Portal & Administration (Parent-Facing)
+
+Payment Processing: Securely integrate with a payment gateway (like Stripe) to allow parents to pay for league fees, uniforms, and other expenses.
+
+Invoice History: A clear record of all payments made and outstanding balances.
+
+Digital Forms: Ability for parents to view and digitally sign waivers, codes of conduct, and medical release forms directly in the app.
+
+8. Administrative Backend (For UYP Staff)
+
+A secure web-based dashboard for league administrators to:
+
+Manage all users (parents and players) and team rosters.
+
+Create, update, and cancel events on the master schedule.
+
+Send push notifications and announcements to the entire league, specific teams, or individuals.
+
+View and export attendance data from the QR code check-in system.
+
+Manage content for the Drill Library and News feed.
+
+Oversee and moderate all communication channels.
+
+Manage finances and view payment statuses.
+
+Technical Stack Suggestion:
+
+Frontend: React Native for cross-platform iOS/Android development from a single codebase.
+
+Backend: Firebase (Authentication, Firestore for database, Cloud Functions, Push Notifications) or a similar BaaS platform to accelerate development.

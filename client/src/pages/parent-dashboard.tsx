@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
@@ -57,9 +58,11 @@ export default function ParentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
-                <Users className="h-5 w-5 text-white" />
-              </div>
+              <img 
+                src={logoPath} 
+                alt="UYP Basketball Academy" 
+                className="h-10 w-10 mr-3 object-contain"
+              />
               <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <div className="flex items-center space-x-4">

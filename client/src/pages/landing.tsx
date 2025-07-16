@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Volleyball, Users, Calendar, Trophy, Shield, MessageCircle } from "lucide-react";
+import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function Landing() {
   return (
@@ -10,8 +11,12 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Volleyball className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">UYP Volleyball</h1>
+              <img 
+                src={logoPath} 
+                alt="UYP Basketball Academy" 
+                className="h-10 w-10 mr-3 object-contain"
+              />
+              <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <Button 
               onClick={() => window.location.href = '/api/login'}
@@ -27,7 +32,7 @@ export default function Landing() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-            Welcome to UYP Volleyball League
+            Welcome to UYP Basketball League
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Your all-in-one app for managing youth basketball teams, tracking progress, 

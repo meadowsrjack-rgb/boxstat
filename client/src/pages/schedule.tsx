@@ -44,6 +44,8 @@ export default function Schedule() {
         return "bg-green-100 text-green-800";
       case "tournament":
         return "bg-purple-100 text-purple-800";
+      case "camp":
+        return "bg-orange-100 text-orange-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -87,10 +89,12 @@ export default function Schedule() {
                 <Filter className="h-4 w-4 mr-1" />
                 Filter
               </Button>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Event
-              </Button>
+              {user?.role === "admin" && (
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Event
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -145,6 +149,14 @@ export default function Schedule() {
                   onClick={() => setFilter("tournament")}
                 >
                   Tournaments
+                </Button>
+                <Button
+                  variant={filter === "camp" ? "default" : "outline"}
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setFilter("camp")}
+                >
+                  Camps
                 </Button>
               </div>
             </CardContent>

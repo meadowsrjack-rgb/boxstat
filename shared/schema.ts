@@ -34,7 +34,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { enum: ["parent", "player", "admin"] }).notNull().default("parent"),
+  role: varchar("role", { enum: ["parent", "player", "admin"] }).notNull().default("parent"),
   parentId: varchar("parent_id"), // For linking player to parent - self-reference
   teamId: integer("team_id"),
   sportsEngineCustomerId: varchar("sports_engine_customer_id"),
@@ -56,7 +56,7 @@ export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
   description: text("description"),
-  eventType: varchar("event_type", { enum: ["practice", "game", "tournament"] }).notNull(),
+  eventType: varchar("event_type", { enum: ["practice", "game", "tournament", "camp"] }).notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   location: varchar("location").notNull(),
@@ -122,7 +122,7 @@ export const payments = pgTable("payments", {
   sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
   status: varchar("status", { enum: ["pending", "completed", "failed", "refunded"] }).default("pending"),
   description: text("description"),
-  metadata: jsonb("metadata"), // Store additional data like programId, subscriptionType
+
   dueDate: date("due_date"),
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow(),

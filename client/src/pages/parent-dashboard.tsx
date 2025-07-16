@@ -76,7 +76,8 @@ export default function ParentDashboard() {
                 <img 
                   src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
                   alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-8 h-8 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                  onClick={() => setLocation('/profile')}
                 />
                 <span className="text-sm font-medium text-gray-700">
                   {user.firstName} {user.lastName}
@@ -110,6 +111,10 @@ export default function ParentDashboard() {
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/team')}>
                 <Users className="h-4 w-4 mr-3 text-primary" />
                 <span className="text-sm font-medium">Team Roster</span>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/training')}>
+                <Trophy className="h-4 w-4 mr-3 text-primary" />
+                <span className="text-sm font-medium">Training Programs</span>
               </Button>
             </CardContent>
           </Card>

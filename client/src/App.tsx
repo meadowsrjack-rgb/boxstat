@@ -15,6 +15,9 @@ import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
 import SportsEnginePayment from "@/pages/sportsengine-payment";
+import Training from "@/pages/training";
+import TrainingLibrary from "@/pages/training-library";
+import Profile from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -70,6 +73,9 @@ function Router() {
       <Route path="/schedule" component={Schedule} />
       <Route path="/chat" component={Chat} />
       <Route path="/payment/:type?" component={SportsEnginePayment} />
+      <Route path="/training" component={Training} />
+      <Route path="/training-library" component={TrainingLibrary} />
+      <Route path="/profile" component={Profile} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>

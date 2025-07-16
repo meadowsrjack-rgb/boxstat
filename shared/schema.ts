@@ -117,13 +117,41 @@ export const payments = pgTable("payments", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   amount: real("amount").notNull(),
   currency: varchar("currency").default("usd"),
-  paymentType: varchar("payment_type", { enum: ["registration", "uniform", "tournament", "other"] }).notNull(),
+  paymentType: varchar("payment_type", { enum: ["registration", "uniform", "tournament", "training_subscription", "other"] }).notNull(),
   sportsEnginePaymentId: varchar("sports_engine_payment_id"),
   sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
   status: varchar("status", { enum: ["pending", "completed", "failed", "refunded"] }).default("pending"),
   description: text("description"),
+  metadata: jsonb("metadata"), // Store additional data like programId, subscriptionType
   dueDate: date("due_date"),
   paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Training subscriptions table
+export const trainingSubscriptions = pgTable("training_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  programId: integer("program_id").notNull(),
+  programTitle: varchar("program_title").notNull(),
+  subscriptionType: varchar("subscription_type", { enum: ["monthly", "annual"] }).notNull(),
+  status: varchar("status", { enum: ["active", "cancelled", "expired"] }).default("active"),
+  sportsEngineSubscriptionId: varchar("sports_engine_subscription_id"),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Training progress table
+export const trainingProgress = pgTable("training_progress", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  subscriptionId: integer("subscription_id").references(() => trainingSubscriptions.id).notNull(),
+  moduleId: integer("module_id").notNull(),
+  moduleTitle: varchar("module_title").notNull(),
+  completedAt: timestamp("completed_at"),
+  progress: integer("progress").default(0), // 0-100
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -161,6 +189,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   messages: many(messages),
   payments: many(payments),
   stats: many(playerStats),
+  trainingSubscriptions: many(trainingSubscriptions),
+  trainingProgress: many(trainingProgress),
 }));
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({
@@ -210,6 +240,16 @@ export const playerStatsRelations = relations(playerStats, ({ one }) => ({
   event: one(events, { fields: [playerStats.eventId], references: [events.id] }),
 }));
 
+export const trainingSubscriptionsRelations = relations(trainingSubscriptions, ({ one, many }) => ({
+  user: one(users, { fields: [trainingSubscriptions.userId], references: [users.id] }),
+  progress: many(trainingProgress),
+}));
+
+export const trainingProgressRelations = relations(trainingProgress, ({ one }) => ({
+  user: one(users, { fields: [trainingProgress.userId], references: [users.id] }),
+  subscription: one(trainingSubscriptions, { fields: [trainingProgress.subscriptionId], references: [trainingSubscriptions.id] }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
@@ -221,6 +261,8 @@ export const insertMessageSchema = createInsertSchema(messages).omit({ id: true,
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, paidAt: true });
 export const insertDrillSchema = createInsertSchema(drills).omit({ id: true, createdAt: true });
 export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({ id: true, createdAt: true });
+export const insertTrainingSubscriptionSchema = createInsertSchema(trainingSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTrainingProgressSchema = createInsertSchema(trainingProgress).omit({ id: true, createdAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -235,6 +277,8 @@ export type Message = typeof messages.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Drill = typeof drills.$inferSelect;
 export type PlayerStats = typeof playerStats.$inferSelect;
+export type TrainingSubscription = typeof trainingSubscriptions.$inferSelect;
+export type TrainingProgress = typeof trainingProgress.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -246,3 +290,5 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertDrill = z.infer<typeof insertDrillSchema>;
 export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
+export type InsertTrainingSubscription = z.infer<typeof insertTrainingSubscriptionSchema>;
+export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;

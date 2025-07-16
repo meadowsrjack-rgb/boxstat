@@ -1,0 +1,59 @@
+Feature Addition: Purchaseable Online Training Programs (Subscription Model)
+
+Develop a new, premium section within the app for purchaseable online training programs. This feature should be seamlessly integrated into the parent's user experience.
+
+Program Showcase:
+
+Create a dedicated "Training" or "UYP Academy" tab in the app.
+
+This section will display available online training programs (e.g., "Elite Ball Handling," "Advanced Shooting Techniques," "Vertical Jump Program").
+
+Each program listing should include a detailed description, a short, free preview video, and clear subscription pricing (e.g., monthly and annual options).
+
+Payment Integration with SportsEngine:
+
+All subscription purchases must be processed through the SportsEngine Payment API.
+
+When a parent selects "Subscribe," the app must initiate a secure transaction flow with SportsEngine.
+
+Upon successful payment confirmation from the API, the app must unlock the corresponding training content for that user's account (and any linked player accounts, if applicable).
+
+The system must manage subscription status (Active, Canceled, Expired) based on webhook notifications or API calls to SportsEngine.
+
+Video Hosting & Secure Delivery:
+
+Training program videos must be hosted on a professional video platform to ensure security and high-quality streaming. Do not store video files directly on the app's primary server.
+
+Primary Suggestion: Vimeo Pro/Premium. Use the Vimeo API to pull and display videos within the app. This provides robust security (domain-level privacy, no downloads), a high-quality player, and reliable streaming.
+
+Alternative Suggestion: Amazon S3 with CloudFront. For a more custom solution, host video files in an AWS S3 bucket and use the CloudFront CDN for fast, secure delivery. This requires more setup but offers immense scalability.
+
+Videos must be accessible only to users with an active subscription to that specific program.
+
+In-App User Experience:
+
+Once subscribed, users will have a "My Training Library" section.
+
+Videos within the library should be organized into logical chapters or modules.
+
+Include a feature to track progress (e.g., mark videos as "complete").
+
+2. Feature Refinement: Dedicated Check-In Section
+
+On the Player's app home screen, there must be a clearly labeled and prominent section or button named "Check-In".
+
+The sole function of this button is to immediately pull up the player's unique QR code on a bright, full-screen display.
+
+This screen is for the explicit purpose of being scanned by UYP staff at the front door of Momentous Sports Center to log attendance.
+
+3. Feature Refinement: "My Profile" Navigation
+
+The user's personal image (profile picture or default avatar), located in the app's header or main navigation menu, must be a clickable element.
+
+Tapping this image will navigate the user to a comprehensive "My Profile" screen.
+
+This screen will contain all relevant account information:
+
+For Parents: View/edit contact information, manage linked player accounts, view payment history, and manage training subscriptions.
+
+For Players: View their stats, achievements/badges, and basic profile info.

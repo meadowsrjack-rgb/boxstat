@@ -22,6 +22,7 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 export default function PlayerDashboard() {
   const { user } = useAuth();
   const [showQR, setShowQR] = useState(false);
+  const [, setLocation] = useLocation();
 
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
@@ -70,7 +71,12 @@ export default function PlayerDashboard() {
                   {userBadges?.length || 0}
                 </span>
               </div>
-              <Trophy className="h-6 w-6 text-yellow-500" />
+              <img 
+                src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32"} 
+                alt="Profile" 
+                className="w-8 h-8 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                onClick={() => setLocation('/profile')}
+              />
             </div>
           </div>
         </div>
@@ -78,20 +84,31 @@ export default function PlayerDashboard() {
 
       {/* Main Content */}
       <main className="max-w-md mx-auto px-6 py-6">
-        {/* QR Code Check-in */}
-        <Card className="mb-6 shadow-lg">
-          <CardContent className="p-6 text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <div className="text-white text-2xl">🎫</div>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">My Check-In Pass</h3>
-            <p className="text-gray-600 text-sm mb-4">Tap to show your QR code at the gym</p>
-            <Button
-              onClick={() => setShowQR(true)}
-              className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 text-white py-4 px-6 rounded-xl text-lg font-semibold shadow-lg transform hover:scale-105 transition-all duration-200"
+        {/* Prominent Check-In Section */}
+        <Card className="mb-6 shadow-lg bg-gradient-to-r from-primary to-red-600 text-white">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-bold mb-3">🏀 Check-In</h2>
+            <p className="text-sm opacity-90 mb-6">
+              Tap below to show your QR code for gym entry at Momentous Sports Center
+            </p>
+            <Button 
+              onClick={() => setShowQR(!showQR)}
+              className="bg-white text-primary hover:bg-gray-100 text-lg py-3 px-8 font-semibold"
+              size="lg"
             >
-              Show My Pass 🎫
+              {showQR ? 'Hide QR Code' : 'Show Check-In QR Code'}
             </Button>
+            {showQR && (
+              <div className="mt-6 bg-white p-6 rounded-lg">
+                <QRCode value={qrData} size={240} />
+                <p className="text-gray-600 text-sm mt-3 font-medium">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-gray-500 text-xs">
+                  {userTeam?.name || 'Team Member'}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

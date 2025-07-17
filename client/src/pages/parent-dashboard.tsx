@@ -16,7 +16,9 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
-  DollarSign
+  DollarSign,
+  Play,
+  BookOpen
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -167,6 +169,64 @@ export default function ParentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Training Programs */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">Training Programs</CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setLocation("/training")}
+              >
+                View All
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Play className="h-6 w-6 text-primary" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Elite Skills Training</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Professional video courses to improve your child's basketball skills
+                  </p>
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setLocation("/training")}
+                  >
+                    Browse Programs
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="h-6 w-6 text-green-500" />
+                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Training Library</h4>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Access subscribed training content and track progress
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setLocation("/training-library")}
+                  >
+                    My Library
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Schedule Calendar */}
         <Card className="mb-8">

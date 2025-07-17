@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,9 @@ import {
   Star,
   Dumbbell,
   ChevronRight,
-  Volleyball
+  Volleyball,
+  Play,
+  BookOpen
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -202,6 +205,42 @@ export default function PlayerDashboard() {
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900">Practice Drills</h4>
                   <p className="text-sm text-gray-600">Fun exercises to try</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
+            onClick={() => setLocation("/training")}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                  <Play className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">Training Videos</h4>
+                  <p className="text-sm text-gray-600">Learn new skills</p>
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
+            onClick={() => setLocation("/training-library")}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <BookOpen className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">My Training</h4>
+                  <p className="text-sm text-gray-600">View my progress</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </div>

@@ -161,7 +161,7 @@ export default function Landing() {
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-primary text-white">
         <div className="max-w-4xl mx-auto text-center">
           <h3 className="text-3xl font-bold mb-6">
-            Ready to Join the UYP Volleyball Community?
+            Ready to Join the UYP Basketball Community?
           </h3>
           <p className="text-xl mb-8 opacity-90">
             Sign in to access your team dashboard, track your child's progress, 

@@ -55,6 +55,8 @@ export function useAppMode() {
   const [isInitialized, setIsInitialized] = useState(false);
   const queryClient = useQueryClient();
 
+
+
   // Initialize device ID only once
   useEffect(() => {
     if (!isInitialized) {

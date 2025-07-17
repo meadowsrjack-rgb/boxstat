@@ -101,10 +101,10 @@ export interface IStorage {
   deleteChildProfile(id: number): Promise<void>;
   
   // Device mode configuration operations
-  getDeviceModeConfig(deviceId: string): Promise<DeviceModeConfig | undefined>;
-  createDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig>;
-  updateDeviceModeConfig(deviceId: string, config: Partial<InsertDeviceModeConfig>): Promise<DeviceModeConfig>;
-  verifyDevicePin(deviceId: string, pin: string): Promise<boolean>;
+  getDeviceModeConfig(deviceId: string, parentId: string): Promise<DeviceModeConfig | undefined>;
+  createOrUpdateDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig>;
+  verifyDevicePin(deviceId: string, parentId: string, pin: string): Promise<boolean>;
+  unlockDevice(deviceId: string, parentId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -363,32 +363,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Device mode configuration operations
-  async getDeviceModeConfig(deviceId: string): Promise<DeviceModeConfig | undefined> {
-    const [config] = await db.select().from(deviceModeConfig).where(eq(deviceModeConfig.deviceId, deviceId));
+  async getDeviceModeConfig(deviceId: string, parentId: string): Promise<DeviceModeConfig | undefined> {
+    const [config] = await db.select().from(deviceModeConfig).where(
+      and(
+        eq(deviceModeConfig.deviceId, deviceId),
+        eq(deviceModeConfig.parentId, parentId)
+      )
+    );
     return config;
   }
 
-  async createDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig> {
-    const [newConfig] = await db.insert(deviceModeConfig).values(config).returning();
-    return newConfig;
-  }
-
-  async updateDeviceModeConfig(deviceId: string, config: Partial<InsertDeviceModeConfig>): Promise<DeviceModeConfig> {
-    const [updatedConfig] = await db
-      .update(deviceModeConfig)
-      .set({ ...config, updatedAt: new Date() })
-      .where(eq(deviceModeConfig.deviceId, deviceId))
+  async createOrUpdateDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig> {
+    // Create a hash of the PIN for storage
+    const pinHash = config.pin ? Buffer.from(config.pin).toString('base64') : undefined;
+    
+    const [result] = await db
+      .insert(deviceModeConfig)
+      .values({
+        ...config,
+        pinHash,
+        pin: undefined, // Don't store PIN in plaintext
+      })
+      .onConflictDoUpdate({
+        target: [deviceModeConfig.deviceId, deviceModeConfig.parentId],
+        set: {
+          mode: config.mode,
+          childProfileId: config.childProfileId,
+          pinHash,
+          isLocked: config.mode === 'player',
+          updatedAt: new Date(),
+        },
+      })
       .returning();
-    return updatedConfig;
+    
+    return result;
   }
 
-  async verifyDevicePin(deviceId: string, pin: string): Promise<boolean> {
-    const config = await this.getDeviceModeConfig(deviceId);
+  async verifyDevicePin(deviceId: string, parentId: string, pin: string): Promise<boolean> {
+    const config = await this.getDeviceModeConfig(deviceId, parentId);
     if (!config || !config.pinHash) return false;
     
     // Simple hash comparison (in production, use bcrypt or similar)
     const hashedPin = Buffer.from(pin).toString('base64');
     return hashedPin === config.pinHash;
+  }
+
+  async unlockDevice(deviceId: string, parentId: string): Promise<void> {
+    await db
+      .update(deviceModeConfig)
+      .set({ 
+        mode: 'parent',
+        isLocked: false,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(deviceModeConfig.deviceId, deviceId),
+          eq(deviceModeConfig.parentId, parentId)
+        )
+      );
   }
 }
 

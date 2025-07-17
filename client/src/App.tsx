@@ -21,17 +21,12 @@ import SportsEnginePayment from "@/pages/sportsengine-payment";
 import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
+import ManageChildren from "@/pages/manage-children";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  // Temporarily disable useAppMode to debug white screen issue
-  // const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
-  const currentMode = 'parent';
-  const deviceConfig = null;
-  const isLoadingConfig = false;
-  const isLocked = false;
-  const isInitialized = true;
+  const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
 
@@ -100,6 +95,7 @@ function Router() {
             <Route path="/training" component={Training} />
             <Route path="/training-library" component={TrainingLibrary} />
             <Route path="/profile" component={Profile} />
+            <Route path="/manage-children" component={ManageChildren} />
             <Route path="/admin" component={AdminDashboard} />
           </>
         )}

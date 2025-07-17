@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema, insertChildProfileSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -272,6 +272,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching badges:", error);
       res.status(500).json({ message: "Failed to fetch badges" });
+    }
+  });
+
+  // Child Profile Management Routes
+  app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.params.parentId;
+      const userId = req.user.claims.sub;
+      
+      // Ensure user can only access their own child profiles
+      if (parentId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const childProfiles = await storage.getChildProfiles(parentId);
+      res.json(childProfiles);
+    } catch (error) {
+      console.error("Error fetching child profiles:", error);
+      res.status(500).json({ message: "Failed to fetch child profiles" });
+    }
+  });
+
+  app.post('/api/child-profiles', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const childData = insertChildProfileSchema.parse({
+        ...req.body,
+        parentId,
+      });
+      
+      const childProfile = await storage.createChildProfile(childData);
+      res.json(childProfile);
+    } catch (error) {
+      console.error("Error creating child profile:", error);
+      res.status(500).json({ message: "Failed to create child profile" });
+    }
+  });
+
+  app.put('/api/child-profiles/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const childId = parseInt(req.params.id);
+      const parentId = req.user.claims.sub;
+      
+      // Verify the child belongs to the authenticated parent
+      const existingChild = await storage.getChildProfile(childId);
+      if (!existingChild || existingChild.parentId !== parentId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updateData = insertChildProfileSchema.partial().parse(req.body);
+      const updatedChild = await storage.updateChildProfile(childId, updateData);
+      res.json(updatedChild);
+    } catch (error) {
+      console.error("Error updating child profile:", error);
+      res.status(500).json({ message: "Failed to update child profile" });
+    }
+  });
+
+  app.delete('/api/child-profiles/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const childId = parseInt(req.params.id);
+      const parentId = req.user.claims.sub;
+      
+      // Verify the child belongs to the authenticated parent
+      const existingChild = await storage.getChildProfile(childId);
+      if (!existingChild || existingChild.parentId !== parentId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteChildProfile(childId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting child profile:", error);
+      res.status(500).json({ message: "Failed to delete child profile" });
+    }
+  });
+
+  // Device Mode Configuration Routes
+  app.get('/api/device-mode-config/:deviceId', isAuthenticated, async (req: any, res) => {
+    try {
+      const deviceId = req.params.deviceId;
+      const parentId = req.user.claims.sub;
+      
+      const deviceConfig = await storage.getDeviceModeConfig(deviceId, parentId);
+      res.json(deviceConfig);
+    } catch (error) {
+      console.error("Error fetching device config:", error);
+      res.status(500).json({ message: "Failed to fetch device config" });
+    }
+  });
+
+  app.post('/api/device-mode-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const { deviceId, mode, childProfileId, pin } = req.body;
+      
+      const deviceConfig = await storage.createOrUpdateDeviceModeConfig({
+        deviceId,
+        parentId,
+        mode,
+        childProfileId,
+        pin,
+      });
+      
+      res.json(deviceConfig);
+    } catch (error) {
+      console.error("Error updating device config:", error);
+      res.status(500).json({ message: "Failed to update device config" });
+    }
+  });
+
+  app.post('/api/device-mode-config/verify-pin', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const { deviceId, pin } = req.body;
+      
+      const isValid = await storage.verifyDevicePin(deviceId, parentId, pin);
+      
+      if (isValid) {
+        // Unlock the device by setting mode to parent
+        await storage.unlockDevice(deviceId, parentId);
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ message: "Invalid PIN" });
+      }
+    } catch (error) {
+      console.error("Error verifying PIN:", error);
+      res.status(500).json({ message: "Failed to verify PIN" });
     }
   });
 

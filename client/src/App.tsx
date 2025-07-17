@@ -25,7 +25,13 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
+  // Temporarily disable useAppMode to debug white screen issue
+  // const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
+  const currentMode = 'parent';
+  const deviceConfig = null;
+  const isLoadingConfig = false;
+  const isLocked = false;
+  const isInitialized = true;
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
 

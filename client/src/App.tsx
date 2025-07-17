@@ -4,7 +4,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useAppMode } from "@/hooks/useAppMode";
+import { useEffect, useState } from "react";
+import ModeSelection from "@/components/ui/mode-selection";
+import PinEntry from "@/components/ui/pin-entry";
 
 // Pages
 import Landing from "@/pages/landing";
@@ -22,6 +25,9 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const { currentMode, deviceConfig, isLoadingConfig, isLocked } = useAppMode();
+  const [showModeSelection, setShowModeSelection] = useState(false);
+  const [showPinEntry, setShowPinEntry] = useState(false);
 
   // Register service worker for PWA
   useEffect(() => {
@@ -36,7 +42,14 @@ function Router() {
     }
   }, []);
 
-  if (isLoading) {
+  // Show mode selection for first-time setup
+  useEffect(() => {
+    if (isAuthenticated && !isLoadingConfig && !deviceConfig) {
+      setShowModeSelection(true);
+    }
+  }, [isAuthenticated, isLoadingConfig, deviceConfig]);
+
+  if (isLoading || isLoadingConfig) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -53,13 +66,15 @@ function Router() {
     );
   }
 
-  // Route based on user type
+  // Route based on user type and app mode
   const getDashboardComponent = () => {
+    if (currentMode === 'player') {
+      return PlayerDashboard;
+    }
+    
     switch (user?.role) {
       case "admin":
         return AdminDashboard;
-      case "player":
-        return PlayerDashboard;
       case "parent":
       default:
         return ParentDashboard;
@@ -67,18 +82,45 @@ function Router() {
   };
 
   return (
-    <Switch>
-      <Route path="/" component={getDashboardComponent()} />
-      <Route path="/team" component={TeamDetails} />
-      <Route path="/schedule" component={Schedule} />
-      <Route path="/chat" component={Chat} />
-      <Route path="/payment/:type?" component={SportsEnginePayment} />
-      <Route path="/training" component={Training} />
-      <Route path="/training-library" component={TrainingLibrary} />
-      <Route path="/profile" component={Profile} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={getDashboardComponent()} />
+        {currentMode === 'parent' && (
+          <>
+            <Route path="/team" component={TeamDetails} />
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/payment/:type?" component={SportsEnginePayment} />
+            <Route path="/training" component={Training} />
+            <Route path="/training-library" component={TrainingLibrary} />
+            <Route path="/profile" component={Profile} />
+            <Route path="/admin" component={AdminDashboard} />
+          </>
+        )}
+        {currentMode === 'player' && (
+          <>
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/training" component={Training} />
+            <Route path="/training-library" component={TrainingLibrary} />
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
+
+      <ModeSelection
+        isOpen={showModeSelection}
+        onClose={() => setShowModeSelection(false)}
+      />
+
+      <PinEntry
+        isOpen={showPinEntry}
+        onClose={() => setShowPinEntry(false)}
+        onSuccess={() => {
+          // Device unlocked, user can now access parent features
+        }}
+      />
+    </>
   );
 }
 

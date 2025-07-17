@@ -18,16 +18,30 @@ import {
   ChevronRight,
   DollarSign,
   Play,
-  BookOpen
+  BookOpen,
+  User,
+  RotateCcw,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useAppMode } from "@/hooks/useAppMode";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
+  const { childProfiles, setPlayerMode } = useAppMode();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
+  const [showModeSelector, setShowModeSelector] = useState(false);
+  const [selectedChild, setSelectedChild] = useState<string>('');
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [error, setError] = useState('');
 
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
@@ -49,6 +63,34 @@ export default function ParentDashboard() {
     enabled: !!user?.id,
   });
 
+  const handleSwitchToPlayerMode = async () => {
+    if (!selectedChild) {
+      setError('Please select a child profile');
+      return;
+    }
+    
+    if (pin !== confirmPin) {
+      setError('PINs do not match');
+      return;
+    }
+    
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      setError('PIN must be exactly 4 digits');
+      return;
+    }
+    
+    try {
+      await setPlayerMode(parseInt(selectedChild), pin);
+      setShowModeSelector(false);
+      setSelectedChild('');
+      setPin('');
+      setConfirmPin('');
+      setError('');
+    } catch (error) {
+      setError('Failed to switch to player mode');
+    }
+  };
+
   if (!user) {
     return <div>Loading...</div>;
   }
@@ -68,6 +110,15 @@ export default function ParentDashboard() {
               <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowModeSelector(true)}
+                className="flex items-center space-x-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>Switch Mode</span>
+              </Button>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -385,6 +436,79 @@ export default function ParentDashboard() {
           </Card>
         </div>
       </main>
+
+      {/* Mode Selector Modal */}
+      <Dialog open={showModeSelector} onOpenChange={setShowModeSelector}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Switch to Player Mode</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="child-select">Select Child Profile</Label>
+              <Select value={selectedChild} onValueChange={setSelectedChild}>
+                <SelectTrigger id="child-select">
+                  <SelectValue placeholder="Choose a child" />
+                </SelectTrigger>
+                <SelectContent>
+                  {childProfiles?.map((child: any) => (
+                    <SelectItem key={child.id} value={child.id.toString()}>
+                      {child.firstName} {child.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="pin">Set 4-digit PIN</Label>
+              <Input
+                id="pin"
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+                placeholder="1234"
+                maxLength={4}
+                className="text-center text-lg tracking-widest"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="confirm-pin">Confirm PIN</Label>
+              <Input
+                id="confirm-pin"
+                type="password"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value)}
+                placeholder="1234"
+                maxLength={4}
+                className="text-center text-lg tracking-widest"
+              />
+            </div>
+            
+            {error && (
+              <p className="text-red-500 text-sm">{error}</p>
+            )}
+            
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowModeSelector(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSwitchToPlayerMode}
+                className="flex-1"
+                disabled={!selectedChild || !pin || !confirmPin}
+              >
+                Switch Mode
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

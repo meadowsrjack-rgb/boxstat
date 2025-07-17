@@ -275,6 +275,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Child profile routes
+  app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.params.parentId;
+      const profiles = await storage.getChildProfiles(parentId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching child profiles:", error);
+      res.status(500).json({ message: "Failed to fetch child profiles" });
+    }
+  });
+
+  app.post('/api/child-profiles', isAuthenticated, async (req: any, res) => {
+    try {
+      const { insertChildProfileSchema } = await import("@shared/schema");
+      const profileData = insertChildProfileSchema.parse({
+        ...req.body,
+        parentId: req.user.claims.sub,
+        qrCodeData: `UYP-CHILD-${Date.now()}-${req.user.claims.sub}`,
+      });
+      const profile = await storage.createChildProfile(profileData);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error creating child profile:", error);
+      res.status(500).json({ message: "Failed to create child profile" });
+    }
+  });
+
+  app.put('/api/child-profiles/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = parseInt(req.params.id);
+      const updatedProfile = await storage.updateChildProfile(profileId, req.body);
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating child profile:", error);
+      res.status(500).json({ message: "Failed to update child profile" });
+    }
+  });
+
+  app.delete('/api/child-profiles/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = parseInt(req.params.id);
+      await storage.deleteChildProfile(profileId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting child profile:", error);
+      res.status(500).json({ message: "Failed to delete child profile" });
+    }
+  });
+
+  // Device mode configuration routes
+  app.get('/api/device-mode-config/:deviceId', isAuthenticated, async (req: any, res) => {
+    try {
+      const config = await storage.getDeviceModeConfig(req.params.deviceId);
+      res.json(config);
+    } catch (error) {
+      console.error("Error fetching device mode config:", error);
+      res.status(500).json({ message: "Failed to fetch device mode config" });
+    }
+  });
+
+  app.post('/api/device-mode-config', isAuthenticated, async (req: any, res) => {
+    try {
+      const { deviceId, mode, childProfileId, pin } = req.body;
+      
+      // Hash the PIN if provided
+      const pinHash = pin ? Buffer.from(pin).toString('base64') : null;
+      
+      const configData = {
+        deviceId,
+        parentId: req.user.claims.sub,
+        mode,
+        childProfileId: childProfileId || null,
+        pinHash,
+        isLocked: mode === 'player',
+      };
+
+      // Check if config already exists
+      const existingConfig = await storage.getDeviceModeConfig(deviceId);
+      
+      let config;
+      if (existingConfig) {
+        config = await storage.updateDeviceModeConfig(deviceId, configData);
+      } else {
+        config = await storage.createDeviceModeConfig(configData);
+      }
+      
+      res.json(config);
+    } catch (error) {
+      console.error("Error creating/updating device mode config:", error);
+      res.status(500).json({ message: "Failed to create/update device mode config" });
+    }
+  });
+
+  app.post('/api/device-mode-config/verify-pin', isAuthenticated, async (req: any, res) => {
+    try {
+      const { deviceId, pin } = req.body;
+      const isValid = await storage.verifyDevicePin(deviceId, pin);
+      
+      if (isValid) {
+        // Temporarily unlock the device
+        await storage.updateDeviceModeConfig(deviceId, { isLocked: false });
+        res.json({ success: true });
+      } else {
+        res.status(401).json({ success: false, message: "Invalid PIN" });
+      }
+    } catch (error) {
+      console.error("Error verifying PIN:", error);
+      res.status(500).json({ message: "Failed to verify PIN" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server for real-time messaging

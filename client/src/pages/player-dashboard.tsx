@@ -16,15 +16,21 @@ import {
   ChevronRight,
   Volleyball,
   Play,
-  BookOpen
+  BookOpen,
+  Lock,
+  Key
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useAppMode } from "@/hooks/useAppMode";
+import PinEntry from "@/components/ui/pin-entry";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
+  const { deviceConfig } = useAppMode();
   const [showQR, setShowQR] = useState(false);
+  const [showPinEntry, setShowPinEntry] = useState(false);
   const [, setLocation] = useLocation();
 
   const { data: userTeam } = useQuery({
@@ -69,6 +75,15 @@ export default function PlayerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowPinEntry(true)}
+                className="flex items-center space-x-1"
+              >
+                <Lock className="h-3 w-3" />
+                <span className="text-xs">Parent</span>
+              </Button>
               <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
                   {userBadges?.length || 0}
@@ -290,6 +305,16 @@ export default function PlayerDashboard() {
           </div>
         </div>
       )}
+
+      {/* PIN Entry Modal */}
+      <PinEntry
+        isOpen={showPinEntry}
+        onClose={() => setShowPinEntry(false)}
+        onSuccess={() => {
+          // Successfully unlocked - user can now access parent features
+          setShowPinEntry(false);
+        }}
+      />
     </div>
   );
 }

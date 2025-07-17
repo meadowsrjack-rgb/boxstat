@@ -10,6 +10,8 @@ import {
   payments,
   drills,
   playerStats,
+  childProfiles,
+  deviceModeConfig,
   type User,
   type UpsertUser,
   type Team,
@@ -22,6 +24,8 @@ import {
   type Payment,
   type Drill,
   type PlayerStats,
+  type ChildProfile,
+  type DeviceModeConfig,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -32,6 +36,8 @@ import {
   type InsertPayment,
   type InsertDrill,
   type InsertPlayerStats,
+  type InsertChildProfile,
+  type InsertDeviceModeConfig,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
@@ -86,6 +92,19 @@ export interface IStorage {
   // Stats operations
   getPlayerStats(userId: string): Promise<PlayerStats[]>;
   createPlayerStats(stats: InsertPlayerStats): Promise<PlayerStats>;
+  
+  // Child profile operations
+  getChildProfiles(parentId: string): Promise<ChildProfile[]>;
+  getChildProfile(id: number): Promise<ChildProfile | undefined>;
+  createChildProfile(profile: InsertChildProfile): Promise<ChildProfile>;
+  updateChildProfile(id: number, profile: Partial<InsertChildProfile>): Promise<ChildProfile>;
+  deleteChildProfile(id: number): Promise<void>;
+  
+  // Device mode configuration operations
+  getDeviceModeConfig(deviceId: string): Promise<DeviceModeConfig | undefined>;
+  createDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig>;
+  updateDeviceModeConfig(deviceId: string, config: Partial<InsertDeviceModeConfig>): Promise<DeviceModeConfig>;
+  verifyDevicePin(deviceId: string, pin: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -309,6 +328,67 @@ export class DatabaseStorage implements IStorage {
   async createPlayerStats(stats: InsertPlayerStats): Promise<PlayerStats> {
     const [newStats] = await db.insert(playerStats).values(stats).returning();
     return newStats;
+  }
+
+  // Child profile operations
+  async getChildProfiles(parentId: string): Promise<ChildProfile[]> {
+    return await db
+      .select()
+      .from(childProfiles)
+      .where(eq(childProfiles.parentId, parentId))
+      .orderBy(asc(childProfiles.firstName));
+  }
+
+  async getChildProfile(id: number): Promise<ChildProfile | undefined> {
+    const [profile] = await db.select().from(childProfiles).where(eq(childProfiles.id, id));
+    return profile;
+  }
+
+  async createChildProfile(profile: InsertChildProfile): Promise<ChildProfile> {
+    const [newProfile] = await db.insert(childProfiles).values(profile).returning();
+    return newProfile;
+  }
+
+  async updateChildProfile(id: number, profile: Partial<InsertChildProfile>): Promise<ChildProfile> {
+    const [updatedProfile] = await db
+      .update(childProfiles)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(eq(childProfiles.id, id))
+      .returning();
+    return updatedProfile;
+  }
+
+  async deleteChildProfile(id: number): Promise<void> {
+    await db.delete(childProfiles).where(eq(childProfiles.id, id));
+  }
+
+  // Device mode configuration operations
+  async getDeviceModeConfig(deviceId: string): Promise<DeviceModeConfig | undefined> {
+    const [config] = await db.select().from(deviceModeConfig).where(eq(deviceModeConfig.deviceId, deviceId));
+    return config;
+  }
+
+  async createDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig> {
+    const [newConfig] = await db.insert(deviceModeConfig).values(config).returning();
+    return newConfig;
+  }
+
+  async updateDeviceModeConfig(deviceId: string, config: Partial<InsertDeviceModeConfig>): Promise<DeviceModeConfig> {
+    const [updatedConfig] = await db
+      .update(deviceModeConfig)
+      .set({ ...config, updatedAt: new Date() })
+      .where(eq(deviceModeConfig.deviceId, deviceId))
+      .returning();
+    return updatedConfig;
+  }
+
+  async verifyDevicePin(deviceId: string, pin: string): Promise<boolean> {
+    const config = await this.getDeviceModeConfig(deviceId);
+    if (!config || !config.pinHash) return false;
+    
+    // Simple hash comparison (in production, use bcrypt or similar)
+    const hashedPin = Buffer.from(pin).toString('base64');
+    return hashedPin === config.pinHash;
   }
 }
 

@@ -37,8 +37,38 @@ export const users = pgTable("users", {
   role: varchar("role", { enum: ["parent", "player", "admin"] }).notNull().default("parent"),
   parentId: varchar("parent_id"), // For linking player to parent - self-reference
   teamId: integer("team_id"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
   sportsEngineCustomerId: varchar("sports_engine_customer_id"),
   sportsEngineSubscriptionId: varchar("sports_engine_subscription_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Child profiles table - data objects linked to parent accounts
+export const childProfiles = pgTable("child_profiles", {
+  id: serial("id").primaryKey(),
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  dateOfBirth: date("date_of_birth"),
+  jerseyNumber: varchar("jersey_number"),
+  profileImageUrl: varchar("profile_image_url"),
+  teamId: integer("team_id").references(() => teams.id),
+  qrCodeData: varchar("qr_code_data").notNull(), // Unique QR code for check-in
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Device mode configuration for Player Mode locking
+export const deviceModeConfig = pgTable("device_mode_config", {
+  id: serial("id").primaryKey(),
+  deviceId: varchar("device_id").notNull(), // Browser fingerprint or device identifier
+  parentId: varchar("parent_id").references(() => users.id).notNull(),
+  childProfileId: integer("child_profile_id").references(() => childProfiles.id),
+  mode: varchar("mode", { enum: ["parent", "player"] }).notNull().default("parent"),
+  pinHash: varchar("pin_hash"), // Hashed 4-digit PIN for Player Mode
+  isLocked: boolean("is_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -118,11 +148,11 @@ export const payments = pgTable("payments", {
   amount: real("amount").notNull(),
   currency: varchar("currency").default("usd"),
   paymentType: varchar("payment_type", { enum: ["registration", "uniform", "tournament", "training_subscription", "other"] }).notNull(),
+  stripePaymentId: varchar("stripe_payment_id"),
   sportsEnginePaymentId: varchar("sports_engine_payment_id"),
   sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
   status: varchar("status", { enum: ["pending", "completed", "failed", "refunded"] }).default("pending"),
   description: text("description"),
-
   dueDate: date("due_date"),
   paidAt: timestamp("paid_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -183,6 +213,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   parent: one(users, { fields: [users.parentId], references: [users.id] }),
   children: many(users),
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
+  childProfiles: many(childProfiles),
+  deviceModeConfigs: many(deviceModeConfig),
   attendances: many(attendances),
   badges: many(userBadges),
   announcements: many(announcements),
@@ -191,6 +223,17 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   stats: many(playerStats),
   trainingSubscriptions: many(trainingSubscriptions),
   trainingProgress: many(trainingProgress),
+}));
+
+export const childProfilesRelations = relations(childProfiles, ({ one, many }) => ({
+  parent: one(users, { fields: [childProfiles.parentId], references: [users.id] }),
+  team: one(teams, { fields: [childProfiles.teamId], references: [teams.id] }),
+  deviceModeConfigs: many(deviceModeConfig),
+}));
+
+export const deviceModeConfigRelations = relations(deviceModeConfig, ({ one }) => ({
+  parent: one(users, { fields: [deviceModeConfig.parentId], references: [users.id] }),
+  childProfile: one(childProfiles, { fields: [deviceModeConfig.childProfileId], references: [childProfiles.id] }),
 }));
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({
@@ -263,6 +306,8 @@ export const insertDrillSchema = createInsertSchema(drills).omit({ id: true, cre
 export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({ id: true, createdAt: true });
 export const insertTrainingSubscriptionSchema = createInsertSchema(trainingSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTrainingProgressSchema = createInsertSchema(trainingProgress).omit({ id: true, createdAt: true });
+export const insertChildProfileSchema = createInsertSchema(childProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertDeviceModeConfigSchema = createInsertSchema(deviceModeConfig).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -279,6 +324,8 @@ export type Drill = typeof drills.$inferSelect;
 export type PlayerStats = typeof playerStats.$inferSelect;
 export type TrainingSubscription = typeof trainingSubscriptions.$inferSelect;
 export type TrainingProgress = typeof trainingProgress.$inferSelect;
+export type ChildProfile = typeof childProfiles.$inferSelect;
+export type DeviceModeConfig = typeof deviceModeConfig.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -292,3 +339,5 @@ export type InsertDrill = z.infer<typeof insertDrillSchema>;
 export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type InsertTrainingSubscription = z.infer<typeof insertTrainingSubscriptionSchema>;
 export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;
+export type InsertChildProfile = z.infer<typeof insertChildProfileSchema>;
+export type InsertDeviceModeConfig = z.infer<typeof insertDeviceModeConfigSchema>;

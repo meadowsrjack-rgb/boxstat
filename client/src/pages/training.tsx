@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useAppMode } from "@/hooks/useAppMode";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +87,7 @@ const trainingPrograms: TrainingProgram[] = [
 
 export default function Training() {
   const { user } = useAuth();
+  const { currentMode } = useAppMode();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedProgram, setSelectedProgram] = useState<TrainingProgram | null>(null);
@@ -176,11 +178,13 @@ export default function Training() {
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Premium Training Programs
+            {currentMode === 'player' ? 'Your Training Programs' : 'Premium Training Programs'}
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Take your game to the next level with our professional training programs. 
-            Learn from expert coaches and improve your skills with structured, progressive training.
+            {currentMode === 'player' 
+              ? 'Practice and improve your basketball skills with these training videos assigned to you.'
+              : 'Take your game to the next level with our professional training programs. Learn from expert coaches and improve your skills with structured, progressive training.'
+            }
           </p>
         </div>
 
@@ -235,42 +239,62 @@ export default function Training() {
                   </div>
                 </div>
 
-                {isSubscribed(program.id) ? (
-                  <Button 
-                    className="w-full"
-                    onClick={() => setLocation(`/training/${program.id}`)}
-                  >
-                    Access Training
-                  </Button>
+{currentMode === 'player' ? (
+                  // Player mode: Only show purchased content, no pricing
+                  isSubscribed(program.id) ? (
+                    <Button 
+                      className="w-full"
+                      onClick={() => setLocation(`/training/${program.id}`)}
+                    >
+                      Continue Training
+                    </Button>
+                  ) : (
+                    <div className="p-3 bg-gray-100 rounded-lg text-center">
+                      <Lock className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">
+                        Ask your parent to unlock this training program
+                      </p>
+                    </div>
+                  )
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Subscription Options:</span>
+                  // Parent mode: Show full pricing and subscription options
+                  isSubscribed(program.id) ? (
+                    <Button 
+                      className="w-full"
+                      onClick={() => setLocation(`/training/${program.id}`)}
+                    >
+                      Access Training
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Subscription Options:</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          className="text-sm"
+                          onClick={() => handleSubscribe(program, 'monthly')}
+                          disabled={subscribeMutation.isPending}
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          ${program.monthlyPrice}/month
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="text-sm"
+                          onClick={() => handleSubscribe(program, 'annual')}
+                          disabled={subscribeMutation.isPending}
+                        >
+                          <Trophy className="h-4 w-4 mr-1" />
+                          ${program.annualPrice}/year
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 text-center">
+                        Save ${(program.monthlyPrice * 12 - program.annualPrice).toFixed(2)} with annual plan
+                      </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button
-                        variant="outline"
-                        className="text-sm"
-                        onClick={() => handleSubscribe(program, 'monthly')}
-                        disabled={subscribeMutation.isPending}
-                      >
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        ${program.monthlyPrice}/month
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-sm"
-                        onClick={() => handleSubscribe(program, 'annual')}
-                        disabled={subscribeMutation.isPending}
-                      >
-                        <Trophy className="h-4 w-4 mr-1" />
-                        ${program.annualPrice}/year
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 text-center">
-                      Save ${(program.monthlyPrice * 12 - program.annualPrice).toFixed(2)} with annual plan
-                    </p>
-                  </div>
+                  )
                 )}
               </CardContent>
             </Card>

@@ -3,6 +3,7 @@ import { useLocation, useRoute } from 'wouter';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppMode } from '@/hooks/useAppMode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -13,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CreditCard, DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { CreditCard, DollarSign, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
 
 const paymentSchema = z.object({
   amount: z.number().min(1, "Amount must be at least $1"),
@@ -25,6 +26,7 @@ type PaymentFormData = z.infer<typeof paymentSchema>;
 
 export default function SportsEnginePayment() {
   const { user, isAuthenticated } = useAuth();
+  const { currentMode } = useAppMode();
   const [location, setLocation] = useLocation();
   const [match, params] = useRoute('/payment/:type?');
   const { toast } = useToast();
@@ -113,6 +115,37 @@ export default function SportsEnginePayment() {
             <CardTitle>Please Log In</CardTitle>
             <CardDescription>You need to be logged in to make payments.</CardDescription>
           </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (currentMode === 'player') {
+    return (
+      <div className="container mx-auto p-4 max-w-2xl">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Payment Access Restricted
+            </CardTitle>
+            <CardDescription>
+              Only parents can make payments. Please ask your parent to handle any payment needs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <p className="text-gray-600 mb-4">
+                Your parent needs to be in Parent Mode to make payments.
+              </p>
+              <Button 
+                variant="outline" 
+                onClick={() => setLocation('/')}
+              >
+                Return to Home
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       </div>
     );

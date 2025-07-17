@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Volleyball, Users, Calendar, Trophy, Shield, MessageCircle } from "lucide-react";
+import { Users, Calendar, Trophy, Shield, MessageCircle } from "lucide-react";
+import { FaBasketballBall } from "react-icons/fa";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function Landing() {
@@ -142,7 +143,7 @@ export default function Landing() {
             <Card className="border-2 hover:border-primary/50 transition-colors">
               <CardHeader>
                 <div className="w-12 h-12 bg-red-500/10 rounded-lg flex items-center justify-center mb-4">
-                  <Volleyball className="h-6 w-6 text-red-500" />
+                  <FaBasketballBall className="h-6 w-6 text-red-500" />
                 </div>
                 <CardTitle>Dual Interface</CardTitle>
               </CardHeader>
@@ -184,8 +185,8 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <Volleyball className="h-6 w-6 text-primary mr-2" />
-                <span className="text-lg font-semibold">UYP Volleyball</span>
+                <FaBasketballBall className="h-6 w-6 text-primary mr-2" />
+                <span className="text-lg font-semibold">UYP Basketball</span>
               </div>
               <p className="text-gray-400">
                 Building character through basketball in Costa Mesa, CA.

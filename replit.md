@@ -10,6 +10,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **July 17, 2025**: Updated training pages to hide pricing information in Player Mode - players only see purchased content
+- **July 17, 2025**: Added payment restrictions for Player Mode - only parents can access payment pages
+- **July 17, 2025**: Modified training program text to be child-appropriate in Player Mode
 - **July 17, 2025**: Added training programs to both Parent and Player dashboards with dedicated sections and navigation
 - **July 17, 2025**: Received single parent account system specifications with Parent Mode/Player Mode functionality requirements
 

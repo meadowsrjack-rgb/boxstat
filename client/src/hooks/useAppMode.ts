@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -52,56 +52,66 @@ export function useAppMode() {
   const [currentMode, setCurrentMode] = useState<AppMode>('parent');
   const [deviceId, setDeviceId] = useState<string>('');
   const [tempMode, setTempMode] = useState<AppMode | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const queryClient = useQueryClient();
 
-  // Initialize device ID
+  // Initialize device ID only once
   useEffect(() => {
-    let storedDeviceId = localStorage.getItem(DEVICE_ID_KEY);
-    if (!storedDeviceId) {
-      storedDeviceId = generateDeviceId();
-      localStorage.setItem(DEVICE_ID_KEY, storedDeviceId);
+    if (!isInitialized) {
+      let storedDeviceId = localStorage.getItem(DEVICE_ID_KEY);
+      if (!storedDeviceId) {
+        storedDeviceId = generateDeviceId();
+        localStorage.setItem(DEVICE_ID_KEY, storedDeviceId);
+      }
+      setDeviceId(storedDeviceId);
+      setIsInitialized(true);
     }
-    setDeviceId(storedDeviceId);
-  }, []);
+  }, [isInitialized]);
 
-  // Check for temporary mode override
+  // Check for temporary mode override only once
   useEffect(() => {
-    const tempModeData = localStorage.getItem(TEMP_MODE_KEY);
-    if (tempModeData) {
-      try {
-        const parsed = JSON.parse(tempModeData);
-        setTempMode(parsed.mode);
-      } catch (error) {
-        localStorage.removeItem(TEMP_MODE_KEY);
+    if (isInitialized) {
+      const tempModeData = localStorage.getItem(TEMP_MODE_KEY);
+      if (tempModeData) {
+        try {
+          const parsed = JSON.parse(tempModeData);
+          setTempMode(parsed.mode);
+        } catch (error) {
+          localStorage.removeItem(TEMP_MODE_KEY);
+        }
       }
     }
-  }, []);
+  }, [isInitialized]);
 
-  // Query device mode configuration
+  // Query device mode configuration with proper caching
   const { data: deviceConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['/api/device-mode-config', deviceId],
-    enabled: !!deviceId && !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!deviceId && !!user && isInitialized,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false,
     retry: 1,
   });
 
-  // Sync current mode with device config
-  useEffect(() => {
-    if (deviceConfig) {
-      setCurrentMode(deviceConfig.mode);
-    }
-  }, [deviceConfig]);
-
-  // Query child profiles for the current user
+  // Query child profiles with proper caching
   const { data: childProfiles } = useQuery({
     queryKey: ['/api/child-profiles', user?.id],
-    enabled: !!user && user.role === 'parent',
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user && user.role === 'parent' && isInitialized,
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    cacheTime: 60 * 60 * 1000, // 1 hour
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false,
   });
+
+  // Sync current mode with device config only when data changes
+  useEffect(() => {
+    if (deviceConfig && deviceConfig.mode !== currentMode) {
+      setCurrentMode(deviceConfig.mode);
+    }
+  }, [deviceConfig?.mode]);
 
   // Mutation to update device mode configuration
   const updateDeviceMode = useMutation({
@@ -135,80 +145,59 @@ export function useAppMode() {
   });
 
   // Set device to Player Mode
-  const setPlayerMode = async (childProfileId: number, pin: string) => {
+  const setPlayerMode = useCallback(async (childProfileId: number, pin: string) => {
     await updateDeviceMode.mutateAsync({
       mode: 'player',
       childProfileId,
       pin,
     });
-  };
+  }, [updateDeviceMode]);
 
   // Set device to Parent Mode
-  const setParentMode = async () => {
+  const setParentMode = useCallback(async () => {
     await updateDeviceMode.mutateAsync({
       mode: 'parent',
     });
-  };
+  }, [updateDeviceMode]);
 
   // Temporarily view as child (Parent preview mode)
-  const viewAsChild = (childProfileId: number) => {
-    const childProfile = childProfiles?.find((child: any) => child.id === childProfileId);
-    if (childProfile) {
-      setTempMode('player');
-      localStorage.setItem(TEMP_MODE_KEY, JSON.stringify({
-        mode: 'player',
-        childProfileId,
-        isPreview: true,
-      }));
-    }
-  };
+  const viewAsChild = useCallback((childProfileId: number) => {
+    const tempData = {
+      mode: 'player' as AppMode,
+      childProfileId,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(TEMP_MODE_KEY, JSON.stringify(tempData));
+    setTempMode('player');
+  }, []);
 
-  // Exit temporary view mode
-  const exitTempMode = () => {
-    setTempMode(null);
+  // Exit temporary mode
+  const exitTempMode = useCallback(() => {
     localStorage.removeItem(TEMP_MODE_KEY);
-  };
+    setTempMode(null);
+  }, []);
 
-  // Unlock device with PIN
-  const unlockDevice = async (pin: string) => {
-    await verifyPin.mutateAsync(pin);
-  };
+  // Get current active mode (temp mode takes precedence)
+  const activeMode = tempMode || currentMode;
 
-  // Get current child profile for Player Mode
-  const getCurrentChildProfile = () => {
-    if (tempMode === 'player') {
-      const tempModeData = localStorage.getItem(TEMP_MODE_KEY);
-      if (tempModeData) {
-        try {
-          const parsed = JSON.parse(tempModeData);
-          return childProfiles?.find((child: any) => child.id === parsed.childProfileId);
-        } catch (error) {
-          return null;
-        }
-      }
-    }
-    return deviceConfig?.childProfile;
-  };
+  // Check if device is locked in player mode
+  const isLocked = deviceConfig?.isLocked || false;
 
-  // Determine effective mode (considering temporary overrides)
-  const effectiveMode = tempMode || currentMode;
+  // Get current child profile
+  const currentChildProfile = deviceConfig?.childProfile || null;
 
   return {
-    currentMode: effectiveMode,
+    currentMode: activeMode,
     deviceConfig,
     childProfiles,
-    currentChildProfile: getCurrentChildProfile(),
-    isLocked: deviceConfig?.isLocked || false,
     isLoadingConfig,
-    isTempMode: !!tempMode,
-    // Actions
+    isLocked,
+    currentChildProfile,
     setPlayerMode,
     setParentMode,
     viewAsChild,
     exitTempMode,
-    unlockDevice,
-    // Status
-    isUpdating: updateDeviceMode.isPending,
-    isVerifying: verifyPin.isPending,
+    verifyPin,
+    isInitialized,
   };
 }

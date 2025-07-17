@@ -34,8 +34,7 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
-  // Temporarily disable useAppMode to fix infinite loop
-  // const { childProfiles, setPlayerMode } = useAppMode();
+  const { childProfiles, setPlayerMode } = useAppMode();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
   const [showModeSelector, setShowModeSelector] = useState(false);
@@ -81,13 +80,14 @@ export default function ParentDashboard() {
     }
     
     try {
-      // Temporarily disabled - need to fix infinite loop first
-      // await setPlayerMode(parseInt(selectedChild), pin);
+      await setPlayerMode(parseInt(selectedChild), pin);
       setShowModeSelector(false);
       setSelectedChild('');
       setPin('');
       setConfirmPin('');
       setError('');
+      // Force a page refresh to switch to player mode
+      window.location.reload();
     } catch (error) {
       setError('Failed to switch to player mode');
     }
@@ -453,9 +453,11 @@ export default function ParentDashboard() {
                   <SelectValue placeholder="Choose a child" />
                 </SelectTrigger>
                 <SelectContent>
-                  {/* Temporarily disabled */}
-                  <SelectItem value="1">Sample Child 1</SelectItem>
-                  <SelectItem value="2">Sample Child 2</SelectItem>
+                  {childProfiles?.map((child: any) => (
+                    <SelectItem key={child.id} value={child.id.toString()}>
+                      {child.firstName} {child.lastName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

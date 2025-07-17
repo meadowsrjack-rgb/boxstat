@@ -28,8 +28,7 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
-  // Temporarily disable useAppMode to fix infinite loop
-  // const { deviceConfig } = useAppMode();
+  const { deviceConfig } = useAppMode();
   const [showQR, setShowQR] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
   const [, setLocation] = useLocation();
@@ -238,7 +237,7 @@ export default function PlayerDashboard() {
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900">Training Videos</h4>
-                  <p className="text-sm text-gray-600">Learn new skills</p>
+                  <p className="text-sm text-gray-600">Your assigned training videos</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </div>
@@ -256,7 +255,7 @@ export default function PlayerDashboard() {
                 </div>
                 <div className="flex-1">
                   <h4 className="font-bold text-gray-900">My Training</h4>
-                  <p className="text-sm text-gray-600">View my progress</p>
+                  <p className="text-sm text-gray-600">View your progress</p>
                 </div>
                 <ChevronRight className="h-5 w-5 text-gray-400" />
               </div>

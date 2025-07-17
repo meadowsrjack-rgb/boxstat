@@ -8,6 +8,11 @@ This is a comprehensive cross-platform mobile application for the UYP Basketball
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **July 17, 2025**: Added training programs to both Parent and Player dashboards with dedicated sections and navigation
+- **July 17, 2025**: Received single parent account system specifications with Parent Mode/Player Mode functionality requirements
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -36,9 +41,11 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### User Management System
-- **Multi-user Types**: Parents, Players, and Admins with role-based access
-- **Parent-Child Linking**: Parents can create and manage multiple child accounts
-- **Profile Management**: User profiles with images, contact information, and preferences
+- **Single Parent Account**: One primary user type (Parent) with email/password authentication
+- **Linked Child Profiles**: Parents can create multiple child profiles as data objects (not independent users)
+- **Dual Mode System**: Parent Mode (full access) and Player Mode (restricted child access)
+- **PIN-Based Security**: 4-digit PIN system for securing Player Mode on devices
+- **Device-Specific Locking**: Local storage-based device configuration for Player Mode
 
 ### QR Code Check-in System
 - **Purpose**: Secure gym entry and attendance tracking at Momentous Sports Center

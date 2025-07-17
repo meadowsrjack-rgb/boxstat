@@ -1,0 +1,53 @@
+1. Core Concept & Data Structure
+Single Parent Account: The system will have one primary user type: the Parent. Parents register and log in with their email and password. The Parent account is the container for all family data, including linked children, payment methods, and subscriptions.
+
+Linked Child Profiles: A Parent account can have one or more Child Profiles linked to it. A Child Profile is a data object, not an independent user with its own login. It contains the child's specific information: name, team, jersey number, unique QR code for check-in, etc.
+
+2. The Two User Modes
+The entire app interface will change based on the active mode.
+
+Parent Mode (Default, Unlocked View):
+
+This is the default view when a parent logs into their own device.
+
+It provides full access to all features: master family calendar, payment portal, subscription management, digital forms, parent-level chats, and administrative settings.
+
+It must include a UI element (e.g., a dropdown menu in the header) that allows the parent to select a child and temporarily "View as [Child's Name]". This provides a read-only preview of that child's Player Mode interface.
+
+Player Mode (Restricted, Locked View):
+
+This mode is designed for the child's use on their own (or a shared) device.
+
+The interface is simplified and displays information for only one specific child.
+
+Permitted Features: View personal schedule, access the "Check-In" QR code, participate in the kid-safe team chat, and view the skill/drill library.
+
+Restricted Features: All parent-level features MUST be hidden and inaccessible. This includes settings, payments, subscriptions, other siblings' information, and parent-level chats.
+
+This mode is secured by a 4-digit PIN set by the parent.
+
+3. The "Locking" Workflow: First-Time Setup on a Device
+Implement the following flow for setting up Player Mode on a new device:
+
+Parent Login: The parent logs into the app on the target device using their own credentials.
+
+Mode Selection Prompt: Upon successful login on a device not yet configured, the app MUST prompt the parent: "How will this device be used?" with two options:
+
+A) Parent Mode (Full Access)
+
+B) Player Mode (Locked for a Child)
+
+Child Assignment: If the parent chooses Player Mode, the app will display a list of their linked children. The parent selects the child who will be using this device.
+
+PIN Creation: The app MUST then prompt the parent to create a 4-digit PIN. This PIN is required to exit Player Mode.
+
+Local State Storage: Upon PIN confirmation, the app MUST save a persistent flag to the device's local storage (e.g., UserDefaults/SharedPreferences). This flag indicates that the app is locked in Player Mode and specifies for which Child Profile ID. This ensures the app always opens directly into Player Mode for that child, even after being closed and reopened.
+
+4. Exiting Player Mode
+The Player Mode interface must include a discreet "Parent Access" or "Settings" icon (e.g., a small gear or lock icon).
+
+Tapping this icon MUST bring up a keypad for the parent to enter their 4-digit PIN.
+
+Upon successful PIN entry, the app unlocks, switching to the full Parent Mode.
+
+The parent should then have the option to re-lock the app in Player Mode when they are finished.

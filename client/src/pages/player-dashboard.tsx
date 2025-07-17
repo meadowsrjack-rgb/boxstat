@@ -28,7 +28,8 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
-  const { deviceConfig } = useAppMode();
+  // Temporarily disable useAppMode to fix infinite loop
+  // const { deviceConfig } = useAppMode();
   const [showQR, setShowQR] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
   const [, setLocation] = useLocation();

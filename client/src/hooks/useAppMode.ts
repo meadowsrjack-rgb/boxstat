@@ -81,17 +81,26 @@ export function useAppMode() {
   const { data: deviceConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['/api/device-mode-config', deviceId],
     enabled: !!deviceId && !!user,
-    onSuccess: (config: DeviceModeConfig) => {
-      if (config) {
-        setCurrentMode(config.mode);
-      }
-    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1,
   });
+
+  // Sync current mode with device config
+  useEffect(() => {
+    if (deviceConfig) {
+      setCurrentMode(deviceConfig.mode);
+    }
+  }, [deviceConfig]);
 
   // Query child profiles for the current user
   const { data: childProfiles } = useQuery({
     queryKey: ['/api/child-profiles', user?.id],
     enabled: !!user && user.role === 'parent',
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   // Mutation to update device mode configuration

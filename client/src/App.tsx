@@ -25,9 +25,11 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const { currentMode, deviceConfig, isLoadingConfig, isLocked } = useAppMode();
+  // Temporarily disable useAppMode to fix infinite loop
+  // const { currentMode, deviceConfig, isLoadingConfig, isLocked } = useAppMode();
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
+  const [currentMode, setCurrentMode] = useState<'parent' | 'player'>('parent');
 
   // Register service worker for PWA
   useEffect(() => {
@@ -43,13 +45,13 @@ function Router() {
   }, []);
 
   // Show mode selection for first-time setup
-  useEffect(() => {
-    if (isAuthenticated && !isLoadingConfig && !deviceConfig) {
-      setShowModeSelection(true);
-    }
-  }, [isAuthenticated, isLoadingConfig, deviceConfig]);
+  // useEffect(() => {
+  //   if (isAuthenticated && !isLoadingConfig && !deviceConfig) {
+  //     setShowModeSelection(true);
+  //   }
+  // }, [isAuthenticated, isLoadingConfig, deviceConfig]);
 
-  if (isLoading || isLoadingConfig) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />

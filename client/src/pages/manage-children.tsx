@@ -95,8 +95,11 @@ export default function ManageChildren() {
     queryKey: ["/api/teams"],
   });
 
-  // Get child profiles (using the one from useAppMode)
-  const profiles = childProfiles || [];
+  // Get child profiles directly from API
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["/api/child-profiles", user?.id],
+    enabled: !!user?.id,
+  });
 
   // Add child mutation
   const addChildMutation = useMutation({
@@ -211,16 +214,18 @@ export default function ManageChildren() {
     setLocation("/");
   };
 
+  const [qrCodeDataURL, setQrCodeDataURL] = useState<string>("");
+
   const generateQRCode = async (qrData: string) => {
     try {
       const qrCodeDataURL = await QRCode.toDataURL(qrData, {
         width: 200,
         margin: 2,
       });
-      return qrCodeDataURL;
+      setQrCodeDataURL(qrCodeDataURL);
     } catch (error) {
       console.error("Error generating QR code:", error);
-      return "";
+      setQrCodeDataURL("");
     }
   };
 
@@ -640,7 +645,12 @@ export default function ManageChildren() {
       </Dialog>
 
       {/* QR Code Dialog */}
-      <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
+      <Dialog open={showQRCode} onOpenChange={(open) => {
+        setShowQRCode(open);
+        if (open && selectedChild) {
+          generateQRCode(selectedChild.qrCodeData);
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Check-in QR Code</DialogTitle>
@@ -651,7 +661,13 @@ export default function ManageChildren() {
             </p>
             <div className="flex justify-center p-4">
               <div className="bg-white p-4 rounded-lg border">
-                <QRCode value={selectedChild?.qrCodeData || ""} size={200} />
+                {qrCodeDataURL ? (
+                  <img src={qrCodeDataURL} alt="QR Code" className="w-48 h-48" />
+                ) : (
+                  <div className="w-48 h-48 bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500">Generating QR Code...</span>
+                  </div>
+                )}
               </div>
             </div>
             <p className="text-xs text-gray-500">

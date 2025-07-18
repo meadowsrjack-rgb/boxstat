@@ -451,68 +451,89 @@ export default function ParentDashboard() {
             <DialogTitle>Switch to Player Mode</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="child-select">Select Child Profile</Label>
-              <Select value={selectedChild} onValueChange={setSelectedChild}>
-                <SelectTrigger id="child-select">
-                  <SelectValue placeholder="Choose a child" />
-                </SelectTrigger>
-                <SelectContent>
-                  {childProfiles?.map((child: any) => (
-                    <SelectItem key={child.id} value={child.id.toString()}>
-                      {child.firstName} {child.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="pin">Set 4-digit PIN</Label>
-              <Input
-                id="pin"
-                type="password"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                placeholder="1234"
-                maxLength={4}
-                className="text-center text-lg tracking-widest"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="confirm-pin">Confirm PIN</Label>
-              <Input
-                id="confirm-pin"
-                type="password"
-                value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value)}
-                placeholder="1234"
-                maxLength={4}
-                className="text-center text-lg tracking-widest"
-              />
-            </div>
-            
-            {error && (
-              <p className="text-red-500 text-sm">{error}</p>
+            {childProfiles && childProfiles.length > 0 ? (
+              <div>
+                <Label htmlFor="child-select">Select Child Profile</Label>
+                <Select value={selectedChild} onValueChange={setSelectedChild}>
+                  <SelectTrigger id="child-select">
+                    <SelectValue placeholder="Choose a child" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {childProfiles.map((child: any) => (
+                      <SelectItem key={child.id} value={child.id.toString()}>
+                        {child.firstName} {child.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Children Added</h3>
+                <p className="text-gray-500 mb-4">
+                  Add your first child profile to enable player mode.
+                </p>
+                <Button onClick={() => {
+                  setShowModeSelector(false);
+                  setLocation('/manage-children');
+                }}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Add Child Profile
+                </Button>
+              </div>
             )}
             
-            <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowModeSelector(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSwitchToPlayerMode}
-                className="flex-1"
-                disabled={!selectedChild || !pin || !confirmPin}
-              >
-                Switch Mode
-              </Button>
-            </div>
+            {childProfiles && childProfiles.length > 0 && (
+              <>
+                <div>
+                  <Label htmlFor="pin">Set 4-digit PIN</Label>
+                  <Input
+                    id="pin"
+                    type="password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value)}
+                    placeholder="1234"
+                    maxLength={4}
+                    className="text-center text-lg tracking-widest"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="confirm-pin">Confirm PIN</Label>
+                  <Input
+                    id="confirm-pin"
+                    type="password"
+                    value={confirmPin}
+                    onChange={(e) => setConfirmPin(e.target.value)}
+                    placeholder="1234"
+                    maxLength={4}
+                    className="text-center text-lg tracking-widest"
+                  />
+                </div>
+                
+                {error && (
+                  <p className="text-red-500 text-sm">{error}</p>
+                )}
+                
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowModeSelector(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleSwitchToPlayerMode}
+                    className="flex-1"
+                    disabled={!selectedChild || !pin || !confirmPin}
+                  >
+                    Switch Mode
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -52,6 +52,7 @@ function Router() {
   }, []);
 
   // Show mode selection for first-time setup - temporarily disabled
+  // Since we disabled useAppMode, we won't show mode selection
   // useEffect(() => {
   //   if (isAuthenticated && !isLoadingConfig && !deviceConfig && isInitialized) {
   //     setShowModeSelection(true);
@@ -118,10 +119,12 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
 
+      {/* Temporarily disable mode selection 
       <ModeSelection
         isOpen={showModeSelection}
         onClose={() => setShowModeSelection(false)}
       />
+      */}
 
       <PinEntry
         isOpen={showPinEntry}

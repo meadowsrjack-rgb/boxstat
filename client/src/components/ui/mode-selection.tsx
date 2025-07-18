@@ -42,14 +42,17 @@ export default function ModeSelection({ isOpen, onClose }: ModeSelectionProps) {
   };
 
   const handlePinSubmit = async () => {
-    if (pin !== confirmPin) {
-      setError('PINs do not match');
-      return;
-    }
+    // Only validate PIN for player mode
+    if (selectedMode === 'player') {
+      if (pin !== confirmPin) {
+        setError('PINs do not match');
+        return;
+      }
 
-    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-      setError('PIN must be exactly 4 digits');
-      return;
+      if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        setError('PIN must be exactly 4 digits');
+        return;
+      }
     }
 
     try {

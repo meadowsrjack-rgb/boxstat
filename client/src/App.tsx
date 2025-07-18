@@ -26,9 +26,17 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
-  const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
+  // Temporarily disable useAppMode to fix performance issues
+  // const { currentMode, deviceConfig, isLoadingConfig, isLocked, isInitialized } = useAppMode();
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
+  
+  // Temporary values to make app work
+  const currentMode = 'parent';
+  const deviceConfig = null;
+  const isLoadingConfig = false;
+  const isLocked = false;
+  const isInitialized = true;
 
   // Register service worker for PWA
   useEffect(() => {
@@ -43,12 +51,12 @@ function Router() {
     }
   }, []);
 
-  // Show mode selection for first-time setup
-  useEffect(() => {
-    if (isAuthenticated && !isLoadingConfig && !deviceConfig && isInitialized) {
-      setShowModeSelection(true);
-    }
-  }, [isAuthenticated, isLoadingConfig, deviceConfig, isInitialized]);
+  // Show mode selection for first-time setup - temporarily disabled
+  // useEffect(() => {
+  //   if (isAuthenticated && !isLoadingConfig && !deviceConfig && isInitialized) {
+  //     setShowModeSelection(true);
+  //   }
+  // }, [isAuthenticated, isLoadingConfig, deviceConfig, isInitialized]);
 
   if (isLoading || isLoadingConfig || !isInitialized) {
     return (

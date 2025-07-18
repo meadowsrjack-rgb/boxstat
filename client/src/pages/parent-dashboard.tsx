@@ -47,6 +47,11 @@ export default function ParentDashboard() {
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchInterval: false,
   });
 
   const { data: userEvents } = useQuery({

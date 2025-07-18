@@ -88,26 +88,27 @@ export function useAppMode() {
   // Query device mode configuration with proper caching
   const { data: deviceConfig, isLoading: isLoadingConfig } = useQuery({
     queryKey: ['/api/device-mode-config', deviceId],
-    enabled: !!deviceId && !!user && isInitialized,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour  
+    enabled: false, // Disable automatic fetching for now to stop the loop
+    staleTime: Infinity, // Never consider stale
+    gcTime: Infinity, // Never garbage collect
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchInterval: false,
-    retry: 1,
+    retry: 0,
   });
 
   // Query child profiles with proper caching
   const { data: childProfiles } = useQuery({
     queryKey: ['/api/child-profiles', user?.id],
     enabled: !!user && isInitialized,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
     refetchInterval: false,
+    retry: 1,
   });
 
   // Sync current mode with device config only when data changes

@@ -31,8 +31,10 @@ function Router() {
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
   
-  // Temporary values to make app work
-  const currentMode = 'parent';
+  // Temporary values to make app work - check URL for mode override
+  const urlParams = new URLSearchParams(window.location.search);
+  const modeOverride = urlParams.get('mode');
+  const currentMode = modeOverride === 'player' ? 'player' : 'parent';
   const deviceConfig = null;
   const isLoadingConfig = false;
   const isLocked = false;

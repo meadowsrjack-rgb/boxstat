@@ -127,6 +127,14 @@ export default function ParentDashboard() {
                 <RotateCcw className="h-4 w-4" />
                 <span>Switch Mode</span>
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.location.href = "/?mode=player"}
+                className="flex items-center space-x-2"
+              >
+                <span>Preview Player</span>
+              </Button>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">

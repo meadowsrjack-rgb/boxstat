@@ -38,7 +38,9 @@ interface UserProgram {
 
 export default function TrainingLibrary() {
   const { user } = useAuth();
-  const { currentMode } = useAppMode();
+  // Temporarily use URL parameter for mode detection  
+  const urlParams = new URLSearchParams(window.location.search);
+  const currentMode = urlParams.get('mode') === 'player' ? 'player' : 'parent';
   const [, setLocation] = useLocation();
   const [selectedModule, setSelectedModule] = useState<TrainingModule | null>(null);
 

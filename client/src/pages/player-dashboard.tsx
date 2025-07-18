@@ -28,10 +28,17 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function PlayerDashboard() {
   const { user } = useAuth();
-  const { deviceConfig } = useAppMode();
+  // Temporarily disable useAppMode
+  // const { deviceConfig } = useAppMode();
   const [showQR, setShowQR] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
   const [, setLocation] = useLocation();
+  
+  // Get child profiles to find the current child's QR code
+  const { data: childProfiles } = useQuery({
+    queryKey: ["/api/child-profiles", user?.id],
+    enabled: !!user?.id,
+  });
 
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
@@ -58,7 +65,9 @@ export default function PlayerDashboard() {
   }
 
   const nextEvent = userEvents?.[0];
-  const qrData = `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
+  // Use the first child's QR code data if available
+  const currentChild = childProfiles?.[0];
+  const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500 to-blue-600">
@@ -74,7 +83,7 @@ export default function PlayerDashboard() {
               />
               <div>
                 <h1 className="text-lg font-bold text-gray-900">
-                  Hey {user.firstName}! 🏀
+                  Hey {currentChild?.firstName || user.firstName}! 🏀
                 </h1>
                 <p className="text-sm text-gray-600">{userTeam?.name}</p>
               </div>
@@ -83,7 +92,7 @@ export default function PlayerDashboard() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setShowPinEntry(true)}
+                onClick={() => window.location.href = "/"}
                 className="flex items-center space-x-1"
               >
                 <Lock className="h-3 w-3" />
@@ -125,7 +134,7 @@ export default function PlayerDashboard() {
               <div className="mt-6 bg-white p-6 rounded-lg">
                 <QRCode value={qrData} size={240} />
                 <p className="text-gray-600 text-sm mt-3 font-medium">
-                  {user.firstName} {user.lastName}
+                  {currentChild?.firstName || user.firstName} {currentChild?.lastName || user.lastName}
                 </p>
                 <p className="text-gray-500 text-xs">
                   {userTeam?.name || 'Team Member'}

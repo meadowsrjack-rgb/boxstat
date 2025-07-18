@@ -334,8 +334,24 @@ export class DatabaseStorage implements IStorage {
   // Child profile operations
   async getChildProfiles(parentId: string): Promise<ChildProfile[]> {
     return await db
-      .select()
+      .select({
+        id: childProfiles.id,
+        parentId: childProfiles.parentId,
+        firstName: childProfiles.firstName,
+        lastName: childProfiles.lastName,
+        dateOfBirth: childProfiles.dateOfBirth,
+        jerseyNumber: childProfiles.jerseyNumber,
+        profileImageUrl: childProfiles.profileImageUrl,
+        teamId: childProfiles.teamId,
+        qrCodeData: childProfiles.qrCodeData,
+        createdAt: childProfiles.createdAt,
+        updatedAt: childProfiles.updatedAt,
+        teamName: teams.name,
+        teamAgeGroup: teams.ageGroup,
+        teamColor: teams.color,
+      })
       .from(childProfiles)
+      .leftJoin(teams, eq(childProfiles.teamId, teams.id))
       .where(eq(childProfiles.parentId, parentId))
       .orderBy(asc(childProfiles.firstName));
   }

@@ -34,8 +34,10 @@ function Router() {
   // Temporary values to make app work - check URL for mode override
   const urlParams = new URLSearchParams(window.location.search);
   const modeOverride = urlParams.get('mode');
+  const childIdOverride = urlParams.get('childId');
   const currentMode = modeOverride === 'player' ? 'player' : 'parent';
-  const deviceConfig = null;
+  const selectedChildId = childIdOverride ? parseInt(childIdOverride) : null;
+  const deviceConfig = selectedChildId ? { childProfileId: selectedChildId } : null;
   const isLoadingConfig = false;
   const isLocked = false;
   const isInitialized = true;

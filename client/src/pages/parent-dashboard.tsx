@@ -198,24 +198,58 @@ export default function ParentDashboard() {
               <Baby className="h-6 w-6 text-green-500" />
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
-                  A
+              {childProfiles && childProfiles.length > 0 ? (
+                childProfiles.map((child: any) => {
+                  const childTeam = child.teamName ? `${child.teamAgeGroup} ${child.teamName}` : 'No Team';
+                  const childAge = child.dateOfBirth ? 
+                    new Date().getFullYear() - new Date(child.dateOfBirth).getFullYear() : 
+                    'Unknown';
+                  const initials = `${child.firstName?.[0] || ''}${child.lastName?.[0] || ''}`;
+                  const colors = ['bg-green-500', 'bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500'];
+                  const colorIndex = child.id % colors.length;
+                  
+                  return (
+                    <div key={child.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 ${colors[colorIndex]} text-white rounded-full flex items-center justify-center text-sm font-bold mr-3`}>
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{child.firstName} {child.lastName}</p>
+                          <p className="text-sm text-gray-500">
+                            {childTeam} • Age {childAge}
+                            {child.jerseyNumber && ` • #${child.jerseyNumber}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `/?mode=player&childId=${child.id}`;
+                          }}
+                          className="text-xs"
+                        >
+                          Switch to {child.firstName}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-8">
+                  <Baby className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Children Added</h3>
+                  <p className="text-gray-500 mb-4">
+                    Add your first child profile to get started.
+                  </p>
+                  <Button onClick={() => setLocation('/manage-children')}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Child Profile
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">Alex Johnson</p>
-                  <p className="text-sm text-gray-500">Lightning Bolts • Age 10</p>
-                </div>
-              </div>
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">
-                  M
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Maya Johnson</p>
-                  <p className="text-sm text-gray-500">Thunder Stars • Age 8</p>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

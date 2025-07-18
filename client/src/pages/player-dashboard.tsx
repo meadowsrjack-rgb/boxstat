@@ -40,6 +40,11 @@ export default function PlayerDashboard() {
     enabled: !!user?.id,
   });
 
+  // Get the selected child ID from URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const selectedChildId = urlParams.get('childId');
+  const currentChild = childProfiles?.find((child: any) => child.id.toString() === selectedChildId) || childProfiles?.[0];
+
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
     enabled: !!user?.id,
@@ -65,8 +70,7 @@ export default function PlayerDashboard() {
   }
 
   const nextEvent = userEvents?.[0];
-  // Use the first child's QR code data if available
-  const currentChild = childProfiles?.[0];
+  // Use the selected child's QR code data if available
   const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
 
   return (
@@ -85,7 +89,9 @@ export default function PlayerDashboard() {
                 <h1 className="text-lg font-bold text-gray-900">
                   Hey {currentChild?.firstName || user.firstName}! 🏀
                 </h1>
-                <p className="text-sm text-gray-600">{userTeam?.name}</p>
+                <p className="text-sm text-gray-600">
+                  {currentChild?.teamName ? `${currentChild.teamAgeGroup} ${currentChild.teamName}` : userTeam?.name || 'No Team'}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -137,7 +143,7 @@ export default function PlayerDashboard() {
                   {currentChild?.firstName || user.firstName} {currentChild?.lastName || user.lastName}
                 </p>
                 <p className="text-gray-500 text-xs">
-                  {userTeam?.name || 'Team Member'}
+                  {currentChild?.teamName ? `${currentChild.teamAgeGroup} ${currentChild.teamName}` : userTeam?.name || 'Team Member'}
                 </p>
               </div>
             )}

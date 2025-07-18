@@ -10,7 +10,8 @@ import {
   integer,
   date,
   uuid,
-  real
+  real,
+  unique
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -71,7 +72,9 @@ export const deviceModeConfig = pgTable("device_mode_config", {
   isLocked: boolean("is_locked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  deviceParentUnique: unique().on(table.deviceId, table.parentId),
+}));
 
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),

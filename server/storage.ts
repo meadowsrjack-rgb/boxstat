@@ -383,26 +383,39 @@ export class DatabaseStorage implements IStorage {
     // Create a hash of the PIN for storage
     const pinHash = config.pin ? Buffer.from(config.pin).toString('base64') : undefined;
     
-    const [result] = await db
-      .insert(deviceModeConfig)
-      .values({
-        ...config,
-        pinHash,
-        pin: undefined, // Don't store PIN in plaintext
-      })
-      .onConflictDoUpdate({
-        target: [deviceModeConfig.deviceId, deviceModeConfig.parentId],
-        set: {
+    // Check if config already exists
+    const existing = await this.getDeviceModeConfig(config.deviceId, config.parentId);
+    
+    if (existing) {
+      // Update existing config
+      const [result] = await db
+        .update(deviceModeConfig)
+        .set({
           mode: config.mode,
           childProfileId: config.childProfileId,
           pinHash,
           isLocked: config.mode === 'player',
           updatedAt: new Date(),
-        },
-      })
-      .returning();
-    
-    return result;
+        })
+        .where(and(
+          eq(deviceModeConfig.deviceId, config.deviceId),
+          eq(deviceModeConfig.parentId, config.parentId)
+        ))
+        .returning();
+      return result;
+    } else {
+      // Create new config
+      const [result] = await db
+        .insert(deviceModeConfig)
+        .values({
+          ...config,
+          pinHash,
+          pin: undefined, // Don't store PIN in plaintext
+          isLocked: config.mode === 'player',
+        })
+        .returning();
+      return result;
+    }
   }
 
   async verifyDevicePin(deviceId: string, parentId: string, pin: string): Promise<boolean> {

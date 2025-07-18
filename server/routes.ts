@@ -278,14 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Teams routes
   app.get('/api/teams', isAuthenticated, async (req: any, res) => {
     try {
-      // For now, return mock team data since we don't have a getAllTeams method
-      const teams = [
-        { id: 1, name: "Thunder", ageGroup: "U10", description: "Under 10 team" },
-        { id: 2, name: "Lightning", ageGroup: "U12", description: "Under 12 team" },
-        { id: 3, name: "Storm", ageGroup: "U14", description: "Under 14 team" },
-        { id: 4, name: "Hurricanes", ageGroup: "U16", description: "Under 16 team" },
-        { id: 5, name: "Tornadoes", ageGroup: "U18", description: "Under 18 team" },
-      ];
+      const teams = await storage.getAllTeams();
       res.json(teams);
     } catch (error) {
       console.error("Error fetching teams:", error);

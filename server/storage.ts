@@ -49,6 +49,7 @@ export interface IStorage {
   updateUserSportsEngineInfo(userId: string, sportsEngineCustomerId: string, sportsEngineSubscriptionId: string): Promise<User>;
   
   // Team operations
+  getAllTeams(): Promise<Team[]>;
   getTeam(id: number): Promise<Team | undefined>;
   getTeamsByCoach(coachId: string): Promise<Team[]>;
   getUserTeam(userId: string): Promise<Team | undefined>;
@@ -360,6 +361,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteChildProfile(id: number): Promise<void> {
     await db.delete(childProfiles).where(eq(childProfiles.id, id));
+  }
+
+  // Team operations
+  async getAllTeams(): Promise<Team[]> {
+    return await db.select().from(teams);
   }
 
   // Device mode configuration operations

@@ -27,6 +27,20 @@ export default function Schedule() {
     enabled: !!user?.id,
   });
 
+  // Check if we're in player mode and get child-specific events
+  const urlParams = new URLSearchParams(window.location.search);
+  const childId = urlParams.get('childId');
+  const mode = urlParams.get('mode');
+  const isPlayerMode = mode === 'player';
+
+  const { data: childEvents } = useQuery({
+    queryKey: ["/api/child-profiles", childId, "events"],
+    enabled: !!childId && isPlayerMode,
+  });
+
+  // Use child events if in player mode, otherwise use all user events
+  const displayEvents = (isPlayerMode && childEvents) ? childEvents : userEvents;
+
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
     enabled: !!user?.id,
@@ -46,6 +60,8 @@ export default function Schedule() {
         return "bg-purple-100 text-purple-800";
       case "camp":
         return "bg-orange-100 text-orange-800";
+      case "skills":
+        return "bg-yellow-100 text-yellow-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -58,7 +74,7 @@ export default function Schedule() {
     return format(date, "MMM d");
   };
 
-  const filteredEvents = userEvents?.filter((event: any) => {
+  const filteredEvents = displayEvents?.filter((event: any) => {
     if (filter === "all") return true;
     return event.eventType === filter;
   });
@@ -157,6 +173,14 @@ export default function Schedule() {
                   onClick={() => setFilter("camp")}
                 >
                   Camps
+                </Button>
+                <Button
+                  variant={filter === "skills" ? "default" : "outline"}
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => setFilter("skills")}
+                >
+                  Skills Training
                 </Button>
               </div>
             </CardContent>

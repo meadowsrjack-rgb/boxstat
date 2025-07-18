@@ -33,15 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/users/:id/events', isAuthenticated, async (req: any, res) => {
-    try {
-      const events = await storage.getUserEvents(req.params.id);
-      res.json(events);
-    } catch (error) {
-      console.error("Error fetching user events:", error);
-      res.status(500).json({ message: "Failed to fetch events" });
-    }
-  });
+  // Moved to Event routes section below
 
   app.get('/api/users/:id/badges', isAuthenticated, async (req: any, res) => {
     try {
@@ -105,6 +97,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event routes
+  app.get('/api/users/:userId/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const events = await storage.getUserEvents(req.params.userId);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  app.get('/api/child-profiles/:childId/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const events = await storage.getChildEvents(parseInt(req.params.childId));
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching child events:", error);
+      res.status(500).json({ message: "Failed to fetch child events" });
+    }
+  });
+
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
       const eventData = insertEventSchema.parse(req.body);
@@ -113,6 +125,294 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating event:", error);
       res.status(500).json({ message: "Failed to create event" });
+    }
+  });
+
+  app.post('/api/events/recurring', isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventData, occurrences } = req.body;
+      const parsedEventData = insertEventSchema.parse(eventData);
+      const events = await storage.createRecurringEvent(parsedEventData, occurrences.map((d: string) => new Date(d)));
+      res.json(events);
+    } catch (error) {
+      console.error("Error creating recurring events:", error);
+      res.status(500).json({ message: "Failed to create recurring events" });
+    }
+  });
+
+  // Initialize sample schedule data
+  app.post('/api/schedule/initialize-sample', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const childProfiles = await storage.getChildProfiles(userId);
+      
+      if (childProfiles.length < 2) {
+        return res.status(400).json({ message: "Need at least 2 child profiles to create sample schedule" });
+      }
+
+      const bobProfile = childProfiles.find(child => child.firstName.toLowerCase().includes('bob')) || childProfiles[0];
+      const doraProfile = childProfiles.find(child => child.firstName.toLowerCase().includes('dora')) || childProfiles[1];
+
+      const events = [];
+
+      // Generate recurring weekly events for the rest of 2025
+      const generateRecurringEvents = (startDate: Date, endDate: Date, childProfile: any, eventData: any) => {
+        const events = [];
+        let currentDate = new Date(startDate);
+        
+        while (currentDate <= endDate) {
+          events.push({
+            ...eventData,
+            childProfileId: childProfile.id,
+            startTime: new Date(currentDate.getTime() + eventData.startHour * 60 * 60 * 1000),
+            endTime: new Date(currentDate.getTime() + eventData.endHour * 60 * 60 * 1000),
+          });
+          currentDate.setDate(currentDate.getDate() + 7); // Next week
+        }
+        return events;
+      };
+
+      // Set up date ranges
+      const startOfJuly = new Date('2025-07-01');
+      const endOfYear = new Date('2025-12-31');
+
+      // Bob's Monday & Wednesday Skills Training (5:00-6:00 PM)
+      const bobMondaySkills = generateRecurringEvents(
+        new Date('2025-07-07'), // First Monday
+        endOfYear,
+        bobProfile,
+        { 
+          title: "Skills Training", 
+          description: "Individual skills development session",
+          eventType: "skills", 
+          location: "UYP Main Court", 
+          startHour: 17, 
+          endHour: 18 
+        }
+      );
+
+      const bobWednesdaySkills = generateRecurringEvents(
+        new Date('2025-07-09'), // First Wednesday  
+        endOfYear,
+        bobProfile,
+        { 
+          title: "Skills Training", 
+          description: "Individual skills development session",
+          eventType: "skills", 
+          location: "UYP Main Court", 
+          startHour: 17, 
+          endHour: 18 
+        }
+      );
+
+      // Dora's Monday & Wednesday Skills Training (6:00-7:00 PM)
+      const doraMondaySkills = generateRecurringEvents(
+        new Date('2025-07-07'),
+        endOfYear,
+        doraProfile,
+        { 
+          title: "Skills Training", 
+          description: "Individual skills development session",
+          eventType: "skills", 
+          location: "UYP Main Court", 
+          startHour: 18, 
+          endHour: 19 
+        }
+      );
+
+      const doraWednesdaySkills = generateRecurringEvents(
+        new Date('2025-07-09'),
+        endOfYear,
+        doraProfile,
+        { 
+          title: "Skills Training", 
+          description: "Individual skills development session",
+          eventType: "skills", 
+          location: "UYP Main Court", 
+          startHour: 18, 
+          endHour: 19 
+        }
+      );
+
+      // Team Practice - Tuesdays & Thursdays
+      const bobTuesdayPractice = generateRecurringEvents(
+        new Date('2025-07-08'),
+        endOfYear,
+        bobProfile,
+        { 
+          title: "Team Practice", 
+          description: "Team practice session",
+          eventType: "practice", 
+          location: "UYP Main Court", 
+          startHour: 17.5, 
+          endHour: 18.5 
+        }
+      );
+
+      const bobThursdayPractice = generateRecurringEvents(
+        new Date('2025-07-10'),
+        endOfYear,
+        bobProfile,
+        { 
+          title: "Team Practice", 
+          description: "Team practice session",
+          eventType: "practice", 
+          location: "UYP Main Court", 
+          startHour: 17.5, 
+          endHour: 18.5 
+        }
+      );
+
+      const doraTuesdayPractice = generateRecurringEvents(
+        new Date('2025-07-08'),
+        endOfYear,
+        doraProfile,
+        { 
+          title: "Team Practice", 
+          description: "Team practice session",
+          eventType: "practice", 
+          location: "UYP Main Court", 
+          startHour: 18.5, 
+          endHour: 20 
+        }
+      );
+
+      const doraThursdayPractice = generateRecurringEvents(
+        new Date('2025-07-10'),
+        endOfYear,
+        doraProfile,
+        { 
+          title: "Team Practice", 
+          description: "Team practice session",
+          eventType: "practice", 
+          location: "UYP Main Court", 
+          startHour: 18.5, 
+          endHour: 20 
+        }
+      );
+
+      // Friday Night Hoops
+      const bobFridayHoops = generateRecurringEvents(
+        new Date('2025-07-11'),
+        endOfYear,
+        bobProfile,
+        { 
+          title: "Friday Night Hoops", 
+          description: "Fun scrimmage games",
+          eventType: "game", 
+          location: "UYP Main Court", 
+          startHour: 18, 
+          endHour: 19 
+        }
+      );
+
+      const doraFridayHoops = generateRecurringEvents(
+        new Date('2025-07-11'),
+        endOfYear,
+        doraProfile,
+        { 
+          title: "Friday Night Hoops", 
+          description: "Fun scrimmage games",
+          eventType: "game", 
+          location: "UYP Main Court", 
+          startHour: 19, 
+          endHour: 20 
+        }
+      );
+
+      // Special Events
+      const specialEvents = [
+        // July 2025
+        {
+          title: "Weekend Game",
+          description: "Saturday morning game",
+          eventType: "game",
+          startTime: new Date('2025-07-12T10:00:00'),
+          endTime: new Date('2025-07-12T11:00:00'),
+          location: "UYP Main Court",
+          childProfileId: bobProfile.id
+        },
+        {
+          title: "UYP Summer Skills Camp",
+          description: "5-day intensive skills camp",
+          eventType: "camp",
+          startTime: new Date('2025-07-21T09:00:00'),
+          endTime: new Date('2025-07-21T12:00:00'),
+          location: "UYP Main Court",
+          childProfileId: bobProfile.id
+        },
+        {
+          title: "UYP Summer Skills Camp",
+          description: "5-day intensive skills camp",
+          eventType: "camp",
+          startTime: new Date('2025-07-21T13:00:00'),
+          endTime: new Date('2025-07-21T16:00:00'),
+          location: "UYP Main Court",
+          childProfileId: doraProfile.id
+        },
+        // August 2025
+        {
+          title: "Summer Showdown Tournament",
+          description: "Weekend tournament - multiple games",
+          eventType: "tournament",
+          startTime: new Date('2025-08-09T09:00:00'),
+          endTime: new Date('2025-08-10T18:00:00'),
+          location: "UYP Main Court",
+          childProfileId: bobProfile.id
+        },
+        {
+          title: "Summer Showdown Tournament",
+          description: "Weekend tournament - multiple games",
+          eventType: "tournament",
+          startTime: new Date('2025-08-09T09:00:00'),
+          endTime: new Date('2025-08-10T18:00:00'),
+          location: "UYP Main Court",
+          childProfileId: doraProfile.id
+        },
+        {
+          title: "Weekend Game",
+          description: "Saturday game",
+          eventType: "game",
+          startTime: new Date('2025-08-23T11:30:00'),
+          endTime: new Date('2025-08-23T12:30:00'),
+          location: "UYP Main Court",
+          childProfileId: doraProfile.id
+        }
+      ];
+
+      // Combine all events
+      const allEvents = [
+        ...bobMondaySkills,
+        ...bobWednesdaySkills,
+        ...doraMondaySkills,
+        ...doraWednesdaySkills,
+        ...bobTuesdayPractice,
+        ...bobThursdayPractice,
+        ...doraTuesdayPractice,
+        ...doraThursdayPractice,
+        ...bobFridayHoops,
+        ...doraFridayHoops,
+        ...specialEvents
+      ];
+
+      // Create all events
+      const createdEvents = [];
+      for (const event of allEvents) {
+        try {
+          const createdEvent = await storage.createEvent(event);
+          createdEvents.push(createdEvent);
+        } catch (error) {
+          console.error("Error creating event:", error);
+        }
+      }
+
+      res.json({ 
+        message: `Created ${createdEvents.length} events for Bob and Dora`,
+        events: createdEvents.length
+      });
+    } catch (error) {
+      console.error("Error initializing sample schedule:", error);
+      res.status(500).json({ message: "Failed to initialize sample schedule" });
     }
   });
 

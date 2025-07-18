@@ -184,8 +184,65 @@ export class DatabaseStorage implements IStorage {
 
   async getUserEvents(userId: string): Promise<Event[]> {
     const user = await this.getUser(userId);
-    if (!user || !user.teamId) return [];
-    return await this.getTeamEvents(user.teamId);
+    const childProfiles = await this.getChildProfiles(userId);
+    
+    // Get events for user's team and all child profiles
+    const teamEvents = user?.teamId ? await this.getTeamEvents(user.teamId) : [];
+
+    const childEvents = childProfiles.length > 0 ? await db
+      .select()
+      .from(events)
+      .where(
+        or(
+          ...childProfiles.map(child => eq(events.childProfileId, child.id)),
+          ...childProfiles.filter(child => child.teamId).map(child => eq(events.teamId, child.teamId!))
+        )
+      )
+      .orderBy(asc(events.startTime)) : [];
+
+    // Combine and deduplicate events
+    const allEvents = [...teamEvents, ...childEvents];
+    const uniqueEvents = allEvents.filter((event, index, self) => 
+      index === self.findIndex(e => e.id === event.id)
+    );
+
+    return uniqueEvents;
+  }
+
+  async getChildEvents(childProfileId: number): Promise<Event[]> {
+    const child = await this.getChildProfile(childProfileId);
+    if (!child) return [];
+
+    const childSpecificEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.childProfileId, childProfileId))
+      .orderBy(asc(events.startTime));
+
+    const teamEvents = child.teamId ? await db
+      .select()
+      .from(events)
+      .where(and(eq(events.teamId, child.teamId), eq(events.childProfileId, null)))
+      .orderBy(asc(events.startTime)) : [];
+
+    return [...childSpecificEvents, ...teamEvents];
+  }
+
+  async createRecurringEvent(eventData: InsertEvent, occurrences: Date[]): Promise<Event[]> {
+    const createdEvents: Event[] = [];
+    
+    for (const occurrence of occurrences) {
+      const eventWithDate = {
+        ...eventData,
+        startTime: new Date(occurrence.getTime() + (eventData.startTime.getTime() - new Date(eventData.startTime).setHours(0,0,0,0))),
+        endTime: new Date(occurrence.getTime() + (eventData.endTime.getTime() - new Date(eventData.endTime).setHours(0,0,0,0)))
+      };
+      
+      const [newEvent] = await db.insert(events).values(eventWithDate).returning();
+      createdEvents.push(newEvent);
+    }
+    
+    return createdEvents;
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {

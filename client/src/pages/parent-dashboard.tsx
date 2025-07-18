@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Bell, 
   Calendar as CalendarIcon, 
@@ -36,6 +38,7 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 export default function ParentDashboard() {
   const { user } = useAuth();
   const { childProfiles, setPlayerMode } = useAppMode();
+  const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
   const [showModeSelector, setShowModeSelector] = useState(false);
@@ -362,23 +365,81 @@ export default function ParentDashboard() {
                 />
               </div>
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Alex's Events</span>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Upcoming Events</h3>
+                  <Button variant="outline" size="sm" onClick={() => setLocation('/schedule')}>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    View Schedule
+                  </Button>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Maya's Events</span>
-                </div>
-                <div className="space-y-2">
-                  {userEvents?.slice(0, 3).map((event: any) => (
-                    <div key={event.id} className="p-3 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium text-gray-900">{event.title}</h4>
-                      <p className="text-sm text-gray-500">
-                        {format(new Date(event.startTime), "MMM d, h:mm a")}
-                      </p>
+                <div className="space-y-3">
+                  {userEvents && userEvents.length > 0 ? (
+                    userEvents.slice(0, 3).map((event: any) => {
+                      const eventDate = new Date(event.startTime);
+                      const isToday = eventDate.toDateString() === new Date().toDateString();
+                      const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+                      
+                      let dateLabel = format(eventDate, "MMM d");
+                      if (isToday) dateLabel = "Today";
+                      else if (isTomorrow) dateLabel = "Tomorrow";
+                      
+                      const eventTypeColors = {
+                        practice: "bg-blue-50 border-blue-200",
+                        game: "bg-green-50 border-green-200",
+                        tournament: "bg-purple-50 border-purple-200",
+                        camp: "bg-orange-50 border-orange-200",
+                        skills: "bg-yellow-50 border-yellow-200"
+                      };
+                      
+                      const dotColors = {
+                        practice: "bg-blue-500",
+                        game: "bg-green-500",
+                        tournament: "bg-purple-500",
+                        camp: "bg-orange-500",
+                        skills: "bg-yellow-500"
+                      };
+                      
+                      return (
+                        <div key={event.id} className={`flex items-center p-3 rounded-lg border ${eventTypeColors[event.eventType] || 'bg-gray-50 border-gray-200'}`}>
+                          <div className={`w-2 h-2 rounded-full mr-3 ${dotColors[event.eventType] || 'bg-gray-500'}`}></div>
+                          <div>
+                            <p className="font-medium text-sm">{event.title}</p>
+                            <p className="text-xs text-gray-500">
+                              {dateLabel} • {format(eventDate, "h:mm a")}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-6 text-gray-500">
+                      <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No upcoming events</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={async () => {
+                          try {
+                            await apiRequest('POST', '/api/schedule/initialize-sample');
+                            queryClient.invalidateQueries({ queryKey: ['/api/users', user.id, 'events'] });
+                            toast({
+                              title: "Sample Schedule Added",
+                              description: "Created sample events for your children",
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to create sample schedule",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                      >
+                        Add Sample Schedule
+                      </Button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>

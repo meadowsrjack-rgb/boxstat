@@ -60,6 +60,11 @@ export default function PlayerDashboard() {
     enabled: !!user?.id,
   });
 
+  const { data: childEvents } = useQuery({
+    queryKey: ["/api/child-profiles", selectedChildId, "events"],
+    enabled: !!selectedChildId,
+  });
+
   const { data: userBadges } = useQuery({
     queryKey: ["/api/users", user?.id, "badges"],
     enabled: !!user?.id,
@@ -69,7 +74,9 @@ export default function PlayerDashboard() {
     return <div>Loading...</div>;
   }
 
-  const nextEvent = userEvents?.[0];
+  // Use child-specific events if available, otherwise fall back to user events
+  const displayEvents = childEvents || userEvents;
+  const nextEvent = displayEvents?.[0];
   // Use the selected child's QR code data if available
   const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
 

@@ -89,12 +89,16 @@ export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
   description: text("description"),
-  eventType: varchar("event_type", { enum: ["practice", "game", "tournament", "camp"] }).notNull(),
+  eventType: varchar("event_type", { enum: ["practice", "game", "tournament", "camp", "skills"] }).notNull(),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   location: varchar("location").notNull(),
   teamId: integer("team_id").references(() => teams.id),
+  childProfileId: integer("child_profile_id").references(() => childProfiles.id), // Link to specific child
   opponentTeam: varchar("opponent_team"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringType: varchar("recurring_type", { enum: ["weekly", "daily", "monthly"] }),
+  recurringEndDate: timestamp("recurring_end_date"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

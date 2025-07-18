@@ -31,10 +31,12 @@ function Router() {
   const [showModeSelection, setShowModeSelection] = useState(false);
   const [showPinEntry, setShowPinEntry] = useState(false);
   
-  // Temporary values to make app work - check URL for mode override
+  // Check URL for mode override - only use player mode if explicitly set
   const urlParams = new URLSearchParams(window.location.search);
   const modeOverride = urlParams.get('mode');
   const childIdOverride = urlParams.get('childId');
+  
+  // Default to parent mode unless explicitly set to player mode
   const currentMode = modeOverride === 'player' ? 'player' : 'parent';
   const selectedChildId = childIdOverride ? parseInt(childIdOverride) : null;
   const deviceConfig = selectedChildId ? { childProfileId: selectedChildId } : null;

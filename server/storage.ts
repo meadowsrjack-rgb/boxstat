@@ -40,7 +40,7 @@ import {
   type InsertDeviceModeConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)

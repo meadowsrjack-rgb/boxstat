@@ -10,12 +10,12 @@ export default function Landing() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-28">
+          <div className="flex justify-between items-center h-40">
             <div className="flex items-center">
               <img 
                 src={logoPath} 
                 alt="UYP Basketball" 
-                className="h-16 w-16 object-contain"
+                className="h-32 w-32 object-contain"
               />
             </div>
             <Button 
@@ -29,8 +29,8 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center pt-20">
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center py-12">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
             Welcome to UYP Basketball
           </h2>

@@ -6,9 +6,9 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
       {/* Header */}
-      <header className="backdrop-blur-xl bg-white/10 border-b border-white/20 sticky top-0 z-50">
+      <header className="bg-black/30 border-b border-white/10 sticky top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-36">
             <div className="flex items-center">
@@ -20,7 +20,7 @@ export default function Landing() {
             </div>
             <Button 
               onClick={() => window.location.href = '/api/login'}
-              className="bg-white/20 backdrop-blur-md border-white/30 text-white hover:bg-white/30 transition-all duration-300"
+              className="bg-white/20 border border-white/30 text-white hover:bg-white/30 transition-all duration-300 shadow-lg"
             >
               Sign In
             </Button>
@@ -41,14 +41,14 @@ export default function Landing() {
             <Button 
               size="lg" 
               onClick={() => window.location.href = '/api/login'}
-              className="bg-gradient-to-r from-blue-500/80 to-purple-600/80 backdrop-blur-md border-white/20 text-white hover:from-blue-500 hover:to-purple-600 text-lg px-8 py-3 shadow-2xl transition-all duration-300"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 border border-white/20 text-white hover:from-blue-400 hover:to-purple-500 text-lg px-8 py-3 shadow-2xl transition-all duration-300"
             >
               Get Started
             </Button>
             <Button 
               size="lg" 
               onClick={() => window.open('https://www.upyourperformance.org', '_blank')}
-              className="bg-white/10 backdrop-blur-md border-white/30 text-white hover:bg-white/20 text-lg px-8 py-3 transition-all duration-300"
+              className="bg-white/10 border border-white/30 text-white hover:bg-white/20 text-lg px-8 py-3 transition-all duration-300 shadow-xl"
             >
               Learn More
             </Button>
@@ -63,9 +63,9 @@ export default function Landing() {
             Everything You Need in One App
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-blue-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-blue-500/30 rounded-lg flex items-center justify-center mb-4">
                   <Calendar className="h-6 w-6 text-blue-300" />
                 </div>
                 <CardTitle className="text-white">Smart Scheduling</CardTitle>
@@ -78,9 +78,9 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-green-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-green-500/30 rounded-lg flex items-center justify-center mb-4">
                   <Shield className="h-6 w-6 text-green-300" />
                 </div>
                 <CardTitle className="text-white">QR Code Check-In</CardTitle>
@@ -93,9 +93,9 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-yellow-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-yellow-500/30 rounded-lg flex items-center justify-center mb-4">
                   <Trophy className="h-6 w-6 text-yellow-300" />
                 </div>
                 <CardTitle className="text-white">Player Development</CardTitle>
@@ -108,9 +108,9 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-purple-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-purple-500/30 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-purple-300" />
                 </div>
                 <CardTitle className="text-white">Team Management</CardTitle>
@@ -123,9 +123,9 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-blue-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-blue-500/30 rounded-lg flex items-center justify-center mb-4">
                   <MessageCircle className="h-6 w-6 text-blue-300" />
                 </div>
                 <CardTitle className="text-white">Safe Communication</CardTitle>
@@ -138,9 +138,9 @@ export default function Landing() {
               </CardContent>
             </Card>
 
-            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300 shadow-2xl">
+            <Card className="bg-black/20 border border-white/10 hover:bg-black/30 transition-all duration-300 shadow-2xl">
               <CardHeader>
-                <div className="w-12 h-12 bg-red-500/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4">
+                <div className="w-12 h-12 bg-red-500/30 rounded-lg flex items-center justify-center mb-4">
                   <FaBasketballBall className="h-6 w-6 text-red-300" />
                 </div>
                 <CardTitle className="text-white">Dual Interface</CardTitle>
@@ -157,7 +157,7 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600/30 to-purple-600/30">
         <div className="max-w-4xl mx-auto text-center">
           <h3 className="text-3xl font-bold mb-6 text-white drop-shadow-lg">
             Ready to Join the UYP Basketball Community?
@@ -169,7 +169,7 @@ export default function Landing() {
           <Button 
             size="lg" 
             onClick={() => window.location.href = '/api/login'}
-            className="bg-white/20 backdrop-blur-md border-white/30 text-white hover:bg-white/30 text-lg px-8 py-3 transition-all duration-300 shadow-2xl"
+            className="bg-white/20 border border-white/30 text-white hover:bg-white/30 text-lg px-8 py-3 transition-all duration-300 shadow-2xl"
           >
             Sign In Now
           </Button>
@@ -177,7 +177,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-black/40 backdrop-blur-xl text-white py-12 border-t border-white/10">
+      <footer className="bg-black/50 text-white py-12 border-t border-white/10 shadow-2xl">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div></div>

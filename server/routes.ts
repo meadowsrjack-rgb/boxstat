@@ -342,12 +342,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ];
 
-      // Combine only a few sample events
-      const allEvents = [
-        ...bobMondaySkills,
-        ...bobTuesdayPractice,
-        ...specialEvents.slice(0, 1) // Only keep first special event
-      ];
+      // No events - empty calendar
+      const allEvents = [];
 
       // Create all events
       const createdEvents = [];

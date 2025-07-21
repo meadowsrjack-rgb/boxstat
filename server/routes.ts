@@ -172,9 +172,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return events;
       };
 
-      // Set up date ranges - reduced to only 4 weeks to keep 10% of events
+      // Set up date ranges - reduced to only 1 week for minimal events
       const startOfJuly = new Date('2025-07-01');
-      const endOfJuly = new Date('2025-07-28');
+      const endOfJuly = new Date('2025-07-07');
 
       // Bob's Monday & Wednesday Skills Training (5:00-6:00 PM)
       const bobMondaySkills = generateRecurringEvents(
@@ -342,19 +342,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       ];
 
-      // Combine all events
+      // Combine only a few sample events
       const allEvents = [
         ...bobMondaySkills,
-        ...bobWednesdaySkills,
-        ...doraMondaySkills,
-        ...doraWednesdaySkills,
         ...bobTuesdayPractice,
-        ...bobThursdayPractice,
-        ...doraTuesdayPractice,
-        ...doraThursdayPractice,
-        ...bobFridayHoops,
-        ...doraFridayHoops,
-        ...specialEvents
+        ...specialEvents.slice(0, 1) // Only keep first special event
       ];
 
       // Create all events

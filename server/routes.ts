@@ -172,14 +172,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return events;
       };
 
-      // Set up date ranges
+      // Set up date ranges - reduced to only 4 weeks to keep 10% of events
       const startOfJuly = new Date('2025-07-01');
-      const endOfYear = new Date('2025-12-31');
+      const endOfJuly = new Date('2025-07-28');
 
       // Bob's Monday & Wednesday Skills Training (5:00-6:00 PM)
       const bobMondaySkills = generateRecurringEvents(
         new Date('2025-07-07'), // First Monday
-        endOfYear,
+        endOfJuly,
         bobProfile,
         { 
           title: "Skills Training", 
@@ -193,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bobWednesdaySkills = generateRecurringEvents(
         new Date('2025-07-09'), // First Wednesday  
-        endOfYear,
+        endOfJuly,
         bobProfile,
         { 
           title: "Skills Training", 
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Dora's Monday & Wednesday Skills Training (6:00-7:00 PM)
       const doraMondaySkills = generateRecurringEvents(
         new Date('2025-07-07'),
-        endOfYear,
+        endOfJuly,
         doraProfile,
         { 
           title: "Skills Training", 
@@ -222,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const doraWednesdaySkills = generateRecurringEvents(
         new Date('2025-07-09'),
-        endOfYear,
+        endOfJuly,
         doraProfile,
         { 
           title: "Skills Training", 
@@ -237,7 +237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Team Practice - Tuesdays & Thursdays
       const bobTuesdayPractice = generateRecurringEvents(
         new Date('2025-07-08'),
-        endOfYear,
+        endOfJuly,
         bobProfile,
         { 
           title: "Team Practice", 
@@ -251,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const bobThursdayPractice = generateRecurringEvents(
         new Date('2025-07-10'),
-        endOfYear,
+        endOfJuly,
         bobProfile,
         { 
           title: "Team Practice", 
@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const doraTuesdayPractice = generateRecurringEvents(
         new Date('2025-07-08'),
-        endOfYear,
+        endOfJuly,
         doraProfile,
         { 
           title: "Team Practice", 
@@ -279,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const doraThursdayPractice = generateRecurringEvents(
         new Date('2025-07-10'),
-        endOfYear,
+        endOfJuly,
         doraProfile,
         { 
           title: "Team Practice", 
@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Friday Night Hoops
       const bobFridayHoops = generateRecurringEvents(
         new Date('2025-07-11'),
-        endOfYear,
+        endOfJuly,
         bobProfile,
         { 
           title: "Friday Night Hoops", 
@@ -308,7 +308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const doraFridayHoops = generateRecurringEvents(
         new Date('2025-07-11'),
-        endOfYear,
+        endOfJuly,
         doraProfile,
         { 
           title: "Friday Night Hoops", 
@@ -320,9 +320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       );
 
-      // Special Events
+      // Special Events - reduced to only 2 events (keep 10%)
       const specialEvents = [
-        // July 2025
         {
           title: "Weekend Game",
           description: "Saturday morning game",
@@ -340,43 +339,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endTime: new Date('2025-07-21T12:00:00'),
           location: "UYP Main Court",
           childProfileId: bobProfile.id
-        },
-        {
-          title: "UYP Summer Skills Camp",
-          description: "5-day intensive skills camp",
-          eventType: "camp",
-          startTime: new Date('2025-07-21T13:00:00'),
-          endTime: new Date('2025-07-21T16:00:00'),
-          location: "UYP Main Court",
-          childProfileId: doraProfile.id
-        },
-        // August 2025
-        {
-          title: "Summer Showdown Tournament",
-          description: "Weekend tournament - multiple games",
-          eventType: "tournament",
-          startTime: new Date('2025-08-09T09:00:00'),
-          endTime: new Date('2025-08-10T18:00:00'),
-          location: "UYP Main Court",
-          childProfileId: bobProfile.id
-        },
-        {
-          title: "Summer Showdown Tournament",
-          description: "Weekend tournament - multiple games",
-          eventType: "tournament",
-          startTime: new Date('2025-08-09T09:00:00'),
-          endTime: new Date('2025-08-10T18:00:00'),
-          location: "UYP Main Court",
-          childProfileId: doraProfile.id
-        },
-        {
-          title: "Weekend Game",
-          description: "Saturday game",
-          eventType: "game",
-          startTime: new Date('2025-08-23T11:30:00'),
-          endTime: new Date('2025-08-23T12:30:00'),
-          location: "UYP Main Court",
-          childProfileId: doraProfile.id
         }
       ];
 

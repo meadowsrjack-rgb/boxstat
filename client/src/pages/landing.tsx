@@ -24,9 +24,9 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center">
             <img 
               src={logoPath} 
               alt="UYP Basketball" 

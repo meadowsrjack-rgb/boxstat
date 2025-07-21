@@ -12,11 +12,6 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-28">
             <div className="flex items-center">
-              <img 
-                src={logoPath} 
-                alt="UYP Basketball" 
-                className="h-24 w-24 mr-3 object-contain"
-              />
             </div>
             <Button 
               onClick={() => window.location.href = '/api/login'}
@@ -31,11 +26,11 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-4">
             <img 
               src={logoPath} 
               alt="UYP Basketball" 
-              className="h-32 w-32 object-contain"
+              className="h-40 w-40 object-contain"
             />
           </div>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
@@ -210,7 +205,7 @@ export default function Landing() {
               <img 
                 src={logoPath} 
                 alt="UYP Basketball" 
-                className="h-16 w-16 object-contain"
+                className="h-20 w-20 object-contain"
               />
             </div>
             <p>&copy; 2024 UYP Basketball. All rights reserved.</p>

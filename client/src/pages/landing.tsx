@@ -14,10 +14,9 @@ export default function Landing() {
             <div className="flex items-center">
               <img 
                 src={logoPath} 
-                alt="UYP Basketball Academy" 
-                className="h-10 w-10 mr-3 object-contain"
+                alt="UYP Basketball" 
+                className="h-16 w-16 mr-3 object-contain"
               />
-              <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <Button 
               onClick={() => window.location.href = '/api/login'}
@@ -33,11 +32,10 @@ export default function Landing() {
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-            Welcome to UYP Basketball League
+            Welcome to UYP Basketball
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Your all-in-one app for managing youth basketball teams, tracking progress, 
-            and staying connected with the league community in Costa Mesa, CA.
+            Your child's basketball season—organized, safe, and all in your pocket.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
@@ -51,6 +49,7 @@ export default function Landing() {
               size="lg" 
               variant="outline" 
               className="text-lg px-8 py-3"
+              onClick={() => window.open('https://www.upyourperformance.org', '_blank')}
             >
               Learn More
             </Button>
@@ -185,30 +184,33 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <FaBasketballBall className="h-6 w-6 text-primary mr-2" />
-                <span className="text-lg font-semibold">UYP Basketball</span>
+                <img 
+                  src={logoPath} 
+                  alt="UYP Basketball" 
+                  className="h-8 w-8 mr-2 object-contain"
+                />
               </div>
               <p className="text-gray-400">
-                Building character through basketball in Costa Mesa, CA.
+                Building character through basketball.
               </p>
             </div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Location</h4>
               <p className="text-gray-400">
                 Momentous Sports Center<br />
-                Costa Mesa, CA
+                14522 Myford Rd, Irvine, CA 92606
               </p>
             </div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Contact</h4>
               <p className="text-gray-400">
-                Email: info@uypbasketball.com<br />
-                Phone: (714) 555-0123
+                Phone: (714) 389-7900<br />
+                Email: info@upyourperformance.org
               </p>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 UYP Volleyball League. All rights reserved.</p>
+            <p>&copy; 2024 UYP Basketball. All rights reserved.</p>
           </div>
         </div>
       </footer>

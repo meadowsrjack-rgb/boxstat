@@ -57,13 +57,12 @@ function Router() {
     }
   }, []);
 
-  // Show mode selection for first-time setup - temporarily disabled
-  // Since we disabled useAppMode, we won't show mode selection
-  // useEffect(() => {
-  //   if (isAuthenticated && !isLoadingConfig && !deviceConfig && isInitialized) {
-  //     setShowModeSelection(true);
-  //   }
-  // }, [isAuthenticated, isLoadingConfig, deviceConfig, isInitialized]);
+  // Show mode selection for first-time setup when no mode is specified in URL
+  useEffect(() => {
+    if (isAuthenticated && !modeOverride && isInitialized) {
+      setShowModeSelection(true);
+    }
+  }, [isAuthenticated, modeOverride, isInitialized]);
 
   if (isLoading || isLoadingConfig || !isInitialized) {
     return (
@@ -125,12 +124,10 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
 
-      {/* Temporarily disable mode selection 
       <ModeSelection
         isOpen={showModeSelection}
         onClose={() => setShowModeSelection(false)}
       />
-      */}
 
       <PinEntry
         isOpen={showPinEntry}

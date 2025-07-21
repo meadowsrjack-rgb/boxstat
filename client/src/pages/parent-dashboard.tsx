@@ -336,112 +336,63 @@ export default function ParentDashboard() {
           </CardContent>
         </Card>
 
-        {/* Schedule Calendar */}
+        {/* Upcoming Events */}
         <Card className="mb-8">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl">Family Schedule</CardTitle>
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="icon">
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium px-3">
-                  {selectedDate ? format(selectedDate, "MMMM yyyy") : "December 2024"}
-                </span>
-                <Button variant="ghost" size="icon">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <CardTitle className="text-xl">Upcoming Events</CardTitle>
+              <Button variant="outline" size="sm" onClick={() => setLocation('/schedule')}>
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                View Schedule
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Upcoming Events</h3>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/schedule')}>
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    View Schedule
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {userEvents && userEvents.length > 0 ? (
-                    userEvents.slice(0, 3).map((event: any) => {
-                      const eventDate = new Date(event.startTime);
-                      const isToday = eventDate.toDateString() === new Date().toDateString();
-                      const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
-                      
-                      let dateLabel = format(eventDate, "MMM d");
-                      if (isToday) dateLabel = "Today";
-                      else if (isTomorrow) dateLabel = "Tomorrow";
-                      
-                      const eventTypeColors = {
-                        practice: "bg-blue-50 border-blue-200",
-                        game: "bg-green-50 border-green-200",
-                        tournament: "bg-purple-50 border-purple-200",
-                        camp: "bg-orange-50 border-orange-200",
-                        skills: "bg-yellow-50 border-yellow-200"
-                      };
-                      
-                      const dotColors = {
-                        practice: "bg-blue-500",
-                        game: "bg-green-500",
-                        tournament: "bg-purple-500",
-                        camp: "bg-orange-500",
-                        skills: "bg-yellow-500"
-                      };
-                      
-                      return (
-                        <div key={event.id} className={`flex items-center p-3 rounded-lg border ${eventTypeColors[event.eventType] || 'bg-gray-50 border-gray-200'}`}>
-                          <div className={`w-2 h-2 rounded-full mr-3 ${dotColors[event.eventType] || 'bg-gray-500'}`}></div>
-                          <div>
-                            <p className="font-medium text-sm">{event.title}</p>
-                            <p className="text-xs text-gray-500">
-                              {dateLabel} • {format(eventDate, "h:mm a")}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="text-center py-6 text-gray-500">
-                      <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No upcoming events</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={async () => {
-                          try {
-                            await apiRequest('POST', '/api/schedule/initialize-sample');
-                            queryClient.invalidateQueries({ queryKey: ['/api/users', user.id, 'events'] });
-                            toast({
-                              title: "Sample Schedule Added",
-                              description: "Created sample events for your children",
-                            });
-                          } catch (error) {
-                            toast({
-                              title: "Error",
-                              description: "Failed to create sample schedule",
-                              variant: "destructive",
-                            });
-                          }
-                        }}
-                      >
-                        Add Sample Schedule
-                      </Button>
+            <div className="space-y-3">
+              {userEvents && userEvents.length > 0 ? (
+                userEvents.slice(0, 5).map((event: any) => {
+                  const eventDate = new Date(event.start_time);
+                  const isToday = eventDate.toDateString() === new Date().toDateString();
+                  const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+                  
+                  let dateLabel = format(eventDate, "MMM d");
+                  if (isToday) dateLabel = "Today";
+                  else if (isTomorrow) dateLabel = "Tomorrow";
+                  
+                  const eventTypeColors = {
+                    practice: "bg-blue-50 border-blue-200",
+                    game: "bg-green-50 border-green-200",
+                    tournament: "bg-purple-50 border-purple-200",
+                    camp: "bg-orange-50 border-orange-200",
+                    skills: "bg-yellow-50 border-yellow-200"
+                  };
+                  
+                  const dotColors = {
+                    practice: "bg-blue-500",
+                    game: "bg-green-500",
+                    tournament: "bg-purple-500",
+                    camp: "bg-orange-500",
+                    skills: "bg-yellow-500"
+                  };
+                  
+                  return (
+                    <div key={event.id} className={`flex items-center p-3 rounded-lg border ${eventTypeColors[event.event_type] || 'bg-gray-50 border-gray-200'}`}>
+                      <div className={`w-2 h-2 rounded-full mr-3 ${dotColors[event.event_type] || 'bg-gray-500'}`}></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{event.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {dateLabel} • {format(eventDate, "h:mm a")} • {event.location}
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  );
+                })
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No upcoming events</p>
                 </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>

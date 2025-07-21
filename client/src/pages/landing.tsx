@@ -10,12 +10,12 @@ export default function Landing() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-28">
             <div className="flex items-center">
               <img 
                 src={logoPath} 
                 alt="UYP Basketball" 
-                className="h-16 w-16 mr-3 object-contain"
+                className="h-24 w-24 mr-3 object-contain"
               />
             </div>
             <Button 
@@ -187,7 +187,7 @@ export default function Landing() {
                 <img 
                   src={logoPath} 
                   alt="UYP Basketball" 
-                  className="h-8 w-8 mr-2 object-contain"
+                  className="h-12 w-12 mr-2 object-contain"
                 />
               </div>
               <p className="text-gray-400">

@@ -57,17 +57,17 @@ export default function ParentDashboard() {
     refetchInterval: false,
   });
 
-  const { data: userEvents } = useQuery({
+  const { data: userEvents = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "events"],
     enabled: !!user?.id,
   });
 
-  const { data: userPayments } = useQuery({
+  const { data: userPayments = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "payments"],
     enabled: !!user?.id,
   });
 
-  const { data: announcements } = useQuery({
+  const { data: announcements = [] } = useQuery({
     queryKey: ["/api/announcements"],
     enabled: !!user?.id,
   });
@@ -201,7 +201,7 @@ export default function ParentDashboard() {
               <Baby className="h-6 w-6 text-green-500" />
             </CardHeader>
             <CardContent className="space-y-3">
-              {childProfiles && childProfiles.length > 0 ? (
+              {childProfiles && Array.isArray(childProfiles) && childProfiles.length > 0 ? (
                 childProfiles.map((child: any) => {
                   const childTeam = child.teamName ? `${child.teamAgeGroup} ${child.teamName}` : 'No Team';
                   const childAge = child.dateOfBirth ? 
@@ -349,7 +349,7 @@ export default function ParentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {userEvents && userEvents.length > 0 ? (
+              {Array.isArray(userEvents) && userEvents.length > 0 ? (
                 userEvents.slice(0, 5).map((event: any) => {
                   const eventDate = new Date(event.start_time);
                   const isToday = eventDate.toDateString() === new Date().toDateString();

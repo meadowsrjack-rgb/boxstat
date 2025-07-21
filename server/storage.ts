@@ -40,7 +40,7 @@ import {
   type InsertDeviceModeConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, gte, lte, sql, or } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, sql, or, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -222,7 +222,7 @@ export class DatabaseStorage implements IStorage {
     const teamEvents = child.teamId ? await db
       .select()
       .from(events)
-      .where(and(eq(events.teamId, child.teamId), eq(events.childProfileId, null)))
+      .where(and(eq(events.teamId, child.teamId), isNull(events.childProfileId)))
       .orderBy(asc(events.startTime)) : [];
 
     return [...childSpecificEvents, ...teamEvents];
@@ -454,7 +454,7 @@ export class DatabaseStorage implements IStorage {
 
   async createOrUpdateDeviceModeConfig(config: InsertDeviceModeConfig): Promise<DeviceModeConfig> {
     // Create a hash of the PIN for storage
-    const pinHash = config.pin ? Buffer.from(config.pin).toString('base64') : undefined;
+    const pinHash = config.pinHash;
     
     // Check if config already exists
     const existing = await this.getDeviceModeConfig(config.deviceId, config.parentId);
@@ -481,9 +481,11 @@ export class DatabaseStorage implements IStorage {
       const [result] = await db
         .insert(deviceModeConfig)
         .values({
-          ...config,
+          deviceId: config.deviceId,
+          parentId: config.parentId,
+          mode: config.mode,
+          childProfileId: config.childProfileId,
           pinHash,
-          pin: undefined, // Don't store PIN in plaintext
           isLocked: config.mode === 'player',
         })
         .returning();

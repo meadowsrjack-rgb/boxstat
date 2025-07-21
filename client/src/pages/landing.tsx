@@ -32,7 +32,7 @@ export default function Landing() {
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center py-6">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-            Welcome to UYP Basketball
+            Welcome to UYP's Basketball App
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Your child's basketball season—organized, safe, and all in your pocket.

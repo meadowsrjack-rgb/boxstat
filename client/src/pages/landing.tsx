@@ -13,26 +13,26 @@ export default function Landing() {
           <div className="flex justify-between items-center h-28">
             <div className="flex items-center">
             </div>
-            <Button 
-              onClick={() => window.location.href = '/api/login'}
-              className="bg-primary hover:bg-primary/90"
-            >
-              Sign In
-            </Button>
+            <div className="flex items-center gap-4">
+              <img 
+                src={logoPath} 
+                alt="UYP Basketball" 
+                className="h-12 w-12 object-contain"
+              />
+              <Button 
+                onClick={() => window.location.href = '/api/login'}
+                className="bg-primary hover:bg-primary/90"
+              >
+                Sign In
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
       <section className="px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="flex justify-center">
-            <img 
-              src={logoPath} 
-              alt="UYP Basketball" 
-              className="h-40 w-40 object-contain"
-            />
-          </div>
+        <div className="max-w-4xl mx-auto text-center pt-20">
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
             Welcome to UYP Basketball
           </h2>

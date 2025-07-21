@@ -76,11 +76,11 @@ export default function Schedule() {
 
   const filteredEvents = displayEvents?.filter((event: any) => {
     if (filter === "all") return true;
-    return event.eventType === filter;
+    return event.event_type === filter;
   });
 
   const upcomingEvents = filteredEvents?.filter((event: any) => 
-    new Date(event.startTime) >= new Date()
+    new Date(event.start_time) >= new Date()
   );
 
   return (
@@ -206,12 +206,12 @@ export default function Schedule() {
                         <div>
                           <h3 className="font-semibold text-gray-900">{event.title}</h3>
                           <p className="text-sm text-gray-500">
-                            {getDateLabel(new Date(event.startTime))}
+                            {getDateLabel(new Date(event.start_time))}
                           </p>
                         </div>
                       </div>
-                      <Badge className={getEventTypeColor(event.eventType)}>
-                        {event.eventType}
+                      <Badge className={getEventTypeColor(event.event_type)}>
+                        {event.event_type}
                       </Badge>
                     </div>
 
@@ -219,7 +219,7 @@ export default function Schedule() {
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Clock className="h-4 w-4" />
                         <span>
-                          {format(new Date(event.startTime), "h:mm a")} - {format(new Date(event.endTime), "h:mm a")}
+                          {format(new Date(event.start_time), "h:mm a")} - {format(new Date(event.end_time), "h:mm a")}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -228,10 +228,10 @@ export default function Schedule() {
                       </div>
                     </div>
 
-                    {event.opponentTeam && (
+                    {event.opponent_team && (
                       <div className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
                         <Users className="h-4 w-4" />
-                        <span>vs {event.opponentTeam}</span>
+                        <span>vs {event.opponent_team}</span>
                       </div>
                     )}
 

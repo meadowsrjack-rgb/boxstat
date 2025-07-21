@@ -55,6 +55,18 @@ function Router() {
           console.log('SW registration failed: ', registrationError);
         });
     }
+
+    // Add global error handler for unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      event.preventDefault(); // Prevent the default behavior
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
 
   // Show mode selection for first-time setup when no mode is specified in URL
@@ -87,7 +99,7 @@ function Router() {
       return () => <PlayerDashboard childId={selectedChildId} />;
     }
     
-    switch (user?.role) {
+    switch ((user as any)?.role) {
       case "admin":
         return AdminDashboard;
       case "parent":

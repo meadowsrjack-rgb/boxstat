@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { User, Baby } from "lucide-react";
 
 interface ModeSelectionProps {
@@ -13,6 +14,7 @@ interface ModeSelectionProps {
 export default function ModeSelection({ isOpen, onClose }: ModeSelectionProps) {
   const [error, setError] = useState('');
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
   // Get child profiles for player mode selection
   const { data: childProfiles = [] } = useQuery({
@@ -23,19 +25,24 @@ export default function ModeSelection({ isOpen, onClose }: ModeSelectionProps) {
   const handleModeSelect = (mode: 'parent' | 'player') => {
     setError('');
     
-    if (mode === 'parent') {
-      // Navigate to parent mode
-      window.location.href = '/';
-      onClose();
-    } else {
-      // Navigate to player mode with first child
-      const firstChild = Array.isArray(childProfiles) && childProfiles.length > 0 ? childProfiles[0] : null;
-      if (firstChild) {
-        window.location.href = `/?mode=player&childId=${firstChild.id}`;
+    try {
+      if (mode === 'parent') {
+        // Navigate to parent mode
+        setLocation('/');
         onClose();
       } else {
-        setError('No child profiles found');
+        // Navigate to player mode with first child
+        const firstChild = Array.isArray(childProfiles) && childProfiles.length > 0 ? childProfiles[0] : null;
+        if (firstChild) {
+          setLocation(`/?mode=player&childId=${firstChild.id}`);
+          onClose();
+        } else {
+          setError('No child profiles found');
+        }
       }
+    } catch (err) {
+      console.error('Navigation error:', err);
+      setError('Navigation failed. Please try again.');
     }
   };
 

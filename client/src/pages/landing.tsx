@@ -31,6 +31,13 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-8">
+            <img 
+              src={logoPath} 
+              alt="UYP Basketball" 
+              className="h-32 w-32 object-contain"
+            />
+          </div>
           <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
             Welcome to UYP Basketball
           </h2>
@@ -182,18 +189,7 @@ export default function Landing() {
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <img 
-                  src={logoPath} 
-                  alt="UYP Basketball" 
-                  className="h-12 w-12 mr-2 object-contain"
-                />
-              </div>
-              <p className="text-gray-400">
-                Building character through basketball.
-              </p>
-            </div>
+            <div></div>
             <div>
               <h4 className="text-lg font-semibold mb-4">Location</h4>
               <p className="text-gray-400">
@@ -210,6 +206,13 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <div className="flex justify-center mb-4">
+              <img 
+                src={logoPath} 
+                alt="UYP Basketball" 
+                className="h-16 w-16 object-contain"
+              />
+            </div>
             <p>&copy; 2024 UYP Basketball. All rights reserved.</p>
           </div>
         </div>

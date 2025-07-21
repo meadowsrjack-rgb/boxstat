@@ -12,20 +12,18 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-28">
             <div className="flex items-center">
-            </div>
-            <div className="flex items-center gap-4">
               <img 
                 src={logoPath} 
                 alt="UYP Basketball" 
-                className="h-12 w-12 object-contain"
+                className="h-16 w-16 object-contain"
               />
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Sign In
-              </Button>
             </div>
+            <Button 
+              onClick={() => window.location.href = '/api/login'}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Sign In
+            </Button>
           </div>
         </div>
       </header>

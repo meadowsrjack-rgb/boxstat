@@ -103,7 +103,11 @@ export default function ParentDashboard() {
   };
 
   if (!user) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   return (
@@ -133,7 +137,7 @@ export default function ParentDashboard() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => window.location.href = "/?mode=player"}
+                onClick={() => setLocation("/?mode=player&childId=2")}
                 className="flex items-center space-x-2"
               >
                 <span>Preview Player</span>

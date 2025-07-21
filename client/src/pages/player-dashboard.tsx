@@ -26,7 +26,7 @@ import { useAppMode } from "@/hooks/useAppMode";
 import PinEntry from "@/components/ui/pin-entry";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
-export default function PlayerDashboard() {
+export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
   // Temporarily disable useAppMode
   // const { deviceConfig } = useAppMode();
@@ -40,10 +40,12 @@ export default function PlayerDashboard() {
     enabled: !!user?.id,
   });
 
-  // Get the selected child ID from URL parameter
+  // Get the selected child ID from URL parameter or prop
   const urlParams = new URLSearchParams(window.location.search);
-  const selectedChildId = urlParams.get('childId');
-  const currentChild = childProfiles?.find((child: any) => child.id.toString() === selectedChildId) || childProfiles?.[0];
+  const selectedChildId = childId?.toString() || urlParams.get('childId');
+  const currentChild = Array.isArray(childProfiles) ? 
+    childProfiles.find((child: any) => child.id.toString() === selectedChildId) || childProfiles[0] : 
+    null;
 
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],
@@ -55,12 +57,12 @@ export default function PlayerDashboard() {
     refetchInterval: false,
   });
 
-  const { data: userEvents } = useQuery({
+  const { data: userEvents = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "events"],
     enabled: !!user?.id,
   });
 
-  const { data: childEvents } = useQuery({
+  const { data: childEvents = [] } = useQuery({
     queryKey: ["/api/child-profiles", selectedChildId, "events"],
     enabled: !!selectedChildId,
   });
@@ -71,7 +73,11 @@ export default function PlayerDashboard() {
   });
 
   if (!user) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
   }
 
   // Use child-specific events if available, otherwise fall back to user events

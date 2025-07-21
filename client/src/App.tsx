@@ -85,7 +85,7 @@ function Router() {
   // Route based on user type and app mode
   const getDashboardComponent = () => {
     if (currentMode === 'player') {
-      return PlayerDashboard;
+      return () => <PlayerDashboard childId={selectedChildId} />;
     }
     
     switch (user?.role) {

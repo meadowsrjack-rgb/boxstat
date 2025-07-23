@@ -54,7 +54,10 @@ export default function CoachParentMessages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
-      await apiRequest("POST", "/api/announcements", messageData);
+      return apiRequest("/api/announcements", {
+        method: "POST",
+        body: messageData,
+      });
     },
     onSuccess: () => {
       toast({
@@ -64,7 +67,10 @@ export default function CoachParentMessages() {
       setTitle("");
       setContent("");
       setSelectedParent("");
+      setMessageType("message");
+      setRecipientType("all");
       queryClient.invalidateQueries({ queryKey: ["/api/announcements", "parents", teamId] });
+      queryClient.refetchQueries({ queryKey: ["/api/announcements", "parents", teamId] });
     },
     onError: (error) => {
       toast({

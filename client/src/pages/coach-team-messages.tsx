@@ -44,7 +44,10 @@ export default function CoachTeamMessages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
-      await apiRequest("POST", "/api/announcements", messageData);
+      return apiRequest("/api/announcements", {
+        method: "POST",
+        body: messageData,
+      });
     },
     onSuccess: () => {
       toast({
@@ -53,7 +56,10 @@ export default function CoachTeamMessages() {
       });
       setTitle("");
       setContent("");
+      setMessageType("message");
+      // Force immediate refresh
       queryClient.invalidateQueries({ queryKey: ["/api/announcements", "team", teamId] });
+      queryClient.refetchQueries({ queryKey: ["/api/announcements", "team", teamId] });
     },
     onError: (error) => {
       toast({

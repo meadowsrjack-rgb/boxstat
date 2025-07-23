@@ -52,12 +52,13 @@ export default function AccountSetup() {
     mutationFn: async (data: AccountSetupData) => {
       return apiRequest("POST", "/api/setup-account", data);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       toast({
         title: "Account Setup Complete",
         description: "Your account has been set up successfully!",
       });
-      setLocation("/");
+      // Redirect based on user type
+      setLocation(response.redirectUrl || "/");
     },
     onError: (error) => {
       toast({

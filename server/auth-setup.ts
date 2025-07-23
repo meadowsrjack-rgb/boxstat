@@ -9,7 +9,7 @@ export async function setupAccount(req: Request, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const userId = req.user?.claims?.sub;
+    const userId = (req.user as any)?.claims?.sub;
     if (!userId) {
       return res.status(401).json({ message: "User ID not found" });
     }
@@ -52,7 +52,8 @@ export async function setupAccount(req: Request, res: Response) {
 
     res.json({ 
       message: "Account setup completed successfully",
-      user: updatedUser
+      user: updatedUser,
+      redirectUrl: userType === "player" ? "/player-dashboard" : "/parent-dashboard"
     });
   } catch (error) {
     console.error("Account setup error:", error);

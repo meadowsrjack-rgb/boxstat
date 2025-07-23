@@ -253,70 +253,77 @@ export default function CoachTeamMessages() {
           <CardContent>
             {messages.length > 0 ? (
               <div className="space-y-4">
-                {messages.slice(0, 10).map((message: any) => (
-                  <LongPressMessage key={message.id} messageId={message.id}>
-                    <div className={`p-4 rounded-lg border-l-4 ${getMessageTypeColor(message.messageType || 'message')}`}>
-                      <div className="flex justify-between items-start mb-2">
-                        {message.messageType !== "message" && (
-                          <h4 className="font-semibold text-gray-900">{message.title}</h4>
-                        )}
-                        <div className="flex items-center gap-2 ml-auto">
-                          <Badge variant="outline" className="text-xs">
-                            {getMessageTypeIcon(message.messageType || 'message')}
-                            <span className="ml-1 capitalize">{message.messageType || 'message'}</span>
-                          </Badge>
-                          <Badge variant="outline" className="bg-blue-100 text-blue-800 text-xs">
-                            Team
-                          </Badge>
+                {messages.slice(0, 10).map((message: any) => {
+                  // Determine message type from priority or other fields
+                  const messageType = message.priority === "high" ? "task" : 
+                                    message.title && message.title !== `${message.content.slice(0, 50)}...` ? "announcement" : 
+                                    "message";
+                  
+                  return (
+                    <LongPressMessage key={message.id} messageId={message.id}>
+                      <div className={`p-4 rounded-lg border-l-4 ${getMessageTypeColor(messageType)}`}>
+                        <div className="flex justify-between items-start mb-2">
+                          {messageType !== "message" && (
+                            <h4 className="font-semibold text-gray-900">{message.title}</h4>
+                          )}
+                          <div className="flex items-center gap-2 ml-auto">
+                            <Badge variant="outline" className="text-xs">
+                              {getMessageTypeIcon(messageType)}
+                              <span className="ml-1 capitalize">{messageType}</span>
+                            </Badge>
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800 text-xs">
+                              Team
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-gray-600 mb-3 whitespace-pre-wrap">{message.content}</p>
-                      
-                      {/* Task completion tracking */}
-                      {message.messageType === "task" && (
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <h5 className="text-sm font-medium text-gray-700 mb-2">Task Completion:</h5>
-                          <div className="grid grid-cols-2 gap-2">
-                            {players.map((player: any) => (
-                              <div key={player.id} className="flex items-center gap-2 text-sm">
-                                <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center">
-                                  {Math.random() > 0.5 ? "✓" : ""}
+                        <p className="text-gray-600 mb-3 whitespace-pre-wrap">{message.content}</p>
+                        
+                        {/* Task completion tracking */}
+                        {messageType === "task" && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <h5 className="text-sm font-medium text-gray-700 mb-2">Task Completion:</h5>
+                            <div className="grid grid-cols-2 gap-2">
+                              {players.map((player: any) => (
+                                <div key={player.id} className="flex items-center gap-2 text-sm">
+                                  <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center">
+                                    {Math.random() > 0.5 ? "✓" : ""}
+                                  </div>
+                                  <span className="text-gray-600">{player.firstName} {player.lastName}</span>
                                 </div>
-                                <span className="text-gray-600">{player.firstName} {player.lastName}</span>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Announcement acknowledgment tracking */}
-                      {message.messageType === "announcement" && (
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                          <h5 className="text-sm font-medium text-gray-700 mb-2">Seen by:</h5>
-                          <div className="flex flex-wrap gap-2">
-                            {players.map((player: any) => (
-                              <div key={player.id} className="flex items-center gap-1 text-sm">
-                                <div className={`w-3 h-3 rounded-full ${Math.random() > 0.5 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                                <span className="text-gray-600">{player.firstName}</span>
-                              </div>
-                            ))}
+                        {/* Announcement acknowledgment tracking */}
+                        {messageType === "announcement" && (
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                            <h5 className="text-sm font-medium text-gray-700 mb-2">Seen by:</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {players.map((player: any) => (
+                                <div key={player.id} className="flex items-center gap-1 text-sm">
+                                  <div className={`w-3 h-3 rounded-full ${Math.random() > 0.5 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                  <span className="text-gray-600">{player.firstName}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Emoji reactions */}
-                      <MessageReactionsDisplay
-                        reactions={message.reactions || []}
-                        messageId={message.id}
-                        currentUserId="test-admin-001"
-                      />
+                        {/* Emoji reactions */}
+                        <MessageReactionsDisplay
+                          reactions={message.reactions || []}
+                          messageId={message.id}
+                          currentUserId="test-admin-001"
+                        />
 
-                      <p className="text-xs text-gray-500 mt-3">
-                        {new Date(message.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </LongPressMessage>
-                ))}
+                        <p className="text-xs text-gray-500 mt-3">
+                          {new Date(message.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </LongPressMessage>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8">

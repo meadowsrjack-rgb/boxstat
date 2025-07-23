@@ -208,25 +208,12 @@ export default function CoachTeamMessages() {
                   {messageType === "task" ? "Task Description" : messageType === "announcement" ? "Announcement" : "Message"}
                 </label>
                 <Textarea
-                  placeholder={`What would you like to tell the team? 😊 Use emojis to make it fun!`}
+                  placeholder={`What would you like to tell the team?`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}
                   className="resize-none"
                 />
-                <div className="flex flex-wrap gap-1 mt-2">
-                  <div className="text-xs text-gray-500 mb-2">Quick emojis:</div>
-                  {['⚾', '🏀', '⚽', '🏆', '💪', '👍', '🔥', '⭐', '🎯', '👏'].map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => setContent(prev => prev + emoji)}
-                      className="text-lg hover:bg-gray-200 px-2 py-1 rounded transition-colors"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
               </div>
               <Button 
                 onClick={handleSendMessage}

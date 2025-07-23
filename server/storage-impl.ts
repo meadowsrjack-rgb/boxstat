@@ -231,6 +231,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
+    // For testing, return mock teams for our test admin
+    if (coachId === 'test-admin-001') {
+      return [
+        {
+          id: 1,
+          name: 'U10 Warriors',
+          ageGroup: 'Under 10',
+          coachId: 'test-admin-001',
+          season: '2025 Spring',
+          maxPlayers: 12,
+          isActive: true,
+          createdAt: new Date(),
+          description: 'Competitive team for ages 8-10'
+        },
+        {
+          id: 2,
+          name: 'U12 Lightning',
+          ageGroup: 'Under 12',
+          coachId: 'test-admin-001',
+          season: '2025 Spring',
+          maxPlayers: 12,
+          isActive: true,
+          createdAt: new Date(),
+          description: 'Advanced team for ages 10-12'
+        },
+        {
+          id: 3,
+          name: 'U14 Thunder',
+          ageGroup: 'Under 14',
+          coachId: 'test-admin-001',
+          season: '2025 Spring',
+          maxPlayers: 12,
+          isActive: true,
+          createdAt: new Date(),
+          description: 'Elite team for ages 12-14'
+        }
+      ];
+    }
     return await db.select().from(teams).where(eq(teams.coachId, coachId));
   }
 
@@ -246,6 +284,60 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamPlayers(teamId: number): Promise<User[]> {
+    // Mock data for test teams
+    if (teamId === 1) { // U10 Warriors
+      return [
+        {
+          id: 'player1',
+          email: 'alice@example.com',
+          firstName: 'Alice',
+          lastName: 'Johnson',
+          userType: 'player',
+          teamId: 1,
+          jerseyNumber: 7,
+          position: 'Guard',
+          profileImageUrl: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          sportsEngineCustomerId: null,
+          sportsEngineSubscriptionId: null
+        },
+        {
+          id: 'player2',
+          email: 'bob@example.com',
+          firstName: 'Bob',
+          lastName: 'Smith',
+          userType: 'player',
+          teamId: 1,
+          jerseyNumber: 12,
+          position: 'Forward',
+          profileImageUrl: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          sportsEngineCustomerId: null,
+          sportsEngineSubscriptionId: null
+        }
+      ];
+    }
+    if (teamId === 2) { // U12 Lightning
+      return [
+        {
+          id: 'player3',
+          email: 'charlie@example.com',
+          firstName: 'Charlie',
+          lastName: 'Brown',
+          userType: 'player',
+          teamId: 2,
+          jerseyNumber: 23,
+          position: 'Center',
+          profileImageUrl: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          sportsEngineCustomerId: null,
+          sportsEngineSubscriptionId: null
+        }
+      ];
+    }
     return await db.select().from(users).where(eq(users.teamId, teamId));
   }
 
@@ -256,6 +348,72 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTeamEvents(teamId: number): Promise<Event[]> {
+    // Mock events for test teams
+    if (teamId === 1) { // U10 Warriors
+      return [
+        {
+          id: 1,
+          title: 'Practice Session',
+          description: 'Weekly team practice focusing on fundamentals',
+          eventType: 'practice',
+          startTime: new Date('2025-07-24T17:00:00'),
+          endTime: new Date('2025-07-24T18:30:00'),
+          location: 'UYP Main Court',
+          teamId: 1,
+          playerId: null,
+          isActive: true,
+          createdAt: new Date()
+        },
+        {
+          id: 2,
+          title: 'Scrimmage Game',
+          description: 'Practice game against U10 Eagles',
+          eventType: 'game',
+          startTime: new Date('2025-07-26T10:00:00'),
+          endTime: new Date('2025-07-26T11:30:00'),
+          location: 'UYP Court 2',
+          teamId: 1,
+          playerId: null,
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+    }
+    if (teamId === 2) { // U12 Lightning
+      return [
+        {
+          id: 3,
+          title: 'Team Practice',
+          description: 'Advanced skills training',
+          eventType: 'practice',
+          startTime: new Date('2025-07-25T18:00:00'),
+          endTime: new Date('2025-07-25T19:30:00'),
+          location: 'UYP Main Court',
+          teamId: 2,
+          playerId: null,
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+    }
+    if (teamId === 3) { // U14 Thunder
+      return [
+        {
+          id: 4,
+          title: 'Championship Practice',
+          description: 'Intensive training for upcoming tournament',
+          eventType: 'practice',
+          startTime: new Date('2025-07-27T16:00:00'),
+          endTime: new Date('2025-07-27T18:00:00'),
+          location: 'UYP Main Court',
+          teamId: 3,
+          playerId: null,
+          isActive: true,
+          createdAt: new Date()
+        }
+      ];
+    }
+    
     const now = new Date();
     return await db
       .select()

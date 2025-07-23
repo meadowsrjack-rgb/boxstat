@@ -36,26 +36,31 @@ export default function AdminDashboard() {
   const [announcementContent, setAnnouncementContent] = useState("");
   const [showQRReader, setShowQRReader] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
+  const [messageType, setMessageType] = useState<"message" | "task" | "announcement">("message");
+  const [messageTarget, setMessageTarget] = useState<"team" | "parents">("team");
+  const [showTeamSelector, setShowTeamSelector] = useState(false);
 
   // Get teams coached by this admin/coach
-  const { data: coachTeams } = useQuery({
+  const { data: coachTeams = [] } = useQuery({
     queryKey: ["/api/teams/coach", user?.id],
     enabled: !!user?.id,
   });
 
   // Get team events/schedule
-  const { data: teamEvents } = useQuery({
+  const { data: teamEvents = [] } = useQuery({
     queryKey: ["/api/team-events", selectedTeam || coachTeams?.[0]?.id],
     enabled: !!(selectedTeam || coachTeams?.[0]?.id),
   });
 
   // Get team players
-  const { data: teamPlayers } = useQuery({
+  const { data: teamPlayers = [] } = useQuery({
     queryKey: ["/api/team-players", selectedTeam || coachTeams?.[0]?.id],
     enabled: !!(selectedTeam || coachTeams?.[0]?.id),
   });
 
-  const currentTeam = coachTeams?.[0]; // For now, use first team
+  const currentTeam = selectedTeam 
+    ? coachTeams?.find(team => team.id === selectedTeam) 
+    : coachTeams?.[0];
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (announcementData: any) => {
@@ -80,13 +85,15 @@ export default function AdminDashboard() {
   });
 
   const handleCreateAnnouncement = () => {
-    if (!announcementTitle.trim() || !announcementContent.trim()) return;
+    if (!announcementTitle.trim() || !announcementContent.trim() || !currentTeam) return;
 
     createAnnouncementMutation.mutate({
       title: announcementTitle,
       content: announcementContent,
-      priority: "medium",
-      teamId: currentTeam?.id || null,
+      priority: messageType === "task" ? "high" : "medium",
+      messageType: messageType,
+      targetAudience: messageTarget,
+      teamId: currentTeam.id,
     });
   };
 
@@ -113,7 +120,7 @@ export default function AdminDashboard() {
     );
   }
 
-  if (user.userType !== "admin") {
+  if (user?.userType !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -121,7 +128,7 @@ export default function AdminDashboard() {
             <div className="text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
               <p className="text-gray-600">You don't have permission to access this page.</p>
-              <p className="text-sm text-gray-500 mt-2">Current user type: {user.userType}</p>
+              <p className="text-sm text-gray-500 mt-2">Current user type: {user?.userType}</p>
             </div>
           </CardContent>
         </Card>
@@ -146,16 +153,36 @@ export default function AdminDashboard() {
                   Coach Dashboard
                 </h1>
                 <p className="text-sm text-gray-600">
-                  Welcome back, Coach {user.firstName}!
+                  Welcome back, Coach {user?.firstName}!
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                {currentTeam?.name || 'No Team'}
+              <Badge 
+                variant="outline" 
+                className="bg-blue-50 text-blue-700 cursor-pointer hover:bg-blue-100 transition-colors"
+                onClick={() => setShowTeamSelector(!showTeamSelector)}
+              >
+                {currentTeam?.name || 'Select Team'} {coachTeams && coachTeams.length > 1 && '▼'}
               </Badge>
+              {showTeamSelector && coachTeams && coachTeams.length > 1 && (
+                <div className="absolute top-16 right-20 bg-white border rounded-lg shadow-lg z-50 min-w-40">
+                  {coachTeams.map((team) => (
+                    <div
+                      key={team.id}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                      onClick={() => {
+                        setSelectedTeam(team.id);
+                        setShowTeamSelector(false);
+                      }}
+                    >
+                      {team.name}
+                    </div>
+                  ))}
+                </div>
+              )}
               <img 
-                src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32"} 
+                src={user?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32"} 
                 alt="Profile" 
                 className="w-8 h-8 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                 onClick={() => setLocation('/profile')}
@@ -168,12 +195,22 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
         
+        {/* Team Selection Alert */}
+        {!currentTeam && (
+          <Card className="bg-yellow-50 border-yellow-200">
+            <CardContent className="p-4 text-center">
+              <h3 className="font-semibold text-yellow-800 mb-2">No Team Selected</h3>
+              <p className="text-sm text-yellow-700">Please select a team from the header to access team features.</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Coach Action Cards */}
         <div className="grid grid-cols-2 gap-4">
           {/* QR Scanner */}
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setShowQRReader(true)}
+            className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => currentTeam && setShowQRReader(true)}
           >
             <CardContent className="p-4 text-center">
               <Camera className="w-8 h-8 text-purple-500 mx-auto mb-2" />
@@ -182,39 +219,39 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Team Chat */}
+          {/* Team Messages */}
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation(`/chat/${currentTeam?.id || ''}`)}
+            className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => currentTeam && (setMessageTarget("team"), setShowTeamSelector(false))}
           >
             <CardContent className="p-4 text-center">
               <MessageCircle className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Team Chat</h3>
-              <p className="text-xs text-gray-600">Message team</p>
+              <h3 className="font-semibold text-gray-900 text-sm">Team Messages</h3>
+              <p className="text-xs text-gray-600">Message players</p>
+            </CardContent>
+          </Card>
+
+          {/* Parent Messages */}
+          <Card 
+            className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => currentTeam && (setMessageTarget("parents"), setShowTeamSelector(false))}
+          >
+            <CardContent className="p-4 text-center">
+              <Users className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Parent Messages</h3>
+              <p className="text-xs text-gray-600">Message parents</p>
             </CardContent>
           </Card>
 
           {/* Schedule */}
           <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/schedule')}
+            className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
+            onClick={() => currentTeam && setLocation('/schedule')}
           >
             <CardContent className="p-4 text-center">
-              <Calendar className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <Calendar className="w-8 h-8 text-orange-500 mx-auto mb-2" />
               <h3 className="font-semibold text-gray-900 text-sm">Schedule</h3>
               <p className="text-xs text-gray-600">View team events</p>
-            </CardContent>
-          </Card>
-
-          {/* Assign Homework */}
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/training')}
-          >
-            <CardContent className="p-4 text-center">
-              <BookOpen className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Assign Work</h3>
-              <p className="text-xs text-gray-600">Training videos</p>
             </CardContent>
           </Card>
         </div>
@@ -315,57 +352,133 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Team Announcements */}
+        {/* Team Communication */}
         <Card className="bg-white border border-gray-100">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-orange-500" />
-              Team Announcements
+              <MessageCircle className="w-5 h-5 text-blue-500" />
+              Team Communication
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <Input
-                  placeholder="Announcement title"
-                  value={announcementTitle}
-                  onChange={(e) => setAnnouncementTitle(e.target.value)}
-                  className="text-sm"
-                />
-                <Textarea
-                  placeholder="What would you like to tell the team?"
-                  value={announcementContent}
-                  onChange={(e) => setAnnouncementContent(e.target.value)}
-                  rows={3}
-                  className="text-sm resize-none"
-                />
-                <Button 
-                  onClick={handleCreateAnnouncement}
-                  disabled={createAnnouncementMutation.isPending}
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Post Announcement
-                </Button>
-              </div>
-              
-              {/* Recent Announcements */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Recent Announcements</h4>
-                <div className="space-y-3">
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <h5 className="font-semibold text-gray-900 text-sm">Practice Update</h5>
-                    <p className="text-xs text-gray-600 mt-1">Tomorrow's practice starts at 4:30 PM sharp. Please arrive 15 minutes early.</p>
-                    <span className="text-xs text-gray-500">2 hours ago</span>
+            {currentTeam ? (
+              <div className="space-y-4">
+                {/* Message Type & Target Selection */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-2 block">Send To:</label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={messageTarget === "team" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => setMessageTarget("team")}
+                      >
+                        Team
+                      </Button>
+                      <Button
+                        variant={messageTarget === "parents" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 text-xs"
+                        onClick={() => setMessageTarget("parents")}
+                      >
+                        Parents
+                      </Button>
+                    </div>
                   </div>
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <h5 className="font-semibold text-gray-900 text-sm">Equipment Reminder</h5>
-                    <p className="text-xs text-gray-600 mt-1">Don't forget to bring your water bottles and proper basketball shoes.</p>
-                    <span className="text-xs text-gray-500">1 day ago</span>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 mb-2 block">Message Type:</label>
+                    <div className="flex gap-1">
+                      <Button
+                        variant={messageType === "message" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 text-xs px-2"
+                        onClick={() => setMessageType("message")}
+                      >
+                        Message
+                      </Button>
+                      <Button
+                        variant={messageType === "task" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 text-xs px-2"
+                        onClick={() => setMessageType("task")}
+                      >
+                        Task
+                      </Button>
+                      <Button
+                        variant={messageType === "announcement" ? "default" : "outline"}
+                        size="sm"
+                        className="flex-1 text-xs px-2"
+                        onClick={() => setMessageType("announcement")}
+                      >
+                        News
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Message Composer */}
+                <div className="space-y-3">
+                  <Input
+                    placeholder={`${messageType} title`}
+                    value={announcementTitle}
+                    onChange={(e) => setAnnouncementTitle(e.target.value)}
+                    className="text-sm"
+                  />
+                  <Textarea
+                    placeholder={`What would you like to tell the ${messageTarget}?`}
+                    value={announcementContent}
+                    onChange={(e) => setAnnouncementContent(e.target.value)}
+                    rows={3}
+                    className="text-sm resize-none"
+                  />
+                  <Button 
+                    onClick={handleCreateAnnouncement}
+                    disabled={createAnnouncementMutation.isPending}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Send {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"} to {messageTarget === "team" ? "Team" : "Parents"}
+                  </Button>
+                </div>
+                
+                {/* Recent Messages */}
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Recent Messages</h4>
+                  <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                      <div className="flex justify-between items-start mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Practice Update</h5>
+                        <Badge className="bg-blue-100 text-blue-800 text-xs">Team</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">Tomorrow's practice starts at 4:30 PM sharp. Please arrive 15 minutes early.</p>
+                      <span className="text-xs text-gray-500">2 hours ago</span>
+                    </div>
+                    <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                      <div className="flex justify-between items-start mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Parent Meeting</h5>
+                        <Badge className="bg-green-100 text-green-800 text-xs">Parents</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">Monthly parent meeting scheduled for next Friday at 7 PM.</p>
+                      <span className="text-xs text-gray-500">1 day ago</span>
+                    </div>
+                    <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
+                      <div className="flex justify-between items-start mb-1">
+                        <h5 className="font-semibold text-gray-900 text-sm">Training Homework</h5>
+                        <Badge className="bg-orange-100 text-orange-800 text-xs">Task</Badge>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">Complete 50 free throws before next practice. Log your results.</p>
+                      <span className="text-xs text-gray-500">3 days ago</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">Select a team to send messages</p>
+              </div>
+            )}
           </CardContent>
         </Card>
         

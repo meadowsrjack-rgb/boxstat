@@ -101,8 +101,6 @@ export default function CoachParentMessages() {
     sendMessageMutation.mutate({
       title: messageType === "message" ? content.slice(0, 50) + "..." : title,
       content,
-      messageType,
-      targetAudience: "parents",
       recipientId: recipientType === "individual" ? selectedParent : null,
       priority: messageType === "task" ? "high" : "medium",
       teamId: parseInt(teamId!),

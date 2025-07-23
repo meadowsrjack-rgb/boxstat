@@ -131,7 +131,6 @@ export const announcements = pgTable("announcements", {
   authorId: varchar("author_id").references(() => users.id).notNull(),
   teamId: integer("team_id").references(() => teams.id), // null for league-wide announcements
   priority: varchar("priority", { enum: ["low", "medium", "high"] }).default("medium"),
-  targetAudience: varchar("target_audience", { enum: ["team", "parents", "all"] }).default("team"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

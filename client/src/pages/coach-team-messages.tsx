@@ -81,8 +81,6 @@ export default function CoachTeamMessages() {
     sendMessageMutation.mutate({
       title: messageType === "message" ? content.slice(0, 50) + "..." : title,
       content,
-      messageType,
-      targetAudience: "team",
       priority: messageType === "task" ? "high" : "medium",
       teamId: parseInt(teamId!),
     });

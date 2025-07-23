@@ -538,8 +538,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/announcements', isAuthenticated, async (req: any, res) => {
     try {
-      // Remove messageType from the request body since it's not in the schema
-      const { messageType, ...announcementBody } = req.body;
+      // Remove fields that don't exist in the database schema
+      const { messageType, targetAudience, recipientId, ...announcementBody } = req.body;
       const announcementData = insertAnnouncementSchema.parse({
         ...announcementBody,
         authorId: req.user.claims.sub,

@@ -95,6 +95,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={getDashboardComponent()} />
+      <Route path="/player-dashboard" component={PlayerDashboard} />
+      <Route path="/parent-dashboard" component={ParentDashboard} />
+      <Route path="/admin-dashboard" component={AdminDashboard} />
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />

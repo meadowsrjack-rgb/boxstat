@@ -974,25 +974,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test accounts endpoint for development/testing
-  app.post('/api/test-accounts/switch', isAuthenticated, async (req: any, res) => {
+  app.post('/api/test-accounts/create', async (req, res) => {
     try {
-      const { type } = req.body;
-      const userId = req.user.claims.sub;
+      const { id, type, name, email } = req.body;
       
-      // Update the current user's type instead of creating new user
-      const updatedUser = await storage.updateUserProfile(userId, {
+      // Create dedicated test user in database
+      const testUser = await storage.upsertUser({
+        id: id,
+        email: email,
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ')[1] || '',
         userType: type,
         profileCompleted: true,
+        qrCodeData: `UYP-${id}-${Date.now()}`,
+        // Add team assignment for players
+        teamId: type === 'player' ? 1 : null,
+        jerseyNumber: type === 'player' ? Math.floor(Math.random() * 99) + 1 : null,
+        position: type === 'player' ? 'Guard' : null,
       });
 
       res.json({ 
         success: true, 
-        userType: type,
-        message: `Switched to ${type} account successfully`
+        testUser: {
+          id: testUser.id,
+          name: `${testUser.firstName} ${testUser.lastName}`,
+          email: testUser.email,
+          type: testUser.userType
+        },
+        loginUrl: `/test-login/${testUser.id}`
       });
     } catch (error) {
-      console.error("Error switching account type:", error);
-      res.status(500).json({ message: "Failed to switch account type" });
+      console.error("Error creating test account:", error);
+      res.status(500).json({ message: "Failed to create test account" });
+    }
+  });
+
+  // Test login endpoint - simulates signing in as a test user
+  app.get('/test-login/:userId', async (req, res) => {
+    try {
+      const userId = req.params.userId;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Test user not found" });
+      }
+
+      // Create a test session by manually setting up the user session
+      const testUserSession = {
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: 'https://replit.com/public/images/mark.png'
+        },
+        access_token: 'test-token',
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      };
+
+      // Set up the session
+      req.login(testUserSession, (err) => {
+        if (err) {
+          console.error('Test login error:', err);
+          return res.status(500).json({ message: "Failed to create test session" });
+        }
+        
+        // Redirect to appropriate dashboard based on user type
+        const redirectPath = user.userType === 'player' ? '/player-dashboard' : 
+                           user.userType === 'admin' ? '/admin' : '/';
+        res.redirect(redirectPath);
+      });
+    } catch (error) {
+      console.error("Error in test login:", error);
+      res.status(500).json({ message: "Failed to sign in as test user" });
     }
   });
 

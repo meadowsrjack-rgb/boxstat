@@ -59,38 +59,42 @@ export default function TestAccounts() {
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
 
-  const switchAccountType = async (type: 'parent' | 'player' | 'admin') => {
+  const createAndUseTestAccount = async (accountType: any) => {
     try {
       setLoading(true);
       
-      const response = await apiRequest('/api/test-accounts/switch', {
+      const testAccount = {
+        id: accountType.type === 'parent' ? 'test-parent-001' : 
+            accountType.type === 'player' ? 'test-player-001' : 'test-admin-001',
+        type: accountType.type,
+        name: accountType.name,
+        email: accountType.type === 'parent' ? 'parent.test@uyp.com' :
+               accountType.type === 'player' ? 'player.test@uyp.com' : 'admin.test@uyp.com'
+      };
+      
+      const response = await apiRequest('/api/test-accounts/create', {
         method: 'POST',
-        body: JSON.stringify({ type }),
+        body: JSON.stringify(testAccount),
       });
 
       if (response.success) {
         toast({
-          title: "Account Type Changed",
-          description: response.message,
+          title: "Test Account Created",
+          description: `Created ${accountType.type} account. Signing you in...`,
         });
         
-        // Refresh the page to update the UI
+        // Redirect to the test login URL
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = response.loginUrl;
         }, 1000);
       }
     } catch (error) {
-      console.error('Error switching account type:', error);
+      console.error('Error creating test account:', error);
       toast({
-        title: "Sign In Required",
-        description: "Please sign in first, then try switching account types.",
+        title: "Error",
+        description: "Failed to create test account",
         variant: "destructive",
       });
-      
-      // Redirect to login
-      setTimeout(() => {
-        window.location.href = '/api/login';
-      }, 2000);
     } finally {
       setLoading(false);
     }
@@ -131,15 +135,15 @@ export default function TestAccounts() {
             <h2 className="text-lg font-semibold text-gray-900">Testing Environment</h2>
           </div>
           <p className="text-gray-600 mb-4">
-            Select an account type below to switch your current session and explore different features. 
-            You need to be signed in first for this to work.
+            Click on any account type below to create and sign in with that specific test account. 
+            Each account type provides access to different dashboards and features.
           </p>
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
             <div className="flex">
               <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  <strong>How it works:</strong> Sign in first, then come back here to switch between Parent, Player, and Admin account types.
-                  Each type shows different dashboards and features.
+                <p className="text-sm text-blue-700">
+                  <strong>How it works:</strong> Click "Use This Account" to create and automatically sign in with that account type.
+                  You'll be redirected to the appropriate dashboard for testing.
                 </p>
               </div>
             </div>
@@ -185,14 +189,14 @@ export default function TestAccounts() {
                   
                   <Button 
                     className="w-full mt-4" 
-                    onClick={() => switchAccountType(account.type as 'parent' | 'player' | 'admin')}
+                    onClick={() => createAndUseTestAccount(account)}
                     disabled={loading}
                   >
                     {loading ? (
-                      "Switching..."
+                      "Creating Account..."
                     ) : (
                       <>
-                        Switch to {account.name}
+                        Use This Account
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </>
                     )}
@@ -209,7 +213,7 @@ export default function TestAccounts() {
             onClick={() => window.location.href = '/api/login'}
             className="mr-4"
           >
-            Sign In First
+            Regular Sign In
           </Button>
           <Button 
             variant="ghost"

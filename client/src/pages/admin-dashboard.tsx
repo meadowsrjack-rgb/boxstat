@@ -239,15 +239,15 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Schedule */}
+          {/* Team Members */}
           <Card 
             className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={() => currentTeam && setLocation('/schedule')}
+            onClick={() => currentTeam && setLocation(`/team-details/${currentTeam.id}`)}
           >
             <CardContent className="p-4 text-center">
-              <Calendar className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Schedule</h3>
-              <p className="text-xs text-gray-600">View team events</p>
+              <Users className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Team Members</h3>
+              <p className="text-xs text-gray-600">{teamPlayers?.length || 0} players</p>
             </CardContent>
           </Card>
         </div>
@@ -302,51 +302,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Team Members */}
-        <Card className="bg-white border border-gray-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-500" />
-              Team Members
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {teamPlayers && teamPlayers.length > 0 ? (
-              <div className="space-y-3">
-                {teamPlayers.slice(0, 4).map((player: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <img 
-                      src={player.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=32&h=32"} 
-                      alt={player.firstName} 
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 text-sm">
-                        {player.firstName} {player.lastName}
-                      </h4>
-                      <p className="text-xs text-gray-600">
-                        #{player.jerseyNumber} • {player.position}
-                      </p>
-                    </div>
-                    <QrCode className="w-4 h-4 text-gray-400" />
-                  </div>
-                ))}
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-blue-600 hover:text-blue-700 mt-3"
-                  onClick={() => setLocation('/roster')}
-                >
-                  View Full Team →
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No team members</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
 
 
         

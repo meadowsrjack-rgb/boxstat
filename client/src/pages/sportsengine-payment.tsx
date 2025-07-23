@@ -1,366 +1,216 @@
-import { useEffect, useState } from 'react';
-import { useLocation, useRoute } from 'wouter';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { useAuth } from '@/hooks/useAuth';
-import { useAppMode } from '@/hooks/useAppMode';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { CreditCard, DollarSign, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { CreditCard, Clock, CheckCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
-const paymentSchema = z.object({
-  amount: z.number().min(1, "Amount must be at least $1"),
-  paymentType: z.enum(["registration", "uniform", "tournament", "other"]),
-  description: z.string().min(1, "Description is required"),
-});
+interface SportsEnginePayment {
+  id: string;
+  playerId: string;
+  playerName: string;
+  amount: number;
+  description: string;
+  type: 'registration' | 'uniform' | 'tournament' | 'equipment' | 'other';
+  status: 'paid' | 'pending' | 'overdue' | 'refunded';
+  dueDate: string;
+  paidDate?: string;
+  invoiceId: string;
+}
 
-type PaymentFormData = z.infer<typeof paymentSchema>;
+interface SportsEngineTeam {
+  id: string;
+  name: string;
+  ageGroup: string;
+  season: string;
+  division: string;
+  coachName: string;
+  myPlayers: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    jerseyNumber?: number;
+    position?: string;
+  }>;
+}
 
 export default function SportsEnginePayment() {
-  const { user, isAuthenticated } = useAuth();
-  const { currentMode } = useAppMode();
-  const [location, setLocation] = useLocation();
-  const [match, params] = useRoute('/payment/:type?');
   const { toast } = useToast();
-  const [paymentStatus, setPaymentStatus] = useState<'form' | 'processing' | 'completed' | 'failed'>('form');
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
 
-  const form = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      amount: 0,
-      paymentType: params?.type as any || 'registration',
-      description: '',
-    },
+  // Fetch my payments from SportsEngine
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery<SportsEnginePayment[]>({
+    queryKey: ['/api/sportsengine/my-payments'],
   });
 
-  // Get user's existing payments
-  const { data: payments = [] } = useQuery({
-    queryKey: ['/api/users', user?.id, 'payments'],
-    enabled: !!user?.id,
+  // Fetch my teams and players
+  const { data: teams = [], isLoading: teamsLoading } = useQuery<SportsEngineTeam[]>({
+    queryKey: ['/api/sportsengine/my-teams'],
   });
 
-  // Create SportsEngine payment
-  const createPaymentMutation = useMutation({
-    mutationFn: async (data: PaymentFormData) => {
-      const response = await apiRequest('POST', '/api/payments/sportsengine/create', data);
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Payment Created",
-        description: "Redirecting to SportsEngine payment...",
-      });
-      setPaymentStatus('processing');
-      
-      // In a real implementation, you would redirect to SportsEngine
-      // For demo purposes, we'll simulate a successful payment after 3 seconds
-      setTimeout(() => {
-        simulatePaymentCompletion(data.paymentId);
-      }, 3000);
-    },
-    onError: (error) => {
-      toast({
-        title: "Payment Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-      setPaymentStatus('failed');
-    },
-  });
-
-  const simulatePaymentCompletion = async (paymentId: string) => {
+  const handlePayment = async (payment: SportsEnginePayment) => {
+    setProcessingPayment(payment.id);
+    
     try {
-      await apiRequest('POST', '/api/payments/sportsengine/complete', {
-        paymentId,
-        sportsEnginePaymentId: `se_${Date.now()}`,
-        sportsEngineTransactionId: `txn_${Date.now()}`,
-        status: 'completed'
+      // Create payment intent with SportsEngine
+      const response = await fetch('/api/sportsengine/payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: payment.amount,
+          description: payment.description,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment intent');
+      }
+
+      const { clientSecret, paymentId } = await response.json();
       
-      setPaymentStatus('completed');
-      queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'payments'] });
-      
+      // In real implementation, redirect to SportsEngine payment page
       toast({
-        title: "Payment Successful",
-        description: "Your payment has been processed successfully!",
+        title: "Redirecting to Payment",
+        description: `Processing $${payment.amount} payment for ${payment.playerName}`,
       });
+
+      // Simulate redirect delay
+      setTimeout(() => {
+        window.open(`https://sportsengine.com/payment/${paymentId}`, '_blank');
+        setProcessingPayment(null);
+      }, 1000);
+
     } catch (error) {
-      setPaymentStatus('failed');
+      console.error('Payment error:', error);
       toast({
-        title: "Payment Failed",
-        description: "There was an error processing your payment.",
+        title: "Payment Error",
+        description: "Failed to process payment. Please try again.",
         variant: "destructive",
       });
+      setProcessingPayment(null);
     }
   };
 
-  const onSubmit = (data: PaymentFormData) => {
-    setPaymentStatus('processing');
-    createPaymentMutation.mutate(data);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge variant="default" className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Paid</Badge>;
+      case 'pending':
+        return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'overdue':
+        return <Badge variant="destructive"><AlertTriangle className="w-3 h-3 mr-1" />Overdue</Badge>;
+      case 'refunded':
+        return <Badge variant="outline">Refunded</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
-  if (!isAuthenticated) {
+  const getPaymentTypeLabel = (type: string) => {
+    switch (type) {
+      case 'registration':
+        return 'Season Registration';
+      case 'uniform':
+        return 'Team Uniform';
+      case 'tournament':
+        return 'Tournament Entry';
+      case 'equipment':
+        return 'Equipment';
+      default:
+        return 'Other';
+    }
+  };
+
+  if (paymentsLoading || teamsLoading) {
     return (
-      <div className="container mx-auto p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Please Log In</CardTitle>
-            <CardDescription>You need to be logged in to make payments.</CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="p-6 space-y-6">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+          <p>Loading SportsEngine data...</p>
+        </div>
       </div>
     );
   }
 
-  if (currentMode === 'player') {
-    return (
-      <div className="container mx-auto p-4 max-w-2xl">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Payment Access Restricted
-            </CardTitle>
-            <CardDescription>
-              Only parents can make payments. Please ask your parent to handle any payment needs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <p className="text-gray-600 mb-4">
-                Your parent needs to be in Parent Mode to make payments.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={() => setLocation('/')}
-              >
-                Return to Home
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const pendingPayments = payments.filter(p => p.status === 'pending' || p.status === 'overdue');
+  const completedPayments = payments.filter(p => p.status === 'paid' || p.status === 'refunded');
 
   return (
-    <div className="container mx-auto p-4 max-w-2xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">SportsEngine Payment</h1>
-        <p className="text-muted-foreground">Secure payment processing for UYP Basketball League</p>
+    <div className="p-6 space-y-6">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-2">SportsEngine Payments</h1>
+        <p className="text-muted-foreground">Manage your league payments and registration fees</p>
       </div>
 
-      {paymentStatus === 'form' && (
+      {/* Team Overview */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {teams.map(team => (
+          <Card key={team.id}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">{team.name}</CardTitle>
+              <CardDescription>{team.ageGroup} • {team.division}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-2">Coach: {team.coachName}</p>
+              <div className="space-y-1">
+                {team.myPlayers.map(player => (
+                  <div key={player.id} className="flex justify-between text-sm">
+                    <span>{player.firstName} {player.lastName}</span>
+                    <span className="text-muted-foreground">#{player.jerseyNumber || 'TBD'}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Pending Payments */}
+      {pendingPayments.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Details
+              <CreditCard className="w-5 h-5" />
+              Outstanding Payments ({pendingPayments.length})
             </CardTitle>
             <CardDescription>
-              Enter your payment information below. You'll be redirected to SportsEngine to complete the payment.
+              Payment required for continued participation
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="paymentType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Payment Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select payment type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="registration">Registration Fee</SelectItem>
-                          <SelectItem value="uniform">Uniform Purchase</SelectItem>
-                          <SelectItem value="tournament">Tournament Entry</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount ($)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="1"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Enter the payment amount in USD
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Enter payment description..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Provide details about this payment
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex gap-2">
-                  <Button type="submit" className="flex-1" disabled={createPaymentMutation.isPending}>
-                    {createPaymentMutation.isPending ? 'Creating Payment...' : 'Continue to SportsEngine'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setLocation('/')}>
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      )}
-
-      {paymentStatus === 'processing' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 animate-spin" />
-              Processing Payment
-            </CardTitle>
-            <CardDescription>
-              Processing your payment through SportsEngine...
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8">
-              <div className="animate-pulse">
-                <DollarSign className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium">Please wait while we process your payment</p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Do not close this window or navigate away
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {paymentStatus === 'completed' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
-              Payment Successful
-            </CardTitle>
-            <CardDescription>
-              Your payment has been processed successfully!
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-6">
-              <CheckCircle className="h-16 w-16 mx-auto mb-4 text-green-600" />
-              <p className="text-lg font-medium mb-2">Payment Completed</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                You will receive a confirmation email shortly
-              </p>
-              <Button onClick={() => setLocation('/')}>
-                Return to Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {paymentStatus === 'failed' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-5 w-5" />
-              Payment Failed
-            </CardTitle>
-            <CardDescription>
-              There was an error processing your payment
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-6">
-              <XCircle className="h-16 w-16 mx-auto mb-4 text-red-600" />
-              <p className="text-lg font-medium mb-2">Payment Failed</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please try again or contact support if the issue persists
-              </p>
-              <div className="flex gap-2 justify-center">
-                <Button onClick={() => setPaymentStatus('form')}>
-                  Try Again
-                </Button>
-                <Button variant="outline" onClick={() => setLocation('/')}>
-                  Go Home
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Payments */}
-      {payments.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Recent Payments</CardTitle>
-            <CardDescription>Your payment history</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {payments.slice(0, 5).map((payment: any) => (
-                <div key={payment.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
-                    <p className="font-medium">{payment.description}</p>
+            <div className="space-y-4">
+              {pendingPayments.map(payment => (
+                <div key={payment.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className="font-medium">{payment.description}</h3>
+                      {getStatusBadge(payment.status)}
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                      {payment.paymentType} • {new Date(payment.createdAt).toLocaleDateString()}
+                      {getPaymentTypeLabel(payment.type)} • Due: {new Date(payment.dueDate).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Invoice: {payment.invoiceId}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">${payment.amount}</p>
-                    <p className={`text-sm ${
-                      payment.status === 'completed' ? 'text-green-600' : 
-                      payment.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
-                    }`}>
-                      {payment.status}
-                    </p>
+                    <p className="text-2xl font-bold">${payment.amount}</p>
+                    <Button 
+                      onClick={() => handlePayment(payment)}
+                      disabled={processingPayment === payment.id}
+                      className="mt-2"
+                    >
+                      {processingPayment === payment.id ? (
+                        <>Processing...</>
+                      ) : (
+                        <>
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Pay Now
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -368,6 +218,66 @@ export default function SportsEnginePayment() {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment History</CardTitle>
+          <CardDescription>
+            All completed and processed payments
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {completedPayments.length > 0 ? (
+            <div className="space-y-3">
+              {completedPayments.map(payment => (
+                <div key={payment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h4 className="font-medium">{payment.description}</h4>
+                      {getStatusBadge(payment.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getPaymentTypeLabel(payment.type)} • 
+                      {payment.paidDate && ` Paid: ${new Date(payment.paidDate).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">${payment.amount}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">
+              No payment history available
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* SportsEngine Integration Info */}
+      <Card>
+        <CardHeader>
+          <CardTitle>About SportsEngine Payments</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              • All payments are processed securely through SportsEngine's payment platform
+            </p>
+            <p>
+              • You'll be redirected to SportsEngine to complete your payment
+            </p>
+            <p>
+              • Payment confirmations and receipts are sent via email
+            </p>
+            <p>
+              • Contact your team administrator for payment questions or assistance
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

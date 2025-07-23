@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema, insertChildProfileSchema } from "@shared/schema";
 import { z } from "zod";
+import sportsEngineRoutes from "./sportsengine-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -535,6 +536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch teams" });
     }
   });
+
+  // SportsEngine integration routes
+  app.use('/api/sportsengine', sportsEngineRoutes);
 
   // Child Profile Management Routes
   app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {

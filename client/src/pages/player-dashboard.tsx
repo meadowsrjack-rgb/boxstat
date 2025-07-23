@@ -16,9 +16,7 @@ import {
   ChevronRight,
   Volleyball,
   Play,
-  BookOpen,
-
-  Key
+  BookOpen
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -30,7 +28,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Temporarily disable useAppMode
   // const { deviceConfig } = useAppMode();
   const [showQR, setShowQR] = useState(false);
-  const [showPinEntry, setShowPinEntry] = useState(false);
   const [, setLocation] = useLocation();
   
   // Get child profiles to find the current child's QR code
@@ -329,15 +326,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         </div>
       )}
 
-      {/* PIN Entry Modal */}
-      <PinEntry
-        isOpen={showPinEntry}
-        onClose={() => setShowPinEntry(false)}
-        onSuccess={() => {
-          // Successfully unlocked - user can now access parent features
-          setShowPinEntry(false);
-        }}
-      />
+
     </div>
   );
 }

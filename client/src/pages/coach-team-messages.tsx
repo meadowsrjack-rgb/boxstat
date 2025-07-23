@@ -44,10 +44,8 @@ export default function CoachTeamMessages() {
 
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: any) => {
-      return apiRequest("/api/announcements", {
-        method: "POST",
-        body: messageData,
-      });
+      const response = await apiRequest("POST", "/api/announcements", messageData);
+      return response.json();
     },
     onSuccess: () => {
       toast({

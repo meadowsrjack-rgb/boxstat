@@ -2,9 +2,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Calendar, Trophy, Shield, MessageCircle } from "lucide-react";
 import { FaBasketballBall } from "react-icons/fa";
+import { useLocation } from "wouter";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function Landing() {
+  const [, setLocation] = useLocation();
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       {/* Header */}
@@ -167,14 +169,24 @@ export default function Landing() {
             Sign in to access your team dashboard, track your child's progress, 
             and stay connected with the league.
           </p>
-          <Button 
-            size="lg" 
-            variant="secondary"
-            onClick={() => window.location.href = '/api/login'}
-            className="text-lg px-8 py-3"
-          >
-            Sign In Now
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button 
+              size="lg" 
+              variant="secondary"
+              onClick={() => window.location.href = '/api/login'}
+              className="text-lg px-8 py-3"
+            >
+              Sign In Now
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline"
+              onClick={() => setLocation('/test-accounts')}
+              className="text-lg px-8 py-3 border-white text-white hover:bg-white hover:text-primary"
+            >
+              View Test Accounts
+            </Button>
+          </div>
         </div>
       </section>
 

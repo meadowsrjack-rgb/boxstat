@@ -22,6 +22,7 @@ import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
 import FamilyManagement from "@/pages/family-management";
+import TestAccounts from "@/pages/test-accounts";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -67,6 +68,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/test-accounts" component={TestAccounts} />
         <Route component={Landing} />
       </Switch>
     );

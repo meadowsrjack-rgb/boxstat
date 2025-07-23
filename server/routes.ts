@@ -973,5 +973,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Test accounts endpoint for development/testing
+  app.post('/api/test-accounts/create', async (req, res) => {
+    try {
+      const { id, type, name, email } = req.body;
+      
+      // Create test user in database
+      const testUser = await storage.upsertUser({
+        id: id,
+        email: email,
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ')[1] || '',
+        userType: type,
+        profileCompleted: true,
+        qrCodeData: `UYP-${id}-${Date.now()}`,
+      });
+
+      res.json({ 
+        success: true, 
+        name: name,
+        redirectUrl: type === 'parent' ? '/' : type === 'player' ? '/?view=player' : '/admin'
+      });
+    } catch (error) {
+      console.error("Error creating test account:", error);
+      res.status(500).json({ message: "Failed to create test account" });
+    }
+  });
+
   return httpServer;
 }

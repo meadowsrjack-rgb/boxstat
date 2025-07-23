@@ -675,6 +675,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get teams by coach (for admin dashboard)
+  app.get('/api/teams/coach/:coachId', isAuthenticated, async (req: any, res) => {
+    try {
+      const coachId = req.params.coachId;
+      const teams = await storage.getTeamsByCoach(coachId);
+      res.json(teams);
+    } catch (error) {
+      console.error("Error fetching coach teams:", error);
+      res.status(500).json({ message: "Failed to fetch coach teams" });
+    }
+  });
+
+  // Team events route (alias for compatibility)
+  app.get('/api/team-events/:teamId', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const events = await storage.getTeamEvents(teamId);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching team events:", error);
+      res.status(500).json({ message: "Failed to fetch team events" });
+    }
+  });
+
+  // Team players route (alias for compatibility)
+  app.get('/api/team-players/:teamId', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const players = await storage.getTeamPlayers(teamId);
+      res.json(players);
+    } catch (error) {
+      console.error("Error fetching team players:", error);
+      res.status(500).json({ message: "Failed to fetch team players" });
+    }
+  });
+
   // SportsEngine integration routes
   app.use('/api/sportsengine', sportsEngineRoutes);
 

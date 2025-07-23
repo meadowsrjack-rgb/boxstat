@@ -10,6 +10,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **July 23, 2025**: Completely redesigned admin/coach dashboard to be coach-focused with mobile-first design
+- **July 23, 2025**: Added QR code scanner functionality for player check-ins with camera integration
+- **July 23, 2025**: Implemented team-centered coach dashboard with schedule, team members, and announcements
+- **July 23, 2025**: Removed payment/billing features from coach dashboard - handled through SportsEngine
+- **July 23, 2025**: Added team management features: homework assignment, team chat access, and schedule viewing
+- **July 23, 2025**: Fixed missing storage functions for announcements and implemented proper coach team queries
 - **July 17, 2025**: Updated training pages to hide pricing information in Player Mode - players only see purchased content
 - **July 17, 2025**: Added payment restrictions for Player Mode - only parents can access payment pages
 - **July 17, 2025**: Modified training program text to be child-appropriate in Player Mode

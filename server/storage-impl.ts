@@ -72,6 +72,10 @@ export interface IStorage {
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
   getUserAttendances(userId: string): Promise<Attendance[]>;
   getEventAttendances(eventId: number): Promise<Attendance[]>;
+
+  // Announcement operations
+  getAnnouncements(teamId?: number): Promise<Announcement[]>;
+  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   
   // Badge operations
   getAllBadges(): Promise<Badge[]>;
@@ -427,6 +431,44 @@ export class DatabaseStorage implements IStorage {
   async createDrill(drill: InsertDrill): Promise<Drill> {
     const [newDrill] = await db.insert(drills).values(drill).returning();
     return newDrill;
+  }
+
+  // Announcement operations
+  async getAnnouncements(teamId?: number): Promise<Announcement[]> {
+    if (teamId) {
+      return await db
+        .select()
+        .from(announcements)
+        .where(and(eq(announcements.isActive, true), eq(announcements.teamId, teamId)))
+        .orderBy(desc(announcements.createdAt));
+    }
+    
+    return await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.isActive, true))
+      .orderBy(desc(announcements.createdAt));
+  }
+
+  async getAllAnnouncements(): Promise<Announcement[]> {
+    return await db
+      .select()
+      .from(announcements)
+      .where(eq(announcements.isActive, true))
+      .orderBy(desc(announcements.createdAt));
+  }
+
+  async getTeamAnnouncements(teamId: number): Promise<Announcement[]> {
+    return await db
+      .select()
+      .from(announcements)
+      .where(and(eq(announcements.isActive, true), eq(announcements.teamId, teamId)))
+      .orderBy(desc(announcements.createdAt));
+  }
+
+  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
+    const [newAnnouncement] = await db.insert(announcements).values(announcement).returning();
+    return newAnnouncement;
   }
 }
 

@@ -72,12 +72,21 @@ export default function TestAccounts() {
                accountType.type === 'player' ? 'player.test@uyp.com' : 'admin.test@uyp.com'
       };
       
-      const response = await apiRequest('/api/test-accounts/create', {
+      const response = await fetch('/api/test-accounts/create', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(testAccount),
       });
 
-      if (response.success) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         toast({
           title: "Test Account Created",
           description: `Created ${accountType.type} account. Signing you in...`,
@@ -85,7 +94,7 @@ export default function TestAccounts() {
         
         // Redirect to the test login URL
         setTimeout(() => {
-          window.location.href = response.loginUrl;
+          window.location.href = data.loginUrl;
         }, 1000);
       }
     } catch (error) {

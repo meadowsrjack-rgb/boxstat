@@ -978,6 +978,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id, type, name, email } = req.body;
       
+      console.log('Creating test account with data:', { id, type, name, email });
+      
       // Create dedicated test user in database
       const testUser = await storage.upsertUser({
         id: id,
@@ -987,11 +989,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userType: type,
         profileCompleted: true,
         qrCodeData: `UYP-${id}-${Date.now()}`,
-        // Add team assignment for players
-        teamId: type === 'player' ? 1 : null,
-        jerseyNumber: type === 'player' ? Math.floor(Math.random() * 99) + 1 : null,
-        position: type === 'player' ? 'Guard' : null,
+        // Add basic required fields
+        profileImageUrl: 'https://replit.com/public/images/mark.png',
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
+
+      console.log('Test user created successfully:', testUser);
 
       res.json({ 
         success: true, 
@@ -1004,8 +1008,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         loginUrl: `/test-login/${testUser.id}`
       });
     } catch (error) {
-      console.error("Error creating test account:", error);
-      res.status(500).json({ message: "Failed to create test account" });
+      console.error("Detailed error creating test account:", error);
+      res.status(500).json({ 
+        message: "Failed to create test account", 
+        error: error.message || "Unknown error"
+      });
     }
   });
 

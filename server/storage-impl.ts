@@ -6,6 +6,7 @@ import {
   badges,
   userBadges,
   announcements,
+  messageReactions,
   messages,
   payments,
   drills,
@@ -19,6 +20,7 @@ import {
   type Badge,
   type UserBadge,
   type Announcement,
+  type MessageReaction,
   type Message,
   type Payment,
   type Drill,
@@ -30,6 +32,7 @@ import {
   type InsertAttendance,
   type InsertBadge,
   type InsertAnnouncement,
+  type InsertMessageReaction,
   type InsertMessage,
   type InsertPayment,
   type InsertDrill,
@@ -627,6 +630,33 @@ export class DatabaseStorage implements IStorage {
   async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
     const [newAnnouncement] = await db.insert(announcements).values(announcement).returning();
     return newAnnouncement;
+  }
+
+  // Message reaction operations
+  async getMessageReactions(messageId: number): Promise<MessageReaction[]> {
+    return await db
+      .select()
+      .from(messageReactions)
+      .where(eq(messageReactions.messageId, messageId))
+      .orderBy(desc(messageReactions.createdAt));
+  }
+
+  async addMessageReaction(reaction: InsertMessageReaction): Promise<MessageReaction> {
+    const [newReaction] = await db.insert(messageReactions).values(reaction).returning();
+    return newReaction;
+  }
+
+  async removeMessageReaction(messageId: number, userId: string, emoji: string): Promise<boolean> {
+    const result = await db
+      .delete(messageReactions)
+      .where(
+        and(
+          eq(messageReactions.messageId, messageId),
+          eq(messageReactions.userId, userId),
+          eq(messageReactions.emoji, emoji)
+        )
+      );
+    return result.rowCount > 0;
   }
 }
 

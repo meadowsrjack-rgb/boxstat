@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, users } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -562,6 +562,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating message:", error);
       res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+
+  // Message reaction routes
+  app.get('/api/messages/:id/reactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const reactions = await storage.getMessageReactions(parseInt(req.params.id));
+      res.json(reactions);
+    } catch (error) {
+      console.error("Error fetching message reactions:", error);
+      res.status(500).json({ message: "Failed to fetch reactions" });
+    }
+  });
+
+  app.post('/api/messages/:id/reactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const reactionData = insertMessageReactionSchema.parse({
+        messageId: parseInt(req.params.id),
+        userId: req.user.claims.sub,
+        emoji: req.body.emoji,
+      });
+      const reaction = await storage.addMessageReaction(reactionData);
+      res.json(reaction);
+    } catch (error) {
+      console.error("Error adding message reaction:", error);
+      res.status(500).json({ message: "Failed to add reaction" });
+    }
+  });
+
+  app.delete('/api/messages/:id/reactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const success = await storage.removeMessageReaction(
+        parseInt(req.params.id),
+        req.user.claims.sub,
+        req.body.emoji
+      );
+      res.json({ success });
+    } catch (error) {
+      console.error("Error removing message reaction:", error);
+      res.status(500).json({ message: "Failed to remove reaction" });
     }
   });
 

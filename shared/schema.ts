@@ -131,11 +131,21 @@ export const announcements = pgTable("announcements", {
   authorId: varchar("author_id").references(() => users.id).notNull(),
   teamId: integer("team_id").references(() => teams.id), // null for league-wide announcements
   priority: varchar("priority", { enum: ["low", "medium", "high"] }).default("medium"),
-  messageType: varchar("message_type", { enum: ["message", "task", "announcement"] }).default("message"),
   targetAudience: varchar("target_audience", { enum: ["team", "parents", "all"] }).default("team"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// Message reactions table
+export const messageReactions = pgTable("message_reactions", {
+  id: serial("id").primaryKey(),
+  messageId: integer("message_id").references(() => announcements.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  emoji: varchar("emoji").notNull(), // The emoji reaction (👍, ❤️, 😄, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserMessageReaction: unique().on(table.messageId, table.userId, table.emoji),
+}));
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
@@ -309,6 +319,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 export const insertAttendanceSchema = createInsertSchema(attendances).omit({ id: true, checkedInAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, createdAt: true });
 export const insertAnnouncementSchema = createInsertSchema(announcements).omit({ id: true, createdAt: true });
+export const insertMessageReactionSchema = createInsertSchema(messageReactions).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, paidAt: true });
 export const insertDrillSchema = createInsertSchema(drills).omit({ id: true, createdAt: true });
@@ -326,6 +337,7 @@ export type Attendance = typeof attendances.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
 export type UserBadge = typeof userBadges.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
+export type MessageReaction = typeof messageReactions.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
 export type Drill = typeof drills.$inferSelect;
@@ -340,6 +352,7 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
 export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
+export type InsertMessageReaction = z.infer<typeof insertMessageReactionSchema>;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type InsertDrill = z.infer<typeof insertDrillSchema>;

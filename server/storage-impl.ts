@@ -48,6 +48,7 @@ export interface IStorage {
   
   // Family operations
   getFamilyMembers(parentId: string): Promise<FamilyMember[]>;
+  getChildProfiles(parentId: string): Promise<any[]>;
   addFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
   removeFamilyMember(id: number): Promise<void>;
   updateFamilyMemberPermissions(id: number, permissions: Partial<FamilyMember>): Promise<FamilyMember>;
@@ -190,6 +191,20 @@ export class DatabaseStorage implements IStorage {
       .where(eq(familyMembers.id, id))
       .returning();
     return member;
+  }
+
+  async getChildProfiles(parentId: string): Promise<any[]> {
+    const members = await this.getFamilyMembers(parentId);
+    return members.map(member => ({
+      id: member.playerId,
+      firstName: member.player?.firstName,
+      lastName: member.player?.lastName,
+      relationship: member.relationship,
+      teamId: member.player?.teamId,
+      jerseyNumber: member.player?.jerseyNumber,
+      position: member.player?.position,
+      qrCodeData: `UYP-${member.playerId}-${Date.now()}`
+    }));
   }
 
   // Team operations

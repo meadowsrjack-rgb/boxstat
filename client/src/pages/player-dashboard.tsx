@@ -17,13 +17,12 @@ import {
   Volleyball,
   Play,
   BookOpen,
-  Lock,
+
   Key
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
-import { useAppMode } from "@/hooks/useAppMode";
-import PinEntry from "@/components/ui/pin-entry";
+
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
@@ -108,15 +107,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => window.location.href = "/"}
-                className="flex items-center space-x-1"
-              >
-                <Lock className="h-3 w-3" />
-                <span className="text-xs">Parent</span>
-              </Button>
               <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
                   {userBadges?.length || 0}

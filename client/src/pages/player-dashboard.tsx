@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Volleyball,
   Play,
-  BookOpen
+  BookOpen,
+  Clock
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -81,6 +82,23 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const nextEvent = displayEvents?.[0];
   // Use the selected child's QR code data if available
   const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
+
+  const getEventTypeColor = (eventType: string) => {
+    switch (eventType) {
+      case "practice":
+        return "bg-blue-100 text-blue-800";
+      case "game":
+        return "bg-green-100 text-green-800";
+      case "tournament":
+        return "bg-purple-100 text-purple-800";
+      case "camp":
+        return "bg-orange-100 text-orange-800";
+      case "skills":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-500 to-blue-600">
@@ -186,6 +204,66 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </CardContent>
           </Card>
         )}
+
+        {/* Calendar Widget - This Week */}
+        <Card className="mb-6 shadow-lg">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-green-500" />
+              This Week's Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {displayEvents && displayEvents.length > 0 ? (
+              <div className="space-y-3">
+                {displayEvents.slice(0, 3).map((event: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={`${getEventTypeColor(event.eventType)} text-xs px-2 py-1`}>
+                          {event.eventType}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                      <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {format(new Date(event.startTime), 'MMM d')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {format(new Date(event.startTime), 'h:mm a')}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                ))}
+                {displayEvents.length > 3 && (
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-green-600 hover:text-green-700 mt-3"
+                    onClick={() => setLocation('/schedule')}
+                  >
+                    View All Events ({displayEvents.length}) →
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No upcoming events</p>
+                <Button 
+                  variant="ghost" 
+                  className="text-green-600 hover:text-green-700 mt-2"
+                  onClick={() => setLocation('/schedule')}
+                >
+                  View Full Schedule
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Badges & Achievements */}
         <Card className="mb-6 shadow-lg">

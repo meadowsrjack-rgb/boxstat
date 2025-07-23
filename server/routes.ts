@@ -974,29 +974,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Test accounts endpoint for development/testing
-  app.post('/api/test-accounts/create', async (req, res) => {
+  app.post('/api/test-accounts/switch', isAuthenticated, async (req: any, res) => {
     try {
-      const { id, type, name, email } = req.body;
+      const { type } = req.body;
+      const userId = req.user.claims.sub;
       
-      // Create test user in database
-      const testUser = await storage.upsertUser({
-        id: id,
-        email: email,
-        firstName: name.split(' ')[0],
-        lastName: name.split(' ')[1] || '',
+      // Update the current user's type instead of creating new user
+      const updatedUser = await storage.updateUserProfile(userId, {
         userType: type,
         profileCompleted: true,
-        qrCodeData: `UYP-${id}-${Date.now()}`,
       });
 
       res.json({ 
         success: true, 
-        name: name,
-        redirectUrl: type === 'parent' ? '/' : type === 'player' ? '/?view=player' : '/admin'
+        userType: type,
+        message: `Switched to ${type} account successfully`
       });
     } catch (error) {
-      console.error("Error creating test account:", error);
-      res.status(500).json({ message: "Failed to create test account" });
+      console.error("Error switching account type:", error);
+      res.status(500).json({ message: "Failed to switch account type" });
     }
   });
 

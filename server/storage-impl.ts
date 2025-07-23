@@ -369,7 +369,10 @@ export class DatabaseStorage implements IStorage {
   async updatePaymentStatus(paymentId: number, status: string, paidAt?: Date): Promise<Payment> {
     const [payment] = await db
       .update(payments)
-      .set({ status, paidAt })
+      .set({ 
+        status: status as "pending" | "completed" | "failed" | "refunded", 
+        paidAt 
+      })
       .where(eq(payments.id, paymentId))
       .returning();
     return payment;
@@ -394,7 +397,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(drills)
-      .where(and(eq(drills.category, category), eq(drills.isActive, true)));
+      .where(and(sql`${drills.category} = ${category}`, eq(drills.isActive, true)));
   }
 
   async createDrill(drill: InsertDrill): Promise<Drill> {

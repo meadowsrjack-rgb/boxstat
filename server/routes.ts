@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema, insertChildProfileSchema } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, users } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 import { z } from "zod";
 import sportsEngineRoutes from "./sportsengine-routes";
 
@@ -364,6 +366,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error initializing sample schedule:", error);
       res.status(500).json({ message: "Failed to initialize sample schedule" });
+    }
+  });
+
+  // Account setup route
+  app.post("/api/setup-account", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const {
+        userType,
+        firstName,
+        lastName,
+        dateOfBirth,
+        phoneNumber,
+        address,
+        emergencyContact,
+        emergencyPhone,
+        medicalInfo,
+        allergies,
+        schoolGrade,
+        parentalConsent
+      } = req.body;
+
+      // Generate unique QR code for check-in
+      const qrCodeData = `UYP-${userId}-${Date.now()}`;
+
+      const updatedUser = await storage.updateUserProfile(userId, {
+        userType,
+        firstName,
+        lastName,
+        dateOfBirth,
+        phoneNumber,
+        address,
+        emergencyContact,
+        emergencyPhone,
+        medicalInfo,
+        allergies,
+        schoolGrade,
+        parentalConsent,
+        profileCompleted: true,
+        qrCodeData,
+      });
+
+      res.json({ 
+        message: "Account setup completed successfully",
+        user: updatedUser
+      });
+    } catch (error) {
+      console.error("Account setup error:", error);
+      res.status(500).json({ message: "Account setup failed" });
+    }
+  });
+
+  // Family member management routes
+  app.get("/api/family-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      res.json(familyMembers);
+    } catch (error) {
+      console.error("Error fetching family members:", error);
+      res.status(500).json({ message: "Failed to fetch family members" });
+    }
+  });
+
+  app.post("/api/family-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const { playerEmail, relationship, canMakePayments, canViewReports, emergencyContact } = req.body;
+      
+      // Find player by email
+      const players = await db.select().from(users).where(eq(users.email, playerEmail));
+      if (players.length === 0) {
+        return res.status(404).json({ message: "Player account not found with this email" });
+      }
+      
+      const player = players[0];
+      if (player.userType !== 'player') {
+        return res.status(400).json({ message: "Account is not a player account" });
+      }
+
+      const familyMember = await storage.addFamilyMember({
+        parentId,
+        playerId: player.id,
+        relationship,
+        canMakePayments,
+        canViewReports,
+        emergencyContact
+      });
+
+      res.json(familyMember);
+    } catch (error) {
+      console.error("Error adding family member:", error);
+      res.status(500).json({ message: "Failed to add family member" });
+    }
+  });
+
+  app.put("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const parentId = req.user.claims.sub;
+      
+      // Verify ownership - check if this is the parent's family member
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      const member = familyMembers.find(m => m.id === parseInt(id));
+      
+      if (!member) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const permissions = req.body;
+      const updatedMember = await storage.updateFamilyMemberPermissions(parseInt(id), permissions);
+      res.json(updatedMember);
+    } catch (error) {
+      console.error("Error updating family member:", error);
+      res.status(500).json({ message: "Failed to update family member" });
+    }
+  });
+
+  app.delete("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const parentId = req.user.claims.sub;
+      
+      // Verify ownership
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      const member = familyMembers.find(m => m.id === parseInt(id));
+      
+      if (!member) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      await storage.removeFamilyMember(parseInt(id));
+      res.json({ message: "Family member removed successfully" });
+    } catch (error) {
+      console.error("Error removing family member:", error);
+      res.status(500).json({ message: "Failed to remove family member" });
     }
   });
 

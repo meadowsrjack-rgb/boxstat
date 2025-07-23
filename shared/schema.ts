@@ -35,45 +35,41 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { enum: ["parent", "player", "admin"] }).notNull().default("parent"),
-  parentId: varchar("parent_id"), // For linking player to parent - self-reference
+  userType: varchar("user_type", { enum: ["parent", "player", "admin"] }).notNull(),
+  dateOfBirth: date("date_of_birth"),
+  phoneNumber: varchar("phone_number"),
+  emergencyContact: varchar("emergency_contact"),
+  emergencyPhone: varchar("emergency_phone"),
+  address: text("address"),
+  medicalInfo: text("medical_info"),
+  allergies: text("allergies"),
   teamId: integer("team_id"),
+  jerseyNumber: integer("jersey_number"),
+  position: varchar("position"),
+  schoolGrade: varchar("school_grade"),
+  parentalConsent: boolean("parental_consent").default(false),
+  profileCompleted: boolean("profile_completed").default(false),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   sportsEngineCustomerId: varchar("sports_engine_customer_id"),
   sportsEngineSubscriptionId: varchar("sports_engine_subscription_id"),
+  qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Child profiles table - data objects linked to parent accounts
-export const childProfiles = pgTable("child_profiles", {
+// Family relationships table - links parents to players
+export const familyMembers = pgTable("family_members", {
   id: serial("id").primaryKey(),
-  parentId: varchar("parent_id").references(() => users.id).notNull(),
-  firstName: varchar("first_name").notNull(),
-  lastName: varchar("last_name").notNull(),
-  dateOfBirth: date("date_of_birth"),
-  jerseyNumber: varchar("jersey_number"),
-  profileImageUrl: varchar("profile_image_url"),
-  teamId: integer("team_id").references(() => teams.id),
-  qrCodeData: varchar("qr_code_data").notNull(), // Unique QR code for check-in
+  parentId: varchar("parent_id").notNull().references(() => users.id),
+  playerId: varchar("player_id").notNull().references(() => users.id),
+  relationship: varchar("relationship", { enum: ["parent", "guardian", "sibling", "grandparent"] }).notNull().default("parent"),
+  canMakePayments: boolean("can_make_payments").notNull().default(true),
+  canViewReports: boolean("can_view_reports").notNull().default(true),
+  emergencyContact: boolean("emergency_contact").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Device mode configuration for Player Mode locking
-export const deviceModeConfig = pgTable("device_mode_config", {
-  id: serial("id").primaryKey(),
-  deviceId: varchar("device_id").notNull(), // Browser fingerprint or device identifier
-  parentId: varchar("parent_id").references(() => users.id).notNull(),
-  childProfileId: integer("child_profile_id").references(() => childProfiles.id),
-  mode: varchar("mode", { enum: ["parent", "player"] }).notNull().default("parent"),
-  pinHash: varchar("pin_hash"), // Hashed 4-digit PIN for Player Mode
-  isLocked: boolean("is_locked").notNull().default(false),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
-  deviceParentUnique: unique().on(table.deviceId, table.parentId),
+  uniqueRelationship: unique().on(table.parentId, table.playerId),
 }));
 
 export const teams = pgTable("teams", {
@@ -94,7 +90,7 @@ export const events = pgTable("events", {
   endTime: timestamp("end_time").notNull(),
   location: varchar("location").notNull(),
   teamId: integer("team_id").references(() => teams.id),
-  childProfileId: integer("child_profile_id").references(() => childProfiles.id), // Link to specific child
+  playerId: varchar("player_id").references(() => users.id), // Link to specific player
   opponentTeam: varchar("opponent_team"),
   isRecurring: boolean("is_recurring").default(false),
   recurringType: varchar("recurring_type", { enum: ["weekly", "daily", "monthly"] }),
@@ -217,11 +213,7 @@ export const playerStats = pgTable("player_stats", {
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
-  parent: one(users, { fields: [users.parentId], references: [users.id] }),
-  children: many(users),
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
-  childProfiles: many(childProfiles),
-  deviceModeConfigs: many(deviceModeConfig),
   attendances: many(attendances),
   badges: many(userBadges),
   announcements: many(announcements),
@@ -230,17 +222,25 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   stats: many(playerStats),
   trainingSubscriptions: many(trainingSubscriptions),
   trainingProgress: many(trainingProgress),
+  childrenAsParent: many(familyMembers, {
+    relationName: "parentRelation",
+  }),
+  parentsAsPlayer: many(familyMembers, {
+    relationName: "playerRelation",
+  }),
 }));
 
-export const childProfilesRelations = relations(childProfiles, ({ one, many }) => ({
-  parent: one(users, { fields: [childProfiles.parentId], references: [users.id] }),
-  team: one(teams, { fields: [childProfiles.teamId], references: [teams.id] }),
-  deviceModeConfigs: many(deviceModeConfig),
-}));
-
-export const deviceModeConfigRelations = relations(deviceModeConfig, ({ one }) => ({
-  parent: one(users, { fields: [deviceModeConfig.parentId], references: [users.id] }),
-  childProfile: one(childProfiles, { fields: [deviceModeConfig.childProfileId], references: [childProfiles.id] }),
+export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
+  parent: one(users, {
+    fields: [familyMembers.parentId],
+    references: [users.id],
+    relationName: "parentRelation",
+  }),
+  player: one(users, {
+    fields: [familyMembers.playerId],
+    references: [users.id],
+    relationName: "playerRelation",
+  }),
 }));
 
 export const teamsRelations = relations(teams, ({ one, many }) => ({
@@ -313,8 +313,7 @@ export const insertDrillSchema = createInsertSchema(drills).omit({ id: true, cre
 export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({ id: true, createdAt: true });
 export const insertTrainingSubscriptionSchema = createInsertSchema(trainingSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTrainingProgressSchema = createInsertSchema(trainingProgress).omit({ id: true, createdAt: true });
-export const insertChildProfileSchema = createInsertSchema(childProfiles).omit({ id: true, createdAt: true, updatedAt: true });
-export const insertDeviceModeConfigSchema = createInsertSchema(deviceModeConfig).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -331,8 +330,7 @@ export type Drill = typeof drills.$inferSelect;
 export type PlayerStats = typeof playerStats.$inferSelect;
 export type TrainingSubscription = typeof trainingSubscriptions.$inferSelect;
 export type TrainingProgress = typeof trainingProgress.$inferSelect;
-export type ChildProfile = typeof childProfiles.$inferSelect;
-export type DeviceModeConfig = typeof deviceModeConfig.$inferSelect;
+export type FamilyMember = typeof familyMembers.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -346,5 +344,4 @@ export type InsertDrill = z.infer<typeof insertDrillSchema>;
 export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type InsertTrainingSubscription = z.infer<typeof insertTrainingSubscriptionSchema>;
 export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;
-export type InsertChildProfile = z.infer<typeof insertChildProfileSchema>;
-export type InsertDeviceModeConfig = z.infer<typeof insertDeviceModeConfigSchema>;
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;

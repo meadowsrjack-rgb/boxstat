@@ -4,7 +4,10 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { useAppMode } from "@/hooks/useAppMode";
+import { useEffect, useState } from "react";
+import ModeSelection from "@/components/ui/mode-selection";
+import PinEntry from "@/components/ui/pin-entry";
 
 // Pages
 import Landing from "@/pages/landing";
@@ -91,56 +94,60 @@ function Router() {
   };
 
   return (
-    <Switch>
-      <Route path="/" component={getDashboardComponent()} />
-      
-      {/* Routes available to all authenticated users */}
-      <Route path="/profile" component={Profile} />
-      <Route path="/team" component={TeamDetails} />
-      <Route path="/schedule" component={Schedule} />
-      <Route path="/chat" component={Chat} />
-      <Route path="/training" component={Training} />
-      <Route path="/training-library" component={TrainingLibrary} />
-      
-      {/* Parent-specific routes */}
-      {user?.userType === 'parent' && (
-        <>
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
-          <Route path="/roster" component={RosterManagement} />
-          <Route path="/schedule-requests" component={ScheduleRequests} />
-          <Route path="/family" component={FamilyManagement} />
-        </>
-      )}
-      
-      {/* Player-specific routes with payment access */}
-      {user?.userType === 'player' && (
-        <>
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
-        </>
-      )}
-      
-      {/* Admin routes */}
-      {user?.userType === 'admin' && (
-        <>
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
-          <Route path="/roster" component={RosterManagement} />
-          <Route path="/schedule-requests" component={ScheduleRequests} />
-          <Route path="/family" component={FamilyManagement} />
-        </>
-      )}
-      
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <Switch>
+        <Route path="/" component={getDashboardComponent()} />
+        {currentMode === 'parent' && (
+          <>
+            <Route path="/team" component={TeamDetails} />
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/payment/:type?" component={SportsEnginePayment} />
+            <Route path="/roster" component={RosterManagement} />
+            <Route path="/schedule-requests" component={ScheduleRequests} />
+            <Route path="/training" component={Training} />
+            <Route path="/training-library" component={TrainingLibrary} />
+            <Route path="/profile" component={Profile} />
+            <Route path="/manage-children" component={ManageChildren} />
+            <Route path="/admin" component={AdminDashboard} />
+          </>
+        )}
+        {currentMode === 'player' && (
+          <>
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/training" component={Training} />
+            <Route path="/training-library" component={TrainingLibrary} />
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
+
+      <ModeSelection
+        isOpen={showModeSelection}
+        onClose={() => setShowModeSelection(false)}
+      />
+
+      <PinEntry
+        isOpen={showPinEntry}
+        onClose={() => setShowPinEntry(false)}
+        onSuccess={() => {
+          // Device unlocked, user can now access parent features
+        }}
+      />
+    </>
   );
 }
 
-export default function App() {
+function App() {
   return (
-    <TooltipProvider>
-      <QueryClientProvider client={queryClient}>
-        <Router />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
         <Toaster />
-      </QueryClientProvider>
-    </TooltipProvider>
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
+
+export default App;

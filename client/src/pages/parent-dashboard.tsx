@@ -24,7 +24,9 @@ import {
   User,
   RotateCcw,
   Settings,
-  UserPlus
+  UserPlus,
+  UserCheck,
+  FileText
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -191,6 +193,14 @@ export default function ParentDashboard() {
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/training')}>
                 <Trophy className="h-4 w-4 mr-3 text-primary" />
                 <span className="text-sm font-medium">Training Programs</span>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/roster')}>
+                <UserCheck className="h-4 w-4 mr-3 text-primary" />
+                <span className="text-sm font-medium">Roster Management</span>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/schedule-requests')}>
+                <FileText className="h-4 w-4 mr-3 text-primary" />
+                <span className="text-sm font-medium">Schedule Requests</span>
               </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/manage-children')}>
                 <UserPlus className="h-4 w-4 mr-3 text-primary" />

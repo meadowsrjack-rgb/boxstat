@@ -136,4 +136,126 @@ router.get('/my-teams', isAuthenticated, async (req, res) => {
   }
 });
 
+// Roster management endpoints
+router.get('/roster/:eventId', isAuthenticated, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const rosterSpots = await MockSportsEngineAPI.getRosterSpots(eventId);
+    
+    // Enrich with player details
+    const allPlayers = await MockSportsEngineAPI.getPlayers();
+    const enrichedRoster = rosterSpots.map(spot => {
+      const player = allPlayers.find(p => p.id === spot.playerId);
+      return {
+        ...spot,
+        playerName: player ? `${player.firstName} ${player.lastName}` : 'Unknown Player',
+        playerDetails: player
+      };
+    });
+    
+    res.json(enrichedRoster);
+  } catch (error) {
+    console.error('Error fetching roster:', error);
+    res.status(500).json({ error: 'Failed to fetch roster' });
+  }
+});
+
+router.put('/roster/:rosterId/status', isAuthenticated, async (req, res) => {
+  try {
+    const { rosterId } = req.params;
+    const { status, notes } = req.body;
+    
+    if (!['confirmed', 'declined', 'unavailable'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const updatedSpot = await MockSportsEngineAPI.updateRosterStatus(rosterId, status, notes);
+    res.json(updatedSpot);
+  } catch (error) {
+    console.error('Error updating roster status:', error);
+    res.status(500).json({ error: 'Failed to update roster status' });
+  }
+});
+
+// Schedule management endpoints
+router.get('/schedule-requests', isAuthenticated, async (req, res) => {
+  try {
+    const { teamId } = req.query;
+    const requests = await MockSportsEngineAPI.getScheduleRequests(teamId as string);
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching schedule requests:', error);
+    res.status(500).json({ error: 'Failed to fetch schedule requests' });
+  }
+});
+
+router.post('/schedule-requests', isAuthenticated, async (req, res) => {
+  try {
+    const userEmail = (req as any).user?.claims?.email;
+    const requestData = {
+      ...req.body,
+      requestedBy: userEmail
+    };
+    
+    const newRequest = await MockSportsEngineAPI.createScheduleRequest(requestData);
+    res.json(newRequest);
+  } catch (error) {
+    console.error('Error creating schedule request:', error);
+    res.status(500).json({ error: 'Failed to create schedule request' });
+  }
+});
+
+router.put('/schedule-requests/:requestId', isAuthenticated, async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const updates = req.body;
+    
+    const updatedRequest = await MockSportsEngineAPI.updateScheduleRequest(requestId, updates);
+    res.json(updatedRequest);
+  } catch (error) {
+    console.error('Error updating schedule request:', error);
+    res.status(500).json({ error: 'Failed to update schedule request' });
+  }
+});
+
+// Get events with roster management
+router.get('/events-with-roster', isAuthenticated, async (req, res) => {
+  try {
+    const { teamId } = req.query;
+    const events = await MockSportsEngineAPI.getEvents(teamId as string);
+    
+    // Get roster information for each event
+    const eventsWithRoster = await Promise.all(
+      events.map(async (event) => {
+        const rosterSpots = await MockSportsEngineAPI.getRosterSpots(event.id);
+        const allPlayers = await MockSportsEngineAPI.getPlayers();
+        
+        const roster = rosterSpots.map(spot => {
+          const player = allPlayers.find(p => p.id === spot.playerId);
+          return {
+            ...spot,
+            playerName: player ? `${player.firstName} ${player.lastName}` : 'Unknown Player'
+          };
+        });
+        
+        return {
+          ...event,
+          roster,
+          rosterStats: {
+            total: roster.length,
+            confirmed: roster.filter(r => r.status === 'confirmed').length,
+            pending: roster.filter(r => r.status === 'pending').length,
+            declined: roster.filter(r => r.status === 'declined').length
+          }
+        };
+      })
+    );
+    
+    res.json(eventsWithRoster);
+  } catch (error) {
+    console.error('Error fetching events with roster:', error);
+    res.status(500).json({ error: 'Failed to fetch events with roster' });
+  }
+});
+
 export default router;

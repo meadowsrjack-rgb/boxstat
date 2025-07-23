@@ -49,6 +49,38 @@ export interface SportsEngineEvent {
   opponent?: string;
   isHome: boolean;
   status: 'scheduled' | 'completed' | 'cancelled' | 'postponed';
+  description?: string;
+  notes?: string;
+  attendanceRequired: boolean;
+  rosterDeadline?: string;
+}
+
+export interface SportsEngineRosterSpot {
+  id: string;
+  teamId: string;
+  eventId: string;
+  playerId: string;
+  status: 'confirmed' | 'pending' | 'declined' | 'unavailable';
+  position?: string;
+  responseDate?: string;
+  notes?: string;
+}
+
+export interface SportsEngineScheduleRequest {
+  id: string;
+  teamId: string;
+  requestType: 'game' | 'practice' | 'tournament';
+  requestedDate: string;
+  requestedTime: string;
+  duration: number;
+  location?: string;
+  opponent?: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'approved' | 'denied';
+  requestedBy: string;
+  requestDate: string;
+  approvalDate?: string;
+  notes?: string;
 }
 
 // Mock data that represents UYP Basketball League
@@ -193,7 +225,10 @@ export const mockSportsEngineData = {
       location: "Momentous Sports Center - Court A",
       teamId: "se_team_002",
       isHome: true,
-      status: "scheduled"
+      status: "scheduled",
+      description: "Weekly team practice focusing on ball handling and shooting",
+      attendanceRequired: true,
+      rosterDeadline: "2024-11-19T12:00:00"
     },
     {
       id: "se_event_002", 
@@ -205,7 +240,10 @@ export const mockSportsEngineData = {
       teamId: "se_team_002",
       opponent: "Thunder", 
       isHome: true,
-      status: "scheduled"
+      status: "scheduled",
+      description: "League game against Thunder team",
+      attendanceRequired: true,
+      rosterDeadline: "2024-11-22T18:00:00"
     },
     {
       id: "se_event_003",
@@ -216,7 +254,10 @@ export const mockSportsEngineData = {
       location: "Momentous Sports Center - Court A",
       teamId: "se_team_003",
       isHome: true,
-      status: "scheduled"
+      status: "scheduled",
+      description: "U8 team fundamentals practice",
+      attendanceRequired: true,
+      rosterDeadline: "2024-11-21T12:00:00"
     },
     {
       id: "se_event_004",
@@ -227,9 +268,111 @@ export const mockSportsEngineData = {
       location: "Orange County Sports Complex",
       teamId: "se_team_002",
       isHome: false,
-      status: "scheduled"
+      status: "scheduled",
+      description: "First round of winter tournament playoffs",
+      attendanceRequired: true,
+      rosterDeadline: "2024-12-05T23:59:00"
+    },
+    {
+      id: "se_event_005",
+      title: "Lightning vs Eagles",
+      type: "game",
+      startTime: "2024-11-30T14:00:00",
+      endTime: "2024-11-30T15:30:00",
+      location: "Rival School Gym",
+      teamId: "se_team_002",
+      opponent: "Eagles",
+      isHome: false,
+      status: "scheduled",
+      description: "Away game against Eagles",
+      attendanceRequired: true,
+      rosterDeadline: "2024-11-29T18:00:00"
     }
-  ] as SportsEngineEvent[]
+  ] as SportsEngineEvent[],
+
+  rosterSpots: [
+    {
+      id: "roster_001",
+      teamId: "se_team_002",
+      eventId: "se_event_002",
+      playerId: "se_player_001",
+      status: "confirmed",
+      position: "Starting Guard",
+      responseDate: "2024-11-20T10:30:00"
+    },
+    {
+      id: "roster_002", 
+      teamId: "se_team_002",
+      eventId: "se_event_002",
+      playerId: "se_player_003",
+      status: "pending",
+      position: "Center"
+    },
+    {
+      id: "roster_003",
+      teamId: "se_team_002", 
+      eventId: "se_event_004",
+      playerId: "se_player_001",
+      status: "confirmed",
+      position: "Guard",
+      responseDate: "2024-11-21T15:45:00"
+    },
+    {
+      id: "roster_004",
+      teamId: "se_team_003",
+      eventId: "se_event_003", 
+      playerId: "se_player_002",
+      status: "confirmed",
+      responseDate: "2024-11-20T09:15:00"
+    }
+  ] as SportsEngineRosterSpot[],
+
+  scheduleRequests: [
+    {
+      id: "req_001",
+      teamId: "se_team_002",
+      requestType: "practice",
+      requestedDate: "2024-12-01",
+      requestedTime: "18:00",
+      duration: 90,
+      location: "Momentous Sports Center - Court A",
+      priority: "medium",
+      status: "pending",
+      requestedBy: "coach_002",
+      requestDate: "2024-11-15T14:30:00",
+      notes: "Need extra practice before tournament"
+    },
+    {
+      id: "req_002", 
+      teamId: "se_team_002",
+      requestType: "game",
+      requestedDate: "2024-12-15",
+      requestedTime: "10:00",
+      duration: 90,
+      opponent: "Wildcats",
+      priority: "high",
+      status: "approved", 
+      requestedBy: "coach_002",
+      requestDate: "2024-11-10T11:20:00",
+      approvalDate: "2024-11-12T16:45:00",
+      notes: "Makeup game from earlier cancellation"
+    },
+    {
+      id: "req_003",
+      teamId: "se_team_003",
+      requestType: "tournament",
+      requestedDate: "2024-12-20",
+      requestedTime: "09:00", 
+      duration: 480,
+      location: "Regional Sports Complex",
+      priority: "high",
+      status: "denied",
+      requestedBy: "coach_003",
+      requestDate: "2024-11-05T13:15:00",
+      approvalDate: "2024-11-08T10:30:00",
+      notes: "Conflict with existing tournament, alternative dates suggested"
+    }
+  ] as SportsEngineScheduleRequest[]
 };
 
 // Mock API functions that simulate SportsEngine API calls
@@ -270,5 +413,72 @@ export class MockSportsEngineAPI {
       clientSecret: `pi_mock_${Date.now()}_secret`,
       paymentId: `pay_mock_${Date.now()}`
     };
+  }
+
+  static async getRosterSpots(eventId?: string, teamId?: string): Promise<SportsEngineRosterSpot[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    let spots = mockSportsEngineData.rosterSpots;
+    
+    if (eventId) {
+      spots = spots.filter(spot => spot.eventId === eventId);
+    }
+    if (teamId) {
+      spots = spots.filter(spot => spot.teamId === teamId);
+    }
+    
+    return spots;
+  }
+
+  static async updateRosterStatus(rosterId: string, status: 'confirmed' | 'declined' | 'unavailable', notes?: string): Promise<SportsEngineRosterSpot> {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    const spot = mockSportsEngineData.rosterSpots.find(r => r.id === rosterId);
+    if (!spot) {
+      throw new Error('Roster spot not found');
+    }
+    
+    spot.status = status;
+    spot.responseDate = new Date().toISOString();
+    if (notes) spot.notes = notes;
+    
+    return spot;
+  }
+
+  static async getScheduleRequests(teamId?: string): Promise<SportsEngineScheduleRequest[]> {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (teamId) {
+      return mockSportsEngineData.scheduleRequests.filter(req => req.teamId === teamId);
+    }
+    return mockSportsEngineData.scheduleRequests;
+  }
+
+  static async createScheduleRequest(request: Omit<SportsEngineScheduleRequest, 'id' | 'status' | 'requestDate'>): Promise<SportsEngineScheduleRequest> {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    const newRequest: SportsEngineScheduleRequest = {
+      ...request,
+      id: `req_${Date.now()}`,
+      status: 'pending',
+      requestDate: new Date().toISOString()
+    };
+    
+    mockSportsEngineData.scheduleRequests.push(newRequest);
+    return newRequest;
+  }
+
+  static async updateScheduleRequest(requestId: string, updates: Partial<SportsEngineScheduleRequest>): Promise<SportsEngineScheduleRequest> {
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    const request = mockSportsEngineData.scheduleRequests.find(req => req.id === requestId);
+    if (!request) {
+      throw new Error('Schedule request not found');
+    }
+    
+    Object.assign(request, updates);
+    if (updates.status === 'approved' || updates.status === 'denied') {
+      request.approvalDate = new Date().toISOString();
+    }
+    
+    return request;
   }
 }

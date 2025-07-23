@@ -18,6 +18,8 @@ import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
 import SportsEnginePayment from "@/pages/sportsengine-payment";
+import RosterManagement from "@/pages/roster-management";
+import ScheduleRequests from "@/pages/schedule-requests";
 import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
@@ -118,6 +120,8 @@ function Router() {
             <Route path="/schedule" component={Schedule} />
             <Route path="/chat" component={Chat} />
             <Route path="/payment/:type?" component={SportsEnginePayment} />
+            <Route path="/roster" component={RosterManagement} />
+            <Route path="/schedule-requests" component={ScheduleRequests} />
             <Route path="/training" component={Training} />
             <Route path="/training-library" component={TrainingLibrary} />
             <Route path="/profile" component={Profile} />

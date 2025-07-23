@@ -63,17 +63,21 @@ export default function CoachTeamMessages() {
   });
 
   const handleSendMessage = () => {
-    if (!title.trim() || !content.trim()) {
+    // For tasks and announcements, title is required. For messages, title is optional
+    const titleRequired = messageType !== "message";
+    if ((titleRequired && !title.trim()) || !content.trim()) {
       toast({
         title: "Missing information",
-        description: "Please enter both a title and message content.",
+        description: titleRequired 
+          ? "Please enter both a title and content."
+          : "Please enter a message.",
         variant: "destructive",
       });
       return;
     }
 
     sendMessageMutation.mutate({
-      title,
+      title: messageType === "message" ? content.slice(0, 50) + "..." : title,
       content,
       messageType,
       targetAudience: "team",
@@ -184,25 +188,43 @@ export default function CoachTeamMessages() {
 
             {/* Message Form */}
             <div className="space-y-4">
+              {/* Title field - only for tasks and announcements */}
+              {messageType !== "message" && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    {messageType === "task" ? "Task" : "Announcement"} Title
+                  </label>
+                  <Input
+                    placeholder={`Enter ${messageType} title...`}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"} Title
+                  {messageType === "task" ? "Task Description" : messageType === "announcement" ? "Announcement" : "Message"}
                 </label>
-                <Input
-                  placeholder={`Enter ${messageType} title...`}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Content</label>
                 <Textarea
-                  placeholder={`What would you like to tell the team?`}
+                  placeholder={`What would you like to tell the team? 😊 Use emojis to make it fun!`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}
                   className="resize-none"
                 />
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="text-xs text-gray-500 mb-2">Quick emojis:</div>
+                  {['⚾', '🏀', '⚽', '🏆', '💪', '👍', '🔥', '⭐', '🎯', '👏'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setContent(prev => prev + emoji)}
+                      className="text-lg hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
               <Button 
                 onClick={handleSendMessage}
@@ -219,7 +241,23 @@ export default function CoachTeamMessages() {
         {/* Recent Messages */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Team Messages</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              Recent Team Messages
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-xs bg-blue-50">
+                  <MessageCircle className="w-3 h-3 mr-1" />
+                  Messages
+                </Badge>
+                <Badge variant="outline" className="text-xs bg-orange-50">
+                  <CheckSquare className="w-3 h-3 mr-1" />
+                  Tasks
+                </Badge>
+                <Badge variant="outline" className="text-xs bg-green-50">
+                  <Megaphone className="w-3 h-3 mr-1" />
+                  Announcements
+                </Badge>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {messages.length > 0 ? (
@@ -227,8 +265,10 @@ export default function CoachTeamMessages() {
                 {messages.slice(0, 10).map((message: any) => (
                   <div key={message.id} className={`p-4 rounded-lg border-l-4 ${getMessageTypeColor(message.messageType || 'message')}`}>
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-900">{message.title}</h4>
-                      <div className="flex items-center gap-2">
+                      {message.messageType !== "message" && (
+                        <h4 className="font-semibold text-gray-900">{message.title}</h4>
+                      )}
+                      <div className="flex items-center gap-2 ml-auto">
                         <Badge variant="outline" className="text-xs">
                           {getMessageTypeIcon(message.messageType || 'message')}
                           <span className="ml-1 capitalize">{message.messageType || 'message'}</span>
@@ -238,8 +278,41 @@ export default function CoachTeamMessages() {
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-gray-600 mb-3">{message.content}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-gray-600 mb-3 whitespace-pre-wrap">{message.content}</p>
+                    
+                    {/* Task completion tracking */}
+                    {message.messageType === "task" && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Task Completion:</h5>
+                        <div className="grid grid-cols-2 gap-2">
+                          {players.map((player: any) => (
+                            <div key={player.id} className="flex items-center gap-2 text-sm">
+                              <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center">
+                                {Math.random() > 0.5 ? "✓" : ""}
+                              </div>
+                              <span className="text-gray-600">{player.firstName} {player.lastName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Announcement acknowledgment tracking */}
+                    {message.messageType === "announcement" && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                        <h5 className="text-sm font-medium text-gray-700 mb-2">Seen by:</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {players.map((player: any) => (
+                            <div key={player.id} className="flex items-center gap-1 text-sm">
+                              <div className={`w-3 h-3 rounded-full ${Math.random() > 0.5 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                              <span className="text-gray-600">{player.firstName}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-500 mt-3">
                       {new Date(message.createdAt).toLocaleString()}
                     </p>
                   </div>

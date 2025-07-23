@@ -76,10 +76,14 @@ export default function CoachParentMessages() {
   });
 
   const handleSendMessage = () => {
-    if (!title.trim() || !content.trim()) {
+    // For tasks and announcements, title is required. For messages, title is optional
+    const titleRequired = messageType !== "message";
+    if ((titleRequired && !title.trim()) || !content.trim()) {
       toast({
         title: "Missing information",
-        description: "Please enter both a title and message content.",
+        description: titleRequired 
+          ? "Please enter both a title and content."
+          : "Please enter a message.",
         variant: "destructive",
       });
       return;
@@ -95,7 +99,7 @@ export default function CoachParentMessages() {
     }
 
     sendMessageMutation.mutate({
-      title,
+      title: messageType === "message" ? content.slice(0, 50) + "..." : title,
       content,
       messageType,
       targetAudience: "parents",
@@ -250,25 +254,43 @@ export default function CoachParentMessages() {
 
             {/* Message Form */}
             <div className="space-y-4">
+              {/* Title field - only for tasks and announcements */}
+              {messageType !== "message" && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">
+                    {messageType === "task" ? "Task" : "Announcement"} Title
+                  </label>
+                  <Input
+                    placeholder={`Enter ${messageType} title...`}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"} Title
+                  {messageType === "task" ? "Task Description" : messageType === "announcement" ? "Announcement" : "Message"}
                 </label>
-                <Input
-                  placeholder={`Enter ${messageType} title...`}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Content</label>
                 <Textarea
-                  placeholder={`What would you like to tell the ${recipientType === "all" ? "parents" : "parent"}?`}
+                  placeholder={`What would you like to tell the ${recipientType === "all" ? "parents" : "parent"}? 😊 Use emojis!`}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={4}
                   className="resize-none"
                 />
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <div className="text-xs text-gray-500 mb-2">Quick emojis:</div>
+                  {['📅', '🏀', '👨‍👩‍👧‍👦', '📝', '🎉', '👍', '⚠️', '💰', '📍', '⏰'].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setContent(prev => prev + emoji)}
+                      className="text-lg hover:bg-gray-200 px-2 py-1 rounded transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
               <Button 
                 onClick={handleSendMessage}
@@ -326,8 +348,10 @@ export default function CoachParentMessages() {
                 {messages.slice(0, 10).map((message: any) => (
                   <div key={message.id} className={`p-4 rounded-lg border-l-4 ${getMessageTypeColor(message.messageType || 'message')}`}>
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-gray-900">{message.title}</h4>
-                      <div className="flex items-center gap-2">
+                      {message.messageType !== "message" && (
+                        <h4 className="font-semibold text-gray-900">{message.title}</h4>
+                      )}
+                      <div className="flex items-center gap-2 ml-auto">
                         <Badge variant="outline" className="text-xs">
                           {getMessageTypeIcon(message.messageType || 'message')}
                           <span className="ml-1 capitalize">{message.messageType || 'message'}</span>
@@ -337,7 +361,7 @@ export default function CoachParentMessages() {
                         </Badge>
                       </div>
                     </div>
-                    <p className="text-gray-600 mb-3">{message.content}</p>
+                    <p className="text-gray-600 mb-3 whitespace-pre-wrap">{message.content}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(message.createdAt).toLocaleString()}
                     </p>

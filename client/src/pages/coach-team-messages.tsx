@@ -251,7 +251,7 @@ export default function CoachTeamMessages() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {messages.length > 0 ? (
+            {messages && messages.length > 0 ? (
               <div className="space-y-4">
                 {messages.slice(0, 10).map((message: any) => {
                   // Determine message type from priority or other fields

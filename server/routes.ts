@@ -536,6 +536,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/announcements/team/:teamId', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const announcements = await storage.getTeamAnnouncements(teamId);
+      res.json(announcements);
+    } catch (error) {
+      console.error("Error fetching team announcements:", error);
+      res.status(500).json({ message: "Failed to fetch team announcements" });
+    }
+  });
+
   app.post('/api/announcements', isAuthenticated, async (req: any, res) => {
     try {
       // Remove fields that don't exist in the database schema

@@ -36,12 +36,15 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
-  const { childProfiles, setPlayerMode } = useAppMode();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
 
-
+  // Get child profiles
+  const { data: childProfiles } = useQuery({
+    queryKey: ["/api/child-profiles", user?.id],
+    enabled: !!user?.id,
+  });
 
   const { data: userTeam } = useQuery({
     queryKey: ["/api/users", user?.id, "team"],

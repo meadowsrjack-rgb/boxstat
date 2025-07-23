@@ -98,6 +98,7 @@ function Router() {
       <Route path="/player-dashboard" component={PlayerDashboard} />
       <Route path="/parent-dashboard" component={ParentDashboard} />
       <Route path="/admin-dashboard" component={AdminDashboard} />
+      <Route path="/admin" component={AdminDashboard} />
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />

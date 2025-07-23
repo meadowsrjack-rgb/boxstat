@@ -1048,7 +1048,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Redirect to appropriate dashboard based on user type
         const redirectPath = user.userType === 'player' ? '/player-dashboard' : 
-                           user.userType === 'admin' ? '/admin' : '/';
+                           user.userType === 'admin' ? '/admin-dashboard' : '/parent-dashboard';
+        console.log(`Redirecting ${user.userType} user to: ${redirectPath}`);
         res.redirect(redirectPath);
       });
     } catch (error) {

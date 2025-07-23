@@ -65,7 +65,15 @@ export default function AdminDashboard() {
     });
   };
 
-  if (!user || user.userType !== "admin") {
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (user.userType !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -73,6 +81,7 @@ export default function AdminDashboard() {
             <div className="text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
               <p className="text-gray-600">You don't have permission to access this page.</p>
+              <p className="text-sm text-gray-500 mt-2">Current user type: {user.userType}</p>
             </div>
           </CardContent>
         </Card>

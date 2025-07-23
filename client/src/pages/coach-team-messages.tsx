@@ -1,0 +1,260 @@
+import { useState } from "react";
+import { useParams, useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Send, Users, CheckSquare, Megaphone, MessageCircle } from "lucide-react";
+
+export default function CoachTeamMessages() {
+  const { teamId } = useParams();
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [messageType, setMessageType] = useState<"message" | "task" | "announcement">("message");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+
+  // Get team info
+  const { data: team } = useQuery({
+    queryKey: ["/api/teams", teamId],
+    enabled: !!teamId,
+  });
+
+  // Get team players
+  const { data: players = [] } = useQuery({
+    queryKey: ["/api/team-players", teamId],
+    enabled: !!teamId,
+  });
+
+  // Get recent messages
+  const { data: messages = [] } = useQuery({
+    queryKey: ["/api/announcements", "team", teamId],
+    enabled: !!teamId,
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (messageData: any) => {
+      await apiRequest("POST", "/api/announcements", messageData);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Message sent!",
+        description: `Your ${messageType} has been sent to the team.`,
+      });
+      setTitle("");
+      setContent("");
+      queryClient.invalidateQueries({ queryKey: ["/api/announcements", "team", teamId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please enter both a title and message content.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    sendMessageMutation.mutate({
+      title,
+      content,
+      messageType,
+      targetAudience: "team",
+      priority: messageType === "task" ? "high" : "medium",
+      teamId: parseInt(teamId!),
+    });
+  };
+
+  const getMessageTypeColor = (type: string) => {
+    switch (type) {
+      case "task": return "border-orange-500 bg-orange-50";
+      case "announcement": return "border-green-500 bg-green-50";
+      default: return "border-blue-500 bg-blue-50";
+    }
+  };
+
+  const getMessageTypeIcon = (type: string) => {
+    switch (type) {
+      case "task": return <CheckSquare className="w-4 h-4" />;
+      case "announcement": return <Megaphone className="w-4 h-4" />;
+      default: return <MessageCircle className="w-4 h-4" />;
+    }
+  };
+
+  if (!user || user.userType !== "admin") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600">You don't have permission to access this page.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-4xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation('/admin-dashboard')}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              <div>
+                <h1 className="text-lg font-bold text-gray-900">Team Messages</h1>
+                <p className="text-sm text-gray-600">{team?.name || 'Loading...'}</p>
+              </div>
+            </div>
+            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+              <Users className="w-3 h-3 mr-1" />
+              {players.length} Players
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+        {/* Message Composer */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-blue-500" />
+              Send Message to Team
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Message Type Selection */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-3 block">Message Type:</label>
+              <div className="flex gap-3">
+                <Button
+                  variant={messageType === "message" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMessageType("message")}
+                  className="flex items-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Message
+                </Button>
+                <Button
+                  variant={messageType === "task" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMessageType("task")}
+                  className="flex items-center gap-2"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  Task
+                </Button>
+                <Button
+                  variant={messageType === "announcement" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setMessageType("announcement")}
+                  className="flex items-center gap-2"
+                >
+                  <Megaphone className="w-4 h-4" />
+                  Announcement
+                </Button>
+              </div>
+            </div>
+
+            {/* Message Form */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"} Title
+                </label>
+                <Input
+                  placeholder={`Enter ${messageType} title...`}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Content</label>
+                <Textarea
+                  placeholder={`What would you like to tell the team?`}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={4}
+                  className="resize-none"
+                />
+              </div>
+              <Button 
+                onClick={handleSendMessage}
+                disabled={sendMessageMutation.isPending}
+                className="w-full"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Send {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Messages */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Team Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {messages.length > 0 ? (
+              <div className="space-y-4">
+                {messages.slice(0, 10).map((message: any) => (
+                  <div key={message.id} className={`p-4 rounded-lg border-l-4 ${getMessageTypeColor(message.messageType || 'message')}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold text-gray-900">{message.title}</h4>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {getMessageTypeIcon(message.messageType || 'message')}
+                          <span className="ml-1 capitalize">{message.messageType || 'message'}</span>
+                        </Badge>
+                        <Badge variant="outline" className="bg-blue-100 text-blue-800 text-xs">
+                          Team
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-gray-600 mb-3">{message.content}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(message.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No messages sent yet</p>
+                <p className="text-sm text-gray-400">Your team messages will appear here</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

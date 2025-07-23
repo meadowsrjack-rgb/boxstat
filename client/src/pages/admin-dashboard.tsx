@@ -36,8 +36,6 @@ export default function AdminDashboard() {
   const [announcementContent, setAnnouncementContent] = useState("");
   const [showQRReader, setShowQRReader] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<number | null>(null);
-  const [messageType, setMessageType] = useState<"message" | "task" | "announcement">("message");
-  const [messageTarget, setMessageTarget] = useState<"team" | "parents">("team");
   const [showTeamSelector, setShowTeamSelector] = useState(false);
 
   // Get teams coached by this admin/coach
@@ -90,9 +88,7 @@ export default function AdminDashboard() {
     createAnnouncementMutation.mutate({
       title: announcementTitle,
       content: announcementContent,
-      priority: messageType === "task" ? "high" : "medium",
-      messageType: messageType,
-      targetAudience: messageTarget,
+      priority: "medium",
       teamId: currentTeam.id,
     });
   };
@@ -222,7 +218,7 @@ export default function AdminDashboard() {
           {/* Team Messages */}
           <Card 
             className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={() => currentTeam && (setMessageTarget("team"), setShowTeamSelector(false))}
+            onClick={() => currentTeam && setLocation(`/coach/team-messages/${currentTeam.id}`)}
           >
             <CardContent className="p-4 text-center">
               <MessageCircle className="w-8 h-8 text-blue-500 mx-auto mb-2" />
@@ -234,7 +230,7 @@ export default function AdminDashboard() {
           {/* Parent Messages */}
           <Card 
             className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={() => currentTeam && (setMessageTarget("parents"), setShowTeamSelector(false))}
+            onClick={() => currentTeam && setLocation(`/coach/parent-messages/${currentTeam.id}`)}
           >
             <CardContent className="p-4 text-center">
               <Users className="w-8 h-8 text-green-500 mx-auto mb-2" />
@@ -352,135 +348,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Team Communication */}
-        <Card className="bg-white border border-gray-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <MessageCircle className="w-5 h-5 text-blue-500" />
-              Team Communication
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {currentTeam ? (
-              <div className="space-y-4">
-                {/* Message Type & Target Selection */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 mb-2 block">Send To:</label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant={messageTarget === "team" ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1 text-xs"
-                        onClick={() => setMessageTarget("team")}
-                      >
-                        Team
-                      </Button>
-                      <Button
-                        variant={messageTarget === "parents" ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1 text-xs"
-                        onClick={() => setMessageTarget("parents")}
-                      >
-                        Parents
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-700 mb-2 block">Message Type:</label>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={messageType === "message" ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1 text-xs px-2"
-                        onClick={() => setMessageType("message")}
-                      >
-                        Message
-                      </Button>
-                      <Button
-                        variant={messageType === "task" ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1 text-xs px-2"
-                        onClick={() => setMessageType("task")}
-                      >
-                        Task
-                      </Button>
-                      <Button
-                        variant={messageType === "announcement" ? "default" : "outline"}
-                        size="sm"
-                        className="flex-1 text-xs px-2"
-                        onClick={() => setMessageType("announcement")}
-                      >
-                        News
-                      </Button>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Message Composer */}
-                <div className="space-y-3">
-                  <Input
-                    placeholder={`${messageType} title`}
-                    value={announcementTitle}
-                    onChange={(e) => setAnnouncementTitle(e.target.value)}
-                    className="text-sm"
-                  />
-                  <Textarea
-                    placeholder={`What would you like to tell the ${messageTarget}?`}
-                    value={announcementContent}
-                    onChange={(e) => setAnnouncementContent(e.target.value)}
-                    rows={3}
-                    className="text-sm resize-none"
-                  />
-                  <Button 
-                    onClick={handleCreateAnnouncement}
-                    disabled={createAnnouncementMutation.isPending}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Send {messageType === "task" ? "Task" : messageType === "announcement" ? "Announcement" : "Message"} to {messageTarget === "team" ? "Team" : "Parents"}
-                  </Button>
-                </div>
-                
-                {/* Recent Messages */}
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Recent Messages</h4>
-                  <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                      <div className="flex justify-between items-start mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Practice Update</h5>
-                        <Badge className="bg-blue-100 text-blue-800 text-xs">Team</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">Tomorrow's practice starts at 4:30 PM sharp. Please arrive 15 minutes early.</p>
-                      <span className="text-xs text-gray-500">2 hours ago</span>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
-                      <div className="flex justify-between items-start mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Parent Meeting</h5>
-                        <Badge className="bg-green-100 text-green-800 text-xs">Parents</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">Monthly parent meeting scheduled for next Friday at 7 PM.</p>
-                      <span className="text-xs text-gray-500">1 day ago</span>
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
-                      <div className="flex justify-between items-start mb-1">
-                        <h5 className="font-semibold text-gray-900 text-sm">Training Homework</h5>
-                        <Badge className="bg-orange-100 text-orange-800 text-xs">Task</Badge>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-2">Complete 50 free throws before next practice. Log your results.</p>
-                      <span className="text-xs text-gray-500">3 days ago</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">Select a team to send messages</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
         
         {/* QR Reader Modal */}
         <QRReader

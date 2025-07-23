@@ -23,6 +23,8 @@ import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
 import FamilyManagement from "@/pages/family-management";
 import TestAccounts from "@/pages/test-accounts";
+import CoachTeamMessages from "@/pages/coach-team-messages";
+import CoachParentMessages from "@/pages/coach-parent-messages";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -128,6 +130,8 @@ function Router() {
       {/* Admin routes */}
       {user?.userType === 'admin' && (
         <>
+          <Route path="/coach/team-messages/:teamId" component={CoachTeamMessages} />
+          <Route path="/coach/parent-messages/:teamId" component={CoachParentMessages} />
           <Route path="/payment/:type?" component={SportsEnginePayment} />
           <Route path="/roster" component={RosterManagement} />
           <Route path="/schedule-requests" component={ScheduleRequests} />

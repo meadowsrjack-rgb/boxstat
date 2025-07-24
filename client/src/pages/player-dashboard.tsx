@@ -360,7 +360,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </CardContent>
           </Card>
 
-          <Card className="shadow-lg hover:shadow-xl transition-all duration-200">
+          <Card 
+            className="shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer"
+            onClick={() => setLocation("/player/team-chat")}
+          >
             <CardContent className="p-4">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center">

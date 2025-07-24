@@ -25,6 +25,7 @@ import FamilyManagement from "@/pages/family-management";
 import TestAccounts from "@/pages/test-accounts";
 import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
+import PlayerTeamChat from "@/pages/player-team-chat";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -123,6 +124,7 @@ function Router() {
       {/* Player-specific routes with payment access */}
       {user?.userType === 'player' && (
         <>
+          <Route path="/player/team-chat" component={PlayerTeamChat} />
           <Route path="/payment/:type?" component={SportsEnginePayment} />
         </>
       )}

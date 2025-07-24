@@ -12,6 +12,8 @@ import {
   drills,
   playerStats,
   familyMembers,
+  taskCompletions,
+  announcementAcknowledgments,
   type User,
   type UpsertUser,
   type Team,
@@ -26,6 +28,8 @@ import {
   type Drill,
   type PlayerStats,
   type FamilyMember,
+  type TaskCompletion,
+  type AnnouncementAcknowledgment,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -38,6 +42,8 @@ import {
   type InsertDrill,
   type InsertPlayerStats,
   type InsertFamilyMember,
+  type InsertTaskCompletion,
+  type InsertAnnouncementAcknowledgment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql, or, isNull } from "drizzle-orm";
@@ -93,6 +99,14 @@ export interface IStorage {
   // Message operations
   getTeamMessages(teamId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  
+  // Task completion operations
+  getTaskCompletion(announcementId: number, userId: string): Promise<TaskCompletion | undefined>;
+  completeTask(data: InsertTaskCompletion): Promise<TaskCompletion>;
+  
+  // Announcement acknowledgment operations
+  getAnnouncementAcknowledgment(announcementId: number, userId: string): Promise<AnnouncementAcknowledgment | undefined>;
+  acknowledgeAnnouncement(data: InsertAnnouncementAcknowledgment): Promise<AnnouncementAcknowledgment>;
   
   // Payment operations
   getUserPayments(userId: string): Promise<Payment[]>;
@@ -657,6 +671,63 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return result.rowCount > 0;
+  }
+
+  // Task completion operations
+  async getTaskCompletion(announcementId: number, userId: string): Promise<TaskCompletion | undefined> {
+    const [completion] = await db
+      .select()
+      .from(taskCompletions)
+      .where(
+        and(
+          eq(taskCompletions.announcementId, announcementId),
+          eq(taskCompletions.userId, userId)
+        )
+      );
+    return completion;
+  }
+
+  async completeTask(data: InsertTaskCompletion): Promise<TaskCompletion> {
+    const [completion] = await db
+      .insert(taskCompletions)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [taskCompletions.announcementId, taskCompletions.userId],
+        set: {
+          notes: data.notes,
+          completedAt: new Date(),
+        },
+      })
+      .returning();
+    return completion;
+  }
+
+  // Announcement acknowledgment operations
+  async getAnnouncementAcknowledgment(announcementId: number, userId: string): Promise<AnnouncementAcknowledgment | undefined> {
+    const [acknowledgment] = await db
+      .select()
+      .from(announcementAcknowledgments)
+      .where(
+        and(
+          eq(announcementAcknowledgments.announcementId, announcementId),
+          eq(announcementAcknowledgments.userId, userId)
+        )
+      );
+    return acknowledgment;
+  }
+
+  async acknowledgeAnnouncement(data: InsertAnnouncementAcknowledgment): Promise<AnnouncementAcknowledgment> {
+    const [acknowledgment] = await db
+      .insert(announcementAcknowledgments)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [announcementAcknowledgments.announcementId, announcementAcknowledgments.userId],
+        set: {
+          acknowledgedAt: new Date(),
+        },
+      })
+      .returning();
+    return acknowledgment;
   }
 }
 

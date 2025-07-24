@@ -30,19 +30,19 @@ export default function PlayerTeamChat() {
   const [message, setMessage] = useState("");
 
   // Get user's team info
-  const { data: userTeam } = useQuery({
+  const { data: userTeam } = useQuery<any>({
     queryKey: ["/api/users", user?.id, "team"],
     enabled: !!user?.id,
   });
 
   // Get team players
-  const { data: players = [] } = useQuery({
+  const { data: players = [] } = useQuery<any[]>({
     queryKey: ["/api/team-players", userTeam?.id],
     enabled: !!userTeam?.id,
   });
 
   // Get team messages/announcements
-  const { data: messages = [] } = useQuery({
+  const { data: messages = [] } = useQuery<any[]>({
     queryKey: ["/api/announcements", "team", userTeam?.id],
     enabled: !!userTeam?.id,
   });
@@ -65,6 +65,65 @@ export default function PlayerTeamChat() {
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Task completion mutation
+  const completeTaskMutation = useMutation({
+    mutationFn: async ({ announcementId, notes = "" }: { announcementId: number; notes?: string }) => {
+      return await apiRequest("POST", `/api/tasks/${announcementId}/complete`, { notes });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Task completed!",
+        description: "You've marked this task as complete.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/announcements", "team", userTeam?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to complete task. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Acknowledge announcement mutation
+  const acknowledgeAnnouncementMutation = useMutation({
+    mutationFn: async (announcementId: number) => {
+      return await apiRequest("POST", `/api/announcements/${announcementId}/acknowledge`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Acknowledged!",
+        description: "You've acknowledged this announcement.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/announcements", "team", userTeam?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to acknowledge. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Message reactions mutation
+  const reactToMessageMutation = useMutation({
+    mutationFn: async ({ messageId, emoji }: { messageId: number; emoji: string }) => {
+      return await apiRequest("POST", `/api/messages/${messageId}/reactions`, { emoji });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/announcements", "team", userTeam?.id] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add reaction.",
         variant: "destructive",
       });
     },
@@ -238,27 +297,51 @@ export default function PlayerTeamChat() {
                             </div>
                             <p className="text-gray-600 mb-3 whitespace-pre-wrap">{msg.content}</p>
                             
-                            {/* Task completion status for current player */}
-                            {messageType === "task" && (
-                              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center justify-between">
-                                  <h5 className="text-sm font-medium text-gray-700">Your Task Status:</h5>
-                                  <Badge variant={Math.random() > 0.5 ? "default" : "outline"} className="text-xs">
-                                    {Math.random() > 0.5 ? (
-                                      <>
-                                        <Check className="w-3 h-3 mr-1" />
-                                        Completed
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Clock className="w-3 h-3 mr-1" />
-                                        Pending
-                                      </>
-                                    )}
-                                  </Badge>
-                                </div>
+                            {/* Interactive Features */}
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {/* Task completion button for tasks */}
+                              {messageType === "task" && (
+                                <Button
+                                  size="sm"
+                                  className="bg-green-500 hover:bg-green-600 text-white"
+                                  onClick={() => completeTaskMutation.mutate({ announcementId: msg.id })}
+                                  disabled={completeTaskMutation.isPending}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  {completeTaskMutation.isPending ? "Completing..." : "Mark Complete"}
+                                </Button>
+                              )}
+                              
+                              {/* Acknowledge button for announcements */}
+                              {messageType === "announcement" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-500 text-green-600 hover:bg-green-50"
+                                  onClick={() => acknowledgeAnnouncementMutation.mutate(msg.id)}
+                                  disabled={acknowledgeAnnouncementMutation.isPending}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  {acknowledgeAnnouncementMutation.isPending ? "Acknowledging..." : "Acknowledge"}
+                                </Button>
+                              )}
+                              
+                              {/* Quick reaction buttons */}
+                              <div className="flex gap-1">
+                                {["👍", "❤️", "😊", "🔥"].map((emoji) => (
+                                  <Button
+                                    key={emoji}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 hover:bg-gray-100"
+                                    onClick={() => reactToMessageMutation.mutate({ messageId: msg.id, emoji })}
+                                    disabled={reactToMessageMutation.isPending}
+                                  >
+                                    {emoji}
+                                  </Button>
+                                ))}
                               </div>
-                            )}
+                            </div>
 
                             {/* Announcement acknowledgment status */}
                             {messageType === "announcement" && (

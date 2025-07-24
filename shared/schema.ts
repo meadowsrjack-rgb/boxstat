@@ -146,6 +146,27 @@ export const messageReactions = pgTable("message_reactions", {
   uniqueUserMessageReaction: unique().on(table.messageId, table.userId, table.emoji),
 }));
 
+// Task completions table
+export const taskCompletions = pgTable("task_completions", {
+  id: serial("id").primaryKey(),
+  announcementId: integer("announcement_id").references(() => announcements.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  completedAt: timestamp("completed_at").defaultNow(),
+  notes: text("notes"), // Optional completion notes from player
+}, (table) => ({
+  uniqueUserTask: unique().on(table.announcementId, table.userId),
+}));
+
+// Announcement acknowledgments table
+export const announcementAcknowledgments = pgTable("announcement_acknowledgments", {
+  id: serial("id").primaryKey(),
+  announcementId: integer("announcement_id").references(() => announcements.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  acknowledgedAt: timestamp("acknowledged_at").defaultNow(),
+}, (table) => ({
+  uniqueUserAcknowledgment: unique().on(table.announcementId, table.userId),
+}));
+
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   senderId: varchar("sender_id").references(() => users.id).notNull(),
@@ -326,6 +347,8 @@ export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({ id
 export const insertTrainingSubscriptionSchema = createInsertSchema(trainingSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTrainingProgressSchema = createInsertSchema(trainingProgress).omit({ id: true, createdAt: true });
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true });
+export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({ id: true, completedAt: true });
+export const insertAnnouncementAcknowledgmentSchema = createInsertSchema(announcementAcknowledgments).omit({ id: true, acknowledgedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -344,6 +367,8 @@ export type PlayerStats = typeof playerStats.$inferSelect;
 export type TrainingSubscription = typeof trainingSubscriptions.$inferSelect;
 export type TrainingProgress = typeof trainingProgress.$inferSelect;
 export type FamilyMember = typeof familyMembers.$inferSelect;
+export type TaskCompletion = typeof taskCompletions.$inferSelect;
+export type AnnouncementAcknowledgment = typeof announcementAcknowledgments.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -359,3 +384,5 @@ export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type InsertTrainingSubscription = z.infer<typeof insertTrainingSubscriptionSchema>;
 export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema>;
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
+export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;
+export type InsertAnnouncementAcknowledgment = z.infer<typeof insertAnnouncementAcknowledgmentSchema>;

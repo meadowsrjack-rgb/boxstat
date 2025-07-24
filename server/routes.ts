@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, users } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -761,6 +761,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching team players:", error);
       res.status(500).json({ message: "Failed to fetch team players" });
+    }
+  });
+
+  // Task completion routes
+  app.get('/api/tasks/:announcementId/completion/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const completion = await storage.getTaskCompletion(
+        parseInt(req.params.announcementId),
+        req.params.userId
+      );
+      res.json(completion);
+    } catch (error) {
+      console.error("Error fetching task completion:", error);
+      res.status(500).json({ message: "Failed to fetch task completion" });
+    }
+  });
+
+  app.post('/api/tasks/:announcementId/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const completionData = insertTaskCompletionSchema.parse({
+        announcementId: parseInt(req.params.announcementId),
+        userId: req.user.claims.sub,
+        notes: req.body.notes,
+      });
+      const completion = await storage.completeTask(completionData);
+      res.json(completion);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  // Announcement acknowledgment routes
+  app.get('/api/announcements/:announcementId/acknowledgment/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const acknowledgment = await storage.getAnnouncementAcknowledgment(
+        parseInt(req.params.announcementId),
+        req.params.userId
+      );
+      res.json(acknowledgment);
+    } catch (error) {
+      console.error("Error fetching acknowledgment:", error);
+      res.status(500).json({ message: "Failed to fetch acknowledgment" });
+    }
+  });
+
+  app.post('/api/announcements/:announcementId/acknowledge', isAuthenticated, async (req: any, res) => {
+    try {
+      const acknowledgmentData = insertAnnouncementAcknowledgmentSchema.parse({
+        announcementId: parseInt(req.params.announcementId),
+        userId: req.user.claims.sub,
+      });
+      const acknowledgment = await storage.acknowledgeAnnouncement(acknowledgmentData);
+      res.json(acknowledgment);
+    } catch (error) {
+      console.error("Error acknowledging announcement:", error);
+      res.status(500).json({ message: "Failed to acknowledge announcement" });
     }
   });
 

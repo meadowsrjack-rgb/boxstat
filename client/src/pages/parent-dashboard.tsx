@@ -22,13 +22,13 @@ import {
   Play,
   BookOpen,
   User,
-
   Settings,
   UserPlus,
   UserCheck,
-  FileText
+  FileText,
+  Megaphone
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 
 
@@ -39,6 +39,24 @@ export default function ParentDashboard() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showNotifications]);
 
   // Get child profiles
   const { data: childProfiles } = useQuery({
@@ -91,17 +109,72 @@ export default function ParentDashboard() {
               <img 
                 src={logoPath} 
                 alt="UYP Basketball Academy" 
-                className="h-10 w-10 mr-3 object-contain"
+                className="h-12 w-12 mr-3 object-contain"
               />
               <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  3
-                </span>
-              </Button>
+              <div className="relative" ref={notificationsRef}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative"
+                  onClick={() => setShowNotifications(!showNotifications)}
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    3
+                  </span>
+                </Button>
+                {showNotifications && (
+                  <div className="absolute right-0 top-12 w-80 bg-white rounded-md shadow-lg border z-50">
+                    <div className="p-3 border-b">
+                      <h4 className="font-semibold text-sm">Recent Notifications</h4>
+                    </div>
+                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Megaphone className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">New Announcement</p>
+                          <p className="text-xs text-gray-600">Practice schedule updated for next week</p>
+                          <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">Player Check-in</p>
+                          <p className="text-xs text-gray-600">Alex checked in for practice</p>
+                          <p className="text-xs text-gray-400 mt-1">1 day ago</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <CreditCard className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">Payment Processed</p>
+                          <p className="text-xs text-gray-600">Monthly fee payment confirmed</p>
+                          <p className="text-xs text-gray-400 mt-1">3 days ago</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 border-t">
+                      <Button variant="ghost" size="sm" className="w-full text-xs">
+                        View All Notifications
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center space-x-2">
                 <img 
                   src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
@@ -138,17 +211,9 @@ export default function ParentDashboard() {
                 <CreditCard className="h-4 w-4 mr-3 text-primary" />
                 <span className="text-sm font-medium">Make Payment</span>
               </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/team')}>
-                <Users className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Team Roster</span>
-              </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/training')}>
                 <Trophy className="h-4 w-4 mr-3 text-primary" />
                 <span className="text-sm font-medium">Training Programs</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/roster')}>
-                <UserCheck className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Roster Management</span>
               </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/schedule-requests')}>
                 <FileText className="h-4 w-4 mr-3 text-primary" />
@@ -156,14 +221,14 @@ export default function ParentDashboard() {
               </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/manage-children')}>
                 <UserPlus className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Manage Children</span>
+                <span className="text-sm font-medium">Manage Players</span>
               </Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg">My Children</CardTitle>
+              <CardTitle className="text-lg">My Players</CardTitle>
               <Baby className="h-6 w-6 text-green-500" />
             </CardHeader>
             <CardContent className="space-y-3">
@@ -209,13 +274,13 @@ export default function ParentDashboard() {
               ) : (
                 <div className="text-center py-8">
                   <Baby className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Children Added</h3>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Players Added</h3>
                   <p className="text-gray-500 mb-4">
-                    Add your first child profile to get started.
+                    Add your first player profile to get started.
                   </p>
                   <Button onClick={() => setLocation('/manage-children')}>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Add Child Profile
+                    Add Player Profile
                   </Button>
                 </div>
               )}

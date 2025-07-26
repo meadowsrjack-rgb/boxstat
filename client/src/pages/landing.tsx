@@ -1,31 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, Trophy, Shield, MessageCircle, Bell, CheckCircle, CreditCard, Megaphone } from "lucide-react";
+import { Users, Calendar, Trophy, Shield, MessageCircle } from "lucide-react";
 import { FaBasketballBall } from "react-icons/fa";
 import { useLocation } from "wouter";
-import { useState, useEffect, useRef } from "react";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notificationsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    }
-
-    if (showNotifications) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
       {/* Header */}
@@ -39,73 +20,12 @@ export default function Landing() {
                 className="h-36 w-36 object-contain"
               />
             </div>
-            <div className="flex items-center gap-4 relative">
-              <div className="relative" ref={notificationsRef}>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  className="relative"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                >
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-                </Button>
-                {showNotifications && (
-                  <div className="absolute right-0 top-12 w-80 bg-white rounded-md shadow-lg border z-50">
-                    <div className="p-3 border-b">
-                      <h4 className="font-semibold text-sm">Recent Notifications</h4>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Megaphone className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">New Announcement</p>
-                          <p className="text-xs text-gray-600">Practice schedule updated for next week</p>
-                          <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">Player Check-in</p>
-                          <p className="text-xs text-gray-600">Alex checked in for practice</p>
-                          <p className="text-xs text-gray-400 mt-1">1 day ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <CreditCard className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">Payment Processed</p>
-                          <p className="text-xs text-gray-600">Monthly fee payment confirmed</p>
-                          <p className="text-xs text-gray-400 mt-1">3 days ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-2 border-t">
-                      <Button variant="ghost" size="sm" className="w-full text-xs">
-                        View All Notifications
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                className="bg-primary hover:bg-primary/90"
-              >
-                Sign In
-              </Button>
-            </div>
+            <Button 
+              onClick={() => window.location.href = '/api/login'}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Sign In
+            </Button>
           </div>
         </div>
       </header>

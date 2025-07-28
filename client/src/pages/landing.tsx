@@ -1,63 +1,181 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import videoPath from "@assets/Add a heading_1753743034117.mp4";
+
+const carouselFeatures = [
+  {
+    title: "Stay informed.",
+    description: "Keep up to date with your team's calendar and upcoming events."
+  },
+  {
+    title: "Unlock your potential.",
+    description: "Follow your development, track key stats, and celebrate milestones on your personal player journey."
+  },
+  {
+    title: "Train smarter.",
+    description: "Access a library of expert drills and training videos to elevate your game on and off the court."
+  }
+];
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
+
+  // Auto-advance carousel every 4 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Handle touch events for mobile swiping
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
+    }
+    if (isRightSwipe) {
+      setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-40">
-            <div className="flex items-center">
-              <img 
-                src={logoPath} 
-                alt="UYP Basketball" 
-                className="h-36 w-36 object-contain"
-              />
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Video Background */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src={videoPath} type="video/mp4" />
+        </video>
+        {/* Dark overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-black/60"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="bg-black/20 backdrop-blur-sm border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-20">
+              <div className="flex items-center">
+                <img 
+                  src={logoPath} 
+                  alt="UYP Basketball" 
+                  className="h-16 w-16 object-contain"
+                />
+              </div>
+              <Button 
+                onClick={() => window.location.href = '/api/login'}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm"
+              >
+                Sign In
+              </Button>
             </div>
-            <Button 
-              onClick={() => window.location.href = '/api/login'}
-              className="bg-white hover:bg-gray-50 text-black border border-gray-300"
-            >
-              Sign In
-            </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Hero Section */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center py-6">
-          <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-            <div className="text-2xl sm:text-3xl font-normal mb-2 italic">Welcome to</div>
-            <div>UYP Basketball</div>
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Own the court with Southern California's premier basketball league.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
+          {/* Logo */}
+          <div className="mb-8">
+            <img 
+              src={logoPath} 
+              alt="UYP Basketball Academy" 
+              className="h-32 w-32 sm:h-40 sm:w-40 mx-auto object-contain drop-shadow-2xl"
+            />
+          </div>
+
+          {/* Carousel Content */}
+          <div 
+            className="mb-8 min-h-[160px] flex items-center justify-center"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="max-w-md mx-auto">
+              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 drop-shadow-lg">
+                {carouselFeatures[currentSlide].title}
+              </h1>
+              <p className="text-lg sm:text-xl text-gray-200 leading-relaxed drop-shadow-md">
+                {carouselFeatures[currentSlide].description}
+              </p>
+            </div>
+          </div>
+
+          {/* Carousel Indicators */}
+          <div className="flex space-x-2 mb-12">
+            {carouselFeatures.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === currentSlide 
+                    ? 'bg-white scale-110' 
+                    : 'bg-white/40 hover:bg-white/60'
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
+          {/* Call to Action Buttons */}
+          <div className="space-y-4">
+            {/* Primary CTA Button */}
             <Button 
               size="lg" 
               onClick={() => window.location.href = '/api/login'}
-              className="bg-primary hover:bg-primary/90 text-lg px-8 py-3"
+              className="bg-red-600 hover:bg-red-700 text-white text-lg font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px]"
             >
-              Get Started
+              LET'S GO
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="text-lg px-8 py-3"
-              onClick={() => setLocation('/test-accounts')}
-            >
-              View Test Accounts
-            </Button>
+
+            {/* Secondary Text/Link */}
+            <div className="text-white/80 text-sm">
+              <span>HAVE AN ACCOUNT? </span>
+              <button 
+                onClick={() => window.location.href = '/api/login'}
+                className="text-white font-semibold underline hover:text-gray-200 transition-colors"
+              >
+                SIGN IN
+              </button>
+            </div>
+
+            {/* Test Accounts Button - Moved under as requested */}
+            <div className="pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setLocation('/test-accounts')}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm text-sm px-6 py-2"
+              >
+                View Test Accounts
+              </Button>
+            </div>
           </div>
         </div>
-      </section>
-
-
+      </div>
     </div>
   );
 }

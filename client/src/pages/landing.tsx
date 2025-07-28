@@ -77,19 +77,10 @@ export default function Landing() {
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pt-20">
-          {/* Logo positioned at top */}
-          <div className="mb-16">
-            <img 
-              src={logoPath} 
-              alt="UYP Basketball Academy" 
-              className="h-32 w-32 sm:h-40 sm:w-40 mx-auto object-contain drop-shadow-2xl"
-            />
-          </div>
-
-          {/* Carousel Content - moved lower */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
+          {/* Carousel Content - moved down more */}
           <div 
-            className="mb-8 min-h-[200px] flex items-center justify-center mt-8"
+            className="mb-8 min-h-[180px] flex items-center justify-center mt-20"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -98,7 +89,7 @@ export default function Landing() {
               <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 drop-shadow-lg">
                 {carouselFeatures[currentSlide].title}
               </h1>
-              <p className="text-base sm:text-lg text-gray-300 leading-relaxed drop-shadow-md font-light">
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">
                 {carouselFeatures[currentSlide].description}
               </p>
             </div>

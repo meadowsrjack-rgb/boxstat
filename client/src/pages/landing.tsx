@@ -66,7 +66,7 @@ export default function Landing() {
           muted
           loop
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full"
         >
           <source src={videoPath} type="video/mp4" />
         </video>
@@ -86,7 +86,7 @@ export default function Landing() {
             onTouchEnd={handleTouchEnd}
           >
             <div className="max-w-lg mx-auto">
-              <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 drop-shadow-lg">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg whitespace-nowrap">
                 {carouselFeatures[currentSlide].title}
               </h1>
               <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">

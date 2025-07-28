@@ -76,31 +76,10 @@ export default function Landing() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-20">
-              <div className="flex items-center">
-                <img 
-                  src={logoPath} 
-                  alt="UYP Basketball" 
-                  className="h-16 w-16 object-contain"
-                />
-              </div>
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm"
-              >
-                Sign In
-              </Button>
-            </div>
-          </div>
-        </header>
-
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
-          {/* Logo */}
-          <div className="mb-8">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pt-20">
+          {/* Logo positioned at top */}
+          <div className="mb-16">
             <img 
               src={logoPath} 
               alt="UYP Basketball Academy" 
@@ -108,18 +87,18 @@ export default function Landing() {
             />
           </div>
 
-          {/* Carousel Content */}
+          {/* Carousel Content - moved lower */}
           <div 
-            className="mb-8 min-h-[160px] flex items-center justify-center"
+            className="mb-8 min-h-[200px] flex items-center justify-center mt-8"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="max-w-md mx-auto">
-              <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 drop-shadow-lg">
+            <div className="max-w-lg mx-auto">
+              <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 drop-shadow-lg">
                 {carouselFeatures[currentSlide].title}
               </h1>
-              <p className="text-lg sm:text-xl text-gray-200 leading-relaxed drop-shadow-md">
+              <p className="text-base sm:text-lg text-gray-300 leading-relaxed drop-shadow-md font-light">
                 {carouselFeatures[currentSlide].description}
               </p>
             </div>
@@ -143,11 +122,11 @@ export default function Landing() {
 
           {/* Call to Action Buttons */}
           <div className="space-y-4">
-            {/* Primary CTA Button */}
+            {/* Primary CTA Button - Made more red */}
             <Button 
               size="lg" 
               onClick={() => window.location.href = '/api/login'}
-              className="bg-red-600 hover:bg-red-700 text-white text-lg font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px]"
+              className="bg-red-500 hover:bg-red-600 text-white text-lg font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px]"
             >
               LET'S GO
             </Button>

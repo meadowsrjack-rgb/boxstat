@@ -252,12 +252,12 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Team Schedule */}
+        {/* Calendar */}
         <Card className="bg-white border border-gray-100">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-green-500" />
-              Team Schedule
+              Calendar
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -290,7 +290,7 @@ export default function AdminDashboard() {
                   className="w-full text-green-600 hover:text-green-700 mt-3"
                   onClick={() => setLocation('/schedule')}
                 >
-                  View Full Schedule →
+                  View Full Calendar →
                 </Button>
               </div>
             ) : (

@@ -57,19 +57,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 mt-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex justify-center mb-4">
-            <img 
-              src={logoPath} 
-              alt="UYP Basketball" 
-              className="h-16 w-16 object-contain"
-            />
-          </div>
-          <p className="text-gray-400">&copy; 2024 UYP Basketball. All rights reserved.</p>
-        </div>
-      </footer>
+
     </div>
   );
 }

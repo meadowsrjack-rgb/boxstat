@@ -285,17 +285,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Team Members */}
-          <Card 
-            className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={() => currentTeam && setLocation(`/team-details/${currentTeam.id}`)}
-          >
-            <CardContent className="p-4 text-center">
-              <Users className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Team Members</h3>
-              <p className="text-xs text-gray-600">{teamPlayers?.length || 0} players</p>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Team Roster */}
@@ -356,6 +345,45 @@ export default function AdminDashboard() {
                 <p className="text-gray-500 text-sm">No players assigned</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Coach Curriculum */}
+        <Card className="bg-white border border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-purple-500" />
+              Coach Resources
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 text-sm">Basic Coach Curriculum</h4>
+                    <p className="text-xs text-gray-600">Fundamental coaching materials</p>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">Coming Soon</div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Trophy className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 text-sm">SOPs</h4>
+                    <p className="text-xs text-gray-600">Standard Operating Procedures</p>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500">Coming Soon</div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

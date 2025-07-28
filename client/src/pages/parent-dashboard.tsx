@@ -4,40 +4,25 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Bell, 
   Calendar as CalendarIcon, 
   CreditCard, 
   Users, 
   CheckCircle, 
-  Baby,
-  Trophy,
-  Mail,
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-  Play,
   BookOpen,
-  User,
-  Settings,
-  UserPlus,
   UserCheck,
-  FileText,
   Megaphone
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
-
 
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 export default function ParentDashboard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [, setLocation] = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -64,16 +49,6 @@ export default function ParentDashboard() {
     enabled: !!user?.id,
   });
 
-  const { data: userTeam } = useQuery({
-    queryKey: ["/api/users", user?.id, "team"],
-    enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchInterval: false,
-  });
-
   const { data: userEvents = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "events"],
     enabled: !!user?.id,
@@ -88,8 +63,6 @@ export default function ParentDashboard() {
     queryKey: ["/api/announcements"],
     enabled: !!user?.id,
   });
-
-
 
   if (!user) {
     return (
@@ -192,349 +165,170 @@ export default function ParentDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-              <div className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs">⚡</span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/schedule')}>
-                <CalendarIcon className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">View Schedule</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/payment')}>
-                <CreditCard className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Make Payment</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/training')}>
-                <Trophy className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Training Programs</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/schedule-requests')}>
-                <FileText className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Schedule Requests</span>
-              </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setLocation('/manage-children')}>
-                <UserPlus className="h-4 w-4 mr-3 text-primary" />
-                <span className="text-sm font-medium">Manage Players</span>
-              </Button>
+      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+        
+        {/* Main Action Tiles */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Calendar */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
+            onClick={() => setLocation('/schedule')}
+          >
+            <CardContent className="p-4 text-center">
+              <CalendarIcon className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Calendar</h3>
+              <p className="text-xs text-gray-600">Schedule & events</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg">My Players</CardTitle>
-              <Baby className="h-6 w-6 text-green-500" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {childProfiles && Array.isArray(childProfiles) && childProfiles.length > 0 ? (
-                childProfiles.map((child: any) => {
-                  const childTeam = child.teamName ? `${child.teamAgeGroup} ${child.teamName}` : 'No Team';
-                  const childAge = child.dateOfBirth ? 
-                    new Date().getFullYear() - new Date(child.dateOfBirth).getFullYear() : 
-                    'Unknown';
-                  const initials = `${child.firstName?.[0] || ''}${child.lastName?.[0] || ''}`;
-                  const colors = ['bg-green-500', 'bg-blue-500', 'bg-yellow-500', 'bg-purple-500', 'bg-red-500'];
-                  const colorIndex = child.id % colors.length;
-                  
-                  return (
-                    <div key={child.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center">
-                        <div className={`w-8 h-8 ${colors[colorIndex]} text-white rounded-full flex items-center justify-center text-sm font-bold mr-3`}>
-                          {initials}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{child.firstName} {child.lastName}</p>
-                          <p className="text-sm text-gray-500">
-                            {childTeam} • Age {childAge}
-                            {child.jerseyNumber && ` • #${child.jerseyNumber}`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            window.location.href = `/?mode=player&childId=${child.id}`;
-                          }}
-                          className="text-xs"
-                        >
-                          Switch to {child.firstName}
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8">
-                  <Baby className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Players Added</h3>
-                  <p className="text-gray-500 mb-4">
-                    Add your first player profile to get started.
-                  </p>
-                  <Button onClick={() => setLocation('/manage-children')}>
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Player Profile
-                  </Button>
-                </div>
-              )}
+          {/* Payments */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
+            onClick={() => setLocation('/sportsengine-payment')}
+          >
+            <CardContent className="p-4 text-center">
+              <CreditCard className="w-8 h-8 text-green-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Payments</h3>
+              <p className="text-xs text-gray-600">Fees & billing</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-lg">Account Status</CardTitle>
-              <CheckCircle className="h-6 w-6 text-green-500" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Payment Status</span>
-                <Badge className="bg-green-500">Paid</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Forms Completed</span>
-                <Badge className="bg-green-500">2/2</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Next Payment</span>
-                <span className="text-sm font-medium text-gray-900">Dec 15</span>
-              </div>
+          {/* Children */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
+            onClick={() => setLocation('/manage-children')}
+          >
+            <CardContent className="p-4 text-center">
+              <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Children</h3>
+              <p className="text-xs text-gray-600">Manage players</p>
+            </CardContent>
+          </Card>
+
+          {/* Online Programs */}
+          <Card 
+            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
+            onClick={() => setLocation('/training')}
+          >
+            <CardContent className="p-4 text-center">
+              <BookOpen className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Online Programs</h3>
+              <p className="text-xs text-gray-600">Training content</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Training Programs */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl">Training Programs</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setLocation("/training")}
-              >
-                View All
-              </Button>
-            </div>
+        {/* Account Status */}
+        <Card className="bg-white border border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <UserCheck className="w-5 h-5 text-green-500" />
+              Account Status
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Play className="h-6 w-6 text-primary" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Elite Skills Training</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Professional video courses to improve your child's basketball skills
-                  </p>
-                  <Button 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => setLocation("/training")}
-                  >
-                    Browse Programs
-                  </Button>
-                </CardContent>
-              </Card>
-              
-              <Card className="border-2 border-dashed border-gray-200 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="h-6 w-6 text-green-500" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Training Library</h4>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Access subscribed training content and track progress
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => setLocation("/training-library")}
-                  >
-                    My Library
-                  </Button>
-                </CardContent>
-              </Card>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                <h4 className="font-semibold text-gray-900 text-sm">Registration</h4>
+                <p className="text-xs text-green-600">Active & Current</p>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <CreditCard className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                <h4 className="font-semibold text-gray-900 text-sm">Payments</h4>
+                <p className="text-xs text-blue-600">Up to Date</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+                <h4 className="font-semibold text-gray-900 text-sm">Players</h4>
+                <p className="text-xs text-purple-600">{childProfiles?.length || 0} Registered</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Upcoming Events */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl">Upcoming Events</CardTitle>
-              <Button variant="outline" size="sm" onClick={() => setLocation('/schedule')}>
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                View Schedule
-              </Button>
-            </div>
+        <Card className="bg-white border border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-blue-500" />
+              Upcoming Events
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {Array.isArray(userEvents) && userEvents.length > 0 ? (
-                userEvents.slice(0, 5).map((event: any) => {
-                  const eventDate = new Date(event.start_time);
-                  const isToday = eventDate.toDateString() === new Date().toDateString();
-                  const isTomorrow = eventDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
-                  
-                  let dateLabel = format(eventDate, "MMM d");
-                  if (isToday) dateLabel = "Today";
-                  else if (isTomorrow) dateLabel = "Tomorrow";
-                  
-                  const eventTypeColors = {
-                    practice: "bg-blue-50 border-blue-200",
-                    game: "bg-green-50 border-green-200",
-                    tournament: "bg-purple-50 border-purple-200",
-                    camp: "bg-orange-50 border-orange-200",
-                    skills: "bg-yellow-50 border-yellow-200"
-                  };
-                  
-                  const dotColors = {
-                    practice: "bg-blue-500",
-                    game: "bg-green-500",
-                    tournament: "bg-purple-500",
-                    camp: "bg-orange-500",
-                    skills: "bg-yellow-500"
-                  };
-                  
-                  return (
-                    <div key={event.id} className={`flex items-center p-3 rounded-lg border ${eventTypeColors[event.event_type] || 'bg-gray-50 border-gray-200'}`}>
-                      <div className={`w-2 h-2 rounded-full mr-3 ${dotColors[event.event_type] || 'bg-gray-500'}`}></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {dateLabel} • {format(eventDate, "h:mm a")} • {event.location}
-                        </p>
+          <CardContent className="pt-0">
+            {Array.isArray(userEvents) && userEvents.length > 0 ? (
+              <div className="space-y-3">
+                {userEvents.slice(0, 3).map((event: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
+                          {event.eventType || 'Event'}
+                        </Badge>
+                      </div>
+                      <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                      <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="w-3 h-3" />
+                          {format(new Date(event.startTime || event.start_time), 'MMM d')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                          {format(new Date(event.startTime || event.start_time), 'h:mm a')}
+                        </span>
                       </div>
                     </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No upcoming events</p>
-                </div>
-              )}
-            </div>
+                  </div>
+                ))}
+                <Button 
+                  variant="ghost" 
+                  className="w-full text-blue-600 hover:text-blue-700 mt-3"
+                  onClick={() => setLocation('/schedule')}
+                >
+                  View Full Calendar →
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No upcoming events</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Recent Activity & Announcements */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Alex checked in at practice</p>
-                  <p className="text-xs text-gray-500">2 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
-                  <Trophy className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Maya earned "Perfect Attendance" badge</p>
-                  <p className="text-xs text-gray-500">Yesterday</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                  <Mail className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">New message from Coach Martinez</p>
-                  <p className="text-xs text-gray-500">2 days ago</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                SportsEngine Payments
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <div className="text-sm font-medium text-green-800">Total Paid</div>
-                  <div className="text-lg font-bold text-green-900">
-                    ${userPayments?.filter((p: any) => p.status === 'completed').reduce((sum: number, p: any) => sum + p.amount, 0) || 0}
+        {/* Announcements */}
+        <Card className="bg-white border border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Megaphone className="w-5 h-5 text-purple-500" />
+              Announcements
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {announcements && announcements.length > 0 ? (
+              <div className="space-y-3">
+                {announcements.slice(0, 3).map((announcement: any, index: number) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900 text-sm">{announcement.title}</h4>
+                      <span className="text-xs text-gray-500">
+                        {format(new Date(announcement.createdAt), "MMM d")}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">{announcement.content}</p>
                   </div>
-                </div>
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <div className="text-sm font-medium text-yellow-800">Outstanding</div>
-                  <div className="text-lg font-bold text-yellow-900">
-                    ${userPayments?.filter((p: any) => p.status === 'pending').reduce((sum: number, p: any) => sum + p.amount, 0) || 0}
-                  </div>
-                </div>
+                ))}
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Quick Pay Options</span>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/payment')}>
-                    View All
-                  </Button>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/payment/registration')}>
-                    Registration
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/payment/uniform')}>
-                    Uniform
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/payment/tournament')}>
-                    Tournament
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setLocation('/payment/other')}>
-                    Other
-                  </Button>
-                </div>
+            ) : (
+              <div className="text-center py-8">
+                <Megaphone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No announcements</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">League Announcements</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {announcements?.slice(0, 2).map((announcement: any) => (
-                <div key={announcement.id} className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium text-gray-900">{announcement.title}</h4>
-                    <span className="text-xs text-gray-500">
-                      {format(new Date(announcement.createdAt), "MMM d")}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">{announcement.content}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </main>
-
-
     </div>
   );
 }

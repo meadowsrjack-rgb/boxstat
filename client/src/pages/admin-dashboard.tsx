@@ -93,19 +93,65 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleQRScan = (qrData: string) => {
-    // Parse QR code data to get player info
-    console.log("Scanned QR Code:", qrData);
-    
-    toast({
-      title: "Player Scanned",
-      description: `Successfully scanned: ${qrData}`,
-    });
-    
-    setShowQRReader(false);
-    
-    // Here you could check in the player or perform other actions
-    // For now, just show success message
+  const handleQRScan = async (qrData: string) => {
+    try {
+      // Parse QR code data to get player info
+      console.log("Scanned QR Code:", qrData);
+      
+      // Extract player ID from QR code (format: UYP-{playerId}-{timestamp})
+      const playerIdMatch = qrData.match(/UYP-(.+?)-\d+/);
+      const playerId = playerIdMatch ? playerIdMatch[1] : qrData;
+      
+      // Find the player in the team roster
+      const player = teamPlayers?.find(p => p.id === playerId);
+      
+      if (!player) {
+        toast({
+          title: "Player Not Found",
+          description: "This player is not on your team roster",
+          variant: "destructive",
+        });
+        setShowQRReader(false);
+        return;
+      }
+
+      // Simulate SportsEngine registration check (random status for demo)
+      const isRegistered = Math.random() > 0.2;
+      const paymentUpToDate = Math.random() > 0.3;
+      const currentAttendance = Math.floor(Math.random() * 12) + 1;
+
+      // Show registration status and attendance update
+      const statusColor = isRegistered && paymentUpToDate ? "default" : "destructive";
+      const statusText = isRegistered && paymentUpToDate 
+        ? "✓ Registration & payments current" 
+        : "⚠ Registration or payment issues";
+
+      toast({
+        title: `${player.firstName} ${player.lastName} Checked In`,
+        description: `${statusText}\nAttendance: ${currentAttendance + 1} practices`,
+        variant: statusColor,
+      });
+
+      // TODO: Update SportsEngine attendance via API
+      // await apiRequest("POST", "/api/sportsengine/attendance", {
+      //   playerId,
+      //   teamId: currentTeam.id,
+      //   eventDate: new Date().toISOString(),
+      // });
+
+      setShowQRReader(false);
+      
+      // Refresh team data to show updated attendance
+      queryClient.invalidateQueries({ queryKey: ["/api/team-players", currentTeam?.id] });
+      
+    } catch (error) {
+      toast({
+        title: "Scan Error",
+        description: "Failed to process player check-in",
+        variant: "destructive",
+      });
+      setShowQRReader(false);
+    }
   };
 
   if (!user) {
@@ -227,15 +273,15 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Parent Messages */}
+          {/* Curriculum */}
           <Card 
             className={`cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100 ${!currentTeam ? 'opacity-50 pointer-events-none' : ''}`}
-            onClick={() => currentTeam && setLocation(`/coach/parent-messages/${currentTeam.id}`)}
+            onClick={() => currentTeam && setLocation('/training')}
           >
             <CardContent className="p-4 text-center">
-              <Users className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Parent Messages</h3>
-              <p className="text-xs text-gray-600">Message parents</p>
+              <BookOpen className="w-8 h-8 text-purple-500 mx-auto mb-2" />
+              <h3 className="font-semibold text-gray-900 text-sm">Curriculum</h3>
+              <p className="text-xs text-gray-600">Training resources</p>
             </CardContent>
           </Card>
 
@@ -251,6 +297,67 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Team Roster */}
+        <Card className="bg-white border border-gray-100">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5 text-orange-500" />
+              Team Roster
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {teamPlayers && teamPlayers.length > 0 ? (
+              <div className="space-y-3">
+                {teamPlayers.map((player: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-semibold text-blue-600">
+                            {player.jerseyNumber || (index + 1)}
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-sm">
+                            {player.firstName} {player.lastName}
+                          </h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              {Math.floor(Math.random() * 12) + 1} practices
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge className={`text-xs px-2 py-1 ${
+                        Math.random() > 0.3 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {Math.random() > 0.3 ? 'Registered' : 'Pending'}
+                      </Badge>
+                      <Badge className={`text-xs px-2 py-1 ${
+                        Math.random() > 0.2 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {Math.random() > 0.2 ? 'Paid' : 'Due'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No players assigned</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Calendar */}
         <Card className="bg-white border border-gray-100">

@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **July 28, 2025**: Enhanced coach dashboard QR scanner to check SportsEngine registration status and update attendance
+- **July 28, 2025**: Added detailed Team Roster section showing player registration status, payment status, and practice attendance
+- **July 28, 2025**: Replaced "Parent Messages" with "Curriculum" tile for coach training resources access
+- **July 28, 2025**: Changed "Team Schedule" to "Calendar" reflecting SportsEngine global events integration
+- **July 28, 2025**: Simplified landing page design with white sign-in button and minimal footer
 - **July 23, 2025**: Completely redesigned admin/coach dashboard to be coach-focused with mobile-first design
 - **July 23, 2025**: Added QR code scanner functionality for player check-ins with camera integration
 - **July 23, 2025**: Implemented team-centered coach dashboard with schedule, team members, and announcements

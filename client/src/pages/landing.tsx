@@ -24,16 +24,11 @@ export default function Landing() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Auto-advance carousel every 4 seconds
   useEffect(() => {
     const timer = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
-        setIsTransitioning(false);
-      }, 150);
+      setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
     }, 4000);
     return () => clearInterval(timer);
   }, []);
@@ -54,17 +49,11 @@ export default function Landing() {
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
-    if (isLeftSwipe || isRightSwipe) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        if (isLeftSwipe) {
-          setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
-        }
-        if (isRightSwipe) {
-          setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
-        }
-        setIsTransitioning(false);
-      }, 150);
+    if (isLeftSwipe) {
+      setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
+    }
+    if (isRightSwipe) {
+      setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
     }
   };
 
@@ -105,42 +94,19 @@ export default function Landing() {
         <div className="px-4 sm:px-6 lg:px-8 text-center pb-6" style={{ paddingBottom: '24px' }}>
           {/* Carousel Content */}
           <div 
-            className="mb-12 min-h-[120px] flex items-center justify-center overflow-hidden"
+            className="mb-12 min-h-[120px] flex items-center justify-center"
             style={{ marginTop: '24px' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <div className="relative w-full max-w-lg mx-auto">
-              {carouselFeatures.map((feature, index) => (
-                <div
-                  key={index}
-                  className={`absolute inset-0 transition-all duration-500 ease-in-out ${
-                    index === currentSlide
-                      ? 'opacity-100 transform translate-x-0'
-                      : index < currentSlide
-                      ? 'opacity-0 transform -translate-x-full'
-                      : 'opacity-0 transform translate-x-full'
-                  } ${
-                    isTransitioning 
-                      ? 'transition-all duration-300 ease-out' 
-                      : ''
-                  }`}
-                  style={{
-                    transform: `translateX(${(index - currentSlide) * 100}%)`,
-                    transition: isTransitioning 
-                      ? 'transform 0.3s ease-out, opacity 0.3s ease-out' 
-                      : 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out'
-                  }}
-                >
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg whitespace-nowrap text-center">
-                    {feature.title}
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light text-center">
-                    {feature.description}
-                  </p>
-                </div>
-              ))}
+            <div className="max-w-lg mx-auto">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg whitespace-nowrap">
+                {carouselFeatures[currentSlide].title}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">
+                {carouselFeatures[currentSlide].description}
+              </p>
             </div>
           </div>
 
@@ -149,15 +115,7 @@ export default function Landing() {
             {carouselFeatures.map((_, index) => (
               <button
                 key={index}
-                onClick={() => {
-                  if (index !== currentSlide) {
-                    setIsTransitioning(true);
-                    setTimeout(() => {
-                      setCurrentSlide(index);
-                      setIsTransitioning(false);
-                    }, 150);
-                  }
-                }}
+                onClick={() => setCurrentSlide(index)}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === currentSlide 
                     ? 'bg-white scale-110' 

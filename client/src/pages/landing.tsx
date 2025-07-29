@@ -66,7 +66,7 @@ export default function Landing() {
           muted
           loop
           playsInline
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full object-cover"
         >
           <source src={videoPath} type="video/mp4" />
         </video>

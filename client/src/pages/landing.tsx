@@ -125,7 +125,7 @@ export default function Landing() {
                 <motion.div
                   key={currentSlide}
                   initial={{
-                    x: swipeDirection === 'left' ? 100 : swipeDirection === 'right' ? -100 : 0,
+                    x: swipeDirection === 'left' ? 300 : swipeDirection === 'right' ? -300 : 0,
                     opacity: 0
                   }}
                   animate={{
@@ -133,7 +133,7 @@ export default function Landing() {
                     opacity: 1
                   }}
                   exit={{
-                    x: swipeDirection === 'left' ? -100 : swipeDirection === 'right' ? 100 : 0,
+                    x: swipeDirection === 'left' ? -300 : swipeDirection === 'right' ? 300 : 0,
                     opacity: 0
                   }}
                   transition={{

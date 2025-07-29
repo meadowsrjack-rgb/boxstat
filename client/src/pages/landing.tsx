@@ -76,8 +76,19 @@ export default function Landing() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Test Accounts Button at Top */}
+        <div className="absolute top-6 right-6 z-20">
+          <Button 
+            variant="outline" 
+            onClick={() => setLocation('/test-accounts')}
+            className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm text-sm px-6 py-2"
+          >
+            View Test Accounts
+          </Button>
+        </div>
+
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pt-32">
           {/* Carousel Content - moved down more */}
           <div 
             className="mb-8 min-h-[180px] flex items-center justify-center mt-20"
@@ -131,17 +142,6 @@ export default function Landing() {
               >
                 SIGN IN
               </button>
-            </div>
-
-            {/* Test Accounts Button - Moved under as requested */}
-            <div className="pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setLocation('/test-accounts')}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm text-sm px-6 py-2"
-              >
-                View Test Accounts
-              </Button>
             </div>
           </div>
         </div>

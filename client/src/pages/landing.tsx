@@ -95,6 +95,7 @@ export default function Landing() {
           {/* Carousel Content */}
           <div 
             className="mb-6 min-h-[120px] flex items-center justify-center"
+            style={{ marginTop: '48px' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}

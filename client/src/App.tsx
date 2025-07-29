@@ -8,6 +8,7 @@ import { useEffect } from "react";
 
 // Pages
 import Landing from "@/pages/landing";
+import TestLanding from "@/test-landing";
 import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
@@ -32,7 +33,7 @@ function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
   
   // Show account setup if user is authenticated but profile not completed
-  const needsSetup = isAuthenticated && user && !user.profileCompleted;
+  const needsSetup = isAuthenticated && user && !user?.profileCompleted;
 
   // Register service worker for PWA
   useEffect(() => {
@@ -70,9 +71,9 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/" component={Landing} />
+        <Route path="/" component={TestLanding} />
         <Route path="/test-accounts" component={TestAccounts} />
-        <Route component={Landing} />
+        <Route component={TestLanding} />
       </Switch>
     );
   }
@@ -98,8 +99,12 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={getDashboardComponent()} />
-      <Route path="/player-dashboard" component={PlayerDashboard} />
-      <Route path="/parent-dashboard" component={ParentDashboard} />
+      <Route path="/player-dashboard">
+        {() => <PlayerDashboard />}
+      </Route>
+      <Route path="/parent-dashboard">
+        {() => <ParentDashboard />}
+      </Route>
       <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       

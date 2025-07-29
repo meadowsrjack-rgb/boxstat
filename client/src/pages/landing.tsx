@@ -87,11 +87,14 @@ export default function Landing() {
           </Button>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pb-8">
+        {/* Spacer to push content to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Bottom Content */}
+        <div className="px-4 sm:px-6 lg:px-8 text-center pb-6" style={{ paddingBottom: '24px' }}>
           {/* Carousel Content */}
           <div 
-            className="mb-6 min-h-[120px] flex items-center justify-center mt-[300px]"
+            className="mb-6 min-h-[120px] flex items-center justify-center"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -107,7 +110,7 @@ export default function Landing() {
           </div>
 
           {/* Carousel Indicators */}
-          <div className="flex space-x-2 mb-8">
+          <div className="flex space-x-2 mb-8 justify-center">
             {carouselFeatures.map((_, index) => (
               <button
                 key={index}

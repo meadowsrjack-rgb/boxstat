@@ -101,7 +101,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   };
 
   return (
-    <div className="page-container bg-gradient-to-br from-green-500 to-blue-600">
+    <div className="min-h-screen bg-gradient-to-br from-green-500 to-blue-600">
       {/* Header */}
       <header className="bg-white shadow-lg">
         <div className="max-w-md mx-auto px-6 py-4">
@@ -139,7 +139,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md mx-auto px-6 py-6 main-content">
+      <main className="max-w-md mx-auto px-6 py-6">
         {/* Prominent Check-In Section */}
         <Card className="mb-6 shadow-lg bg-gradient-to-r from-primary to-red-600 text-white">
           <CardContent className="p-8 text-center">

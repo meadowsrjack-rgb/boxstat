@@ -58,7 +58,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="relative page-container overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       {/* Video Background */}
       <div className="absolute inset-0 z-0">
         <video
@@ -88,10 +88,10 @@ export default function Landing() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-end px-4 sm:px-6 lg:px-8 text-center pb-16">
-          {/* Carousel Content - pushed to bottom */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pb-8">
+          {/* Carousel Content */}
           <div 
-            className="mb-8 min-h-[180px] flex items-center justify-center"
+            className="mb-6 min-h-[120px] flex items-center justify-center mt-[300px]"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -107,7 +107,7 @@ export default function Landing() {
           </div>
 
           {/* Carousel Indicators */}
-          <div className="flex space-x-2 mb-12">
+          <div className="flex space-x-2 mb-8">
             {carouselFeatures.map((_, index) => (
               <button
                 key={index}
@@ -134,7 +134,7 @@ export default function Landing() {
             </Button>
 
             {/* Secondary Text/Link */}
-            <div className="text-white/80 text-sm mb-8">
+            <div className="text-white/80 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
                 onClick={() => window.location.href = '/api/login'}

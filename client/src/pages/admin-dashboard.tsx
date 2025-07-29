@@ -179,7 +179,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="page-container bg-gradient-to-br from-blue-500 to-purple-600">
+    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600">
       {/* Header */}
       <header className="bg-white shadow-lg">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 py-6 space-y-6 main-content">
+      <main className="max-w-4xl mx-auto px-6 py-6 space-y-6">
         
         {/* Team Selection Alert */}
         {!currentTeam && (

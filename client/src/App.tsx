@@ -8,7 +8,6 @@ import { useEffect } from "react";
 
 // Pages
 import Landing from "@/pages/landing";
-import SimpleLanding from "@/pages/simple-landing";
 
 import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
@@ -72,9 +71,9 @@ function Router() {
   if (!isAuthenticated) {
     return (
       <Switch>
-        <Route path="/" component={SimpleLanding} />
+        <Route path="/" component={Landing} />
         <Route path="/test-accounts" component={TestAccounts} />
-        <Route component={SimpleLanding} />
+        <Route component={Landing} />
       </Switch>
     );
   }

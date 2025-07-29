@@ -95,7 +95,7 @@ export default function Landing() {
           {/* Carousel Content */}
           <div 
             className="mb-6 min-h-[120px] flex items-center justify-center"
-            style={{ marginTop: '48px' }}
+            style={{ marginTop: '24px' }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -116,7 +116,7 @@ export default function Landing() {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === currentSlide 
                     ? 'bg-white scale-110' 
                     : 'bg-white/40 hover:bg-white/60'

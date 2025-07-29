@@ -4,6 +4,7 @@
   "description": "Official app for UYP Basketball League in Costa Mesa, CA",
   "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "theme_color": "#1E40AF",
   "background_color": "#FFFFFF",
   "orientation": "portrait-primary",

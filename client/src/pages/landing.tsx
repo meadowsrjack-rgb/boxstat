@@ -58,7 +58,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative page-container overflow-hidden">
       {/* Video Background */}
       <div className="absolute inset-0 z-0">
         <video

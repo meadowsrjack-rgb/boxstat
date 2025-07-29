@@ -192,6 +192,15 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
+  /* Footer spacing utility */
+  .page-container {
+    @apply min-h-screen pb-16;
+  }
+
+  .main-content {
+    @apply pb-8;
+  }
+
   /* PWA specific styles */
   .pwa-install-prompt {
     @apply fixed bottom-4 left-4 right-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-lg z-50;

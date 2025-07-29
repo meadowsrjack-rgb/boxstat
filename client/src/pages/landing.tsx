@@ -91,7 +91,7 @@ export default function Landing() {
         <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 text-center pb-8">
           {/* Carousel Content */}
           <div 
-            className="mb-6 min-h-[120px] flex items-center justify-center"
+            className="mb-6 min-h-[120px] flex items-center justify-center mt-[300px]"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}

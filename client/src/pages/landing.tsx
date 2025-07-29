@@ -88,7 +88,7 @@ export default function Landing() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col items-center justify-end px-4 sm:px-6 lg:px-8 text-center pb-20">
+        <div className="flex-1 flex flex-col items-center justify-end px-4 sm:px-6 lg:px-8 text-center pb-40">
           {/* Carousel Content - pushed to bottom */}
           <div 
             className="mb-8 min-h-[180px] flex items-center justify-center"

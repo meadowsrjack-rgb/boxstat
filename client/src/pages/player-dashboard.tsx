@@ -18,7 +18,8 @@ import {
   ChevronDown,
   Target,
   Zap,
-  Activity
+  Activity,
+  Shirt
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -194,7 +195,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 activeTab === 'team' ? 'text-orange-500' : 'text-gray-400'
               }`}
             >
-              <Users className="h-6 w-6" />
+              <Shirt className="h-6 w-6" />
               {activeTab === 'team' && <div className="h-0.5 w-8 bg-orange-500 rounded" />}
             </button>
             <button

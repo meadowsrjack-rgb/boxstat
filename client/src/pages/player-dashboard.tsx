@@ -19,7 +19,11 @@ import {
   Target,
   Zap,
   Activity,
-  Shirt
+  Shirt,
+  BookOpen,
+  Tent,
+  UserCheck,
+  Award
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -244,6 +248,65 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     <div className="text-center">
                       <h3 className="text-sm font-medium text-gray-600 mb-1">Games</h3>
                       <div className="text-2xl font-bold text-gray-900">8</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Activity Tiles */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <BookOpen className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Lessons</h3>
+                        <p className="text-xs text-gray-500">3 completed</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <Tent className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Camps</h3>
+                        <p className="text-xs text-gray-500">1 attended</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                        <UserCheck className="h-6 w-6 text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Privates</h3>
+                        <p className="text-xs text-gray-500">2 scheduled</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <Award className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Skills</h3>
+                        <p className="text-xs text-gray-500">5 improving</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

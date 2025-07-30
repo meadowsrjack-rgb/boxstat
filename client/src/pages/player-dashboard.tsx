@@ -325,67 +325,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
-              {/* Badges & Achievements Section */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900">Badges & Achievements</h3>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-                
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Perfect Attendance Badge */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-lg">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <Target className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">Perfect Attendance</span>
-                  </div>
-                  
-                  {/* Team Player Badge */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-green-400 to-blue-500 rounded-lg">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">Team Player</span>
-                  </div>
-                  
-                  {/* MVP Badge (Locked) */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-gray-300 to-gray-400 rounded-lg opacity-60">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <Activity className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">MVP</span>
-                  </div>
-                  
-                  {/* Rising Star Badge */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-purple-400 to-pink-500 rounded-lg">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <Zap className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">Rising Star</span>
-                  </div>
-                  
-                  {/* Consistent Player Badge */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-indigo-400 to-blue-600 rounded-lg">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">Consistent</span>
-                  </div>
-                  
-                  {/* Future Badge (Locked) */}
-                  <div className="flex flex-col items-center p-3 bg-gradient-to-b from-gray-300 to-gray-400 rounded-lg opacity-60">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center mb-2">
-                      <Target className="h-6 w-6 text-white" />
-                    </div>
-                    <span className="text-xs font-medium text-white text-center">Future Champ</span>
-                  </div>
-                </div>
-                
-                <div className="text-center pt-2">
-                  <p className="text-sm text-gray-500">4 of 6 badges earned</p>
-                </div>
-              </div>
+
             </div>
           )}
 

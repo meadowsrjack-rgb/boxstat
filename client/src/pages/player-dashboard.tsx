@@ -326,33 +326,45 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-2">
-                      {Array.from({ length: getDaysInMonth() }, (_, i) => {
-                        const day = i + 1;
-                        const hasEvent = calendarEvents[day];
-                        const isCompleted = hasEvent && hasEvent.some(event => event.completed);
-                        const isSelected = selectedDay === day;
+                      {/* Generate all days for the month in proper grid format */}
+                      {(() => {
+                        const daysInMonth = getDaysInMonth();
+                        const days = [];
                         
-                        return (
-                          <button
-                            key={day}
-                            onClick={() => setSelectedDay(selectedDay === day ? null : day)}
-                            className={`w-8 h-8 flex items-center justify-center text-sm rounded transition-colors relative ${
-                              isSelected 
-                                ? 'bg-orange-500 text-white' 
-                                : hasEvent
-                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                : 'text-gray-900 hover:bg-gray-100'
-                            }`}
-                          >
-                            {day}
-                            {hasEvent && (
-                              <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full ${
-                                isCompleted ? 'bg-green-500' : 'bg-orange-400'
-                              }`} />
-                            )}
-                          </button>
-                        );
-                      })}
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const hasEvent = calendarEvents[day];
+                          const isCompleted = hasEvent && hasEvent.some(event => event.completed);
+                          const isSelected = selectedDay === day;
+                          
+                          days.push(
+                            <button
+                              key={day}
+                              onClick={() => setSelectedDay(selectedDay === day ? null : day)}
+                              className={`w-8 h-8 flex items-center justify-center text-sm rounded transition-colors relative ${
+                                isSelected 
+                                  ? 'bg-orange-500 text-white' 
+                                  : hasEvent
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                  : 'text-gray-900 hover:bg-gray-100'
+                              }`}
+                            >
+                              {day}
+                              {hasEvent && (
+                                <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full ${
+                                  isCompleted ? 'bg-green-500' : 'bg-orange-400'
+                                }`} />
+                              )}
+                            </button>
+                          );
+                        }
+                        
+                        // Fill remaining cells to complete the grid
+                        while (days.length % 7 !== 0) {
+                          days.push(<div key={`empty-${days.length}`} className="w-8 h-8"></div>);
+                        }
+                        
+                        return days;
+                      })()}
                     </div>
 
                     {/* Selected Day Event Details */}

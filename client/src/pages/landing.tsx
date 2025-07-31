@@ -27,6 +27,8 @@ export default function Landing() {
   const [touchEnd, setTouchEnd] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [textSlideDirection, setTextSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [isTextSliding, setIsTextSliding] = useState(false);
 
   // Auto-advance carousel every 4 seconds
   useEffect(() => {
@@ -54,31 +56,45 @@ export default function Landing() {
   };
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd || isAnimating) return;
+    if (!touchStart || !touchEnd || isAnimating || isTextSliding) return;
     
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
     if (isLeftSwipe || isRightSwipe) {
-      setIsAnimating(true);
-      setSwipeDirection(isLeftSwipe ? 'left' : 'right');
+      // Trigger text slide animation
+      setIsTextSliding(true);
+      setTextSlideDirection(isLeftSwipe ? 'left' : 'right');
       
+      // After text slides out, change slide and slide text back in
       setTimeout(() => {
-        if (isLeftSwipe) {
-          setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
-        }
-        if (isRightSwipe) {
-          setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
-        }
-        setIsAnimating(false);
-        setSwipeDirection(null);
+        setIsAnimating(true);
+        setSwipeDirection(isLeftSwipe ? 'left' : 'right');
+        
+        setTimeout(() => {
+          if (isLeftSwipe) {
+            setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
+          }
+          if (isRightSwipe) {
+            setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
+          }
+          setIsAnimating(false);
+          setSwipeDirection(null);
+          setIsTextSliding(false);
+          setTextSlideDirection(null);
+        }, 100);
       }, 300);
     }
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div 
+      className="relative min-h-screen overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Video Background */}
       <div className="absolute inset-0 z-0">
         <video
@@ -116,9 +132,6 @@ export default function Landing() {
           <div 
             className="mb-12 min-h-[120px] flex items-center justify-center relative overflow-hidden"
             style={{ marginTop: '24px' }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
             <div className="max-w-lg mx-auto w-full">
               <AnimatePresence mode="wait">
@@ -129,8 +142,10 @@ export default function Landing() {
                     opacity: 0
                   }}
                   animate={{
-                    x: 0,
-                    opacity: 1
+                    x: isTextSliding 
+                      ? (textSlideDirection === 'left' ? -400 : 400)
+                      : 0,
+                    opacity: isTextSliding ? 0 : 1
                   }}
                   exit={{
                     x: swipeDirection === 'left' ? -300 : swipeDirection === 'right' ? 300 : 0,
@@ -139,23 +154,48 @@ export default function Landing() {
                   transition={{
                     type: "spring",
                     stiffness: 300,
-                    damping: 30
+                    damping: 30,
+                    duration: isTextSliding ? 0.3 : 0.5
                   }}
                   className="text-center"
                 >
                   <motion.h1 
                     className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg"
                     initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1, duration: 0.4 }}
+                    animate={{ 
+                      y: 0, 
+                      opacity: isTextSliding ? 0 : 1,
+                      x: isTextSliding 
+                        ? (textSlideDirection === 'left' ? -300 : 300)
+                        : 0
+                    }}
+                    transition={{ 
+                      delay: isTextSliding ? 0 : 0.1, 
+                      duration: isTextSliding ? 0.3 : 0.4,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30
+                    }}
                   >
                     {carouselFeatures[currentSlide].title}
                   </motion.h1>
                   <motion.p 
                     className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light"
                     initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.4 }}
+                    animate={{ 
+                      y: 0, 
+                      opacity: isTextSliding ? 0 : 1,
+                      x: isTextSliding 
+                        ? (textSlideDirection === 'left' ? -300 : 300)
+                        : 0
+                    }}
+                    transition={{ 
+                      delay: isTextSliding ? 0 : 0.2, 
+                      duration: isTextSliding ? 0.3 : 0.4,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30
+                    }}
                   >
                     {carouselFeatures[currentSlide].description}
                   </motion.p>

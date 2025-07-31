@@ -174,42 +174,46 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-center space-x-8">
+          <div className="flex justify-center space-x-12">
             <button
               onClick={() => setActiveTab('activity')}
-              className={`flex flex-col items-center space-y-2 p-2 ${
-                activeTab === 'activity' ? 'text-orange-500' : 'text-gray-400'
+              className={`flex flex-col items-center space-y-2 p-3 ${
+                activeTab === 'activity' ? 'text-red-600' : 'text-gray-400'
               }`}
+              style={{ color: activeTab === 'activity' ? '#d82428' : undefined }}
             >
               <TrendingUp className="h-6 w-6" />
-              {activeTab === 'activity' && <div className="h-0.5 w-8 bg-orange-500 rounded" />}
+              {activeTab === 'activity' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
             </button>
             <button
               onClick={() => setActiveTab('video')}
-              className={`flex flex-col items-center space-y-2 p-2 ${
-                activeTab === 'video' ? 'text-orange-500' : 'text-gray-400'
+              className={`flex flex-col items-center space-y-2 p-3 ${
+                activeTab === 'video' ? 'text-red-600' : 'text-gray-400'
               }`}
+              style={{ color: activeTab === 'video' ? '#d82428' : undefined }}
             >
               <Play className="h-6 w-6" />
-              {activeTab === 'video' && <div className="h-0.5 w-8 bg-orange-500 rounded" />}
+              {activeTab === 'video' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
             </button>
             <button
               onClick={() => setActiveTab('team')}
-              className={`flex flex-col items-center space-y-2 p-2 ${
-                activeTab === 'team' ? 'text-orange-500' : 'text-gray-400'
+              className={`flex flex-col items-center space-y-2 p-3 ${
+                activeTab === 'team' ? 'text-red-600' : 'text-gray-400'
               }`}
+              style={{ color: activeTab === 'team' ? '#d82428' : undefined }}
             >
               <Shirt className="h-6 w-6" />
-              {activeTab === 'team' && <div className="h-0.5 w-8 bg-orange-500 rounded" />}
+              {activeTab === 'team' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center space-y-2 p-2 ${
-                activeTab === 'profile' ? 'text-orange-500' : 'text-gray-400'
+              className={`flex flex-col items-center space-y-2 p-3 ${
+                activeTab === 'profile' ? 'text-red-600' : 'text-gray-400'
               }`}
+              style={{ color: activeTab === 'profile' ? '#d82428' : undefined }}
             >
               <User className="h-6 w-6" />
-              {activeTab === 'profile' && <div className="h-0.5 w-8 bg-orange-500 rounded" />}
+              {activeTab === 'profile' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
             </button>
           </div>
         </div>
@@ -228,8 +232,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   </div>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <span className="text-orange-500 text-sm">Recent activity</span>
-                  <ChevronRight className="h-4 w-4 text-orange-500" />
+                  <span className="text-sm" style={{ color: '#d82428' }}>Recent activity</span>
+                  <ChevronRight className="h-4 w-4" style={{ color: '#d82428' }} />
                 </div>
               </div>
 
@@ -314,8 +318,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div 
-                              className="bg-orange-500 h-2 rounded-full transition-all duration-500"
-                              style={{ width: `${skill.rating}%` }}
+                              className="h-2 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${skill.rating}%`,
+                                backgroundColor: '#d82428'
+                              }}
                             />
                           </div>
                         </div>

@@ -90,7 +90,7 @@ function Router() {
       case "admin":
         return AdminDashboard;
       case "player":
-        return PlayerDashboard;
+        return () => <PlayerDashboard />;
       case "parent":
       default:
         return ParentDashboard;
@@ -100,7 +100,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={getDashboardComponent()} />
-      <Route path="/player-dashboard" component={PlayerDashboard} />
+      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
       <Route path="/parent-dashboard" component={ParentDashboard} />
       <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/admin" component={AdminDashboard} />

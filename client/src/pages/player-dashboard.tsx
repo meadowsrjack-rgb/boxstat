@@ -30,6 +30,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [showQR, setShowQR] = useState(false);
   const [activeTab, setActiveTab] = useState('activity');
   const [timePeriod, setTimePeriod] = useState('This month');
+  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 5)); // June 2025
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   
   // Get child profiles to find the current child's QR code
@@ -97,6 +99,44 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     { name: 'Mid-Range', rating: 77, icon: Target },
     { name: 'Three Point', rating: 65, icon: Target },
   ];
+
+  // Sample calendar events with completion status
+  const calendarEvents = {
+    3: [{ type: 'Team Practice', time: '5:00 PM', location: 'Main Gym', completed: true }],
+    7: [{ type: 'Skills Training', time: '10:00 AM', location: 'Court 2', completed: false }],
+    10: [{ type: 'Team Practice', time: '5:00 PM', location: 'Main Gym', completed: true }],
+    14: [{ type: 'Game', time: '2:00 PM', location: 'Away - Lincoln High', completed: true }],
+    17: [{ type: 'Team Practice', time: '5:00 PM', location: 'Main Gym', completed: false }],
+    21: [{ type: 'Skills Training', time: '10:00 AM', location: 'Court 2', completed: true }],
+    24: [{ type: 'Team Practice', time: '5:00 PM', location: 'Main Gym', completed: false }],
+    28: [{ type: 'Game', time: '6:00 PM', location: 'Home vs Eagles', completed: false }]
+  };
+
+  // Calendar navigation functions
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      if (direction === 'prev') {
+        newMonth.setMonth(prev.getMonth() - 1);
+      } else {
+        newMonth.setMonth(prev.getMonth() + 1);
+      }
+      return newMonth;
+    });
+    setSelectedDay(null);
+  };
+
+  // Get days in current month
+  const getDaysInMonth = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  // Get month name
+  const getMonthName = () => {
+    return currentMonth.toLocaleString('default', { month: 'long' }).toUpperCase();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -250,10 +290,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </Card>
               </div>
 
-              {/* Activity History Calendar */}
+              {/* Activity Calendar */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900">Activity History</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Activity</h3>
                   <div className="flex items-center space-x-1">
                     <span className="text-gray-400 text-sm">View all</span>
                     <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -265,62 +305,77 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <CardContent className="p-4">
                     {/* Month Header */}
                     <div className="flex items-center justify-between mb-4">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => navigateMonth('prev')}
+                      >
                         <ChevronLeft className="h-4 w-4 text-gray-600" />
                       </Button>
-                      <h4 className="text-base font-semibold text-gray-900 tracking-wider">JUNE</h4>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <h4 className="text-base font-semibold text-gray-900 tracking-wider">{getMonthName()}</h4>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => navigateMonth('next')}
+                      >
                         <ChevronRight className="h-4 w-4 text-gray-600" />
                       </Button>
                     </div>
 
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-2">
-                      {/* Week 1 */}
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">1</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">2</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">3</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">4</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">5</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">6</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">7</div>
-                      
-                      {/* Week 2 */}
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">8</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">9</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">10</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">11</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">12</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">13</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">14</div>
-                      
-                      {/* Week 3 */}
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">15</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">16</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">17</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">18</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">19</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">20</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">21</div>
-                      
-                      {/* Week 4 */}
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">22</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">23</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">24</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">25</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">26</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">27</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">28</div>
-                      
-                      {/* Week 5 */}
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">29</div>
-                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">30</div>
-                      <div className="w-8 h-8"></div>
-                      <div className="w-8 h-8"></div>
-                      <div className="w-8 h-8"></div>
-                      <div className="w-8 h-8"></div>
-                      <div className="w-8 h-8"></div>
+                      {Array.from({ length: getDaysInMonth() }, (_, i) => {
+                        const day = i + 1;
+                        const hasEvent = calendarEvents[day];
+                        const isCompleted = hasEvent && hasEvent.some(event => event.completed);
+                        const isSelected = selectedDay === day;
+                        
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => setSelectedDay(selectedDay === day ? null : day)}
+                            className={`w-8 h-8 flex items-center justify-center text-sm rounded transition-colors relative ${
+                              isSelected 
+                                ? 'bg-orange-500 text-white' 
+                                : hasEvent
+                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                : 'text-gray-900 hover:bg-gray-100'
+                            }`}
+                          >
+                            {day}
+                            {hasEvent && (
+                              <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full ${
+                                isCompleted ? 'bg-green-500' : 'bg-orange-400'
+                              }`} />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
+
+                    {/* Selected Day Event Details */}
+                    {selectedDay && calendarEvents[selectedDay] && (
+                      <div className="mt-4 pt-4 border-t">
+                        <h5 className="font-semibold text-gray-900 mb-2">
+                          {getMonthName().charAt(0) + getMonthName().slice(1).toLowerCase()} {selectedDay}
+                        </h5>
+                        {calendarEvents[selectedDay].map((event, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <h6 className="font-medium text-gray-900">{event.type}</h6>
+                                {event.completed && (
+                                  <Badge className="bg-green-100 text-green-800 text-xs">Completed</Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{event.time} • {event.location}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

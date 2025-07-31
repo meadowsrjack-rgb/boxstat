@@ -23,7 +23,9 @@ import {
   BookOpen,
   Tent,
   UserCheck,
-  Award
+  Award,
+  Calendar,
+  ChevronLeft
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -340,6 +342,90 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
+              {/* Calendar Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Schedule</h3>
+                  <div className="flex items-center space-x-2">
+                    <ChevronLeft className="h-5 w-5 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-900">December 2025</span>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                
+                {/* Calendar Grid */}
+                <div className="bg-white rounded-lg p-4 shadow-sm">
+                  {/* Days of Week Header */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {/* Previous month days (faded) */}
+                    {[29, 30].map((day) => (
+                      <div key={`prev-${day}`} className="aspect-square flex items-center justify-center text-sm text-gray-300">
+                        {day}
+                      </div>
+                    ))}
+                    
+                    {/* Current month days */}
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const isToday = day === 15; // Example: 15th is today
+                      const hasEvent = [3, 7, 12, 18, 22, 28].includes(day); // Example event days
+                      const isPractice = [3, 12, 22].includes(day);
+                      const isGame = [7, 18, 28].includes(day);
+                      
+                      return (
+                        <button
+                          key={day}
+                          className={`aspect-square flex items-center justify-center text-sm rounded-lg relative ${
+                            isToday 
+                              ? 'bg-gray-900 text-white font-bold' 
+                              : hasEvent 
+                                ? 'text-gray-900 font-medium hover:bg-gray-50' 
+                                : 'text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {day}
+                          {hasEvent && (
+                            <div className={`absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full ${
+                              isPractice ? 'bg-blue-500' : isGame ? 'bg-red-500' : 'bg-green-500'
+                            }`} style={{ backgroundColor: isPractice ? '#3b82f6' : isGame ? '#d82428' : '#10b981' }} />
+                          )}
+                        </button>
+                      );
+                    })}
+                    
+                    {/* Next month days (faded) */}
+                    {[1, 2, 3].map((day) => (
+                      <div key={`next-${day}`} className="aspect-square flex items-center justify-center text-sm text-gray-300">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Legend */}
+                  <div className="flex items-center justify-center space-x-6 mt-4 pt-3 border-t border-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span className="text-xs text-gray-600">Practice</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#d82428' }}></div>
+                      <span className="text-xs text-gray-600">Game</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="text-xs text-gray-600">Event</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
             </div>
           )}

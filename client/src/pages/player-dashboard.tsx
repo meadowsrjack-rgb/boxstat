@@ -174,10 +174,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-around items-center mx-8">
+          <div className="flex justify-center items-center space-x-16">
             <button
               onClick={() => setActiveTab('activity')}
-              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-3 ${
                 activeTab === 'activity' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'activity' ? '#d82428' : undefined }}
@@ -189,7 +189,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </button>
             <button
               onClick={() => setActiveTab('video')}
-              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-3 ${
                 activeTab === 'video' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'video' ? '#d82428' : undefined }}
@@ -201,7 +201,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </button>
             <button
               onClick={() => setActiveTab('team')}
-              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-3 ${
                 activeTab === 'team' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'team' ? '#d82428' : undefined }}
@@ -213,7 +213,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-3 ${
                 activeTab === 'profile' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'profile' ? '#d82428' : undefined }}

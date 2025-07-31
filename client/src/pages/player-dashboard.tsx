@@ -182,7 +182,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-center items-center space-x-32">
+          <div className="flex justify-between items-center">
             <button
               onClick={() => setActiveTab('activity')}
               className={`flex flex-col items-center space-y-3 py-4 px-3 ${

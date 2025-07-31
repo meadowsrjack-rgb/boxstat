@@ -115,23 +115,23 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               variant="ghost" 
               size="icon" 
               onClick={() => setShowQR(!showQR)}
-              className="h-10 w-10"
+              className="h-12 w-12"
             >
-              <QrCode className="h-6 w-6" />
+              <QrCode className="h-12 w-12" />
             </Button>
             
             {/* Notifications and More Options */}
             <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Bell className="h-6 w-6" />
+              <Button variant="ghost" size="icon" className="h-12 w-12">
+                <Bell className="h-12 w-12" />
               </Button>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-10 w-10"
+                className="h-12 w-12"
                 onClick={() => setLocation("/settings")}
               >
-                <MoreHorizontal className="h-6 w-6" />
+                <MoreHorizontal className="h-12 w-12" />
               </Button>
             </div>
           </div>

@@ -16,7 +16,6 @@ import {
   User,
   ChevronRight,
   ChevronDown,
-  ChevronLeft,
   Target,
   Zap,
   Activity,
@@ -24,9 +23,7 @@ import {
   BookOpen,
   Tent,
   UserCheck,
-  Award,
-  Check,
-  X
+  Award
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -248,71 +245,64 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
-              {/* Interactive Monthly Calendar */}
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-6">
-                  {/* Calendar Header */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">Activity History</h3>
-                      <p className="text-sm text-gray-500">Track your participation and progress</p>
+              {/* Activity Summary Cards */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Practices</h3>
+                      <div className="text-2xl font-bold text-gray-900">12</div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm" style={{ color: '#d82428' }}>View all</span>
-                      <ChevronRight className="h-4 w-4" style={{ color: '#d82428' }} />
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Games</h3>
+                      <div className="text-2xl font-bold text-gray-900">8</div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                  {/* Month Navigation */}
-                  <div className="flex items-center justify-between mb-6">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <h4 className="text-base font-bold text-gray-900">JUNE</h4>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="space-y-4">
-                    {/* Simple Calendar Grid - No Day Headers */}
-                    <div className="grid grid-cols-7 gap-4">
-                      {/* Previous month days (empty spaces for June example) */}
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                      <div></div>
-                      
-                      {/* June days 1-30 */}
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const day = i + 1;
-                        const hasEvent = [5, 12, 18, 25].includes(day);
-                        
-                        return (
-                          <button
-                            key={day}
-                            className={`h-10 flex items-center justify-center text-sm font-medium transition-colors ${
-                              hasEvent 
-                                ? 'text-white rounded-full' 
-                                : 'text-gray-900 hover:bg-gray-100 rounded-full'
-                            }`}
-                            style={{
-                              backgroundColor: hasEvent ? '#d82428' : undefined
-                            }}
-                          >
-                            {day}
-                          </button>
-                        );
-                      })}
+              {/* Activity Tiles */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Lessons</h3>
+                      <div className="text-2xl font-bold text-gray-900">3</div>
                     </div>
-                  </div>
-
-
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Camps</h3>
+                      <div className="text-2xl font-bold text-gray-900">1</div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Privates</h3>
+                      <div className="text-2xl font-bold text-gray-900">2</div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <h3 className="text-sm font-medium text-gray-600 mb-1">Skills</h3>
+                      <div className="text-2xl font-bold text-gray-900">5</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Skill Ratings Section */}
               <div className="space-y-4">

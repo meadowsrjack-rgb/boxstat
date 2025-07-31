@@ -139,10 +139,24 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Send team message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      return await apiRequest(`/api/teams/${userTeam?.id}/messages`, "POST", { 
-        message, 
-        messageType: "text" 
+      const response = await fetch(`/api/teams/${userTeam?.id}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ 
+          message, 
+          messageType: "text" 
+        }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       setNewMessage('');

@@ -429,44 +429,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           )}
         </div>
 
-        {/* Bottom Navigation (Mobile App Style) */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-          <div className="max-w-md mx-auto">
-            <div className="flex justify-around py-2">
-              <button 
-                onClick={() => setActiveTab('activity')}
-                className={`flex flex-col items-center p-3 ${activeTab === 'activity' ? 'text-orange-500' : 'text-gray-400'}`}
-              >
-                <TrendingUp className="h-6 w-6" />
-                {activeTab === 'activity' && <div className="h-1 w-8 bg-orange-500 rounded-full mt-1" />}
-              </button>
-              <button 
-                onClick={() => setActiveTab('video')}
-                className={`flex flex-col items-center p-3 ${activeTab === 'video' ? 'text-orange-500' : 'text-gray-400'}`}
-              >
-                <Play className="h-6 w-6" />
-                {activeTab === 'video' && <div className="h-1 w-8 bg-orange-500 rounded-full mt-1" />}
-              </button>
-              <button 
-                onClick={() => setActiveTab('team')}
-                className={`flex flex-col items-center p-3 ${activeTab === 'team' ? 'text-orange-500' : 'text-gray-400'}`}
-              >
-                <Users className="h-6 w-6" />
-                {activeTab === 'team' && <div className="h-1 w-8 bg-orange-500 rounded-full mt-1" />}
-              </button>
-              <button 
-                onClick={() => setActiveTab('profile')}
-                className={`flex flex-col items-center p-3 ${activeTab === 'profile' ? 'text-orange-500' : 'text-gray-400'}`}
-              >
-                <User className="h-6 w-6" />
-                {activeTab === 'profile' && <div className="h-1 w-8 bg-orange-500 rounded-full mt-1" />}
-              </button>
-            </div>
-          </div>
-        </div>
 
-        {/* Add padding at bottom to account for fixed bottom nav */}
-        <div className="h-20"></div>
       </main>
     </div>
   );

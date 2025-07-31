@@ -290,9 +290,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
                 
-                {Array.isArray(userEvents) && userEvents.length > 0 ? (
-                  <div className="space-y-3">
-                    {userEvents.slice(0, 3).map((event: any, index: number) => (
+                <div className="space-y-3">
+                  {Array.isArray(userEvents) && userEvents.length > 0 ? (
+                    userEvents.slice(0, 3).map((event: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
@@ -313,21 +313,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           </div>
                         </div>
                       </div>
-                    ))}
-                    <Button 
-                      variant="ghost" 
-                      className="w-full text-blue-600 hover:text-blue-700 mt-3"
-                      onClick={() => setLocation('/schedule')}
-                    >
-                      View Full Calendar →
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No upcoming events</p>
-                  </div>
-                )}
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <CalendarIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No upcoming events</p>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full text-blue-600 hover:text-blue-700 mt-3"
+                    onClick={() => setLocation('/schedule')}
+                  >
+                    View Full Calendar →
+                  </Button>
+                </div>
               </div>
 
             </div>

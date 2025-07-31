@@ -146,22 +146,12 @@ export default function Landing() {
                   }}
                   className="text-center"
                 >
-                  <motion.h1 
-                    className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1, duration: 0.4 }}
-                  >
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg">
                     {carouselFeatures[currentSlide].title}
-                  </motion.h1>
-                  <motion.p 
-                    className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.4 }}
-                  >
+                  </h1>
+                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">
                     {carouselFeatures[currentSlide].description}
-                  </motion.p>
+                  </p>
                 </motion.div>
               </AnimatePresence>
             </div>

@@ -67,23 +67,25 @@ export default function Landing() {
       setIsTextSliding(true);
       setTextSlideDirection(isLeftSwipe ? 'left' : 'right');
       
-      // After text slides out, change slide and slide text back in
+      // After text slides out, change slide and slide text back in from opposite direction
       setTimeout(() => {
+        if (isLeftSwipe) {
+          setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
+        }
+        if (isRightSwipe) {
+          setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
+        }
+        
+        // Set new text to slide in from opposite direction
         setIsAnimating(true);
-        setSwipeDirection(isLeftSwipe ? 'left' : 'right');
+        setSwipeDirection(isLeftSwipe ? 'right' : 'left'); // Opposite direction for slide-in
         
         setTimeout(() => {
-          if (isLeftSwipe) {
-            setCurrentSlide((prev) => (prev + 1) % carouselFeatures.length);
-          }
-          if (isRightSwipe) {
-            setCurrentSlide((prev) => (prev - 1 + carouselFeatures.length) % carouselFeatures.length);
-          }
           setIsAnimating(false);
           setSwipeDirection(null);
           setIsTextSliding(false);
           setTextSlideDirection(null);
-        }, 100);
+        }, 400);
       }, 300);
     }
   };
@@ -138,8 +140,10 @@ export default function Landing() {
                 <motion.div
                   key={currentSlide}
                   initial={{
-                    x: swipeDirection === 'left' ? 300 : swipeDirection === 'right' ? -300 : 0,
-                    opacity: 0
+                    x: isAnimating 
+                      ? (swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0)
+                      : 0,
+                    opacity: isAnimating ? 0 : 1
                   }}
                   animate={{
                     x: isTextSliding 
@@ -148,30 +152,36 @@ export default function Landing() {
                     opacity: isTextSliding ? 0 : 1
                   }}
                   exit={{
-                    x: swipeDirection === 'left' ? -300 : swipeDirection === 'right' ? 300 : 0,
+                    x: textSlideDirection === 'left' ? -400 : textSlideDirection === 'right' ? 400 : 0,
                     opacity: 0
                   }}
                   transition={{
                     type: "spring",
                     stiffness: 300,
                     damping: 30,
-                    duration: isTextSliding ? 0.3 : 0.5
+                    duration: 0.4
                   }}
                   className="text-center"
                 >
                   <motion.h1 
                     className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg"
-                    initial={{ y: 20, opacity: 0 }}
+                    initial={{ 
+                      y: 20, 
+                      opacity: 0,
+                      x: isAnimating 
+                        ? (swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0)
+                        : 0
+                    }}
                     animate={{ 
                       y: 0, 
                       opacity: isTextSliding ? 0 : 1,
                       x: isTextSliding 
-                        ? (textSlideDirection === 'left' ? -300 : 300)
+                        ? (textSlideDirection === 'left' ? -400 : 400)
                         : 0
                     }}
                     transition={{ 
-                      delay: isTextSliding ? 0 : 0.1, 
-                      duration: isTextSliding ? 0.3 : 0.4,
+                      delay: isTextSliding ? 0 : (isAnimating ? 0.2 : 0.1), 
+                      duration: 0.4,
                       type: "spring",
                       stiffness: 300,
                       damping: 30
@@ -181,17 +191,23 @@ export default function Landing() {
                   </motion.h1>
                   <motion.p 
                     className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light"
-                    initial={{ y: 20, opacity: 0 }}
+                    initial={{ 
+                      y: 20, 
+                      opacity: 0,
+                      x: isAnimating 
+                        ? (swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0)
+                        : 0
+                    }}
                     animate={{ 
                       y: 0, 
                       opacity: isTextSliding ? 0 : 1,
                       x: isTextSliding 
-                        ? (textSlideDirection === 'left' ? -300 : 300)
+                        ? (textSlideDirection === 'left' ? -400 : 400)
                         : 0
                     }}
                     transition={{ 
-                      delay: isTextSliding ? 0 : 0.2, 
-                      duration: isTextSliding ? 0.3 : 0.4,
+                      delay: isTextSliding ? 0 : (isAnimating ? 0.3 : 0.2), 
+                      duration: 0.4,
                       type: "spring",
                       stiffness: 300,
                       damping: 30

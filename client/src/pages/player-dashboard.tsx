@@ -16,6 +16,7 @@ import {
   User,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   Target,
   Zap,
   Activity,
@@ -23,7 +24,9 @@ import {
   BookOpen,
   Tent,
   UserCheck,
-  Award
+  Award,
+  Check,
+  X
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -245,64 +248,121 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
-              {/* Activity Summary Cards */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Practices</h3>
-                      <div className="text-2xl font-bold text-gray-900">12</div>
+              {/* Interactive Monthly Calendar */}
+              <Card className="border-0 shadow-sm">
+                <CardContent className="p-6">
+                  {/* Calendar Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">Activity History</h3>
+                      <p className="text-sm text-gray-500">Track your participation and progress</p>
                     </div>
-                  </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Games</h3>
-                      <div className="text-2xl font-bold text-gray-900">8</div>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm" style={{ color: '#d82428' }}>View all</span>
+                      <ChevronRight className="h-4 w-4" style={{ color: '#d82428' }} />
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
 
-              {/* Activity Tiles */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Lessons</h3>
-                      <div className="text-2xl font-bold text-gray-900">3</div>
+                  {/* Month Navigation */}
+                  <div className="flex items-center justify-between mb-6">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <h4 className="text-base font-semibold text-gray-900">January 2025</h4>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="space-y-4">
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                        <div key={index} className="h-8 flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-500">{day}</span>
+                        </div>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Camps</h3>
-                      <div className="text-2xl font-bold text-gray-900">1</div>
+
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {/* Previous month days (grayed out) */}
+                      {[29, 30, 31].map((day) => (
+                        <div key={`prev-${day}`} className="h-10 flex items-center justify-center">
+                          <span className="text-sm text-gray-300">{day}</span>
+                        </div>
+                      ))}
+                      
+                      {/* Current month days */}
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                        // Sample event data for demonstration
+                        const hasUpcomingEvent = [5, 12, 18, 25].includes(day);
+                        const hasCompletedEvent = [3, 8, 15, 22].includes(day);
+                        const hasMissedEvent = [10, 17].includes(day);
+                        const isToday = day === 30;
+                        
+                        return (
+                          <button
+                            key={day}
+                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200 relative ${
+                              isToday 
+                                ? 'bg-gray-900 text-white' 
+                                : hasCompletedEvent
+                                ? 'text-white'
+                                : hasUpcomingEvent
+                                ? 'border-2 text-gray-900'
+                                : hasMissedEvent
+                                ? 'bg-gray-100 text-gray-400'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                            style={{
+                              backgroundColor: hasCompletedEvent ? '#d82428' : undefined,
+                              borderColor: hasUpcomingEvent ? '#d82428' : undefined
+                            }}
+                          >
+                            <span className="relative z-10">{day}</span>
+                            
+                            {/* Event status indicators */}
+                            {hasCompletedEvent && (
+                              <Check className="absolute top-0.5 right-0.5 h-3 w-3 text-white" />
+                            )}
+                            {hasMissedEvent && (
+                              <X className="absolute top-0.5 right-0.5 h-3 w-3 text-gray-400" />
+                            )}
+                            {hasUpcomingEvent && (
+                              <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full" style={{ backgroundColor: '#d82428' }} />
+                            )}
+                          </button>
+                        );
+                      })}
+                      
+                      {/* Next month days (grayed out) */}
+                      {[1, 2, 3, 4, 5, 6].map((day) => (
+                        <div key={`next-${day}`} className="h-10 flex items-center justify-center">
+                          <span className="text-sm text-gray-300">{day}</span>
+                        </div>
+                      ))}
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Privates</h3>
-                      <div className="text-2xl font-bold text-gray-900">2</div>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="flex items-center justify-center space-x-6 mt-6 pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#d82428' }}></div>
+                      <span className="text-xs text-gray-600">Completed</span>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Skills</h3>
-                      <div className="text-2xl font-bold text-gray-900">5</div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: '#d82428' }}></div>
+                      <span className="text-xs text-gray-600">Upcoming</span>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-gray-100"></div>
+                      <span className="text-xs text-gray-600">Missed</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Skill Ratings Section */}
               <div className="space-y-4">

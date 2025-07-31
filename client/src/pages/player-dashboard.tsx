@@ -287,62 +287,78 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                     {/* Calendar Days */}
                     <div className="grid grid-cols-7 gap-1">
-                      {/* Previous month days (grayed out) */}
-                      {[29, 30, 31].map((day) => (
-                        <div key={`prev-${day}`} className="h-10 flex items-center justify-center">
-                          <span className="text-sm text-gray-300">{day}</span>
-                        </div>
-                      ))}
-                      
-                      {/* Current month days */}
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                        // Sample event data for demonstration
-                        const hasUpcomingEvent = [5, 12, 18, 25].includes(day);
-                        const hasCompletedEvent = [3, 8, 15, 22].includes(day);
-                        const hasMissedEvent = [10, 17].includes(day);
-                        const isToday = day === 30;
+                      {(() => {
+                        // Create a proper calendar layout for January 2025
+                        // January 1, 2025 is a Wednesday (day 3 of the week, 0=Sunday)
+                        const firstDayOfMonth = 3; // Wednesday
+                        const daysInMonth = 31;
+                        const calendar = [];
                         
-                        return (
-                          <button
-                            key={day}
-                            className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200 relative ${
-                              isToday 
-                                ? 'bg-gray-900 text-white' 
-                                : hasCompletedEvent
-                                ? 'text-white'
-                                : hasUpcomingEvent
-                                ? 'border-2 text-gray-900'
-                                : hasMissedEvent
-                                ? 'bg-gray-100 text-gray-400'
-                                : 'text-gray-700 hover:bg-gray-100'
-                            }`}
-                            style={{
-                              backgroundColor: hasCompletedEvent ? '#d82428' : undefined,
-                              borderColor: hasUpcomingEvent ? '#d82428' : undefined
-                            }}
-                          >
-                            <span className="relative z-10">{day}</span>
-                            
-                            {/* Event status indicators */}
-                            {hasCompletedEvent && (
-                              <Check className="absolute top-0.5 right-0.5 h-3 w-3 text-white" />
-                            )}
-                            {hasMissedEvent && (
-                              <X className="absolute top-0.5 right-0.5 h-3 w-3 text-gray-400" />
-                            )}
-                            {hasUpcomingEvent && (
-                              <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full" style={{ backgroundColor: '#d82428' }} />
-                            )}
-                          </button>
-                        );
-                      })}
-                      
-                      {/* Next month days (grayed out) */}
-                      {[1, 2, 3, 4, 5, 6].map((day) => (
-                        <div key={`next-${day}`} className="h-10 flex items-center justify-center">
-                          <span className="text-sm text-gray-300">{day}</span>
-                        </div>
-                      ))}
+                        // Previous month days (December 2024 ends on 31)
+                        const prevMonthDays = [29, 30, 31].slice(-firstDayOfMonth);
+                        for (let i = 0; i < firstDayOfMonth; i++) {
+                          calendar.push(
+                            <div key={`prev-${prevMonthDays[i]}`} className="h-10 flex items-center justify-center">
+                              <span className="text-sm text-gray-300">{prevMonthDays[i]}</span>
+                            </div>
+                          );
+                        }
+                        
+                        // Current month days
+                        for (let day = 1; day <= daysInMonth; day++) {
+                          const hasUpcomingEvent = [5, 12, 18, 25].includes(day);
+                          const hasCompletedEvent = [3, 8, 15, 22].includes(day);
+                          const hasMissedEvent = [10, 17].includes(day);
+                          const isToday = day === 30;
+                          
+                          calendar.push(
+                            <button
+                              key={day}
+                              className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-200 relative ${
+                                isToday 
+                                  ? 'bg-gray-900 text-white' 
+                                  : hasCompletedEvent
+                                  ? 'text-white'
+                                  : hasUpcomingEvent
+                                  ? 'border-2 text-gray-900'
+                                  : hasMissedEvent
+                                  ? 'bg-gray-100 text-gray-400'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                              }`}
+                              style={{
+                                backgroundColor: hasCompletedEvent ? '#d82428' : undefined,
+                                borderColor: hasUpcomingEvent ? '#d82428' : undefined
+                              }}
+                            >
+                              <span className="relative z-10">{day}</span>
+                              
+                              {/* Event status indicators */}
+                              {hasCompletedEvent && (
+                                <Check className="absolute top-0.5 right-0.5 h-3 w-3 text-white" />
+                              )}
+                              {hasMissedEvent && (
+                                <X className="absolute top-0.5 right-0.5 h-3 w-3 text-gray-400" />
+                              )}
+                              {hasUpcomingEvent && (
+                                <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full" style={{ backgroundColor: '#d82428' }} />
+                              )}
+                            </button>
+                          );
+                        }
+                        
+                        // Next month days to complete the grid (42 total cells = 6 weeks × 7 days)
+                        const totalCells = Math.ceil((firstDayOfMonth + daysInMonth) / 7) * 7;
+                        const remainingCells = totalCells - (firstDayOfMonth + daysInMonth);
+                        for (let day = 1; day <= remainingCells; day++) {
+                          calendar.push(
+                            <div key={`next-${day}`} className="h-10 flex items-center justify-center">
+                              <span className="text-sm text-gray-300">{day}</span>
+                            </div>
+                          );
+                        }
+                        
+                        return calendar;
+                      })()}
                     </div>
                   </div>
 

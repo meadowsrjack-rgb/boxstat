@@ -287,7 +287,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   onClick={() => setLocation('/schedule')}
                 >
                   <h3 className="text-lg font-bold text-gray-900">
-                    Upcoming Events
+                    Schedule
                   </h3>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>

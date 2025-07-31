@@ -625,6 +625,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
     try {
       const teamId = parseInt(req.params.id);
+      console.log("Creating team message:", { 
+        teamId, 
+        senderId: req.user.claims.sub, 
+        body: req.body 
+      });
+      
       const messageData = insertTeamMessageSchema.parse({
         teamId,
         senderId: req.user.claims.sub,
@@ -633,6 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const message = await storage.createTeamMessage(messageData);
+      console.log("Message created successfully:", message);
       
       // Broadcast to WebSocket clients if connected
       if (wss) {
@@ -652,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(message);
     } catch (error) {
       console.error("Error creating team message:", error);
-      res.status(500).json({ message: "Failed to create team message" });
+      res.status(500).json({ message: "Failed to create team message", error: error.message });
     }
   });
 

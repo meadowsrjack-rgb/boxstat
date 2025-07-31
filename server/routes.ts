@@ -93,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
     try {
-      const messages = await storage.getTeamMessages(parseInt(req.params.id));
+      const messages = await storage.getTeamMessagesNew(parseInt(req.params.id));
       res.json(messages);
     } catch (error) {
       console.error("Error fetching team messages:", error);
@@ -620,17 +620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team messaging routes
-  app.get('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
-    try {
-      const teamId = parseInt(req.params.id);
-      const messages = await storage.getTeamMessagesNew(teamId);
-      res.json(messages);
-    } catch (error) {
-      console.error("Error fetching team messages:", error);
-      res.status(500).json({ message: "Failed to fetch team messages" });
-    }
-  });
+  // Team messaging routes (duplicate removed)
 
   app.post('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
     try {

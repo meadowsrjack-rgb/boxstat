@@ -20,10 +20,7 @@ import {
   Zap,
   Activity,
   Shirt,
-  BookOpen,
-  Tent,
-  UserCheck,
-  Award
+  ChevronLeft
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
@@ -253,40 +250,76 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </Card>
               </div>
 
-              {/* Activity Tiles */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Activity History Calendar */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Activity History</h3>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-gray-400 text-sm">View all</span>
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* Calendar */}
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Lessons</h3>
-                      <div className="text-2xl font-bold text-gray-900">3</div>
+                    {/* Month Header */}
+                    <div className="flex items-center justify-between mb-4">
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <ChevronLeft className="h-4 w-4 text-gray-600" />
+                      </Button>
+                      <h4 className="text-base font-semibold text-gray-900 tracking-wider">JUNE</h4>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <ChevronRight className="h-4 w-4 text-gray-600" />
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Camps</h3>
-                      <div className="text-2xl font-bold text-gray-900">1</div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Privates</h3>
-                      <div className="text-2xl font-bold text-gray-900">2</div>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="border-0 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <h3 className="text-sm font-medium text-gray-600 mb-1">Skills</h3>
-                      <div className="text-2xl font-bold text-gray-900">5</div>
+
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7 gap-2">
+                      {/* Week 1 */}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">1</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">2</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">3</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">4</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">5</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">6</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">7</div>
+                      
+                      {/* Week 2 */}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">8</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">9</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">10</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">11</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">12</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">13</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">14</div>
+                      
+                      {/* Week 3 */}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">15</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">16</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">17</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">18</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">19</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">20</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">21</div>
+                      
+                      {/* Week 4 */}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">22</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">23</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">24</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">25</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">26</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">27</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">28</div>
+                      
+                      {/* Week 5 */}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">29</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900">30</div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
                     </div>
                   </CardContent>
                 </Card>

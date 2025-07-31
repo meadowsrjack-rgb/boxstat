@@ -354,45 +354,69 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-2">
                       {/* Week 1 */}
-                      <CalendarDay day={1} />
-                      <CalendarDay day={2} />
-                      <CalendarDay day={3} />
-                      <CalendarDay day={4} />
-                      <CalendarDay day={5} />
-                      <CalendarDay day={6} />
-                      <CalendarDay day={7} />
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(1)}>1</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(2)}>2</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(3)}>
+                        3
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-green-500" />
+                      </div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(4)}>4</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(5)}>5</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(6)}>6</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(7)}>
+                        7
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                      </div>
                       
                       {/* Week 2 */}
-                      <CalendarDay day={8} />
-                      <CalendarDay day={9} />
-                      <CalendarDay day={10} />
-                      <CalendarDay day={11} />
-                      <CalendarDay day={12} />
-                      <CalendarDay day={13} />
-                      <CalendarDay day={14} />
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(8)}>8</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(9)}>9</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(10)}>
+                        10
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-green-500" />
+                      </div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(11)}>11</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(12)}>12</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(13)}>13</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(14)}>
+                        14
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-green-500" />
+                      </div>
                       
                       {/* Week 3 */}
-                      <CalendarDay day={15} />
-                      <CalendarDay day={16} />
-                      <CalendarDay day={17} />
-                      <CalendarDay day={18} />
-                      <CalendarDay day={19} />
-                      <CalendarDay day={20} />
-                      <CalendarDay day={21} />
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(15)}>15</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(16)}>16</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(17)}>
+                        17
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                      </div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(18)}>18</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(19)}>19</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(20)}>20</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(21)}>
+                        21
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-green-500" />
+                      </div>
                       
                       {/* Week 4 */}
-                      <CalendarDay day={22} />
-                      <CalendarDay day={23} />
-                      <CalendarDay day={24} />
-                      <CalendarDay day={25} />
-                      <CalendarDay day={26} />
-                      <CalendarDay day={27} />
-                      <CalendarDay day={28} />
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(22)}>22</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(23)}>23</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(24)}>
+                        24
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                      </div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(25)}>25</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(26)}>26</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(27)}>27</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm bg-blue-100 text-blue-700 hover:bg-blue-200 rounded cursor-pointer relative" onClick={() => setSelectedDay(28)}>
+                        28
+                        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full bg-orange-400" />
+                      </div>
                       
                       {/* Week 5 */}
-                      <CalendarDay day={29} />
-                      <CalendarDay day={30} />
-                      {currentMonth.getMonth() === 5 && <div className="w-8 h-8"></div>}
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(29)}>29</div>
+                      <div className="w-8 h-8 flex items-center justify-center text-sm text-gray-900 hover:bg-gray-100 rounded cursor-pointer" onClick={() => setSelectedDay(30)}>30</div>
+                      <div className="w-8 h-8"></div>
                       <div className="w-8 h-8"></div>
                       <div className="w-8 h-8"></div>
                       <div className="w-8 h-8"></div>

@@ -174,7 +174,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-center items-center space-x-16">
+          <div className="flex justify-center items-center space-x-32">
             <button
               onClick={() => setActiveTab('activity')}
               className={`flex flex-col items-center space-y-3 py-4 px-3 ${
@@ -183,7 +183,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               style={{ color: activeTab === 'activity' ? '#d82428' : undefined }}
             >
               <TrendingUp className="h-6 w-6" />
-              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+              <div className={`h-1 w-12 rounded-full transition-all duration-200 ${
                 activeTab === 'activity' ? 'opacity-100' : 'opacity-0'
               }`} style={{ backgroundColor: '#d82428' }} />
             </button>
@@ -195,7 +195,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               style={{ color: activeTab === 'video' ? '#d82428' : undefined }}
             >
               <Play className="h-6 w-6" />
-              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+              <div className={`h-1 w-12 rounded-full transition-all duration-200 ${
                 activeTab === 'video' ? 'opacity-100' : 'opacity-0'
               }`} style={{ backgroundColor: '#d82428' }} />
             </button>
@@ -207,7 +207,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               style={{ color: activeTab === 'team' ? '#d82428' : undefined }}
             >
               <Shirt className="h-6 w-6" />
-              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+              <div className={`h-1 w-12 rounded-full transition-all duration-200 ${
                 activeTab === 'team' ? 'opacity-100' : 'opacity-0'
               }`} style={{ backgroundColor: '#d82428' }} />
             </button>
@@ -219,7 +219,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               style={{ color: activeTab === 'profile' ? '#d82428' : undefined }}
             >
               <User className="h-6 w-6" />
-              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+              <div className={`h-1 w-12 rounded-full transition-all duration-200 ${
                 activeTab === 'profile' ? 'opacity-100' : 'opacity-0'
               }`} style={{ backgroundColor: '#d82428' }} />
             </button>

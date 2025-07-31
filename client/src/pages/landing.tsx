@@ -73,7 +73,7 @@ export default function Landing() {
         }
         setIsAnimating(false);
         setSwipeDirection(null);
-      }, 1000);
+      }, 500);
     }
   };
 
@@ -122,26 +122,29 @@ export default function Landing() {
             className="mb-12 min-h-[120px] flex items-center justify-center relative overflow-hidden"
             style={{ marginTop: '24px' }}
           >
-            <div className="max-w-lg mx-auto w-full relative">
-              <AnimatePresence>
+            <div className="max-w-lg mx-auto w-full">
+              <AnimatePresence mode="wait">
                 <motion.div
                   key={currentSlide}
                   initial={{
-                    x: swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0
+                    x: swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0,
+                    opacity: 0
                   }}
                   animate={{
-                    x: 0
+                    x: 0,
+                    opacity: 1
                   }}
                   exit={{
-                    x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : 0
+                    x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : 0,
+                    opacity: 0
                   }}
                   transition={{
                     type: "spring",
-                    stiffness: 120,
-                    damping: 20,
-                    duration: 1.0
+                    stiffness: 300,
+                    damping: 30,
+                    duration: 0.5
                   }}
-                  className="text-center absolute inset-0 w-full"
+                  className="text-center"
                 >
                   <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg">
                     {carouselFeatures[currentSlide].title}

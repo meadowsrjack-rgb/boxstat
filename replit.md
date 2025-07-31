@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **July 31, 2025**: Enhanced PWA setup for iOS installation with proper manifest, service worker, and Apple touch icons
+- **July 31, 2025**: Updated app icons with UYP Basketball branding using red theme (#d82428)
+- **July 31, 2025**: Added comprehensive iOS PWA meta tags for standalone app experience
+- **July 31, 2025**: Fixed player dashboard tab navigation spacing and enlarged top navigation icons
+- **July 31, 2025**: Added schedule section to player dashboard with clickable navigation
 - **July 28, 2025**: Created dynamic landing page with video background and interactive carousel
 - **July 28, 2025**: Added swipeable feature carousel with 3 slides: Stay informed, Unlock potential, Train smarter
 - **July 28, 2025**: Implemented working carousel indicators and auto-advancing slides every 4 seconds
@@ -38,7 +43,8 @@ Preferred communication style: Simple, everyday language.
 - **Styling**: Tailwind CSS with custom design tokens
 - **Routing**: Wouter for client-side routing
 - **State Management**: TanStack Query for server state management
-- **PWA Features**: Service worker for offline functionality and app-like experience
+- **PWA Features**: Full Progressive Web App with service worker, manifest, and iOS support
+- **Mobile App**: Installable on iOS devices as standalone app with native-like experience
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework

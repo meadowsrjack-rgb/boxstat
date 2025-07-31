@@ -27,16 +27,22 @@ import {
   Award,
   Check,
   X,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  MessageCircle,
+  Send,
+  MapPin
 } from "lucide-react";
 import { useState } from "react";
 import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const [activeTab, setActiveTab] = useState('activity');
+  const [newMessage, setNewMessage] = useState('');
 
   const [, setLocation] = useLocation();
   
@@ -104,6 +110,55 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     { name: 'Free Throw', rating: 90, icon: Target },
     { name: 'Mid-Range', rating: 77, icon: Target },
     { name: 'Three Point', rating: 65, icon: Target },
+  ];
+
+  // Example team data
+  const exampleTeam = {
+    id: 1,
+    name: "Thunder Wolves U12",
+    division: "Recreational",
+    coach: "Coach Martinez",
+    location: "Momentous Sports Center",
+    schedule: "Tuesdays & Thursdays 6:30 PM",
+    record: "8-2",
+    nextGame: "vs Lightning Hawks - Aug 2nd, 10:00 AM"
+  };
+
+  // Example team messages
+  const teamMessages = [
+    {
+      id: 1,
+      sender: "Coach Martinez",
+      message: "Great practice today team! Remember to bring your water bottles for Saturday's game.",
+      timestamp: "2 hours ago",
+      isCoach: true
+    },
+    {
+      id: 2,
+      sender: "Alex K.",
+      message: "Can't wait for the game on Saturday! 🏀",
+      timestamp: "4 hours ago",
+      isCoach: false
+    },
+    {
+      id: 3,
+      sender: "Coach Martinez", 
+      message: "Team meeting at 9:30 AM before the game. Please arrive early!",
+      timestamp: "1 day ago",
+      isCoach: true
+    }
+  ];
+
+  // Example team roster
+  const teamRoster = [
+    { id: 1, name: "Alex K.", position: "Point Guard", number: 12, status: "Active" },
+    { id: 2, name: "Jordan M.", position: "Shooting Guard", number: 8, status: "Active" },
+    { id: 3, name: "Taylor S.", position: "Small Forward", number: 23, status: "Active" },
+    { id: 4, name: "Riley P.", position: "Power Forward", number: 15, status: "Active" },
+    { id: 5, name: "Casey D.", position: "Center", number: 32, status: "Active" },
+    { id: 6, name: "Morgan L.", position: "Guard", number: 7, status: "Active" },
+    { id: 7, name: "Drew H.", position: "Forward", number: 21, status: "Injured" },
+    { id: 8, name: "Avery C.", position: "Guard", number: 11, status: "Active" }
   ];
 
   return (
@@ -344,36 +399,138 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Team Tab */}
           {activeTab === 'team' && (
             <div className="space-y-6">
+              {/* Team Info */}
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Teams</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-4">My Team</h2>
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                        <span className="text-xl">+</span>
+                    <div className="flex items-start space-x-4">
+                      <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
+                        <Shirt className="h-8 w-8 text-red-600" />
                       </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">Create a new team</h3>
-                        <p className="text-sm text-gray-500">
-                          Train alongside others with team leaderboards, highlights, and more.
-                        </p>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 text-lg">{exampleTeam.name}</h3>
+                        <p className="text-sm text-gray-600 mb-2">{exampleTeam.division} Division</p>
+                        <div className="space-y-1 text-sm text-gray-500">
+                          <div className="flex items-center space-x-2">
+                            <UserCheck className="h-4 w-4" />
+                            <span>{exampleTeam.coach}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <MapPin className="h-4 w-4" />
+                            <span>{exampleTeam.location}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <CalendarIcon className="h-4 w-4" />
+                            <span>{exampleTeam.schedule}</span>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center space-x-4">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            Record: {exampleTeam.record}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-800 font-medium">Next Game:</p>
+                          <p className="text-sm text-blue-600">{exampleTeam.nextGame}</p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
+              {/* Team Messages */}
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Connections</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Team Messages</h3>
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Target className="h-6 w-6 text-gray-400" />
+                    <div className="space-y-4 max-h-64 overflow-y-auto">
+                      {teamMessages.map((message) => (
+                        <div key={message.id} className="flex space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                            message.isCoach ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                          }`}>
+                            {message.sender.charAt(0)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2">
+                              <span className={`text-sm font-medium ${
+                                message.isCoach ? 'text-red-600' : 'text-gray-900'
+                              }`}>
+                                {message.sender}
+                              </span>
+                              {message.isCoach && (
+                                <Badge variant="outline" className="text-xs px-1 py-0">Coach</Badge>
+                              )}
+                              <span className="text-xs text-gray-500">{message.timestamp}</span>
+                            </div>
+                            <p className="text-sm text-gray-700 mt-1">{message.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Message Input */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Type a message..."
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button 
+                          size="icon"
+                          disabled={!newMessage.trim()}
+                          onClick={() => {
+                            // In real app, would send message via API
+                            setNewMessage('');
+                          }}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Find user</h4>
-                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Team Roster */}
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Team Roster</h3>
+                <Card className="border-0 shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      {teamRoster.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold text-gray-600">#{player.number}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{player.name}</p>
+                              <p className="text-sm text-gray-500">{player.position}</p>
+                            </div>
+                          </div>
+                          <Badge 
+                            variant={player.status === 'Active' ? 'default' : 'destructive'}
+                            className={`text-xs ${
+                              player.status === 'Active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {player.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-gray-100 text-center">
+                      <p className="text-sm text-gray-500">
+                        {teamRoster.filter(p => p.status === 'Active').length} active players • {teamRoster.length} total
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

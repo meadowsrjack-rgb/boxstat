@@ -174,46 +174,54 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
-          <div className="flex justify-center space-x-12">
+          <div className="flex justify-around items-center mx-8">
             <button
               onClick={() => setActiveTab('activity')}
-              className={`flex flex-col items-center space-y-2 p-3 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
                 activeTab === 'activity' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'activity' ? '#d82428' : undefined }}
             >
               <TrendingUp className="h-6 w-6" />
-              {activeTab === 'activity' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
+              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+                activeTab === 'activity' ? 'opacity-100' : 'opacity-0'
+              }`} style={{ backgroundColor: '#d82428' }} />
             </button>
             <button
               onClick={() => setActiveTab('video')}
-              className={`flex flex-col items-center space-y-2 p-3 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
                 activeTab === 'video' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'video' ? '#d82428' : undefined }}
             >
               <Play className="h-6 w-6" />
-              {activeTab === 'video' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
+              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+                activeTab === 'video' ? 'opacity-100' : 'opacity-0'
+              }`} style={{ backgroundColor: '#d82428' }} />
             </button>
             <button
               onClick={() => setActiveTab('team')}
-              className={`flex flex-col items-center space-y-2 p-3 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
                 activeTab === 'team' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'team' ? '#d82428' : undefined }}
             >
               <Shirt className="h-6 w-6" />
-              {activeTab === 'team' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
+              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+                activeTab === 'team' ? 'opacity-100' : 'opacity-0'
+              }`} style={{ backgroundColor: '#d82428' }} />
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex flex-col items-center space-y-2 p-3 ${
+              className={`flex flex-col items-center space-y-3 py-4 px-2 ${
                 activeTab === 'profile' ? 'text-red-600' : 'text-gray-400'
               }`}
               style={{ color: activeTab === 'profile' ? '#d82428' : undefined }}
             >
               <User className="h-6 w-6" />
-              {activeTab === 'profile' && <div className="h-0.5 w-8 rounded" style={{ backgroundColor: '#d82428' }} />}
+              <div className={`h-1 w-8 rounded-full transition-all duration-200 ${
+                activeTab === 'profile' ? 'opacity-100' : 'opacity-0'
+              }`} style={{ backgroundColor: '#d82428' }} />
             </button>
           </div>
         </div>

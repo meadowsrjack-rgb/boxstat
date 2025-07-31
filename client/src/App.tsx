@@ -34,7 +34,7 @@ function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
   
   // Show account setup if user is authenticated but profile not completed
-  const needsSetup = isAuthenticated && user && !user?.profileCompleted;
+  const needsSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
   // Register service worker for PWA
   useEffect(() => {
@@ -86,7 +86,7 @@ function Router() {
 
   // Route based on user type
   const getDashboardComponent = () => {
-    switch (user?.userType) {
+    switch ((user as any)?.userType) {
       case "admin":
         return AdminDashboard;
       case "player":
@@ -100,12 +100,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={getDashboardComponent()} />
-      <Route path="/player-dashboard">
-        {() => <PlayerDashboard />}
-      </Route>
-      <Route path="/parent-dashboard">
-        {() => <ParentDashboard />}
-      </Route>
+      <Route path="/player-dashboard" component={PlayerDashboard} />
+      <Route path="/parent-dashboard" component={ParentDashboard} />
       <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       
@@ -119,7 +115,7 @@ function Router() {
       <Route path="/training-library" component={TrainingLibrary} />
       
       {/* Parent-specific routes */}
-      {user?.userType === 'parent' && (
+      {(user as any)?.userType === 'parent' && (
         <>
           <Route path="/payment/:type?" component={SportsEnginePayment} />
           <Route path="/roster" component={RosterManagement} />
@@ -129,7 +125,7 @@ function Router() {
       )}
       
       {/* Player-specific routes with payment access */}
-      {user?.userType === 'player' && (
+      {(user as any)?.userType === 'player' && (
         <>
           <Route path="/player/team-chat" component={PlayerTeamChat} />
           <Route path="/payment/:type?" component={SportsEnginePayment} />
@@ -137,7 +133,7 @@ function Router() {
       )}
       
       {/* Admin routes */}
-      {user?.userType === 'admin' && (
+      {(user as any)?.userType === 'admin' && (
         <>
           <Route path="/coach/team-messages/:teamId" component={CoachTeamMessages} />
           <Route path="/coach/parent-messages/:teamId" component={CoachParentMessages} />

@@ -129,10 +129,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 variant="ghost" 
                 size="icon" 
                 className="h-10 w-10"
-                onClick={() => {
-                  console.log("Navigating to settings...");
-                  setLocation("/settings");
-                }}
+                onClick={() => setLocation("/settings")}
               >
                 <MoreHorizontal className="h-6 w-6" />
               </Button>

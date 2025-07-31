@@ -233,9 +233,45 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Activity Tab */}
           {activeTab === 'activity' && (
             <div className="space-y-6">
-
-
-
+              {/* Simple Calendar Grid */}
+              <div className="bg-white rounded-lg p-4">
+                <div className="grid grid-cols-7 gap-2">
+                  {/* Day headers */}
+                  {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                    <div key={index} className="text-center text-xs font-medium text-gray-500 p-2">
+                      {day}
+                    </div>
+                  ))}
+                  
+                  {/* Calendar days */}
+                  {Array.from({ length: 35 }, (_, i) => {
+                    const day = i - 5; // Start from -5 to show previous month days
+                    const currentDay = day > 0 && day <= 30 ? day : null;
+                    const hasEvent = currentDay && [5, 12, 18, 25].includes(currentDay);
+                    const isToday = currentDay === 15; // Example: 15th is today
+                    
+                    return (
+                      <div
+                        key={i}
+                        className={`h-8 w-8 flex items-center justify-center text-sm rounded-full ${
+                          currentDay 
+                            ? hasEvent 
+                              ? 'text-white'
+                              : isToday 
+                                ? 'bg-gray-200 text-gray-900 font-medium'
+                                : 'text-gray-900 hover:bg-gray-100'
+                            : 'text-gray-300'
+                        }`}
+                        style={{
+                          backgroundColor: hasEvent ? '#d82428' : undefined
+                        }}
+                      >
+                        {currentDay || (day <= 0 ? 30 + day : day - 30)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Skill Ratings Section */}
               <div className="space-y-4">

@@ -138,6 +138,33 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     return currentMonth.toLocaleString('default', { month: 'long' }).toUpperCase();
   };
 
+  // Calendar Day Component
+  const CalendarDay = ({ day }: { day: number }) => {
+    const hasEvent = calendarEvents[day];
+    const isCompleted = hasEvent && hasEvent.some(event => event.completed);
+    const isSelected = selectedDay === day;
+    
+    return (
+      <button
+        onClick={() => setSelectedDay(selectedDay === day ? null : day)}
+        className={`w-8 h-8 flex items-center justify-center text-sm rounded transition-colors relative ${
+          isSelected 
+            ? 'bg-orange-500 text-white' 
+            : hasEvent
+            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            : 'text-gray-900 hover:bg-gray-100'
+        }`}
+      >
+        {day}
+        {hasEvent && (
+          <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full ${
+            isCompleted ? 'bg-green-500' : 'bg-orange-400'
+          }`} />
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
@@ -326,45 +353,50 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-2">
-                      {/* Generate all days for the month in proper grid format */}
-                      {(() => {
-                        const daysInMonth = getDaysInMonth();
-                        const days = [];
-                        
-                        for (let day = 1; day <= daysInMonth; day++) {
-                          const hasEvent = calendarEvents[day];
-                          const isCompleted = hasEvent && hasEvent.some(event => event.completed);
-                          const isSelected = selectedDay === day;
-                          
-                          days.push(
-                            <button
-                              key={day}
-                              onClick={() => setSelectedDay(selectedDay === day ? null : day)}
-                              className={`w-8 h-8 flex items-center justify-center text-sm rounded transition-colors relative ${
-                                isSelected 
-                                  ? 'bg-orange-500 text-white' 
-                                  : hasEvent
-                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                  : 'text-gray-900 hover:bg-gray-100'
-                              }`}
-                            >
-                              {day}
-                              {hasEvent && (
-                                <div className={`absolute bottom-0 right-0 w-1.5 h-1.5 rounded-full ${
-                                  isCompleted ? 'bg-green-500' : 'bg-orange-400'
-                                }`} />
-                              )}
-                            </button>
-                          );
-                        }
-                        
-                        // Fill remaining cells to complete the grid
-                        while (days.length % 7 !== 0) {
-                          days.push(<div key={`empty-${days.length}`} className="w-8 h-8"></div>);
-                        }
-                        
-                        return days;
-                      })()}
+                      {/* Week 1 */}
+                      <CalendarDay day={1} />
+                      <CalendarDay day={2} />
+                      <CalendarDay day={3} />
+                      <CalendarDay day={4} />
+                      <CalendarDay day={5} />
+                      <CalendarDay day={6} />
+                      <CalendarDay day={7} />
+                      
+                      {/* Week 2 */}
+                      <CalendarDay day={8} />
+                      <CalendarDay day={9} />
+                      <CalendarDay day={10} />
+                      <CalendarDay day={11} />
+                      <CalendarDay day={12} />
+                      <CalendarDay day={13} />
+                      <CalendarDay day={14} />
+                      
+                      {/* Week 3 */}
+                      <CalendarDay day={15} />
+                      <CalendarDay day={16} />
+                      <CalendarDay day={17} />
+                      <CalendarDay day={18} />
+                      <CalendarDay day={19} />
+                      <CalendarDay day={20} />
+                      <CalendarDay day={21} />
+                      
+                      {/* Week 4 */}
+                      <CalendarDay day={22} />
+                      <CalendarDay day={23} />
+                      <CalendarDay day={24} />
+                      <CalendarDay day={25} />
+                      <CalendarDay day={26} />
+                      <CalendarDay day={27} />
+                      <CalendarDay day={28} />
+                      
+                      {/* Week 5 */}
+                      <CalendarDay day={29} />
+                      <CalendarDay day={30} />
+                      {currentMonth.getMonth() === 5 && <div className="w-8 h-8"></div>}
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
+                      <div className="w-8 h-8"></div>
                     </div>
 
                     {/* Selected Day Event Details */}

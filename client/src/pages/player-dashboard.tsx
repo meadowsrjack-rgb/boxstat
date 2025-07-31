@@ -282,9 +282,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Schedule Section */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                    <CalendarIcon className="w-5 h-5 text-blue-500" />
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setLocation('/schedule')}
+                >
+                  <h3 className="text-lg font-bold text-gray-900">
                     Upcoming Events
                   </h3>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -320,14 +322,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       <p className="text-gray-500 text-sm">No upcoming events</p>
                     </div>
                   )}
-                  
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-blue-600 hover:text-blue-700 mt-3"
-                    onClick={() => setLocation('/schedule')}
-                  >
-                    View Full Calendar →
-                  </Button>
                 </div>
               </div>
 

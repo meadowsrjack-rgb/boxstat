@@ -112,11 +112,13 @@ export default function Schedule() {
       isSameDay(event.date, date)
     );
     
+    console.log('Day clicked:', date, 'Events found:', dayEvents.length, dayEvents);
+    
+    setSelectedDate(date);
     if (dayEvents.length > 0) {
       setSelectedDayEvents(dayEvents);
       setIsDialogOpen(true);
     }
-    setSelectedDate(date);
   };
 
   const getEventsForDate = (date: Date) => {
@@ -188,13 +190,17 @@ export default function Schedule() {
                   Day: ({ date, ...props }) => {
                     const events = getEventsForDate(date);
                     const hasEvents = events.length > 0;
-                    const hasCompletedEvent = events.some(e => e.checkedIn && e.date <= new Date());
-                    const hasUpcomingEvent = events.some(e => !e.checkedIn && e.date > new Date());
+                    const hasCompletedEvent = events.some(e => e.checkedIn);
+                    const hasUpcomingEvent = events.some(e => !e.checkedIn);
                     
                     return (
                       <div className="relative">
                         <button
                           {...props as any}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDayClick(date);
+                          }}
                           className={`h-8 w-8 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center justify-center ${
                             isSameDay(date, selectedDate || new Date()) 
                               ? 'bg-primary text-primary-foreground' 

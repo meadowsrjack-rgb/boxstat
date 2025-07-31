@@ -27,6 +27,7 @@ import TestAccounts from "@/pages/test-accounts";
 import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
+import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -110,6 +111,7 @@ function Router() {
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
       <Route path="/chat" component={Chat} />

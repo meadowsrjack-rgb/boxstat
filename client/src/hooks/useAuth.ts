@@ -8,9 +8,14 @@ export function useAuth() {
     retry: false,
   });
 
+  const logout = async () => {
+    window.location.href = "/api/logout";
+  };
+
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    logout,
   };
 }

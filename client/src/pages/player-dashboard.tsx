@@ -125,7 +125,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <Button variant="ghost" size="icon" className="h-10 w-10">
                 <Bell className="h-6 w-6" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10"
+                onClick={() => setLocation("/settings")}
+              >
                 <MoreHorizontal className="h-6 w-6" />
               </Button>
             </div>

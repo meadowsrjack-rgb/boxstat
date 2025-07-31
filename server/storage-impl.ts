@@ -8,6 +8,7 @@ import {
   announcements,
   messageReactions,
   messages,
+  teamMessages,
   payments,
   drills,
   playerStats,
@@ -24,6 +25,7 @@ import {
   type Announcement,
   type MessageReaction,
   type Message,
+  type TeamMessage,
   type Payment,
   type Drill,
   type PlayerStats,
@@ -38,6 +40,7 @@ import {
   type InsertAnnouncement,
   type InsertMessageReaction,
   type InsertMessage,
+  type InsertTeamMessage,
   type InsertPayment,
   type InsertDrill,
   type InsertPlayerStats,
@@ -99,6 +102,10 @@ export interface IStorage {
   // Message operations
   getTeamMessages(teamId: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  
+  // Team messaging operations
+  getTeamMessagesNew(teamId: number): Promise<TeamMessage[]>;
+  createTeamMessage(message: InsertTeamMessage): Promise<TeamMessage>;
   
   // Task completion operations
   getTaskCompletion(announcementId: number, userId: string): Promise<TaskCompletion | undefined>;
@@ -728,6 +735,67 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return acknowledgment;
+  }
+
+  // Team messaging operations
+  async getTeamMessagesNew(teamId: number): Promise<TeamMessage[]> {
+    const result = await db
+      .select({
+        id: teamMessages.id,
+        teamId: teamMessages.teamId,
+        senderId: teamMessages.senderId,
+        message: teamMessages.message,
+        messageType: teamMessages.messageType,
+        createdAt: teamMessages.createdAt,
+        updatedAt: teamMessages.updatedAt,
+        sender: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          userType: users.userType,
+        },
+      })
+      .from(teamMessages)
+      .leftJoin(users, eq(teamMessages.senderId, users.id))
+      .where(eq(teamMessages.teamId, teamId))
+      .orderBy(asc(teamMessages.createdAt));
+    
+    return result.map(row => ({
+      ...row,
+      sender: row.sender || { id: '', firstName: 'Unknown', lastName: 'User', profileImageUrl: null, userType: 'player' }
+    }));
+  }
+
+  async createTeamMessage(message: InsertTeamMessage): Promise<TeamMessage> {
+    const [newMessage] = await db.insert(teamMessages).values(message).returning();
+    
+    // Get message with sender info
+    const [messageWithSender] = await db
+      .select({
+        id: teamMessages.id,
+        teamId: teamMessages.teamId,
+        senderId: teamMessages.senderId,
+        message: teamMessages.message,
+        messageType: teamMessages.messageType,
+        createdAt: teamMessages.createdAt,
+        updatedAt: teamMessages.updatedAt,
+        sender: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          userType: users.userType,
+        },
+      })
+      .from(teamMessages)
+      .leftJoin(users, eq(teamMessages.senderId, users.id))
+      .where(eq(teamMessages.id, newMessage.id));
+    
+    return {
+      ...messageWithSender,
+      sender: messageWithSender.sender || { id: '', firstName: 'Unknown', lastName: 'User', profileImageUrl: null, userType: 'player' }
+    };
   }
 }
 

@@ -3,11 +3,13 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, users } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import sportsEngineRoutes from "./sportsengine-routes";
+
+let wss: WebSocketServer | null = null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -618,6 +620,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team messaging routes
+  app.get('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const messages = await storage.getTeamMessagesNew(teamId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching team messages:", error);
+      res.status(500).json({ message: "Failed to fetch team messages" });
+    }
+  });
+
+  app.post('/api/teams/:id/messages', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      const messageData = insertTeamMessageSchema.parse({
+        teamId,
+        senderId: req.user.claims.sub,
+        message: req.body.message,
+        messageType: req.body.messageType || 'text',
+      });
+      
+      const message = await storage.createTeamMessage(messageData);
+      
+      // Broadcast to WebSocket clients if connected
+      if (wss) {
+        const wsMessage = JSON.stringify({
+          type: 'new_team_message',
+          teamId,
+          message
+        });
+        
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(wsMessage);
+          }
+        });
+      }
+      
+      res.json(message);
+    } catch (error) {
+      console.error("Error creating team message:", error);
+      res.status(500).json({ message: "Failed to create team message" });
+    }
+  });
+
   // Payment routes - SportsEngine Integration
   app.post('/api/payments', isAuthenticated, async (req: any, res) => {
     try {
@@ -1068,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
   // WebSocket server for real-time messaging
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   const clients = new Map<string, WebSocket>();
 
@@ -1082,26 +1130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         switch (message.type) {
           case 'join':
             clients.set(message.userId, ws);
+            ws.teamId = message.teamId; // Store team ID on the connection
             break;
             
-          case 'message':
-            // Broadcast message to all team members
-            const messageData = await storage.createMessage({
-              senderId: message.senderId,
-              content: message.content,
-              teamId: message.teamId,
-              messageType: message.messageType || 'text',
-            });
-            
-            // Send to all connected clients
-            clients.forEach((client, userId) => {
-              if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify({
-                  type: 'message',
-                  data: messageData,
-                }));
-              }
-            });
+          case 'team_message':
+            // This is now handled by the REST API endpoint
+            // WebSocket is just for broadcasting
             break;
         }
       } catch (error) {

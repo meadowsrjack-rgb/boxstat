@@ -72,6 +72,17 @@ export const familyMembers = pgTable("family_members", {
   uniqueRelationship: unique().on(table.parentId, table.playerId),
 }));
 
+// Team messages table
+export const teamMessages = pgTable("team_messages", {
+  id: serial("id").primaryKey(),
+  teamId: integer("team_id").notNull(),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  message: text("message").notNull(),
+  messageType: varchar("message_type", { enum: ["text", "announcement", "system"] }).notNull().default("text"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
@@ -250,6 +261,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   badges: many(userBadges),
   announcements: many(announcements),
   messages: many(messages),
+  teamMessages: many(teamMessages),
   payments: many(payments),
   stats: many(playerStats),
   trainingSubscriptions: many(trainingSubscriptions),
@@ -275,12 +287,18 @@ export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
   }),
 }));
 
+export const teamMessagesRelations = relations(teamMessages, ({ one }) => ({
+  sender: one(users, { fields: [teamMessages.senderId], references: [users.id] }),
+  team: one(teams, { fields: [teamMessages.teamId], references: [teams.id] }),
+}));
+
 export const teamsRelations = relations(teams, ({ one, many }) => ({
   coach: one(users, { fields: [teams.coachId], references: [users.id] }),
   players: many(users),
   events: many(events),
   announcements: many(announcements),
   messages: many(messages),
+  teamMessages: many(teamMessages),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -349,6 +367,7 @@ export const insertTrainingProgressSchema = createInsertSchema(trainingProgress)
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true, createdAt: true });
 export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({ id: true, completedAt: true });
 export const insertAnnouncementAcknowledgmentSchema = createInsertSchema(announcementAcknowledgments).omit({ id: true, acknowledgedAt: true });
+export const insertTeamMessageSchema = createInsertSchema(teamMessages).omit({ id: true, createdAt: true, updatedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -369,6 +388,7 @@ export type TrainingProgress = typeof trainingProgress.$inferSelect;
 export type FamilyMember = typeof familyMembers.$inferSelect;
 export type TaskCompletion = typeof taskCompletions.$inferSelect;
 export type AnnouncementAcknowledgment = typeof announcementAcknowledgments.$inferSelect;
+export type TeamMessage = typeof teamMessages.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -386,3 +406,4 @@ export type InsertTrainingProgress = z.infer<typeof insertTrainingProgressSchema
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;
 export type InsertAnnouncementAcknowledgment = z.infer<typeof insertAnnouncementAcknowledgmentSchema>;
+export type InsertTeamMessage = z.infer<typeof insertTeamMessageSchema>;

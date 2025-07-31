@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +33,11 @@ import {
   Send,
   MapPin
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
@@ -43,6 +45,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [showQR, setShowQR] = useState(false);
   const [activeTab, setActiveTab] = useState('activity');
   const [newMessage, setNewMessage] = useState('');
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [, setLocation] = useLocation();
   
@@ -59,7 +64,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     childProfiles.find((child: any) => child.id.toString() === selectedChildId) || childProfiles[0] : 
     null;
 
-  const { data: userTeam } = useQuery({
+  const { data: userTeam } = useQuery<any>({
     queryKey: ["/api/users", user?.id, "team"],
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -124,30 +129,78 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     nextGame: "vs Lightning Hawks - Aug 2nd, 10:00 AM"
   };
 
-  // Example team messages
-  const teamMessages = [
-    {
-      id: 1,
-      sender: "Coach Martinez",
-      message: "Great practice today team! Remember to bring your water bottles for Saturday's game.",
-      timestamp: "2 hours ago",
-      isCoach: true
+  // Team messages API
+  const { data: teamMessages = [] } = useQuery<any[]>({
+    queryKey: ["/api/teams", userTeam?.id, "messages"],
+    enabled: !!userTeam?.id,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Send team message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      return await apiRequest(`/api/teams/${userTeam?.id}/messages`, "POST", { 
+        message, 
+        messageType: "text" 
+      });
     },
-    {
-      id: 2,
-      sender: "Alex K.",
-      message: "Can't wait for the game on Saturday! 🏀",
-      timestamp: "4 hours ago",
-      isCoach: false
+    onSuccess: () => {
+      setNewMessage('');
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", userTeam?.id, "messages"] });
+      toast({
+        title: "Message sent",
+        description: "Your message has been sent to the team.",
+      });
     },
-    {
-      id: 3,
-      sender: "Coach Martinez", 
-      message: "Team meeting at 9:30 AM before the game. Please arrive early!",
-      timestamp: "1 day ago",
-      isCoach: true
+    onError: (error) => {
+      toast({
+        title: "Failed to send message",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // WebSocket connection for real-time messaging
+  useEffect(() => {
+    if (userTeam?.id && user?.id) {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      const websocket = new WebSocket(wsUrl);
+      
+      websocket.onopen = () => {
+        console.log('WebSocket connected');
+        websocket.send(JSON.stringify({
+          type: 'join',
+          userId: user.id,
+          teamId: userTeam.id
+        }));
+        setWs(websocket);
+      };
+      
+      websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'new_team_message' && data.teamId === userTeam.id) {
+            // Refresh messages when new message received
+            queryClient.invalidateQueries({ queryKey: ["/api/teams", userTeam.id, "messages"] });
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      websocket.onclose = () => {
+        console.log('WebSocket disconnected');
+        setWs(null);
+      };
+      
+      return () => {
+        websocket.close();
+      };
     }
-  ];
+  }, [userTeam?.id, user?.id, queryClient]);
 
   // Example team roster
   const teamRoster = [
@@ -446,29 +499,35 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-4">
                     <div className="space-y-4 max-h-64 overflow-y-auto">
-                      {teamMessages.map((message) => (
-                        <div key={message.id} className="flex space-x-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                            message.isCoach ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
-                          }`}>
-                            {message.sender.charAt(0)}
-                          </div>
+                      {teamMessages.length > 0 ? teamMessages.map((message: any) => (
+                        <div key={message.id} className="flex space-x-3 py-3 border-b border-gray-100 last:border-b-0">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={message.sender?.profileImageUrl || '/placeholder-player.jpg'} />
+                            <AvatarFallback className={message.sender?.userType === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}>
+                              {message.sender?.firstName?.[0]}{message.sender?.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-2">
-                              <span className={`text-sm font-medium ${
-                                message.isCoach ? 'text-red-600' : 'text-gray-900'
-                              }`}>
-                                {message.sender}
-                              </span>
-                              {message.isCoach && (
-                                <Badge variant="outline" className="text-xs px-1 py-0">Coach</Badge>
+                              <p className="text-sm font-medium text-gray-900">
+                                {message.sender?.firstName} {message.sender?.lastName}
+                              </p>
+                              {message.sender?.userType === 'admin' && (
+                                <Badge variant="secondary" className="text-xs bg-red-100 text-red-600">Coach</Badge>
                               )}
-                              <span className="text-xs text-gray-500">{message.timestamp}</span>
+                              <p className="text-xs text-gray-500">
+                                {message.createdAt ? format(new Date(message.createdAt), 'MMM d, h:mm a') : 'Now'}
+                              </p>
                             </div>
                             <p className="text-sm text-gray-700 mt-1">{message.message}</p>
                           </div>
                         </div>
-                      ))}
+                      )) : (
+                        <div className="text-center py-8">
+                          <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                          <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Message Input */}
@@ -482,10 +541,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         />
                         <Button 
                           size="icon"
-                          disabled={!newMessage.trim()}
+                          disabled={!newMessage.trim() || sendMessageMutation.isPending}
                           onClick={() => {
-                            // In real app, would send message via API
-                            setNewMessage('');
+                            if (newMessage.trim()) {
+                              sendMessageMutation.mutate(newMessage.trim());
+                            }
                           }}
                         >
                           <Send className="h-4 w-4" />

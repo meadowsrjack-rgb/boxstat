@@ -26,9 +26,11 @@ import {
   UserCheck,
   Award,
   Check,
-  X
+  X,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { useState } from "react";
+import { format } from "date-fns";
 
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
@@ -278,6 +280,55 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
+              {/* Schedule Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-blue-500" />
+                    Upcoming Events
+                  </h3>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+                
+                {Array.isArray(userEvents) && userEvents.length > 0 ? (
+                  <div className="space-y-3">
+                    {userEvents.slice(0, 3).map((event: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
+                              {event.eventType || 'Event'}
+                            </Badge>
+                          </div>
+                          <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              {format(new Date(event.startTime || event.start_time), 'MMM d')}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                              {format(new Date(event.startTime || event.start_time), 'h:mm a')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-blue-600 hover:text-blue-700 mt-3"
+                      onClick={() => setLocation('/schedule')}
+                    >
+                      View Full Calendar →
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No upcoming events</p>
+                  </div>
+                )}
+              </div>
 
             </div>
           )}

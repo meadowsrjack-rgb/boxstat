@@ -73,7 +73,7 @@ export default function Landing() {
         }
         setIsAnimating(false);
         setSwipeDirection(null);
-      }, 500);
+      }, 800);
     }
   };
 
@@ -128,7 +128,7 @@ export default function Landing() {
                   key={currentSlide}
                   initial={{
                     x: swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0,
-                    opacity: 0
+                    opacity: 1
                   }}
                   animate={{
                     x: 0,
@@ -136,13 +136,13 @@ export default function Landing() {
                   }}
                   exit={{
                     x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : 0,
-                    opacity: 0
+                    opacity: 1
                   }}
                   transition={{
                     type: "spring",
-                    stiffness: 300,
-                    damping: 30,
-                    duration: 0.5
+                    stiffness: 200,
+                    damping: 25,
+                    duration: 0.8
                   }}
                   className="text-center"
                 >

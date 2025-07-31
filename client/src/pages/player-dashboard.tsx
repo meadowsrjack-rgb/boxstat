@@ -35,7 +35,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const { user } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const [activeTab, setActiveTab] = useState('activity');
-  const [timePeriod, setTimePeriod] = useState('This month');
+
   const [, setLocation] = useLocation();
   
   // Get child profiles to find the current child's QR code
@@ -233,20 +233,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Activity Tab */}
           {activeTab === 'activity' && (
             <div className="space-y-6">
-              {/* Activity Section Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Activity</h2>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <span className="text-gray-600">{timePeriod}</span>
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-sm" style={{ color: '#d82428' }}>Recent activity</span>
-                  <ChevronRight className="h-4 w-4" style={{ color: '#d82428' }} />
-                </div>
-              </div>
+
 
 
 

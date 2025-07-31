@@ -10,11 +10,16 @@ import {
   QrCode, 
   Bell, 
   MoreHorizontal,
+  TrendingUp,
   Play,
   Users,
   User,
   ChevronRight,
+  ChevronDown,
   ChevronLeft,
+  Target,
+  Zap,
+  Activity,
   Shirt,
   BookOpen,
   Tent,
@@ -29,8 +34,8 @@ import { useState } from "react";
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
   const [showQR, setShowQR] = useState(false);
-  const [activeTab, setActiveTab] = useState('video');
-
+  const [activeTab, setActiveTab] = useState('activity');
+  const [timePeriod, setTimePeriod] = useState('This month');
   const [, setLocation] = useLocation();
   
   // Get child profiles to find the current child's QR code
@@ -89,7 +94,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
-
+  // Sample skill ratings data - in real app this would come from API
+  const skillRatings = [
+    { name: 'Ball Handling', rating: 75, icon: Activity },
+    { name: 'Agility', rating: 82, icon: Zap },
+    { name: 'Finishing', rating: 68, icon: Target },
+    { name: 'Free Throw', rating: 90, icon: Target },
+    { name: 'Mid-Range', rating: 77, icon: Target },
+    { name: 'Three Point', rating: 65, icon: Target },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -165,7 +178,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Main Navigation Tabs */}
         <div className="px-6 mb-6">
           <div className="flex justify-center items-center space-x-32">
-
+            <button
+              onClick={() => setActiveTab('activity')}
+              className={`flex flex-col items-center space-y-3 py-4 px-3 ${
+                activeTab === 'activity' ? 'text-red-600' : 'text-gray-400'
+              }`}
+              style={{ color: activeTab === 'activity' ? '#d82428' : undefined }}
+            >
+              <TrendingUp className="h-6 w-6" />
+              <div className={`h-1 w-12 rounded-full transition-all duration-200 ${
+                activeTab === 'activity' ? 'opacity-100' : 'opacity-0'
+              }`} style={{ backgroundColor: '#d82428' }} />
+            </button>
             <button
               onClick={() => setActiveTab('video')}
               className={`flex flex-col items-center space-y-3 py-4 px-3 ${
@@ -206,7 +230,65 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         </div>
         {/* Tab Content */}
         <div className="px-6">
+          {/* Activity Tab */}
+          {activeTab === 'activity' && (
+            <div className="space-y-6">
+              {/* Activity Section Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Activity</h2>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <span className="text-gray-600">{timePeriod}</span>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-sm" style={{ color: '#d82428' }}>Recent activity</span>
+                  <ChevronRight className="h-4 w-4" style={{ color: '#d82428' }} />
+                </div>
+              </div>
 
+
+
+              {/* Skill Ratings Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-gray-900">Skill Ratings</h3>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </div>
+                
+                <div className="space-y-3">
+                  {skillRatings.map((skill, index) => {
+                    const IconComponent = skill.icon;
+                    return (
+                      <div key={index} className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <IconComponent className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-medium text-gray-900">{skill.name}</span>
+                            <span className="text-sm text-gray-500">{skill.rating}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="h-2 rounded-full transition-all duration-500"
+                              style={{ 
+                                width: `${skill.rating}%`,
+                                backgroundColor: '#d82428'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+
+            </div>
+          )}
 
           {/* Video Tab */}
           {activeTab === 'video' && (

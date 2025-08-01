@@ -243,6 +243,39 @@ export const drills = pgTable("drills", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Player tasks table - daily completable tasks
+export const playerTasks = pgTable("player_tasks", {
+  id: serial("id").primaryKey(),
+  playerId: varchar("player_id").references(() => users.id).notNull(),
+  taskType: varchar("task_type", { 
+    enum: ["practice", "game", "skills", "video", "homework", "bio_complete"] 
+  }).notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  assignedBy: varchar("assigned_by").references(() => users.id), // Coach who assigned
+  eventId: integer("event_id").references(() => events.id), // For practice/game tasks
+  videoId: varchar("video_id"), // For video completion tasks
+  homeworkContent: text("homework_content"), // For homework tasks
+  pointsValue: integer("points_value").default(10),
+  dueDate: date("due_date"),
+  isCompleted: boolean("is_completed").default(false),
+  completedAt: timestamp("completed_at"),
+  completionMethod: varchar("completion_method", { 
+    enum: ["qr_scan", "manual", "video_watch", "auto"] 
+  }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Player points table - tracking earned points
+export const playerPoints = pgTable("player_points", {
+  id: serial("id").primaryKey(),
+  playerId: varchar("player_id").references(() => users.id).notNull(),
+  taskId: integer("task_id").references(() => playerTasks.id),
+  points: integer("points").notNull(),
+  reason: varchar("reason").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
 export const playerStats = pgTable("player_stats", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
@@ -266,6 +299,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   stats: many(playerStats),
   trainingSubscriptions: many(trainingSubscriptions),
   trainingProgress: many(trainingProgress),
+  playerTasks: many(playerTasks),
+  playerPoints: many(playerPoints),
   childrenAsParent: many(familyMembers, {
     relationName: "parentRelation",
   }),
@@ -350,6 +385,17 @@ export const trainingProgressRelations = relations(trainingProgress, ({ one }) =
   subscription: one(trainingSubscriptions, { fields: [trainingProgress.subscriptionId], references: [trainingSubscriptions.id] }),
 }));
 
+export const playerTasksRelations = relations(playerTasks, ({ one }) => ({
+  player: one(users, { fields: [playerTasks.playerId], references: [users.id] }),
+  assignedByUser: one(users, { fields: [playerTasks.assignedBy], references: [users.id] }),
+  event: one(events, { fields: [playerTasks.eventId], references: [events.id] }),
+}));
+
+export const playerPointsRelations = relations(playerPoints, ({ one }) => ({
+  player: one(users, { fields: [playerPoints.playerId], references: [users.id] }),
+  task: one(playerTasks, { fields: [playerPoints.taskId], references: [playerTasks.id] }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
@@ -368,6 +414,8 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
 export const insertTaskCompletionSchema = createInsertSchema(taskCompletions).omit({ id: true, completedAt: true });
 export const insertAnnouncementAcknowledgmentSchema = createInsertSchema(announcementAcknowledgments).omit({ id: true, acknowledgedAt: true });
 export const insertTeamMessageSchema = createInsertSchema(teamMessages).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlayerTaskSchema = createInsertSchema(playerTasks).omit({ id: true, createdAt: true, completedAt: true });
+export const insertPlayerPointsSchema = createInsertSchema(playerPoints).omit({ id: true, earnedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -389,6 +437,8 @@ export type FamilyMember = typeof familyMembers.$inferSelect;
 export type TaskCompletion = typeof taskCompletions.$inferSelect;
 export type AnnouncementAcknowledgment = typeof announcementAcknowledgments.$inferSelect;
 export type TeamMessage = typeof teamMessages.$inferSelect;
+export type PlayerTask = typeof playerTasks.$inferSelect;
+export type PlayerPoints = typeof playerPoints.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

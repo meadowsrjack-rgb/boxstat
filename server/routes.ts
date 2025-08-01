@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, users } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -1232,6 +1232,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in test login:", error);
       res.status(500).json({ message: "Failed to sign in as test user" });
+    }
+  });
+
+  // Player Task routes
+  app.get('/api/players/:id/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const date = req.query.date as string;
+      
+      const tasks = await storage.getPlayerTasks(playerId, date);
+      res.json(tasks);
+    } catch (error) {
+      console.error("Error fetching player tasks:", error);
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.post('/api/players/:id/tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const taskData = insertPlayerTaskSchema.parse({
+        ...req.body,
+        playerId,
+      });
+      
+      const task = await storage.createPlayerTask(taskData);
+      res.json(task);
+    } catch (error) {
+      console.error("Error creating player task:", error);
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.put('/api/tasks/:id/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const taskId = parseInt(req.params.id);
+      const { completionMethod } = req.body;
+      
+      const task = await storage.completePlayerTask(taskId, completionMethod);
+      
+      // Award points for completion
+      await storage.addPlayerPoints({
+        playerId: task.playerId,
+        taskId: task.id,
+        points: task.pointsValue || 10,
+        reason: `Completed: ${task.title}`
+      });
+      
+      res.json(task);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  app.get('/api/players/:id/points', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const points = await storage.getPlayerPoints(playerId);
+      const totalPoints = await storage.getPlayerTotalPoints(playerId);
+      
+      res.json({ points, totalPoints });
+    } catch (error) {
+      console.error("Error fetching player points:", error);
+      res.status(500).json({ message: "Failed to fetch points" });
+    }
+  });
+
+  // Auto-generate daily tasks for players
+  app.post('/api/players/:id/generate-daily-tasks', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.id;
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if tasks already exist for today
+      const existingTasks = await storage.getPlayerTasks(playerId, today);
+      if (existingTasks.length > 0) {
+        return res.json({ message: "Tasks already exist for today", tasks: existingTasks });
+      }
+
+      // Get player's events for today
+      const events = await storage.getUserEvents(playerId);
+      const todayEvents = events.filter(event => {
+        const eventDate = new Date(event.startTime).toISOString().split('T')[0];
+        return eventDate === today;
+      });
+
+      const tasksToCreate = [];
+
+      // Create tasks for today's events
+      todayEvents.forEach(event => {
+        if (event.eventType === 'practice') {
+          tasksToCreate.push({
+            playerId,
+            taskType: 'practice' as const,
+            title: `${event.title}`,
+            description: `Attend ${event.eventType} session`,
+            pointsValue: 10,
+            dueDate: today,
+            eventId: event.id,
+          });
+        } else if (event.eventType === 'game') {
+          tasksToCreate.push({
+            playerId,
+            taskType: 'game' as const,
+            title: `${event.title}`,
+            description: `Participate in game`,
+            pointsValue: 15,
+            dueDate: today,
+            eventId: event.id,
+          });
+        }
+      });
+
+      // Add standard daily tasks
+      if (tasksToCreate.length === 0) {
+        tasksToCreate.push(
+          {
+            playerId,
+            taskType: 'video' as const,
+            title: 'Foundation Program: Week 3',
+            description: 'Watch and complete training module',
+            pointsValue: 10,
+            dueDate: today,
+          },
+          {
+            playerId,
+            taskType: 'homework' as const,
+            title: "Coach's Homework",
+            description: 'Complete assigned ball handling drills',
+            pointsValue: 10,
+            dueDate: today,
+          }
+        );
+      }
+
+      // Create all tasks
+      const createdTasks = [];
+      for (const taskData of tasksToCreate) {
+        const task = await storage.createPlayerTask(taskData);
+        createdTasks.push(task);
+      }
+
+      res.json({ message: "Daily tasks generated", tasks: createdTasks });
+    } catch (error) {
+      console.error("Error generating daily tasks:", error);
+      res.status(500).json({ message: "Failed to generate daily tasks" });
     }
   });
 

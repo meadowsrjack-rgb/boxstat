@@ -15,6 +15,8 @@ import {
   familyMembers,
   taskCompletions,
   announcementAcknowledgments,
+  playerTasks,
+  playerPoints,
   type User,
   type UpsertUser,
   type Team,
@@ -32,24 +34,29 @@ import {
   type FamilyMember,
   type TaskCompletion,
   type AnnouncementAcknowledgment,
-  type InsertUser,
-  type InsertTeam,
-  type InsertEvent,
-  type InsertAttendance,
-  type InsertBadge,
-  type InsertAnnouncement,
-  type InsertMessageReaction,
-  type InsertMessage,
-  type InsertTeamMessage,
-  type InsertPayment,
-  type InsertDrill,
-  type InsertPlayerStats,
-  type InsertFamilyMember,
-  type InsertTaskCompletion,
-  type InsertAnnouncementAcknowledgment,
+  type PlayerTask,
+  type PlayerPoints,
+  insertUserSchema,
+  insertTeamSchema,
+  insertEventSchema,
+  insertAttendanceSchema,
+  insertBadgeSchema,
+  insertAnnouncementSchema,
+  insertMessageReactionSchema,
+  insertMessageSchema,
+  insertTeamMessageSchema,
+  insertPaymentSchema,
+  insertDrillSchema,
+  insertPlayerStatsSchema,
+  insertFamilyMemberSchema,
+  insertTaskCompletionSchema,
+  insertAnnouncementAcknowledgmentSchema,
+  insertPlayerTaskSchema,
+  insertPlayerPointsSchema,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, gte, lte, sql, or, isNull } from "drizzle-orm";
+import { z } from "zod";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -127,7 +134,17 @@ export interface IStorage {
   // Drill operations
   getAllDrills(): Promise<Drill[]>;
   getDrillsByCategory(category: string): Promise<Drill[]>;
-  createDrill(drill: InsertDrill): Promise<Drill>;
+  createDrill(drill: z.infer<typeof insertDrillSchema>): Promise<Drill>;
+  
+  // Player task operations
+  getPlayerTasks(playerId: string, date?: string): Promise<PlayerTask[]>;
+  createPlayerTask(task: z.infer<typeof insertPlayerTaskSchema>): Promise<PlayerTask>;
+  completePlayerTask(taskId: number, completionMethod: string): Promise<PlayerTask>;
+  
+  // Player points operations
+  getPlayerPoints(playerId: string): Promise<PlayerPoints[]>;
+  addPlayerPoints(points: z.infer<typeof insertPlayerPointsSchema>): Promise<PlayerPoints>;
+  getPlayerTotalPoints(playerId: string): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -148,15 +165,6 @@ export class DatabaseStorage implements IStorage {
           updatedAt: new Date(),
         },
       })
-      .returning();
-    return user;
-  }
-
-  async updateUserProfile(userId: string, updates: Partial<UpsertUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({ ...updates, updatedAt: new Date() })
-      .where(eq(users.id, userId))
       .returning();
     return user;
   }
@@ -796,6 +804,58 @@ export class DatabaseStorage implements IStorage {
       ...messageWithSender,
       sender: messageWithSender.sender || { id: '', firstName: 'Unknown', lastName: 'User', profileImageUrl: null, userType: 'player' }
     };
+  }
+
+  // Player task operations
+  async getPlayerTasks(playerId: string, date?: string): Promise<PlayerTask[]> {
+    let query = db.select().from(playerTasks).where(eq(playerTasks.playerId, playerId));
+    
+    if (date) {
+      query = query.where(eq(playerTasks.dueDate, date));
+    }
+    
+    return await query.orderBy(desc(playerTasks.createdAt));
+  }
+
+  async createPlayerTask(task: z.infer<typeof insertPlayerTaskSchema>): Promise<PlayerTask> {
+    const [newTask] = await db.insert(playerTasks).values(task).returning();
+    return newTask;
+  }
+
+  async completePlayerTask(taskId: number, completionMethod: string): Promise<PlayerTask> {
+    const [updatedTask] = await db
+      .update(playerTasks)
+      .set({ 
+        isCompleted: true, 
+        completedAt: new Date(),
+        completionMethod: completionMethod as any
+      })
+      .where(eq(playerTasks.id, taskId))
+      .returning();
+    return updatedTask;
+  }
+
+  // Player points operations
+  async getPlayerPoints(playerId: string): Promise<PlayerPoints[]> {
+    return await db
+      .select()
+      .from(playerPoints)
+      .where(eq(playerPoints.playerId, playerId))
+      .orderBy(desc(playerPoints.earnedAt));
+  }
+
+  async addPlayerPoints(points: z.infer<typeof insertPlayerPointsSchema>): Promise<PlayerPoints> {
+    const [newPoints] = await db.insert(playerPoints).values(points).returning();
+    return newPoints;
+  }
+
+  async getPlayerTotalPoints(playerId: string): Promise<number> {
+    const result = await db
+      .select({ total: sql<number>`sum(${playerPoints.points})` })
+      .from(playerPoints)
+      .where(eq(playerPoints.playerId, playerId));
+    
+    return result[0]?.total || 0;
   }
 }
 

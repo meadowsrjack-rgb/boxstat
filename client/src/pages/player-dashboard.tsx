@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { TodaySection } from "@/components/TodaySection";
 
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
@@ -366,6 +367,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
 
 
+
+              {/* Today Section */}
+              <TodaySection playerId={user?.id || ''} />
 
               {/* Skill Ratings Section */}
               <div className="space-y-4">

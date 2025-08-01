@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar } from "@/components/ui/calendar";
 import QRCode from "@/components/ui/qr-code";
 import { 
   QrCode, 
@@ -35,7 +34,7 @@ import {
   MapPin
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { format, isSameDay } from "date-fns";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -48,58 +47,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [activeTab, setActiveTab] = useState('activity');
   const [newMessage, setNewMessage] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [, setLocation] = useLocation();
   
-  // Sample events for calendar
-  const sampleEvents = [
-    {
-      id: 1,
-      title: "Thunder Wolves Practice",
-      date: new Date(2025, 7, 1), // August 1, 2025
-      eventType: "practice",
-      startTime: "4:00 PM",
-      location: "Momentous Sports Center"
-    },
-    {
-      id: 2,
-      title: "vs Lightning Bolts",
-      date: new Date(2025, 7, 3), // August 3, 2025
-      eventType: "game",
-      startTime: "6:00 PM",
-      location: "Court A"
-    },
-    {
-      id: 3,
-      title: "Skills Training",
-      date: new Date(2025, 7, 5), // August 5, 2025
-      eventType: "skills",
-      startTime: "3:30 PM",
-      location: "Training Gym"
-    }
-  ];
-  
-  // Helper functions for calendar
-  const getEventTypeColor = (eventType: string) => {
-    switch (eventType) {
-      case "practice":
-        return "bg-blue-100 text-blue-800";
-      case "game":
-        return "bg-green-100 text-green-800";
-      case "skills":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getEventsForDate = (date: Date) => {
-    return sampleEvents.filter(event => isSameDay(event.date, date));
-  };
-
   // Get child profiles to find the current child's QR code
   const { data: childProfiles } = useQuery({
     queryKey: ["/api/child-profiles", user?.id],
@@ -455,85 +407,46 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               </div>
 
-              {/* Schedule Section with Integrated Calendar */}
+              {/* Schedule Section */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold text-gray-900">Schedule</h3>
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setLocation('/schedule')}
+                >
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Schedule
+                  </h3>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
                 
-                <div className="space-y-4">
-                  {/* Calendar */}
-                  <Card className="p-4">
-                    <div className="flex justify-center">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        className="w-full max-w-sm"
-                        classNames={{
-                          months: "flex w-full flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
-                          month: "space-y-4 w-full flex flex-col",
-                          caption: "flex justify-center pt-1 relative items-center",
-                          caption_label: "text-sm font-medium",
-                          nav: "space-x-1 flex items-center",
-                          nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                          nav_button_previous: "absolute left-1",
-                          nav_button_next: "absolute right-1",
-                          table: "w-full border-collapse space-y-1",
-                          head_row: "flex justify-center",
-                          head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex justify-center items-center",
-                          row: "flex w-full mt-2 justify-center",
-                          cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
-                          day: "h-8 w-8 p-0 font-normal flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground",
-                          day_selected: "bg-[#d82428] text-white hover:bg-[#d82428] hover:text-white",
-                          day_today: "bg-accent text-accent-foreground",
-                          day_outside: "text-muted-foreground opacity-50",
-                          day_disabled: "text-muted-foreground opacity-50",
-                        }}
-                        components={{
-                          Day: ({ date, ...props }) => {
-                            const events = getEventsForDate(date);
-                            const hasEvents = events.length > 0;
-                            
-                            return (
-                              <div className="relative">
-                                <button 
-                                  {...props}
-                                  className={`${props.className} ${hasEvents ? 'font-bold' : ''}`}
-                                >
-                                  {date.getDate()}
-                                  {hasEvents && (
-                                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-[#d82428] rounded-full"></div>
-                                  )}
-                                </button>
-                              </div>
-                            );
-                          }
-                        }}
-                      />
-                    </div>
-                  </Card>
-                  
-                  {/* Events for selected date */}
-                  {selectedDate && getEventsForDate(selectedDate).length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-gray-900 text-sm">
-                        {format(selectedDate, 'MMMM d, yyyy')}
-                      </h4>
-                      {getEventsForDate(selectedDate).map((event) => (
-                        <div key={event.id} className="p-3 bg-gray-50 rounded-lg">
+                <div className="space-y-3">
+                  {Array.isArray(userEvents) && userEvents.length > 0 ? (
+                    userEvents.slice(0, 3).map((event: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge className={`text-xs px-2 py-1 ${getEventTypeColor(event.eventType)}`}>
-                              {event.eventType}
+                            <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
+                              {event.eventType || 'Event'}
                             </Badge>
                           </div>
-                          <h5 className="font-semibold text-gray-900 text-sm">{event.title}</h5>
+                          <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                            <span>{event.startTime}</span>
-                            <span>{event.location}</span>
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              {format(new Date(event.startTime || event.start_time), 'MMM d')}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                              {format(new Date(event.startTime || event.start_time), 'h:mm a')}
+                            </span>
                           </div>
                         </div>
-                      ))}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <CalendarIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-500 text-sm">No upcoming events</p>
                     </div>
                   )}
                 </div>

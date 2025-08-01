@@ -138,19 +138,19 @@ export function TodaySection({ playerId }: TodaySectionProps) {
   const getTaskIcon = (taskType: string) => {
     switch (taskType) {
       case 'practice':
-        return 'Practice';
+        return '🏃';
       case 'game':
-        return 'Game';
+        return '🏀';
       case 'skills':
-        return 'Skills';
+        return '⚡';
       case 'video':
-        return 'Video';
+        return '📹';
       case 'homework':
-        return 'Homework';
+        return '📝';
       case 'bio_complete':
-        return 'Profile';
+        return '👤';
       default:
-        return 'Task';
+        return '✨';
     }
   };
 
@@ -214,13 +214,13 @@ export function TodaySection({ playerId }: TodaySectionProps) {
               animate={{ 
                 opacity: 1, 
                 y: 0,
-                backgroundColor: isCompleted ? '#d82428' : '#e5e7eb'
+                backgroundColor: isCompleted ? '#10b981' : '#e5e7eb'
               }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
               className={`relative overflow-hidden rounded-lg p-4 cursor-pointer transition-all duration-300 ${
                 isCompleted 
-                  ? 'bg-[#d82428] text-white' 
+                  ? 'bg-green-500 text-white' 
                   : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
               }`}
               onClick={() => !isCompleted && handleCompleteTask(task.id)}
@@ -282,6 +282,7 @@ export function TodaySection({ playerId }: TodaySectionProps) {
         {displayTasks.length === 0 && (
           <Card className="p-6 text-center">
             <div className="text-gray-500">
+              <span className="text-2xl block mb-2">🎯</span>
               <p className="text-sm">No tasks for today</p>
               <p className="text-xs text-gray-400 mt-1">
                 Check back later for new assignments

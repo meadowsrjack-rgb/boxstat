@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Plus, ChevronRight } from 'lucide-react';
+import { CheckCircle, Plus, ChevronRight, User, Calendar, Play, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -55,8 +55,8 @@ export function TodaySection({ playerId }: TodaySectionProps) {
     {
       id: 2,
       taskType: 'practice',
-      title: 'Thunder Wolves 12U: Practice',
-      description: 'Attend team practice session',
+      title: 'Practice',
+      description: 'Attend Thunder Wolves 12U practice',
       pointsValue: 10,
       isCompleted: false,
       dueDate: today,
@@ -74,7 +74,7 @@ export function TodaySection({ playerId }: TodaySectionProps) {
       id: 4,
       taskType: 'homework',
       title: "Coach's Homework",
-      description: 'Complete assigned ball handling drills',
+      description: 'Make 100 layups',
       pointsValue: 10,
       isCompleted: false,
       dueDate: today,
@@ -138,19 +138,19 @@ export function TodaySection({ playerId }: TodaySectionProps) {
   const getTaskIcon = (taskType: string) => {
     switch (taskType) {
       case 'practice':
-        return '🏃';
+        return <Calendar className="h-5 w-5" />;
       case 'game':
-        return '🏀';
+        return <Calendar className="h-5 w-5" />;
       case 'skills':
-        return '⚡';
+        return <Calendar className="h-5 w-5" />;
       case 'video':
-        return '📹';
+        return <Play className="h-5 w-5" />;
       case 'homework':
-        return '📝';
+        return <BookOpen className="h-5 w-5" />;
       case 'bio_complete':
-        return '👤';
+        return <User className="h-5 w-5" />;
       default:
-        return '✨';
+        return <CheckCircle className="h-5 w-5" />;
     }
   };
 
@@ -227,13 +227,13 @@ export function TodaySection({ playerId }: TodaySectionProps) {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">
+                  <div className="text-current">
                     {getTaskIcon(task.taskType)}
-                  </span>
+                  </div>
                   <div>
                     <h4 className="font-semibold text-sm">{task.title}</h4>
                     <p className="text-xs opacity-75">
-                      {getTaskTypeLabel(task.taskType)}
+                      {task.description}
                     </p>
                   </div>
                 </div>

@@ -380,7 +380,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <h3 className="text-lg font-bold text-gray-900">
                     Schedule
                   </h3>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-500">view full calendar</span>
+                    <ChevronRight className="h-5 w-5 text-gray-400" />
+                  </div>
                 </div>
                 
                 <div className="space-y-3">
@@ -408,10 +411,69 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-4">
-                      <CalendarIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-gray-500 text-sm">No upcoming events</p>
-                    </div>
+                    // Example upcoming events when no real events are available
+                    <>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
+                              Practice
+                            </Badge>
+                          </div>
+                          <h4 className="font-semibold text-gray-900 text-sm">Thunder Wolves Practice</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              Aug 3
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                              6:00 PM
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-green-100 text-green-800 text-xs px-2 py-1">
+                              Game
+                            </Badge>
+                          </div>
+                          <h4 className="font-semibold text-gray-900 text-sm">vs Lightning Eagles</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              Aug 5
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                              2:00 PM
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-purple-100 text-purple-800 text-xs px-2 py-1">
+                              Skills
+                            </Badge>
+                          </div>
+                          <h4 className="font-semibold text-gray-900 text-sm">Individual Skills Session</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span className="flex items-center gap-1">
+                              <CalendarIcon className="w-3 h-3" />
+                              Aug 7
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="w-3 h-3 flex items-center justify-center">🕐</span>
+                              4:30 PM
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>

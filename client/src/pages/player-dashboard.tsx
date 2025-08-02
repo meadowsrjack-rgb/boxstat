@@ -381,7 +381,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     Schedule
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">view full calendar</span>
+                    <span className="text-sm text-gray-500">Full calendar</span>
                     <ChevronRight className="h-5 w-5 text-gray-400" />
                   </div>
                 </div>

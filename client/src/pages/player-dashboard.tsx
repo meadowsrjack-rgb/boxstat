@@ -408,12 +408,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </div>
                     ))
                   ) : (
-                    <div 
-                      className="text-center py-4 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors"
-                      onClick={() => setLocation('/calendar')}
-                    >
+                    <div className="text-center py-4">
                       <CalendarIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-red-600 text-sm font-medium hover:text-red-700">View full calendar</p>
+                      <p className="text-gray-500 text-sm">No upcoming events</p>
                     </div>
                   )}
                 </div>

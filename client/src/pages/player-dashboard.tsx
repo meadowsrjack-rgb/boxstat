@@ -518,20 +518,27 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-900">Trophies & Badges</h3>
-                  <button 
-                    onClick={() => {
-                      console.log('Attempting navigation to /simple-trophies');
-                      console.log('Current location:', window.location.href);
-                      setLocation('/simple-trophies');
-                      setTimeout(() => {
-                        console.log('New location after navigation:', window.location.href);
-                      }, 100);
-                    }}
-                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                  >
-                    View all
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        console.log('Navigation clicked - attempting to go to /simple-trophies');
+                        console.log('Current pathname:', window.location.pathname);
+                        console.log('SetLocation function:', typeof setLocation);
+                        setLocation('/simple-trophies');
+                        console.log('SetLocation called');
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                    >
+                      View all
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <a 
+                      href="/simple-trophies"
+                      className="text-sm text-blue-500 hover:text-blue-700"
+                    >
+                      Direct Link
+                    </a>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">

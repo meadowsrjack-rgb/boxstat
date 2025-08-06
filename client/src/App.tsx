@@ -68,7 +68,10 @@ function Router() {
     };
   }, []);
 
-  if (isLoading) {
+  // Check if we're on a demo route that doesn't require auth
+  const isDemoRoute = window.location.pathname.includes('demo-profiles') || window.location.pathname.includes('demo-account-setup');
+
+  if (isLoading && !isDemoRoute) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -76,12 +79,23 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isDemoRoute) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/test-accounts" component={TestAccounts} />
         <Route component={Landing} />
+      </Switch>
+    );
+  }
+
+  // Handle demo routes separately without authentication
+  if (isDemoRoute) {
+    return (
+      <Switch>
+        <Route path="/demo-profiles" component={DemoProfileSelection} />
+        <Route path="/demo-setup" component={DemoAccountSetup} />
+        <Route component={DemoProfileSelection} />
       </Switch>
     );
   }

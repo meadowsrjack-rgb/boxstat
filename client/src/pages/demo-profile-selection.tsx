@@ -72,19 +72,23 @@ export default function DemoProfileSelection() {
   const handleProfileSelect = (profile: any) => {
     setSelectedProfile(profile);
     
-    // Navigate based on profile type
+    // Store demo profile selection in session storage
+    sessionStorage.setItem('demoProfile', JSON.stringify(profile));
+    sessionStorage.setItem('isDemoMode', 'true');
+    
+    // Navigate based on profile type with demo indicator
     switch (profile.profileType) {
       case "player":
-        setLocation("/player-dashboard");
+        setLocation("/player-dashboard?demo=true");
         break;
       case "parent":
-        setLocation("/parent-dashboard");
+        setLocation("/parent-dashboard?demo=true");
         break;
       case "coach":
-        setLocation("/admin-dashboard");
+        setLocation("/admin-dashboard?demo=true");
         break;
       default:
-        setLocation("/");
+        setLocation("/?demo=true");
     }
   };
 
@@ -270,6 +274,7 @@ export default function DemoProfileSelection() {
                   <Button 
                     className="w-full" 
                     data-testid={`button-select-${profile.id}`}
+                    onClick={() => handleProfileSelect(profile)}
                   >
                     Select Profile
                   </Button>

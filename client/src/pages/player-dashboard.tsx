@@ -521,7 +521,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <button
                     onClick={() => {
                       console.log('Navigating to simple-trophies, current location:', location);
-                      setLocation('/simple-trophies');
+                      setLocation('/trophies-badges');
                       console.log('setLocation called');
                     }}
                     className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 cursor-pointer"

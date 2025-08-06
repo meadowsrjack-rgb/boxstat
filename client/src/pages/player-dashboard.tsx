@@ -518,12 +518,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-900">Trophies & Badges</h3>
-                  <Link href="/trophies-badges">
-                    <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
-                      View all
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </Link>
+                  <a 
+                    href="/simple-trophies"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.history.pushState({}, '', '/simple-trophies');
+                      window.dispatchEvent(new PopStateEvent('popstate'));
+                    }}
+                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    View all
+                    <ChevronRight className="h-4 w-4" />
+                  </a>
                 </div>
                 
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">

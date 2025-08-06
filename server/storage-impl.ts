@@ -5,6 +5,8 @@ import {
   attendances,
   badges,
   userBadges,
+  trophies,
+  userTrophies,
   announcements,
   messageReactions,
   messages,
@@ -24,6 +26,8 @@ import {
   type Attendance,
   type Badge,
   type UserBadge,
+  type Trophy,
+  type UserTrophy,
   type Announcement,
   type MessageReaction,
   type Message,
@@ -41,6 +45,8 @@ import {
   insertEventSchema,
   insertAttendanceSchema,
   insertBadgeSchema,
+  insertTrophySchema,
+  insertUserTrophySchema,
   insertAnnouncementSchema,
   insertMessageReactionSchema,
   insertMessageSchema,
@@ -100,6 +106,11 @@ export interface IStorage {
   getAllBadges(): Promise<Badge[]>;
   getUserBadges(userId: string): Promise<UserBadge[]>;
   awardBadge(userId: string, badgeId: number): Promise<UserBadge>;
+  
+  // Trophy operations
+  getAllTrophies(): Promise<Trophy[]>;
+  getUserTrophies(userId: string): Promise<UserTrophy[]>;
+  awardTrophy(userId: string, trophyId: number): Promise<UserTrophy>;
   
   // Announcement operations
   getAllAnnouncements(): Promise<Announcement[]>;
@@ -523,6 +534,20 @@ export class DatabaseStorage implements IStorage {
   async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
     const [userBadge] = await db.insert(userBadges).values({ userId, badgeId }).returning();
     return userBadge;
+  }
+
+  // Trophy operations
+  async getAllTrophies(): Promise<Trophy[]> {
+    return await db.select().from(trophies).where(eq(trophies.isActive, true));
+  }
+
+  async getUserTrophies(userId: string): Promise<UserTrophy[]> {
+    return await db.select().from(userTrophies).where(eq(userTrophies.userId, userId));
+  }
+
+  async awardTrophy(userId: string, trophyId: number): Promise<UserTrophy> {
+    const [userTrophy] = await db.insert(userTrophies).values({ userId, trophyId }).returning();
+    return userTrophy;
   }
 
   // Announcement operations

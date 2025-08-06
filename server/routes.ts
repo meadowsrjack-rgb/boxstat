@@ -50,6 +50,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/users/:id/trophies', isAuthenticated, async (req: any, res) => {
+    try {
+      const trophies = await storage.getUserTrophies(req.params.id);
+      res.json(trophies);
+    } catch (error) {
+      console.error("Error fetching user trophies:", error);
+      res.status(500).json({ message: "Failed to fetch trophies" });
+    }
+  });
+
   app.get('/api/users/:id/payments', isAuthenticated, async (req: any, res) => {
     try {
       const payments = await storage.getUserPayments(req.params.id);

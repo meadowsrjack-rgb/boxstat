@@ -123,9 +123,29 @@ export const badges = pgTable("badges", {
   description: text("description"),
   icon: varchar("icon").notNull(),
   color: varchar("color").notNull(),
+  tier: varchar("tier", { enum: ["grey", "green", "blue", "purple", "yellow"] }).notNull(),
+  type: varchar("type").notNull(), // MVP, Hustle, Teammate, etc.
   criteria: jsonb("criteria").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const trophies = pgTable("trophies", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  icon: varchar("icon").notNull(),
+  type: varchar("type", { enum: ["legacy", "team"] }).notNull(),
+  criteria: jsonb("criteria").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userTrophies = pgTable("user_trophies", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  trophyId: integer("trophy_id").references(() => trophies.id).notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
 });
 
 export const userBadges = pgTable("user_badges", {
@@ -292,6 +312,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
   attendances: many(attendances),
   badges: many(userBadges),
+  trophies: many(userTrophies),
   announcements: many(announcements),
   messages: many(messages),
   teamMessages: many(teamMessages),
@@ -356,6 +377,15 @@ export const userBadgesRelations = relations(userBadges, ({ one }) => ({
   badge: one(badges, { fields: [userBadges.badgeId], references: [badges.id] }),
 }));
 
+export const trophiesRelations = relations(trophies, ({ many }) => ({
+  users: many(userTrophies),
+}));
+
+export const userTrophiesRelations = relations(userTrophies, ({ one }) => ({
+  user: one(users, { fields: [userTrophies.userId], references: [users.id] }),
+  trophy: one(trophies, { fields: [userTrophies.trophyId], references: [trophies.id] }),
+}));
+
 export const announcementsRelations = relations(announcements, ({ one }) => ({
   author: one(users, { fields: [announcements.authorId], references: [users.id] }),
   team: one(teams, { fields: [announcements.teamId], references: [teams.id] }),
@@ -416,6 +446,8 @@ export const insertAnnouncementAcknowledgmentSchema = createInsertSchema(announc
 export const insertTeamMessageSchema = createInsertSchema(teamMessages).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPlayerTaskSchema = createInsertSchema(playerTasks).omit({ id: true, createdAt: true, completedAt: true });
 export const insertPlayerPointsSchema = createInsertSchema(playerPoints).omit({ id: true, earnedAt: true });
+export const insertTrophySchema = createInsertSchema(trophies).omit({ id: true, createdAt: true });
+export const insertUserTrophySchema = createInsertSchema(userTrophies).omit({ id: true, earnedAt: true });
 
 // Types
 export type UpsertUser = typeof users.$inferInsert;
@@ -425,6 +457,8 @@ export type Event = typeof events.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
 export type UserBadge = typeof userBadges.$inferSelect;
+export type Trophy = typeof trophies.$inferSelect;
+export type UserTrophy = typeof userTrophies.$inferSelect;
 export type Announcement = typeof announcements.$inferSelect;
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type Message = typeof messages.$inferSelect;
@@ -457,3 +491,7 @@ export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type InsertTaskCompletion = z.infer<typeof insertTaskCompletionSchema>;
 export type InsertAnnouncementAcknowledgment = z.infer<typeof insertAnnouncementAcknowledgmentSchema>;
 export type InsertTeamMessage = z.infer<typeof insertTeamMessageSchema>;
+export type InsertPlayerTask = z.infer<typeof insertPlayerTaskSchema>;
+export type InsertPlayerPoints = z.infer<typeof insertPlayerPointsSchema>;
+export type InsertTrophy = z.infer<typeof insertTrophySchema>;
+export type InsertUserTrophy = z.infer<typeof insertUserTrophySchema>;

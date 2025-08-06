@@ -10,6 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 6, 2025**: Added comprehensive trophies and badges system with tiered achievement structure
+- **August 6, 2025**: Created dedicated trophies and badges page with filtering by tier and type
+- **August 6, 2025**: Integrated trophies and badges section into player dashboard below skill ratings
+- **August 6, 2025**: Updated database schema with trophies and userTrophies tables, enhanced badges table with tier/type system
 - **July 31, 2025**: Enhanced PWA setup for iOS installation with proper manifest, service worker, and Apple touch icons
 - **July 31, 2025**: Updated app icons with UYP Basketball branding using red theme (#d82428)
 - **July 31, 2025**: Added comprehensive iOS PWA meta tags for standalone app experience

@@ -50,7 +50,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   
   // Get child profiles to find the current child's QR code
   const { data: childProfiles } = useQuery({
@@ -518,18 +518,17 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-900">Trophies & Badges</h3>
-                  <a 
-                    href="/simple-trophies"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.history.pushState({}, '', '/simple-trophies');
-                      window.dispatchEvent(new PopStateEvent('popstate'));
+                  <button
+                    onClick={() => {
+                      console.log('Navigating to simple-trophies, current location:', location);
+                      setLocation('/simple-trophies');
+                      console.log('setLocation called');
                     }}
                     className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 cursor-pointer"
                   >
                     View all
                     <ChevronRight className="h-4 w-4" />
-                  </a>
+                  </button>
                 </div>
                 
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">

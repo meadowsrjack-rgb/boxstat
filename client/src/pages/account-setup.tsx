@@ -17,7 +17,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
-// Account setup schema for new users
+// Account setup schema for new users with conditional validation
 const accountSetupSchema = z.object({
   userType: z.enum(["parent", "player"]),
   firstName: z.string().min(1, "First name is required"),
@@ -25,12 +25,30 @@ const accountSetupSchema = z.object({
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   phoneNumber: z.string().min(10, "Valid phone number is required"),
   address: z.string().min(1, "Address is required"),
-  emergencyContact: z.string().min(1, "Emergency contact is required"),
-  emergencyPhone: z.string().min(10, "Emergency phone is required"),
+  emergencyContact: z.string().optional(),
+  emergencyPhone: z.string().optional(),
   medicalInfo: z.string().optional(),
   allergies: z.string().optional(),
   schoolGrade: z.string().optional(),
   parentalConsent: z.boolean().refine(val => val === true, "Parental consent is required"),
+}).superRefine((data, ctx) => {
+  // For parents, emergency contact information is required
+  if (data.userType === "parent") {
+    if (!data.emergencyContact || data.emergencyContact.length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Emergency contact name is required for parent accounts",
+        path: ["emergencyContact"],
+      });
+    }
+    if (!data.emergencyPhone || data.emergencyPhone.length < 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Emergency contact phone is required for parent accounts",
+        path: ["emergencyPhone"],
+      });
+    }
+  }
 });
 
 type AccountSetupData = z.infer<typeof accountSetupSchema>;
@@ -75,6 +93,7 @@ export default function AccountSetup() {
 
   const userType = form.watch("userType");
   const isPlayer = userType === "player";
+  const isParent = userType === "parent";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
@@ -112,8 +131,8 @@ export default function AccountSetup() {
             </CardTitle>
             <CardDescription>
               {step === 1 && "Choose your account type"}
-              {step === 2 && "Tell us about yourself"}
-              {step === 3 && "Safety and medical information"}
+              {step === 2 && "Provide your personal information"}
+              {step === 3 && (isParent ? "Emergency contact required for parents" : "Emergency contact and medical information")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -342,34 +361,85 @@ export default function AccountSetup() {
                 {/* Step 3: Emergency & Medical */}
                 {step === 3 && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="emergencyContact"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Emergency Contact Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Full name" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="emergencyPhone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Emergency Contact Phone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="(555) 123-4567" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                    {/* Emergency Contact Section - Required for Parents */}
+                    {isParent && (
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          <h4 className="font-semibold text-orange-900">Emergency Contact Information</h4>
+                          <Badge variant="destructive" className="text-xs">Required</Badge>
+                        </div>
+                        <p className="text-sm text-orange-800 mb-4">
+                          As a parent, you must provide emergency contact information for family safety and league requirements.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="emergencyContact"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-1">
+                                  Emergency Contact Name
+                                  <span className="text-red-500">*</span>
+                                </FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Full name" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="emergencyPhone"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-1">
+                                  Emergency Contact Phone
+                                  <span className="text-red-500">*</span>
+                                </FormLabel>
+                                <FormControl>
+                                  <Input placeholder="(555) 123-4567" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Regular Emergency Contact for Players */}
+                    {!isParent && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="emergencyContact"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Name (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Full name" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="emergencyPhone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Emergency Contact Phone (Optional)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="(555) 123-4567" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
 
                     <FormField
                       control={form.control}

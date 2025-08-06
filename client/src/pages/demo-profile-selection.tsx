@@ -70,24 +70,30 @@ export default function DemoProfileSelection() {
   }, []);
 
   const handleProfileSelect = (profile: any) => {
+    console.log("Profile selected:", profile);
     setSelectedProfile(profile);
     
     // Store demo profile selection in session storage
     sessionStorage.setItem('demoProfile', JSON.stringify(profile));
     sessionStorage.setItem('isDemoMode', 'true');
+    console.log("Session storage set, navigating to:", profile.profileType);
     
     // Navigate based on profile type with demo indicator
     switch (profile.profileType) {
       case "player":
+        console.log("Navigating to player dashboard");
         setLocation("/player-dashboard?demo=true");
         break;
       case "parent":
+        console.log("Navigating to parent dashboard");
         setLocation("/parent-dashboard?demo=true");
         break;
       case "coach":
+        console.log("Navigating to admin dashboard");
         setLocation("/admin-dashboard?demo=true");
         break;
       default:
+        console.log("Navigating to home");
         setLocation("/?demo=true");
     }
   };

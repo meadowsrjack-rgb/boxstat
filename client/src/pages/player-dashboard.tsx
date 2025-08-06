@@ -51,11 +51,27 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const queryClient = useQueryClient();
 
   const [location, setLocation] = useLocation();
+
+  // Check if we're in demo mode
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
+  const demoProfile = isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null;
   
-  // Get child profiles to find the current child's QR code
+  // Use demo user data if in demo mode
+  const currentUser = isDemoMode ? {
+    id: demoProfile?.profileType === 'player' ? demoProfile.id : user?.id,
+    firstName: demoProfile?.firstName || user?.firstName,
+    lastName: demoProfile?.lastName || user?.lastName,
+    userType: 'player',
+    teamName: demoProfile?.teamName,
+    jerseyNumber: demoProfile?.jerseyNumber,
+    position: demoProfile?.position,
+    grade: demoProfile?.grade
+  } : user;
+  
+  // Get child profiles to find the current child's QR code (use demo data if in demo mode)
   const { data: childProfiles } = useQuery({
     queryKey: ["/api/child-profiles", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isDemoMode,
   });
 
   // Get the selected child ID from URL parameter or prop
@@ -90,7 +106,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     enabled: !!user?.id,
   });
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -235,6 +251,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       {/* Top Navigation Bar */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
+          {/* Demo Mode Indicator */}
+          {isDemoMode && (
+            <div className="flex items-center justify-center gap-2 mb-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md text-sm">
+              <span>🎭</span>
+              <span>Demo: {currentUser?.firstName || 'Player'}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setLocation('/demo-profiles')}
+                className="ml-2 h-6 text-xs border-orange-300 hover:bg-orange-200"
+              >
+                Switch Profile
+              </Button>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             {/* QR Code Button */}
             <Button 

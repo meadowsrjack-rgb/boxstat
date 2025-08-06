@@ -27,6 +27,13 @@ export default function ParentDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
+  // Check if we're in demo mode
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
+  const demoProfile = isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null;
+  
+  // Use demo user data if in demo mode
+  const currentUser = isDemoMode ? demoProfile : user;
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
@@ -43,28 +50,52 @@ export default function ParentDashboard() {
     };
   }, [showNotifications]);
 
-  // Get child profiles
+  // Demo data for child profiles
+  const demoChildProfiles = [
+    {
+      id: 1,
+      firstName: "Emma",
+      lastName: "Johnson",
+      teamName: "U12 Thunder",
+      jerseyNumber: 15,
+      position: "Point Guard",
+      grade: "6th Grade"
+    },
+    {
+      id: 2,
+      firstName: "Jake", 
+      lastName: "Johnson",
+      teamName: "U10 Lightning",
+      jerseyNumber: 8,
+      position: "Forward",
+      grade: "4th Grade"
+    }
+  ];
+
+  // Get child profiles (use demo data if in demo mode)
   const { data: childProfiles } = useQuery({
     queryKey: ["/api/child-profiles", user?.id],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isDemoMode,
   });
+  
+  const displayChildProfiles = isDemoMode ? demoChildProfiles : childProfiles;
 
   const { data: userEvents = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "events"],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isDemoMode,
   });
 
   const { data: userPayments = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "payments"],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isDemoMode,
   });
 
   const { data: announcements = [] } = useQuery({
     queryKey: ["/api/announcements"],
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isDemoMode,
   });
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -87,7 +118,23 @@ export default function ParentDashboard() {
               <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="relative" ref={notificationsRef}>
+              {/* Demo Mode Indicator */}
+            {isDemoMode && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md text-sm">
+                <span>🎭</span>
+                <span>Demo: {currentUser?.firstName || 'Parent'}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setLocation('/demo-profiles')}
+                  className="ml-2 h-6 text-xs border-orange-300 hover:bg-orange-200"
+                >
+                  Switch Profile
+                </Button>
+              </div>
+            )}
+            
+            <div className="relative" ref={notificationsRef}>
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -241,7 +288,7 @@ export default function ParentDashboard() {
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
                 <h4 className="font-semibold text-gray-900 text-sm">Players</h4>
-                <p className="text-xs text-purple-600">{childProfiles?.length || 0} Registered</p>
+                <p className="text-xs text-purple-600">{displayChildProfiles?.length || 0} Registered</p>
               </div>
             </div>
           </CardContent>

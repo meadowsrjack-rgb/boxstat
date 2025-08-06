@@ -100,6 +100,23 @@ function Router() {
     );
   }
 
+  // Check for demo mode in dashboards
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDashboardDemo = urlParams.get('demo') === 'true' || sessionStorage.getItem('isDemoMode') === 'true';
+  
+  if (isDashboardDemo && !isAuthenticated) {
+    // Handle demo dashboard routes without authentication
+    return (
+      <Switch>
+        <Route path="/parent-dashboard" component={ParentDashboard} />
+        <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+        <Route path="/admin-dashboard" component={AdminDashboard} />
+        <Route path="/demo-profiles" component={DemoProfileSelection} />
+        <Route component={DemoProfileSelection} />
+      </Switch>
+    );
+  }
+
   // Show account setup if profile not completed
   if (needsSetup) {
     return <AccountSetup />;

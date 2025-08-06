@@ -6,102 +6,76 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { User, Baby, Settings, TestTube, ArrowRight } from "lucide-react";
+import { Users, User, Settings, TestTube, ArrowRight, UserPlus, Briefcase } from "lucide-react";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
-const accountTypes = [
-  {
-    type: "parent",
-    name: "Parent Account",
-    description: "Full parent dashboard with payment management and child profiles",
-    features: [
-      "Full parent dashboard access",
-      "Payment management",
-      "Child profile management", 
-      "Team communication",
-      "Schedule management"
-    ],
-    icon: User,
-    color: "blue"
-  },
-  {
-    type: "player",
-    name: "Player Account",
-    description: "Kid-friendly dashboard with QR check-in and training access",
-    features: [
-      "Player dashboard view",
-      "QR code check-in",
-      "Training programs access",
-      "Team chat",
-      "Game schedule view"
-    ],
-    icon: Baby,
-    color: "green"
-  },
-  {
-    type: "admin",
-    name: "Admin/Coach Account",
-    description: "Administrative controls for team and league management",
-    features: [
-      "Team roster management",
-      "Schedule creation",
-      "Player statistics",
-      "Parent communication",
-      "Admin controls"
-    ],
-    icon: Settings,
-    color: "purple"
-  }
-];
+const unifiedAccount = {
+  type: "unified",
+  name: "Unified Family Account",
+  email: "sarah.johnson@email.com",
+  accountHolder: "Sarah Johnson",
+  description: "Complete family account with multiple profiles demonstrating the unified system",
+  profiles: [
+    {
+      name: "Sarah Johnson",
+      type: "parent",
+      description: "Family manager with full access to payments and children's activities"
+    },
+    {
+      name: "Emma Johnson",
+      type: "player",
+      team: "U12 Thunder",
+      jersey: "#15",
+      position: "Point Guard",
+      description: "6th grade player with team access and progress tracking"
+    },
+    {
+      name: "Jake Johnson", 
+      type: "player",
+      team: "U10 Lightning",
+      jersey: "#8",
+      position: "Forward",
+      description: "4th grade player with age-appropriate features"
+    }
+  ],
+  features: [
+    "Single login for entire family",
+    "Profile switching between family members",
+    "Parent dashboard with payment management",
+    "Multiple children on different teams",
+    "Cross-team communication and scheduling",
+    "Unified progress tracking",
+    "Role-based access control",
+    "Seamless profile management"
+  ],
+  icon: Users,
+  color: "blue"
+};
 
 export default function TestAccounts() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [loading, setLoading] = useState(false);
 
-  const createAndUseTestAccount = async (accountType: any) => {
+  const useUnifiedTestAccount = async () => {
     try {
       setLoading(true);
       
-      const testAccount = {
-        id: accountType.type === 'parent' ? 'test-parent-001' : 
-            accountType.type === 'player' ? 'test-player-001' : 'test-admin-001',
-        type: accountType.type,
-        name: accountType.name,
-        email: accountType.type === 'parent' ? 'parent.test@uyp.com' :
-               accountType.type === 'player' ? 'player.test@uyp.com' : 'admin.test@uyp.com'
-      };
-      
-      const response = await fetch('/api/test-accounts/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(testAccount),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: "Test Account Created",
-          description: `Created ${accountType.type} account. Signing you in...`,
-        });
-        
-        // Redirect to the test login URL
-        setTimeout(() => {
-          window.location.href = data.loginUrl;
-        }, 1000);
-      }
-    } catch (error) {
-      console.error('Error creating test account:', error);
+      // For demo purposes, redirect to the profile selection demo
       toast({
-        title: "Error",
-        description: "Failed to create test account",
+        title: "Loading Unified Account Demo",
+        description: "Redirecting to profile selection demo...",
+      });
+      
+      setTimeout(() => {
+        setLocation("/demo-profiles");
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error accessing demo account:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to access demo account",
         variant: "destructive",
       });
     } finally {
@@ -122,8 +96,8 @@ export default function TestAccounts() {
                 className="h-10 w-10 object-contain"
               />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Test Account Types</h1>
-                <p className="text-sm text-gray-600">Switch your account type to test different features</p>
+                <h1 className="text-2xl font-bold text-gray-900">Test Unified Account</h1>
+                <p className="text-sm text-gray-600">Experience the new unified family account system</p>
               </div>
             </div>
             <Button 
@@ -144,76 +118,126 @@ export default function TestAccounts() {
             <h2 className="text-lg font-semibold text-gray-900">Testing Environment</h2>
           </div>
           <p className="text-gray-600 mb-4">
-            Click on any account type below to create and sign in with that specific test account. 
-            Each account type provides access to different dashboards and features.
+            Test the new unified account system where one account contains multiple profiles for different family members.
+            This demo shows how parents can manage children on different teams within a single account.
           </p>
           <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
             <div className="flex">
               <div className="ml-3">
                 <p className="text-sm text-blue-700">
-                  <strong>How it works:</strong> Click "Use This Account" to create and automatically sign in with that account type.
-                  You'll be redirected to the appropriate dashboard for testing.
+                  <strong>New Unified System:</strong> Click "Try Demo Account" to experience profile selection 
+                  where Sarah can switch between her parent account and her children's player profiles.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3">
-          {accountTypes.map((account) => {
-            const IconComponent = account.icon;
-            return (
-              <Card key={account.type} className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <IconComponent className={`h-6 w-6 text-${account.color}-600`} />
-                      <div>
-                        <CardTitle className="text-lg">{account.name}</CardTitle>
+        <div className="max-w-2xl mx-auto">
+          <Card className="hover:shadow-lg transition-all duration-200 border-2 hover:border-primary/20">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <Users className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <CardTitle className="text-xl">{unifiedAccount.name}</CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">{unifiedAccount.email}</p>
+                  </div>
+                </div>
+                <Badge variant="default" className="capitalize">
+                  Family Account
+                </Badge>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <p className="text-sm text-gray-600">{unifiedAccount.description}</p>
+              
+              {/* Profile showcase */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm text-gray-900">Included Profiles:</h4>
+                <div className="space-y-2">
+                  {unifiedAccount.profiles.map((profile, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-shrink-0">
+                        {profile.type === 'parent' ? (
+                          <Users className="h-5 w-5 text-blue-600" />
+                        ) : profile.type === 'player' ? (
+                          <User className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Briefcase className="h-5 w-5 text-purple-600" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium text-sm">{profile.name}</span>
+                          <Badge 
+                            variant={profile.type === 'parent' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {profile.type}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-600">{profile.description}</p>
+                        {profile.team && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {profile.team} • {profile.jersey} • {profile.position}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <Badge 
-                      variant={account.type === "parent" ? "default" : account.type === "player" ? "secondary" : "outline"}
-                      className="capitalize"
-                    >
-                      {account.type}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-600">{account.description}</p>
-                  
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-gray-900">Features:</h4>
-                    <ul className="space-y-1">
-                      {account.features.map((feature, index) => (
-                        <li key={index} className="text-xs text-gray-600 flex items-center space-x-2">
-                          <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  
-                  <Button 
-                    className="w-full mt-4" 
-                    onClick={() => createAndUseTestAccount(account)}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      "Creating Account..."
-                    ) : (
-                      <>
-                        Use This Account
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm text-gray-900">System Features:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {unifiedAccount.features.map((feature, index) => (
+                    <div key={index} className="text-xs text-gray-600 flex items-center space-x-2">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full flex-shrink-0"></div>
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <Button 
+                className="w-full mt-6" 
+                onClick={useUnifiedTestAccount}
+                disabled={loading}
+                size="lg"
+              >
+                {loading ? (
+                  "Loading Demo..."
+                ) : (
+                  <>
+                    Try Demo Account
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Info box about the change */}
+          <Card className="mt-6 bg-green-50 border-green-200">
+            <CardContent className="p-4">
+              <div className="flex items-start space-x-3">
+                <UserPlus className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2">What's New: Unified Account System</h4>
+                  <ul className="text-sm text-green-800 space-y-1">
+                    <li>• One account now contains multiple family member profiles</li>
+                    <li>• Parents can switch between managing family and accessing player views</li>
+                    <li>• Children can have accounts on different teams within the same family</li>
+                    <li>• Simplified login with profile selection after authentication</li>
+                    <li>• All payment and communication flows unified under one account</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="mt-8 text-center">

@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 6, 2025**: Created demo unified account system with profile selection functionality showing parent account with two children on different teams
 - **August 6, 2025**: Successfully implemented comprehensive trophies and badges system with navigation functionality
 - **August 6, 2025**: Fixed client-side routing issues with wouter setLocation for proper SPA navigation
 - **August 6, 2025**: Added comprehensive trophies and badges system with tiered achievement structure

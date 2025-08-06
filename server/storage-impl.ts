@@ -1,4 +1,9 @@
 import {
+  // New tables
+  accounts,
+  profiles,
+  profileRelationships,
+  // Legacy tables
   users,
   teams,
   events,
@@ -19,6 +24,14 @@ import {
   announcementAcknowledgments,
   playerTasks,
   playerPoints,
+  // New types
+  type Account,
+  type Profile,
+  type ProfileRelationship,
+  type InsertAccount,
+  type InsertProfile,
+  type InsertProfileRelationship,
+  // Legacy types
   type User,
   type UpsertUser,
   type Team,
@@ -40,6 +53,11 @@ import {
   type AnnouncementAcknowledgment,
   type PlayerTask,
   type PlayerPoints,
+  // New insert schemas
+  insertAccountSchema,
+  insertProfileSchema,
+  insertProfileRelationshipSchema,
+  // Legacy insert schemas
   insertUserSchema,
   insertTeamSchema,
   insertEventSchema,
@@ -65,13 +83,30 @@ import { eq, and, desc, asc, gte, lte, sql, or, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // Account operations (new unified system)
+  getAccount(id: string): Promise<Account | undefined>;
+  upsertAccount(account: InsertAccount): Promise<Account>;
+  updateAccount(id: string, data: Partial<Account>): Promise<Account>;
+  
+  // Profile operations (new unified system)
+  getProfile(id: string): Promise<Profile | undefined>;
+  getAccountProfiles(accountId: string): Promise<Profile[]>;
+  createProfile(profile: InsertProfile): Promise<Profile>;
+  updateProfile(id: string, data: Partial<Profile>): Promise<Profile>;
+  deleteProfile(id: string): Promise<void>;
+  selectProfile(accountId: string, profileId: string): Promise<Profile>;
+  
+  // Profile relationship operations
+  getProfileRelationships(accountId: string): Promise<ProfileRelationship[]>;
+  createProfileRelationship(relationship: InsertProfileRelationship): Promise<ProfileRelationship>;
+  
+  // User operations (legacy - required for Replit Auth compatibility)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserProfile(id: string, data: Partial<User>): Promise<User>;
   updateUserSportsEngineInfo(userId: string, sportsEngineCustomerId: string, sportsEngineSubscriptionId: string): Promise<User>;
   
-  // Family operations
+  // Family operations (legacy)
   getFamilyMembers(parentId: string): Promise<FamilyMember[]>;
   getChildProfiles(parentId: string): Promise<any[]>;
   addFamilyMember(data: InsertFamilyMember): Promise<FamilyMember>;
@@ -159,6 +194,87 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Account operations (new unified system)
+  async getAccount(id: string): Promise<Account | undefined> {
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+    return account;
+  }
+
+  async upsertAccount(account: InsertAccount): Promise<Account> {
+    const [result] = await db.insert(accounts).values(account).onConflictDoUpdate({
+      target: accounts.id,
+      set: {
+        email: account.email,
+        primaryAccountType: account.primaryAccountType,
+        accountCompleted: account.accountCompleted,
+        stripeCustomerId: account.stripeCustomerId,
+        sportsEngineCustomerId: account.sportsEngineCustomerId,
+        updatedAt: new Date(),
+      }
+    }).returning();
+    return result;
+  }
+
+  async updateAccount(id: string, data: Partial<Account>): Promise<Account> {
+    const [result] = await db.update(accounts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(accounts.id, id))
+      .returning();
+    return result;
+  }
+
+  // Profile operations (new unified system)
+  async getProfile(id: string): Promise<Profile | undefined> {
+    const [profile] = await db.select().from(profiles).where(eq(profiles.id, id));
+    return profile;
+  }
+
+  async getAccountProfiles(accountId: string): Promise<Profile[]> {
+    return await db.select().from(profiles)
+      .where(and(eq(profiles.accountId, accountId), eq(profiles.isActive, true)))
+      .orderBy(asc(profiles.createdAt));
+  }
+
+  async createProfile(profile: InsertProfile): Promise<Profile> {
+    const [result] = await db.insert(profiles).values({
+      ...profile,
+      qrCodeData: `UYP-${profile.id}-${Date.now()}` // Generate QR code data
+    }).returning();
+    return result;
+  }
+
+  async updateProfile(id: string, data: Partial<Profile>): Promise<Profile> {
+    const [result] = await db.update(profiles)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(profiles.id, id))
+      .returning();
+    return result;
+  }
+
+  async deleteProfile(id: string): Promise<void> {
+    await db.update(profiles)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(profiles.id, id));
+  }
+
+  async selectProfile(accountId: string, profileId: string): Promise<Profile> {
+    const profile = await this.getProfile(profileId);
+    if (!profile || profile.accountId !== accountId) {
+      throw new Error("Profile not found or access denied");
+    }
+    return profile;
+  }
+
+  // Profile relationship operations
+  async getProfileRelationships(accountId: string): Promise<ProfileRelationship[]> {
+    return await db.select().from(profileRelationships)
+      .where(eq(profileRelationships.accountId, accountId));
+  }
+
+  async createProfileRelationship(relationship: InsertProfileRelationship): Promise<ProfileRelationship> {
+    const [result] = await db.insert(profileRelationships).values(relationship).returning();
+    return result;
+  }
   // User operations (required for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

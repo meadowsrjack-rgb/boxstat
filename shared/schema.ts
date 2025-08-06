@@ -28,7 +28,46 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table (required for Replit Auth)
+// Primary account table - one account can have multiple profiles
+export const accounts = pgTable("accounts", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").unique(),
+  primaryAccountType: varchar("primary_account_type", { enum: ["parent", "player", "coach"] }).notNull(),
+  accountCompleted: boolean("account_completed").default(false),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  sportsEngineCustomerId: varchar("sports_engine_customer_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Profiles table - multiple profiles per account
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey().notNull(),
+  accountId: varchar("account_id").notNull().references(() => accounts.id),
+  profileType: varchar("profile_type", { enum: ["parent", "player", "coach"] }).notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  dateOfBirth: date("date_of_birth"),
+  phoneNumber: varchar("phone_number"),
+  emergencyContact: varchar("emergency_contact"),
+  emergencyPhone: varchar("emergency_phone"),
+  address: text("address"),
+  medicalInfo: text("medical_info"),
+  allergies: text("allergies"),
+  teamId: integer("team_id"),
+  jerseyNumber: integer("jersey_number"),
+  position: varchar("position"),
+  schoolGrade: varchar("school_grade"),
+  parentalConsent: boolean("parental_consent").default(false),
+  profileCompleted: boolean("profile_completed").default(false),
+  qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Legacy users table (for backward compatibility with Replit Auth)
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
@@ -58,7 +97,22 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Family relationships table - links parents to players
+// Profile relationships table - links profiles within an account
+export const profileRelationships = pgTable("profile_relationships", {
+  id: serial("id").primaryKey(),
+  accountId: varchar("account_id").notNull().references(() => accounts.id),
+  parentProfileId: varchar("parent_profile_id").references(() => profiles.id),
+  playerProfileId: varchar("player_profile_id").references(() => profiles.id),
+  relationship: varchar("relationship", { enum: ["parent", "guardian", "sibling", "grandparent"] }).notNull().default("parent"),
+  canMakePayments: boolean("can_make_payments").notNull().default(true),
+  canViewReports: boolean("can_view_reports").notNull().default(true),
+  emergencyContact: boolean("emergency_contact").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueRelationship: unique().on(table.parentProfileId, table.playerProfileId),
+}));
+
+// Legacy family relationships table (for backward compatibility)
 export const familyMembers = pgTable("family_members", {
   id: serial("id").primaryKey(),
   parentId: varchar("parent_id").notNull().references(() => users.id),
@@ -330,6 +384,49 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
 }));
 
+// New relations for accounts and profiles
+export const accountsRelations = relations(accounts, ({ many }) => ({
+  profiles: many(profiles),
+  profileRelationships: many(profileRelationships),
+}));
+
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
+  account: one(accounts, { fields: [profiles.accountId], references: [accounts.id] }),
+  team: one(teams, { fields: [profiles.teamId], references: [teams.id] }),
+  attendances: many(attendances),
+  badges: many(userBadges),
+  trophies: many(userTrophies),
+  announcements: many(announcements),
+  messages: many(messages),
+  teamMessages: many(teamMessages),
+  payments: many(payments),
+  stats: many(playerStats),
+  trainingSubscriptions: many(trainingSubscriptions),
+  trainingProgress: many(trainingProgress),
+  playerTasks: many(playerTasks),
+  playerPoints: many(playerPoints),
+  parentRelationships: many(profileRelationships, {
+    relationName: "parentProfileRelation",
+  }),
+  playerRelationships: many(profileRelationships, {
+    relationName: "playerProfileRelation",
+  }),
+}));
+
+export const profileRelationshipsRelations = relations(profileRelationships, ({ one }) => ({
+  account: one(accounts, { fields: [profileRelationships.accountId], references: [accounts.id] }),
+  parentProfile: one(profiles, {
+    fields: [profileRelationships.parentProfileId],
+    references: [profiles.id],
+    relationName: "parentProfileRelation",
+  }),
+  playerProfile: one(profiles, {
+    fields: [profileRelationships.playerProfileId],
+    references: [profiles.id],
+    relationName: "playerProfileRelation",
+  }),
+}));
+
 export const familyMembersRelations = relations(familyMembers, ({ one }) => ({
   parent: one(users, {
     fields: [familyMembers.parentId],
@@ -426,7 +523,12 @@ export const playerPointsRelations = relations(playerPoints, ({ one }) => ({
   task: one(playerTasks, { fields: [playerPoints.taskId], references: [playerTasks.id] }),
 }));
 
-// Insert schemas
+// Insert schemas for new tables
+export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertProfileRelationshipSchema = createInsertSchema(profileRelationships).omit({ id: true, createdAt: true });
+
+// Legacy insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
@@ -449,7 +551,15 @@ export const insertPlayerPointsSchema = createInsertSchema(playerPoints).omit({ 
 export const insertTrophySchema = createInsertSchema(trophies).omit({ id: true, createdAt: true });
 export const insertUserTrophySchema = createInsertSchema(userTrophies).omit({ id: true, earnedAt: true });
 
-// Types
+// New types
+export type Account = typeof accounts.$inferSelect;
+export type Profile = typeof profiles.$inferSelect;
+export type ProfileRelationship = typeof profileRelationships.$inferSelect;
+export type InsertAccount = z.infer<typeof insertAccountSchema>;
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type InsertProfileRelationship = z.infer<typeof insertProfileRelationshipSchema>;
+
+// Legacy types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;

@@ -32,6 +32,10 @@ import TrophiesBadges from "@/pages/trophies-badges-working";
 import SimpleTrophies from "@/pages/simple-trophies";
 import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
+import ProfileSelection from "@/pages/profile-selection";
+import CreateProfile from "@/pages/create-profile";
+import DemoProfileSelection from "@/pages/demo-profile-selection";
+import DemoAccountSetup from "@/pages/demo-account-setup";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -87,6 +91,18 @@ function Router() {
     return <AccountSetup />;
   }
 
+  // Check if user needs to select a profile
+  const needsProfileSelection = (user as any)?.needsProfileSelection;
+  if (needsProfileSelection) {
+    return (
+      <Switch>
+        <Route path="/profile-selection" component={ProfileSelection} />
+        <Route path="/create-profile" component={CreateProfile} />
+        <Route component={ProfileSelection} />
+      </Switch>
+    );
+  }
+
   // Route based on user type
   const getDashboardComponent = () => {
     switch ((user as any)?.userType) {
@@ -119,6 +135,10 @@ function Router() {
       <Route path="/test-route" component={TestRoute} />
       <Route path="/simple-trophies" component={SimpleTrophies} />
       <Route path="/trophies-badges" component={TrophiesBadges} />
+      <Route path="/profile-selection" component={ProfileSelection} />
+      <Route path="/create-profile" component={CreateProfile} />
+      <Route path="/demo-profiles" component={DemoProfileSelection} />
+      <Route path="/demo-setup" component={DemoAccountSetup} />
       
       {/* Parent-specific routes */}
       {(user as any)?.userType === 'parent' && (

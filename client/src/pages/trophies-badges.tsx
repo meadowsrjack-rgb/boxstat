@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, Filter, Trophy, Award, Star, Shield, Target, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Badge tier colors
 const TIER_COLORS = {
@@ -129,15 +127,13 @@ export default function TrophiesBadges() {
       <div className="bg-white border-b">
         <div className="max-w-md mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setLocation('/player-dashboard')}
-              className="p-2"
+              className="p-2 hover:bg-gray-100 rounded-md"
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
-            </Button>
+            </button>
             <h1 className="text-xl font-bold text-gray-900">Trophies & Badges</h1>
           </div>
         </div>
@@ -197,31 +193,31 @@ export default function TrophiesBadges() {
             
             {/* Filter Button */}
             <div className="flex gap-2">
-              <Select value={filterTier} onValueChange={setFilterTier}>
-                <SelectTrigger className="w-32" data-testid="select-tier-filter">
-                  <SelectValue placeholder="Tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIERS.map((tier) => (
-                    <SelectItem key={tier} value={tier}>
-                      {tier}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select 
+                value={filterTier} 
+                onChange={(e) => setFilterTier(e.target.value)}
+                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                data-testid="select-tier-filter"
+              >
+                {TIERS.map((tier) => (
+                  <option key={tier} value={tier}>
+                    {tier}
+                  </option>
+                ))}
+              </select>
               
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-32" data-testid="select-type-filter">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BADGE_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                data-testid="select-type-filter"
+              >
+                {BADGE_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           

@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -518,27 +518,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold text-gray-900">Trophies & Badges</h3>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => {
-                        console.log('Navigation clicked - attempting to go to /simple-trophies');
-                        console.log('Current pathname:', window.location.pathname);
-                        console.log('SetLocation function:', typeof setLocation);
-                        setLocation('/simple-trophies');
-                        console.log('SetLocation called');
-                      }}
-                      className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                    >
+                  <Link href="/trophies-badges">
+                    <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
                       View all
                       <ChevronRight className="h-4 w-4" />
                     </button>
-                    <a 
-                      href="/simple-trophies"
-                      className="text-sm text-blue-500 hover:text-blue-700"
-                    >
-                      Direct Link
-                    </a>
-                  </div>
+                  </Link>
                 </div>
                 
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">

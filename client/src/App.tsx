@@ -28,7 +28,7 @@ import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
-import TrophiesBadges from "@/pages/trophies-badges";
+import TrophiesBadges from "@/pages/trophies-badges-fixed";
 import SimpleTrophies from "@/pages/simple-trophies";
 import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";

@@ -51,8 +51,22 @@ export default function DemoProfileSelection() {
   // Check if we're in demo mode
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const fromDemo = urlParams.get('from') === 'demo' || window.location.pathname.includes('demo');
-    setIsDemoMode(true); // Always in demo mode for this page
+    const demoActive = urlParams.get('demo') === 'active' || window.location.pathname.includes('demo');
+    setIsDemoMode(demoActive);
+    
+    // Check demo session status
+    fetch('/api/auth/demo-status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.isDemoMode) {
+          console.log("Demo mode confirmed:", data);
+          setIsDemoMode(true);
+        }
+      })
+      .catch(err => {
+        console.log("Not in demo mode:", err);
+        setIsDemoMode(false);
+      });
   }, []);
 
   const handleProfileSelect = (profile: any) => {
@@ -127,11 +141,34 @@ export default function DemoProfileSelection() {
         {isDemoMode && (
           <Card className="bg-orange-50 border-orange-200">
             <CardContent className="p-4">
-              <h4 className="font-medium text-orange-900 mb-2">🎭 Demo Mode Active</h4>
-              <p className="text-sm text-orange-800">
-                You're experiencing the unified account system demo. This shows how Sarah Johnson's account 
-                contains multiple family member profiles.
-              </p>
+              <div className="flex items-start space-x-3">
+                <div className="text-orange-600 text-lg">🎭</div>
+                <div>
+                  <h4 className="font-medium text-orange-900 mb-2">Demo Mode Active</h4>
+                  <p className="text-sm text-orange-800">
+                    You're experiencing the unified account system demo. This shows how Sarah Johnson's account 
+                    contains multiple family member profiles with profile switching capabilities.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.location.href = '/'}
+                      className="text-orange-800 border-orange-300 hover:bg-orange-100"
+                    >
+                      Exit Demo
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setLocation('/test-accounts')}
+                      className="text-orange-800 border-orange-300 hover:bg-orange-100"
+                    >
+                      Back to Test Accounts
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}

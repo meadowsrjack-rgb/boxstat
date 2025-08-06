@@ -933,15 +933,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect('/?error=missing_user_id');
       }
 
+      // Get the demo user to verify it exists
+      const demoUser = await storage.getUser(userId);
+      if (!demoUser) {
+        return res.redirect('/?error=demo_user_not_found');
+      }
+
       // Set demo mode in session
       req.session.demoUserId = userId;
       req.session.isDemoMode = true;
+      req.session.demoUser = demoUser;
       
-      // Redirect to demo profiles page
-      res.redirect('/demo-profiles');
+      console.log("Demo session created:", { userId, isDemoMode: true });
+      
+      // Redirect to demo profiles page with query param
+      res.redirect('/demo-profiles?demo=active');
     } catch (error) {
       console.error("Demo login error:", error);
       res.redirect('/?error=demo_login_failed');
+    }
+  });
+
+  // Demo auth check endpoint
+  app.get('/api/auth/demo-status', async (req: any, res) => {
+    if (req.session.isDemoMode && req.session.demoUser) {
+      res.json({
+        isDemoMode: true,
+        user: req.session.demoUser,
+        hasMultipleProfiles: true
+      });
+    } else {
+      res.status(401).json({ message: "No demo session active" });
     }
   });
 

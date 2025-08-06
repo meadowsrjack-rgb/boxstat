@@ -88,7 +88,7 @@ export default function TestAccounts() {
         // Redirect to the demo login URL
         setTimeout(() => {
           window.location.href = data.loginUrl;
-        }, 1000);
+        }, 500);
       } else {
         throw new Error(data.message || 'Failed to create demo account');
       }

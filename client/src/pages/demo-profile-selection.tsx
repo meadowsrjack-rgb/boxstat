@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,14 @@ const DEMO_PROFILES = [
 export default function DemoProfileSelection() {
   const [, setLocation] = useLocation();
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
+
+  // Check if we're in demo mode
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromDemo = urlParams.get('from') === 'demo' || window.location.pathname.includes('demo');
+    setIsDemoMode(true); // Always in demo mode for this page
+  }, []);
 
   const handleProfileSelect = (profile: any) => {
     setSelectedProfile(profile);
@@ -115,6 +123,18 @@ export default function DemoProfileSelection() {
       </div>
 
       <main className="max-w-2xl mx-auto p-6 space-y-6">
+        {/* Demo Mode Notice */}
+        {isDemoMode && (
+          <Card className="bg-orange-50 border-orange-200">
+            <CardContent className="p-4">
+              <h4 className="font-medium text-orange-900 mb-2">🎭 Demo Mode Active</h4>
+              <p className="text-sm text-orange-800">
+                You're experiencing the unified account system demo. This shows how Sarah Johnson's account 
+                contains multiple family member profiles.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         {/* Current Account Info */}
         <Card>
           <CardHeader>

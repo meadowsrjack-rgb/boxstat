@@ -876,6 +876,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test account creation endpoint for unified demo
+  app.post('/api/test-accounts/create-unified', async (req: any, res) => {
+    try {
+      // Create the demo parent account
+      const parentUser = await storage.upsertUser({
+        id: 'demo-parent-sarah-001',
+        email: 'sarah.johnson@email.com',
+        firstName: 'Sarah',
+        lastName: 'Johnson',
+        userType: 'parent',
+        teamId: null,
+        profileCompleted: true,
+        accountCompleted: true,
+        phoneNumber: '(555) 123-4567',
+        address: '123 Family Lane, Costa Mesa, CA 92626'
+      });
+
+      // Create family relationships for demo
+      try {
+        await storage.createFamilyMember({
+          parentId: 'demo-parent-sarah-001',
+          playerId: 'demo-player-emma-001',
+          relationship: 'parent-child'
+        });
+        await storage.createFamilyMember({
+          parentId: 'demo-parent-sarah-001',
+          playerId: 'demo-player-jake-001',
+          relationship: 'parent-child'
+        });
+      } catch (error) {
+        // Family relationships may already exist
+      }
+
+      res.json({
+        success: true,
+        message: "Demo account created successfully",
+        loginUrl: `/api/demo-login?userId=demo-parent-sarah-001`,
+        accountId: 'demo-parent-sarah-001'
+      });
+    } catch (error) {
+      console.error("Error creating demo account:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to create demo account",
+        error: error.message 
+      });
+    }
+  });
+
+  // Demo login endpoint
+  app.get('/api/demo-login', async (req: any, res) => {
+    try {
+      const userId = req.query.userId;
+      if (!userId) {
+        return res.redirect('/?error=missing_user_id');
+      }
+
+      // Set demo mode in session
+      req.session.demoUserId = userId;
+      req.session.isDemoMode = true;
+      
+      // Redirect to demo profiles page
+      res.redirect('/demo-profiles');
+    } catch (error) {
+      console.error("Demo login error:", error);
+      res.redirect('/?error=demo_login_failed');
+    }
+  });
+
   // SportsEngine integration routes
   app.use('/api/sportsengine', sportsEngineRoutes);
 

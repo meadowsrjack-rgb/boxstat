@@ -61,21 +61,43 @@ export default function TestAccounts() {
     try {
       setLoading(true);
       
-      // For demo purposes, redirect to the profile selection demo
-      toast({
-        title: "Loading Unified Account Demo",
-        description: "Redirecting to profile selection demo...",
+      // Create the unified demo account
+      const response = await fetch('/api/test-accounts/create-unified', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'unified',
+          name: 'Unified Family Account'
+        }),
       });
-      
-      setTimeout(() => {
-        setLocation("/demo-profiles");
-      }, 1000);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Demo Account Ready",
+          description: "Redirecting to unified account demo...",
+        });
+        
+        // Redirect to the demo login URL
+        setTimeout(() => {
+          window.location.href = data.loginUrl;
+        }, 1000);
+      } else {
+        throw new Error(data.message || 'Failed to create demo account');
+      }
       
     } catch (error) {
-      console.error('Error accessing demo account:', error);
+      console.error('Error creating demo account:', error);
       toast({
         title: "Error", 
-        description: "Failed to access demo account",
+        description: "Failed to create demo account",
         variant: "destructive",
       });
     } finally {

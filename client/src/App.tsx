@@ -29,6 +29,8 @@ import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
 import TrophiesBadges from "@/pages/trophies-badges";
+import SimpleTrophies from "@/pages/simple-trophies";
+import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -114,6 +116,8 @@ function Router() {
       <Route path="/chat" component={Chat} />
       <Route path="/training" component={Training} />
       <Route path="/training-library" component={TrainingLibrary} />
+      <Route path="/test-route" component={TestRoute} />
+      <Route path="/simple-trophies" component={SimpleTrophies} />
       <Route path="/trophies-badges" component={TrophiesBadges} />
       
       {/* Parent-specific routes */}

@@ -520,8 +520,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <h3 className="text-lg font-bold text-gray-900">Trophies & Badges</h3>
                   <button 
                     onClick={() => {
-                      console.log('Navigating to trophies-badges');
-                      setLocation('/trophies-badges');
+                      console.log('Attempting navigation to /simple-trophies');
+                      console.log('Current location:', window.location.href);
+                      setLocation('/simple-trophies');
+                      setTimeout(() => {
+                        console.log('New location after navigation:', window.location.href);
+                      }, 100);
                     }}
                     className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
                   >

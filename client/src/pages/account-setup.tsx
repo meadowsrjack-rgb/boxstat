@@ -19,7 +19,7 @@ import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 // Account setup schema for new users with conditional validation
 const accountSetupSchema = z.object({
-  userType: z.enum(["parent", "player"]),
+  userType: z.enum(["parent", "player", "coach"]),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
@@ -32,19 +32,19 @@ const accountSetupSchema = z.object({
   schoolGrade: z.string().optional(),
   parentalConsent: z.boolean().refine(val => val === true, "Parental consent is required"),
 }).superRefine((data, ctx) => {
-  // For parents, emergency contact information is required
-  if (data.userType === "parent") {
+  // For parents and coaches, emergency contact information is required
+  if (data.userType === "parent" || data.userType === "coach") {
     if (!data.emergencyContact || data.emergencyContact.length < 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Emergency contact name is required for parent accounts",
+        message: `Emergency contact name is required for ${data.userType} accounts`,
         path: ["emergencyContact"],
       });
     }
     if (!data.emergencyPhone || data.emergencyPhone.length < 10) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Emergency contact phone is required for parent accounts",
+        message: `Emergency contact phone is required for ${data.userType} accounts`,
         path: ["emergencyPhone"],
       });
     }
@@ -115,6 +115,7 @@ export default function AccountSetup() {
   const userType = form.watch("userType");
   const isPlayer = userType === "player";
   const isParent = userType === "parent";
+  const isCoach = userType === "coach";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 flex items-center justify-center p-4">
@@ -160,7 +161,7 @@ export default function AccountSetup() {
             <CardDescription>
               {step === 1 && "Choose your account type"}
               {step === 2 && "Provide your personal information"}
-              {step === 3 && (isParent ? "Emergency contact required for parents" : "Emergency contact and medical information")}
+              {step === 3 && (isParent || isCoach ? `Emergency contact required for ${userType}s` : "Emergency contact and medical information")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -174,9 +175,9 @@ export default function AccountSetup() {
                       name="userType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Are you a parent or player?</FormLabel>
+                          <FormLabel>What type of account do you need?</FormLabel>
                           <FormControl>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <div
                                 className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
                                   field.value === "parent" 
@@ -209,6 +210,22 @@ export default function AccountSetup() {
                                   </p>
                                 </div>
                               </div>
+                              <div
+                                className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
+                                  field.value === "coach" 
+                                    ? "border-green-600 bg-green-50" 
+                                    : "border-gray-200 hover:border-gray-300"
+                                }`}
+                                onClick={() => field.onChange("coach")}
+                              >
+                                <div className="text-center">
+                                  <GraduationCap className="w-12 h-12 mx-auto mb-3 text-green-600" />
+                                  <h3 className="font-semibold mb-2">Coach</h3>
+                                  <p className="text-sm text-gray-600">
+                                    Manage team rosters, practices, and player development
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                           </FormControl>
                           <FormMessage />
@@ -225,6 +242,21 @@ export default function AccountSetup() {
                             <p className="text-sm text-yellow-700 mt-1">
                               Players under 18 will need parental consent to complete registration. 
                               Your parent/guardian can add you to their family account for payments and permissions.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isCoach && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <GraduationCap className="w-5 h-5 text-green-600 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-green-800">Coach Account Information</h4>
+                            <p className="text-sm text-green-700 mt-1">
+                              Coach accounts include team management tools, practice scheduling, and player development tracking. 
+                              Background checks and certifications may be required based on league policies.
                             </p>
                           </div>
                         </div>
@@ -389,8 +421,8 @@ export default function AccountSetup() {
                 {/* Step 3: Emergency & Medical */}
                 {step === 3 && (
                   <div className="space-y-4">
-                    {/* Emergency Contact Section - Required for Parents */}
-                    {isParent && (
+                    {/* Emergency Contact Section - Required for Parents and Coaches */}
+                    {(isParent || isCoach) && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
                         <div className="flex items-center gap-2 mb-3">
                           <AlertTriangle className="w-5 h-5 text-orange-600" />
@@ -398,7 +430,7 @@ export default function AccountSetup() {
                           <Badge variant="destructive" className="text-xs">Required</Badge>
                         </div>
                         <p className="text-sm text-orange-800 mb-4">
-                          As a parent, you must provide emergency contact information for family safety and league requirements.
+                          As a {userType}, you must provide emergency contact information for safety and league requirements.
                         </p>
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
@@ -438,7 +470,7 @@ export default function AccountSetup() {
                     )}
                     
                     {/* Regular Emergency Contact for Players */}
-                    {!isParent && (
+                    {isPlayer && (
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}

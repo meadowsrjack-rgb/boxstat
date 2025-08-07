@@ -147,8 +147,7 @@ export default function TestAccounts() {
             <div className="flex">
               <div className="ml-3">
                 <p className="text-sm text-blue-700">
-                  <strong>New Unified System:</strong> Click "Try Demo Account" to experience profile selection 
-                  where Sarah can switch between her parent account and her children's player profiles.
+                  <strong>Test Options:</strong> Try the demo account to see unified profiles in action, or test the complete signup flow with emergency contact requirements for parents.
                 </p>
               </div>
             </div>
@@ -224,21 +223,36 @@ export default function TestAccounts() {
                 </div>
               </div>
               
-              <Button 
-                className="w-full mt-6" 
-                onClick={useUnifiedTestAccount}
-                disabled={loading}
-                size="lg"
-              >
-                {loading ? (
-                  "Loading Demo..."
-                ) : (
-                  <>
-                    Try Demo Account
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
+              <div className="space-y-3 mt-6">
+                <Button 
+                  className="w-full" 
+                  onClick={useUnifiedTestAccount}
+                  disabled={loading}
+                  size="lg"
+                >
+                  {loading ? (
+                    "Loading Demo..."
+                  ) : (
+                    <>
+                      Try Demo Account
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+
+                <Button 
+                  onClick={() => setLocation('/account-setup')}
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Test New Account Signup
+                </Button>
+                <p className="text-xs text-gray-600 text-center mt-2">
+                  Test the complete registration flow with emergency contact requirements for parents
+                </p>
+              </div>
             </CardContent>
           </Card>
 

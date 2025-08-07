@@ -36,6 +36,7 @@ import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
 import DemoAccountSetup from "@/pages/demo-account-setup";
+import CalendarSync from "@/pages/calendar-sync";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -179,6 +180,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
+      <Route path="/calendar-sync" component={CalendarSync} />
       <Route path="/chat" component={Chat} />
       <Route path="/training" component={Training} />
       <Route path="/training-library" component={TrainingLibrary} />

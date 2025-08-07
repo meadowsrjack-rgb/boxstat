@@ -1,0 +1,194 @@
+import { google } from 'googleapis';
+import { storage } from './storage';
+
+const GOOGLE_CALENDAR_API_KEY = process.env.GOOGLE_CALENDAR_API_KEY;
+const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
+
+if (!GOOGLE_CALENDAR_API_KEY || !GOOGLE_CALENDAR_ID) {
+  console.warn('Google Calendar credentials not found. Calendar sync will be disabled.');
+}
+
+// Initialize Google Calendar API
+const calendar = google.calendar({
+  version: 'v3',
+  auth: GOOGLE_CALENDAR_API_KEY
+});
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime?: string;
+    date?: string;
+    timeZone?: string;
+  };
+  location?: string;
+  created: string;
+  updated: string;
+}
+
+export async function syncGoogleCalendarEvents() {
+  if (!GOOGLE_CALENDAR_API_KEY || !GOOGLE_CALENDAR_ID) {
+    console.log('Google Calendar sync skipped - missing credentials');
+    return;
+  }
+
+  try {
+    console.log('Starting Google Calendar sync...');
+    
+    // Get events from Google Calendar (next 3 months)
+    const now = new Date();
+    const threeMonthsFromNow = new Date();
+    threeMonthsFromNow.setMonth(now.getMonth() + 3);
+
+    const response = await calendar.events.list({
+      calendarId: GOOGLE_CALENDAR_ID,
+      timeMin: now.toISOString(),
+      timeMax: threeMonthsFromNow.toISOString(),
+      maxResults: 100,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    const googleEvents = response.data.items || [];
+    console.log(`Found ${googleEvents.length} events in Google Calendar`);
+
+    // Process each event
+    for (const googleEvent of googleEvents) {
+      await processGoogleCalendarEvent(googleEvent);
+    }
+
+    console.log('Google Calendar sync completed successfully');
+  } catch (error) {
+    console.error('Error syncing Google Calendar:', error);
+    throw error;
+  }
+}
+
+async function processGoogleCalendarEvent(googleEvent: any) {
+  try {
+    // Skip events without proper time data
+    if (!googleEvent.start || (!googleEvent.start.dateTime && !googleEvent.start.date)) {
+      console.log(`Skipping event without start time: ${googleEvent.summary}`);
+      return;
+    }
+
+    // Convert Google Calendar event to our event format
+    const startTime = new Date(googleEvent.start.dateTime || googleEvent.start.date);
+    const endTime = new Date(googleEvent.end?.dateTime || googleEvent.end?.date || startTime);
+    
+    // Determine event type based on summary/description
+    const eventType = determineEventType(googleEvent.summary, googleEvent.description);
+    
+    // Extract team information if available
+    const teamId = extractTeamId(googleEvent.summary, googleEvent.description);
+
+    const eventData = {
+      title: googleEvent.summary || 'Untitled Event',
+      description: googleEvent.description || '',
+      eventType,
+      startTime,
+      endTime,
+      location: googleEvent.location || 'TBD',
+      teamId,
+      playerId: null,
+      opponentTeam: extractOpponentTeam(googleEvent.summary, googleEvent.description),
+      isRecurring: false,
+      googleEventId: googleEvent.id,
+      lastSyncedAt: new Date()
+    };
+
+    // Check if event already exists
+    const existingEvent = await storage.getEventByGoogleId(googleEvent.id);
+    
+    if (existingEvent) {
+      // Update existing event if it has changed
+      const hasChanged = 
+        existingEvent.title !== eventData.title ||
+        existingEvent.startTime.getTime() !== eventData.startTime.getTime() ||
+        existingEvent.location !== eventData.location;
+
+      if (hasChanged) {
+        await storage.updateEvent(existingEvent.id, eventData);
+        console.log(`Updated event: ${eventData.title}`);
+      }
+    } else {
+      // Create new event
+      await storage.createEvent(eventData);
+      console.log(`Created new event: ${eventData.title}`);
+    }
+
+  } catch (error) {
+    console.error(`Error processing Google Calendar event ${googleEvent.id}:`, error);
+  }
+}
+
+function determineEventType(summary: string, description: string): string {
+  const text = `${summary} ${description}`.toLowerCase();
+  
+  if (text.includes('practice') || text.includes('training')) {
+    return 'practice';
+  } else if (text.includes('game') || text.includes('match') || text.includes('vs') || text.includes('against')) {
+    return 'game';
+  } else if (text.includes('tournament') || text.includes('championship')) {
+    return 'tournament';
+  } else if (text.includes('camp') || text.includes('clinic')) {
+    return 'camp';
+  } else if (text.includes('skills') || text.includes('drill')) {
+    return 'skills';
+  }
+  
+  return 'practice'; // Default to practice
+}
+
+function extractTeamId(summary: string, description: string): number | null {
+  const text = `${summary} ${description}`.toLowerCase();
+  
+  // Look for age group patterns
+  if (text.includes('u10') || text.includes('under 10') || text.includes('10u')) {
+    return 1; // U10 Warriors
+  } else if (text.includes('u12') || text.includes('under 12') || text.includes('12u')) {
+    return 2; // U12 Lightning  
+  } else if (text.includes('u14') || text.includes('under 14') || text.includes('14u')) {
+    return 3; // U14 Thunder
+  }
+  
+  // Look for specific team names
+  if (text.includes('warriors')) {
+    return 1;
+  } else if (text.includes('lightning')) {
+    return 2;
+  } else if (text.includes('thunder')) {
+    return 3;
+  }
+  
+  return null; // League-wide event
+}
+
+function extractOpponentTeam(summary: string, description: string): string | null {
+  const text = `${summary} ${description}`;
+  
+  // Look for vs/against patterns
+  const vsMatch = text.match(/(?:vs\.?|against|v\.?)\s+([^,\n\r]+)/i);
+  if (vsMatch) {
+    return vsMatch[1].trim();
+  }
+  
+  return null;
+}
+
+// Scheduled sync function that can be called periodically
+export async function scheduledCalendarSync() {
+  try {
+    console.log('Running scheduled Google Calendar sync...');
+    await syncGoogleCalendarEvents();
+  } catch (error) {
+    console.error('Scheduled calendar sync failed:', error);
+  }
+}

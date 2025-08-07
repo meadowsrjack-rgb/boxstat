@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 7, 2025**: Implemented comprehensive Google Calendar API integration to sync UYP's calendar (upyourperformance@gmail.com) with the app
+- **August 7, 2025**: Added Coach account type as third registration option with green theme and graduation cap icon
+- **August 7, 2025**: Enhanced testing infrastructure with "Test New Account Signup" button that bypasses authentication
+- **August 7, 2025**: Created automatic calendar sync scheduler that runs every hour using node-cron
+- **August 7, 2025**: Added calendar sync management page with manual sync capability and event display
+- **August 7, 2025**: Updated database schema to include Google Calendar integration fields (googleEventId, lastSyncedAt, isActive)
+- **August 7, 2025**: Enhanced events table to support Google Calendar sync with proper event type detection and team assignment
 - **August 6, 2025**: Created demo unified account system with profile selection functionality showing parent account with two children on different teams
 - **August 6, 2025**: Successfully implemented comprehensive trophies and badges system with navigation functionality
 - **August 6, 2025**: Fixed client-side routing issues with wouter setLocation for proper SPA navigation
@@ -87,7 +94,10 @@ Preferred communication style: Simple, everyday language.
 - **Player Stats**: Individual player performance tracking
 
 ### Event & Scheduling System
-- **Event Types**: Practices, games, and tournaments
+- **Event Types**: Practices, games, tournaments, camps, and skills sessions
+- **Google Calendar Integration**: Automatic sync with UYP's public calendar (upyourperformance@gmail.com)
+- **Calendar Sync**: Hourly automated sync with manual trigger capability
+- **Event Management**: Automatic team assignment based on event titles and descriptions
 - **Calendar Integration**: Color-coded events with team-specific views
 - **Attendance Tracking**: QR code-based check-in system
 
@@ -124,6 +134,7 @@ Preferred communication style: Simple, everyday language.
 ### Real-time Features
 - **WebSocket**: Native WebSocket support for team chat
 - **QR Code Generation**: Client-side QR code generation for check-ins
+- **Calendar Sync**: Scheduled hourly sync with Google Calendar API
 
 ### UI & Development
 - **Radix UI**: Accessible component primitives
@@ -146,6 +157,7 @@ Preferred communication style: Simple, everyday language.
 ### Environment Configuration
 - **Database**: PostgreSQL connection via DATABASE_URL
 - **Authentication**: Replit Auth configuration
+- **Google Calendar**: GOOGLE_CALENDAR_API_KEY and GOOGLE_CALENDAR_ID for calendar sync
 - **Payments**: SportsEngine API integration and payment processing
 - **Sessions**: Secure session secrets for production
 

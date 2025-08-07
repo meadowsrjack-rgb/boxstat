@@ -160,6 +160,9 @@ export const events = pgTable("events", {
   isRecurring: boolean("is_recurring").default(false),
   recurringType: varchar("recurring_type", { enum: ["weekly", "daily", "monthly"] }),
   recurringEndDate: timestamp("recurring_end_date"),
+  googleEventId: varchar("google_event_id").unique(), // Link to Google Calendar event
+  lastSyncedAt: timestamp("last_synced_at"),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

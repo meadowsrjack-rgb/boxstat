@@ -580,7 +580,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(events.teamId, teamId),
-          gte(events.startTime, now)
+          gte(events.startTime, now),
+          eq(events.isActive, true)
         )
       )
       .orderBy(asc(events.startTime));
@@ -622,6 +623,28 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.id, id))
       .returning();
     return updatedEvent;
+  }
+
+  async getEventByGoogleId(googleEventId: string): Promise<Event | undefined> {
+    const [event] = await db
+      .select()
+      .from(events)
+      .where(eq(events.googleEventId, googleEventId));
+    return event;
+  }
+
+  async getEventsInDateRange(startDate: Date, endDate: Date): Promise<Event[]> {
+    return await db
+      .select()
+      .from(events)
+      .where(
+        and(
+          gte(events.startTime, startDate),
+          lte(events.startTime, endDate),
+          eq(events.isActive, true)
+        )
+      )
+      .orderBy(asc(events.startTime));
   }
 
   // Attendance operations

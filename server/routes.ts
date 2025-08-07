@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import sportsEngineRoutes from "./sportsengine-routes";
+import calendarRoutes from "./routes/calendar";
 
 let wss: WebSocketServer | null = null;
 
@@ -969,6 +970,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // SportsEngine integration routes
   app.use('/api/sportsengine', sportsEngineRoutes);
+
+  // Google Calendar integration routes
+  app.use('/api/calendar', calendarRoutes);
 
   // Child Profile Management Routes
   app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {

@@ -69,9 +69,16 @@ function Router() {
   }, []);
 
   // Check if we're on a demo route that doesn't require auth
-  const isDemoRoute = window.location.pathname.includes('demo-profiles') || 
-                     window.location.pathname.includes('demo-account-setup') ||
-                     (window.location.pathname.includes('account-setup') && window.location.search.includes('test=true'));
+  const currentPath = window.location.pathname;
+  const currentSearch = window.location.search;
+  const isDemoRoute = currentPath.includes('demo-profiles') || 
+                     currentPath.includes('demo-account-setup') ||
+                     (currentPath === '/account-setup' && currentSearch.includes('test=true'));
+  
+  // Debug logging
+  if (currentPath === '/account-setup') {
+    console.log('Account setup route detected:', { currentPath, currentSearch, isDemoRoute });
+  }
 
   if (isLoading && !isDemoRoute) {
     return (
@@ -86,6 +93,14 @@ function Router() {
       <Switch>
         <Route path="/" component={Landing} />
         <Route path="/test-accounts" component={TestAccounts} />
+        <Route path="/account-setup">
+          {() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isTest = urlParams.get('test') === 'true';
+            console.log('Account setup route accessed, isTest:', isTest);
+            return isTest ? <AccountSetup /> : <Landing />;
+          }}
+        </Route>
         <Route component={Landing} />
       </Switch>
     );
@@ -98,7 +113,8 @@ function Router() {
         <Route path="/demo-profiles" component={DemoProfileSelection} />
         <Route path="/demo-setup" component={DemoAccountSetup} />
         <Route path="/account-setup" component={AccountSetup} />
-        <Route component={DemoProfileSelection} />
+        <Route path="/test-accounts" component={TestAccounts} />
+        <Route component={AccountSetup} />
       </Switch>
     );
   }

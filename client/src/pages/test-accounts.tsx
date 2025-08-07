@@ -241,7 +241,10 @@ export default function TestAccounts() {
                 </Button>
 
                 <Button 
-                  onClick={() => setLocation('/account-setup?test=true')}
+                  onClick={() => {
+                    console.log('Test signup button clicked, navigating to /account-setup?test=true');
+                    setLocation('/account-setup?test=true');
+                  }}
                   variant="outline"
                   size="lg"
                   className="w-full"

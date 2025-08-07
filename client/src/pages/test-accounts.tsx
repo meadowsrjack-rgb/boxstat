@@ -241,7 +241,7 @@ export default function TestAccounts() {
                 </Button>
 
                 <Button 
-                  onClick={() => setLocation('/account-setup')}
+                  onClick={() => setLocation('/account-setup?test=true')}
                   variant="outline"
                   size="lg"
                   className="w-full"

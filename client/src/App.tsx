@@ -69,7 +69,9 @@ function Router() {
   }, []);
 
   // Check if we're on a demo route that doesn't require auth
-  const isDemoRoute = window.location.pathname.includes('demo-profiles') || window.location.pathname.includes('demo-account-setup');
+  const isDemoRoute = window.location.pathname.includes('demo-profiles') || 
+                     window.location.pathname.includes('demo-account-setup') ||
+                     (window.location.pathname.includes('account-setup') && window.location.search.includes('test=true'));
 
   if (isLoading && !isDemoRoute) {
     return (
@@ -95,6 +97,7 @@ function Router() {
       <Switch>
         <Route path="/demo-profiles" component={DemoProfileSelection} />
         <Route path="/demo-setup" component={DemoAccountSetup} />
+        <Route path="/account-setup" component={AccountSetup} />
         <Route component={DemoProfileSelection} />
       </Switch>
     );

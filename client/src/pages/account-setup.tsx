@@ -66,23 +66,44 @@ export default function AccountSetup() {
     },
   });
 
+  // Check if we're in test mode
+  const urlParams = new URLSearchParams(window.location.search);
+  const isTestMode = urlParams.get('test') === 'true';
+
   const setupAccountMutation = useMutation({
     mutationFn: async (data: AccountSetupData) => {
+      if (isTestMode) {
+        // In test mode, just simulate success without calling API
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({ success: true, message: "Test mode - account setup simulated" });
+          }, 1000);
+        });
+      }
       return apiRequest("POST", "/api/setup-account", data);
     },
     onSuccess: (response: any) => {
-      toast({
-        title: "Account Setup Complete",
-        description: "Your account has been set up successfully!",
-      });
-      // Redirect based on user type
-      setLocation(response.redirectUrl || "/");
+      if (isTestMode) {
+        toast({
+          title: "Test Mode Complete",
+          description: "Account setup form tested successfully! This was a simulation.",
+        });
+        // In test mode, redirect back to test accounts
+        setTimeout(() => setLocation("/test-accounts"), 2000);
+      } else {
+        toast({
+          title: "Account Setup Complete",
+          description: "Your account has been set up successfully!",
+        });
+        // Redirect based on user type
+        setLocation(response.redirectUrl || "/");
+      }
     },
     onError: (error) => {
       toast({
-        title: "Setup Failed",
-        description: "Failed to complete account setup. Please try again.",
-        variant: "destructive",
+        title: isTestMode ? "Test Form Validation" : "Setup Failed",
+        description: isTestMode ? "Form validation working correctly!" : "Failed to complete account setup. Please try again.",
+        variant: isTestMode ? "default" : "destructive",
       });
     },
   });
@@ -103,6 +124,13 @@ export default function AccountSetup() {
           <img src={logoPath} alt="UYP Basketball" className="h-16 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to UYP Basketball</h1>
           <p className="text-gray-600">Let's set up your account to get started</p>
+          {isTestMode && (
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 font-medium">
+                🧪 Test Mode Active - Form submission will be simulated
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Progress Steps */}

@@ -88,13 +88,16 @@ function Router() {
   
   // Check if we're accessing demo profiles selection
   const currentPath = window.location.pathname;
-  if (currentPath === '/demo-profiles' || isDemoMode) {
+  if (currentPath === '/demo-profiles') {
     return (
       <Switch>
         <Route path="/demo-profiles" component={DemoProfileSelection} />
         <Route path="/parent-dashboard" component={ParentDashboard} />
         <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
         <Route path="/admin-dashboard" component={AdminDashboard} />
+        <Route path="/schedule" component={Schedule} />
+        <Route path="/training" component={Training} />
+        <Route path="/trophies-badges" component={TrophiesBadges} />
         <Route component={DemoProfileSelection} />
       </Switch>
     );
@@ -141,6 +144,12 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/demo-profiles" component={DemoProfileSelection} />
+      <Route path="/schedule" component={Schedule} />
+      <Route path="/training" component={Training} />
+      <Route path="/trophies-badges" component={TrophiesBadges} />
+      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+      <Route path="/parent-dashboard" component={ParentDashboard} />
+      <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/account-setup" component={AccountSetup} />
       <Route path="/test-accounts" component={TestAccounts} />
       <Route component={Landing} />

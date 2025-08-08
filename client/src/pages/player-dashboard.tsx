@@ -31,7 +31,13 @@ import {
   Calendar as CalendarIcon,
   MessageCircle,
   Send,
-  MapPin
+  MapPin,
+  Edit3,
+  Save,
+  Trophy,
+  Star,
+  Instagram,
+  Twitter
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -48,6 +54,22 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
   const [newMessage, setNewMessage] = useState('');
   const [ws, setWs] = useState<WebSocket | null>(null);
   const { toast } = useToast();
+  
+  // Profile editing states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editableProfile, setEditableProfile] = useState({
+    bio: '',
+    teamName: '',
+    age: '',
+    height: '',
+    weight: '',
+    location: '',
+    position: '',
+    jerseyNumber: '',
+    instagram: '',
+    twitter: '',
+    tiktok: ''
+  });
   const queryClient = useQueryClient();
 
   const [location, setLocation] = useLocation();
@@ -761,46 +783,236 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className="space-y-6">
-              <div>
+              {/* Header Section with Badges */}
+              <div className="relative">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-gray-900">Bio</h2>
-                  <Button variant="ghost" size="icon">
-                    <ChevronRight className="h-5 w-5" />
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-16 w-16">
+                      <AvatarImage 
+                        src={currentUser.profileImageUrl || currentChild?.profileImageUrl} 
+                        alt="Player Avatar" 
+                      />
+                      <AvatarFallback className="text-lg font-bold bg-gray-200">
+                        {getInitials(
+                          currentChild?.firstName || currentUser.firstName || '', 
+                          currentChild?.lastName || currentUser.lastName || ''
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
+                      </h2>
+                      <div className="flex items-center space-x-3 mt-1">
+                        <div className="flex items-center space-x-1">
+                          <Trophy className="h-4 w-4 text-yellow-600" />
+                          <span className="text-sm font-medium text-gray-700">4</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Award className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-gray-700">18</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setIsEditingProfile(!isEditingProfile)}
+                  >
+                    {isEditingProfile ? <X className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
                   </Button>
                 </div>
-                <p className="text-gray-500">You haven't written anything yet...</p>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">Personal details</h3>
-                  <Button variant="ghost" size="icon">
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">BASIC INFO</span>
-                    <span className="text-xs text-gray-400">Visible to: only you</span>
+              {/* Bio Section */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Bio</h3>
+                  </div>
+                  {isEditingProfile ? (
+                    <Textarea
+                      placeholder="Write something about yourself..."
+                      value={editableProfile.bio}
+                      onChange={(e) => setEditableProfile({ ...editableProfile, bio: e.target.value })}
+                      maxLength={300}
+                      className="resize-none"
+                      rows={3}
+                    />
+                  ) : (
+                    <p className="text-gray-600">
+                      {editableProfile.bio || "Write something about yourself..."}
+                    </p>
+                  )}
+                  {isEditingProfile && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {editableProfile.bio.length}/300 characters
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Basic Personal Information */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {[
+                      { label: 'Team Name', key: 'teamName', value: currentChild?.teamName || editableProfile.teamName, placeholder: 'Your team name' },
+                      { label: 'Age', key: 'age', value: editableProfile.age, placeholder: 'Your age' },
+                      { label: 'Height', key: 'height', value: editableProfile.height, placeholder: 'e.g., 5\'8"' },
+                      { label: 'Weight', key: 'weight', value: editableProfile.weight, placeholder: 'e.g., 140 lbs (optional)' },
+                      { label: 'Location', key: 'location', value: editableProfile.location, placeholder: 'Where are you from?' },
+                      { label: 'Position', key: 'position', value: currentChild?.position || editableProfile.position, placeholder: 'e.g., Point Guard' },
+                      { label: 'Jersey Number', key: 'jerseyNumber', value: currentChild?.jerseyNumber || editableProfile.jerseyNumber, placeholder: 'Your number' }
+                    ].map((item, index) => (
+                      <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                        <span className="text-gray-900 font-medium">{item.label}</span>
+                        {isEditingProfile ? (
+                          <Input
+                            value={item.value || ''}
+                            onChange={(e) => setEditableProfile({ ...editableProfile, [item.key]: e.target.value })}
+                            placeholder={item.placeholder}
+                            className="w-48 text-right"
+                          />
+                        ) : (
+                          <span className="text-gray-600">{item.value || '—'}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skills & Ratings */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Skills & Ratings</h3>
+                    <Button variant="ghost" size="sm" className="text-sm text-gray-500">
+                      View all <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
                   </div>
                   
                   <div className="space-y-3">
                     {[
-                      { label: 'Gender', value: '—' },
-                      { label: 'Flag', value: '—' },
-                      { label: 'Height', value: '—' },
-                      { label: 'Weight', value: '—' },
-                      { label: 'Position', value: currentChild?.position || currentUser.position || '—' }
-                    ].map((item, index) => (
-                      <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100">
-                        <span className="text-gray-900">{item.label}</span>
-                        <span className="text-gray-500">{item.value}</span>
+                      { name: 'Shooting', rating: 85, color: 'bg-green-500' },
+                      { name: 'Passing', rating: 78, color: 'bg-blue-500' },
+                      { name: 'Defense', rating: 72, color: 'bg-red-500' }
+                    ].map((skill, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-gray-700">{skill.name}</span>
+                          <span className="text-sm text-gray-500">{skill.rating}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${skill.color}`}
+                            style={{ width: `${skill.rating}%` }}
+                          ></div>
+                        </div>
                       </div>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Game Stats */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Game Stats</h3>
+                  </div>
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Target className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 font-medium">Feature Coming Soon</p>
+                    <p className="text-sm text-gray-400 mt-1">Game statistics and performance tracking will be available soon</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Social Media */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Social Media</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {[
+                      { 
+                        label: 'Instagram', 
+                        key: 'instagram', 
+                        icon: Instagram, 
+                        placeholder: '@username',
+                        color: 'text-pink-600'
+                      },
+                      { 
+                        label: 'Twitter', 
+                        key: 'twitter', 
+                        icon: Twitter, 
+                        placeholder: '@username',
+                        color: 'text-blue-500'
+                      },
+                      { 
+                        label: 'TikTok', 
+                        key: 'tiktok', 
+                        icon: Play, 
+                        placeholder: '@username',
+                        color: 'text-black'
+                      }
+                    ].map((social, index) => (
+                      <div key={index} className="flex items-center space-x-3">
+                        <social.icon className={`h-5 w-5 ${social.color}`} />
+                        <span className="text-gray-900 font-medium w-20">{social.label}</span>
+                        {isEditingProfile ? (
+                          <Input
+                            value={editableProfile[social.key as keyof typeof editableProfile] || ''}
+                            onChange={(e) => setEditableProfile({ ...editableProfile, [social.key]: e.target.value })}
+                            placeholder={social.placeholder}
+                            className="flex-1"
+                          />
+                        ) : (
+                          <span className="text-gray-600 flex-1">
+                            {editableProfile[social.key as keyof typeof editableProfile] || '—'}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Save Button */}
+              {isEditingProfile && (
+                <div className="flex justify-end space-x-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setIsEditingProfile(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => {
+                      setIsEditingProfile(false);
+                      toast({
+                        title: "Profile updated",
+                        description: "Your profile has been saved successfully.",
+                      });
+                    }}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

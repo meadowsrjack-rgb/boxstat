@@ -83,7 +83,7 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     const startTime = new Date(googleEvent.start.dateTime || googleEvent.start.date);
     const endTime = new Date(googleEvent.end?.dateTime || googleEvent.end?.date || startTime);
     
-    // Determine event type based on summary/description
+    // Determine event type based on summary/description - keeping legacy function for now
     const eventType = determineEventType(googleEvent.summary, googleEvent.description);
     
     // Extract team information if available
@@ -101,7 +101,9 @@ async function processGoogleCalendarEvent(googleEvent: any) {
       opponentTeam: extractOpponentTeam(googleEvent.summary, googleEvent.description),
       isRecurring: false,
       googleEventId: googleEvent.id,
-      lastSyncedAt: new Date()
+      lastSyncedAt: new Date(),
+      // Store raw Google event data for client-side parsing
+      rawGoogleEvent: JSON.stringify(googleEvent)
     };
 
     // Check if event already exists

@@ -84,7 +84,14 @@ export default function Schedule() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
 
-  if (!user) {
+  // Check for demo mode
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
+  const demoProfile = isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null;
+  
+  // Use demo profile if in demo mode, otherwise use authenticated user
+  const currentUser = isDemoMode ? demoProfile : user;
+
+  if (!currentUser && !isDemoMode) {
     return <div>Loading...</div>;
   }
 
@@ -132,7 +139,7 @@ export default function Schedule() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <Link href="/">
+              <Link href={isDemoMode ? "/demo-profiles" : "/"}>
                 <Button variant="ghost" size="icon" className="mr-2">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>

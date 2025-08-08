@@ -55,6 +55,9 @@ function Router() {
           <Switch>
             <Route path="/" component={() => <PlayerDashboard demoProfile={profile} />} />
             <Route path="/player-dashboard" component={() => <PlayerDashboard demoProfile={profile} />} />
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/trophies-badges" component={TrophiesBadges} />
+            <Route path="/training" component={Training} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
             <Route component={() => <PlayerDashboard demoProfile={profile} />} />
           </Switch>
@@ -64,6 +67,8 @@ function Router() {
           <Switch>
             <Route path="/" component={() => <ParentDashboard demoProfile={profile} />} />
             <Route path="/parent-dashboard" component={() => <ParentDashboard demoProfile={profile} />} />
+            <Route path="/schedule" component={Schedule} />
+            <Route path="/training" component={Training} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
             <Route component={() => <ParentDashboard demoProfile={profile} />} />
           </Switch>
@@ -73,6 +78,7 @@ function Router() {
           <Switch>
             <Route path="/" component={() => <AdminDashboard demoProfile={profile} />} />
             <Route path="/admin-dashboard" component={() => <AdminDashboard demoProfile={profile} />} />
+            <Route path="/schedule" component={Schedule} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
             <Route component={() => <AdminDashboard demoProfile={profile} />} />
           </Switch>

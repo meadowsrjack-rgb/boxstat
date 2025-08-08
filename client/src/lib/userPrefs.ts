@@ -1,61 +1,35 @@
-
-import { EventType } from "./parseEventMeta";
-
 export interface UserPreferences {
-  eventTypes: EventType[];
+  eventTypes: string[];
   ageTags: string[];
   teamTags: string[];
   coaches: string[];
-  locations: string[];
-  defaultRelevanceProfile?: {
-    eventTypes: EventType[];
-    ageTags: string[];
-    teamTags: string[];
-  };
 }
 
-const PREFS_KEY = "uyp.calendar.prefs";
+const DEFAULT_PREFERENCES: UserPreferences = {
+  eventTypes: [],
+  ageTags: [],
+  teamTags: [],
+  coaches: []
+};
+
+const STORAGE_KEY = 'uyp_schedule_preferences';
 
 export function getUserPreferences(): UserPreferences {
   try {
-    const stored = localStorage.getItem(PREFS_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored);
+      return { ...DEFAULT_PREFERENCES, ...JSON.parse(stored) };
     }
   } catch (error) {
-    console.warn("Failed to load user preferences:", error);
+    console.error('Error loading user preferences:', error);
   }
-
-  // Default preferences
-  return {
-    eventTypes: [],
-    ageTags: [],
-    teamTags: [],
-    coaches: [],
-    locations: [],
-    defaultRelevanceProfile: {
-      eventTypes: ["practice", "skills"],
-      ageTags: ["12U", "4-6th"],
-      teamTags: ["12U Red"]
-    }
-  };
+  return DEFAULT_PREFERENCES;
 }
 
-export function saveUserPreferences(prefs: UserPreferences): void {
+export function saveUserPreferences(preferences: UserPreferences): void {
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
   } catch (error) {
-    console.warn("Failed to save user preferences:", error);
+    console.error('Error saving user preferences:', error);
   }
-}
-
-export function applyRelevanceProfile(prefs: UserPreferences): UserPreferences {
-  if (!prefs.defaultRelevanceProfile) return prefs;
-
-  return {
-    ...prefs,
-    eventTypes: prefs.defaultRelevanceProfile.eventTypes,
-    ageTags: prefs.defaultRelevanceProfile.ageTags,
-    teamTags: prefs.defaultRelevanceProfile.teamTags
-  };
 }

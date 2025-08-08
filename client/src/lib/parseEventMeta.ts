@@ -1,113 +1,103 @@
-
-export type EventType = "skills" | "practice" | "game" | "camp" | "tryout" | "tournament" | "scrimmage" | "other";
+import { parseISO, format } from "date-fns";
 
 export interface ParsedEvent {
-  id: string;
-  start: string; // ISO
-  end: string;   // ISO
+  id: number;
   title: string;
-  location?: string;
+  description: string;
+  start: string; // ISO string
+  end: string; // ISO string
+  location: string;
+  type: 'practice' | 'game' | 'tournament' | 'camp' | 'skills' | 'other';
+  ageTags: string[];
+  teamTags: string[];
   coaches: string[];
-  ageTags: string[];   // ["12U", "4-6th"]
-  teamTags: string[];  // ["11U Red", "HS Black", etc.]
-  type: EventType;
-  raw: any; // original event
+  originalEventType: string;
+  googleEventId?: string;
 }
 
-const TYPE_RULES: Array<[EventType, RegExp]> = [
-  ["skills", /\b(skill|skills|clinic|workout)\b/i],
-  ["practice", /\b(practice|training|session)\b/i],
-  ["game", /\b(game|vs\.?|match)\b/i],
-  ["camp", /\b(camp)\b/i],
-  ["tryout", /\b(tryout)\b/i],
-  ["tournament", /\b(tourney|tournament)\b/i],
-  ["scrimmage", /\b(scrim|scrimmage)\b/i],
-];
-
-const AGE_RULES: RegExp[] = [
-  /\b(\d{1,2})U\b/i,                  // 10U, 11U, 12U
-  /\b([1-8])(?:st|nd|rd|th)\s*-\s*([1-8])(?:st|nd|rd|th)\s*grade\b/i, // 4-6th grade
-  /\b([1-8])(?:st|nd|rd|th)\s*grade\b/i
-];
-
-const TEAM_RULES: RegExp[] = [
-  /\b(11U|12U|13U|14U|HS)\s*(Black|Red|White)?\b/i
-];
-
-const COACH_RULE: RegExp = /\b(coach(?:es)?|coach:)\s*([A-Za-z ,&]+)/i;
-
-export function parseEventMeta(ev: any): ParsedEvent {
-  const haystack = `${ev.summary || ""} ${ev.description || ""} ${ev.location || ""}`.trim();
-
-  // type
-  let type: EventType = "other";
-  for (const [t, rx] of TYPE_RULES) {
-    if (rx.test(haystack)) {
-      type = t;
-      break;
-    }
+export function parseEventMeta(event: any): ParsedEvent {
+  const title = event.title || '';
+  const description = event.description || '';
+  
+  // Parse event type from title and description
+  const combinedText = `${title} ${description}`.toLowerCase();
+  
+  let type: ParsedEvent['type'] = 'other';
+  if (combinedText.includes('practice') || combinedText.includes('training')) {
+    type = 'practice';
+  } else if (combinedText.includes('game') || combinedText.includes('match')) {
+    type = 'game';
+  } else if (combinedText.includes('tournament') || combinedText.includes('tourney')) {
+    type = 'tournament';
+  } else if (combinedText.includes('camp')) {
+    type = 'camp';
+  } else if (combinedText.includes('skills') || combinedText.includes('skill')) {
+    type = 'skills';
   }
 
-  // coaches
-  const coachesMatch = haystack.match(COACH_RULE);
-  const coaches = coachesMatch
-    ? coachesMatch[2].split(/[,&/]+/).map(s => s.trim()).filter(Boolean)
-    : [];
-
-  // ages
+  // Parse age groups from title
   const ageTags: string[] = [];
-  const uMatch = haystack.match(/\b(\d{1,2})U\b/i);
-  if (uMatch) ageTags.push(`${uMatch[1]}U`);
-  
-  const spanMatch = haystack.match(/\b([1-8])(?:st|nd|rd|th)\s*-\s*([1-8])(?:st|nd|rd|th)\s*grade\b/i);
-  if (spanMatch) ageTags.push(`${spanMatch[1]}-${spanMatch[2]}th`);
-  
-  const singleGradeMatch = haystack.match(/\b([1-8])(?:st|nd|rd|th)\s*grade\b/i);
-  if (singleGradeMatch && !spanMatch) ageTags.push(`${singleGradeMatch[1]}th`);
+  const ageMatches = title.match(/\b(\d+(?:st|nd|rd|th)?[-–]\d+(?:st|nd|rd|th)?|\d+(?:st|nd|rd|th)?|\d+U|U\d+|kindergarten|k)\b/gi);
+  if (ageMatches) {
+    ageMatches.forEach((match: string) => {
+      const normalized = match.toLowerCase()
+        .replace(/(\d+)(st|nd|rd|th)/g, '$1')
+        .replace(/[-–]/g, '-');
+      ageTags.push(normalized);
+    });
+  }
 
-  // teams
+  // Parse team indicators from title
   const teamTags: string[] = [];
-  const teamMatch = haystack.match(/\b(11U|12U|13U|14U|HS)\s*(Black|Red|White)?\b/i);
-  if (teamMatch) {
-    teamTags.push([teamMatch[1], teamMatch[2]].filter(Boolean).join(" "));
+  const teamMatches = title.match(/\b(fnH|rookies|warriors|tigers|lions|eagles|hawks|storm|thunder|lightning|blazers|fire|heat|ice|frost|stars|comets|rockets|jets|bullets|arrows|swords|shields|knights|dragons|phoenixes|griffins|titans|giants|panthers|wolves|bears|bulls|rams|mustangs|stallions|colts|broncos|chargers|raiders|cowboys|chiefs|patriots|steelers|packers|vikings|saints|falcons|cardinals|seahawks|49ers|rams|dolphins|bills|jets|titans|jaguars|texans|colts|broncos|raiders|chargers|kings|lakers|warriors|clippers|suns|nuggets|timberwolves|thunder|trail blazers|jazz|spurs|mavericks|rockets|pelicans|grizzlies|heat|magic|hawks|hornets|pistons|pacers|cavaliers|bulls|bucks|raptors|celtics|nets|knicks|76ers|wizards)\b/gi);
+  if (teamMatches) {
+    teamTags.push(...teamMatches.map((match: string) => match.toLowerCase()));
+  }
+
+  // Parse coach names from title and description
+  const coaches: string[] = [];
+  const coachMatches = `${title} ${description}`.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g);
+  if (coachMatches) {
+    // Filter for likely coach names (common first names)
+    const commonNames = ['mary', 'john', 'sarah', 'mike', 'david', 'lisa', 'jennifer', 'robert', 'michael', 'william', 'james', 'christopher', 'daniel', 'matthew', 'anthony', 'mark', 'donald', 'steven', 'paul', 'andrew', 'joshua', 'kenneth', 'kevin', 'brian', 'george', 'edward', 'ronald', 'timothy', 'jason', 'jeffrey', 'ryan', 'jacob', 'gary', 'nicholas', 'eric', 'jonathan', 'stephen', 'larry', 'justin', 'scott', 'brandon', 'benjamin', 'samuel', 'frank', 'gregory', 'alexander', 'raymond', 'patrick', 'jack', 'dennis', 'jerry', 'tyler', 'aaron', 'jose', 'henry', 'adam', 'douglas', 'nathan', 'peter', 'zachary', 'kyle', 'walter', 'harold', 'carl', 'arthur', 'gerald', 'roger', 'keith', 'jeremy', 'lawrence', 'sean', 'christian', 'ethan', 'austin', 'joe', 'albert', 'mason', 'roy', 'alan', 'wayne', 'eugene', 'louis', 'phillip', 'bobby', 'noah', 'ralph', 'mason', 'jordan', 'toffic', 'ahmad', 'jonathan', 'jack', 'hamed', 'jordan', 'sha'];
+    
+    coachMatches.forEach(match => {
+      const firstName = match.split(' ')[0].toLowerCase();
+      if (commonNames.includes(firstName) && !coaches.includes(match)) {
+        coaches.push(match);
+      }
+    });
   }
 
   return {
-    id: ev.id,
-    start: ev.start?.dateTime || ev.start?.date,
-    end: ev.end?.dateTime || ev.end?.date,
-    title: ev.summary || "Untitled",
-    location: ev.location,
-    coaches,
+    id: event.id,
+    title: event.title || 'Untitled Event',
+    description: event.description || '',
+    start: event.startTime || event.startDate || new Date().toISOString(),
+    end: event.endTime || event.endDate || new Date().toISOString(),
+    location: event.location || 'Location TBD',
+    type,
     ageTags,
     teamTags,
-    type,
-    raw: ev
+    coaches,
+    originalEventType: event.eventType || 'other',
+    googleEventId: event.googleEventId
   };
 }
 
-export function getEventTypeColor(type: EventType): string {
+export function getEventTypeDotColor(type: ParsedEvent['type']): string {
   switch (type) {
-    case "skills": return "bg-gray-100 text-gray-700";
-    case "practice": return "bg-blue-100 text-blue-700";
-    case "game": return "bg-green-100 text-green-700";
-    case "camp": return "bg-orange-100 text-orange-700";
-    case "tryout": return "bg-purple-100 text-purple-700";
-    case "tournament": return "bg-red-100 text-red-700";
-    case "scrimmage": return "bg-yellow-100 text-yellow-700";
-    default: return "bg-gray-100 text-gray-700";
-  }
-}
-
-export function getEventTypeDotColor(type: EventType): string {
-  switch (type) {
-    case "skills": return "bg-gray-400";
-    case "practice": return "bg-blue-500";
-    case "game": return "bg-green-500";
-    case "camp": return "bg-orange-500";
-    case "tryout": return "bg-purple-500";
-    case "tournament": return "bg-red-500";
-    case "scrimmage": return "bg-yellow-500";
-    default: return "bg-gray-400";
+    case 'practice':
+      return 'bg-blue-500';
+    case 'game':
+      return 'bg-green-500';
+    case 'tournament':
+      return 'bg-purple-500';
+    case 'camp':
+      return 'bg-orange-500';
+    case 'skills':
+      return 'bg-yellow-500';
+    default:
+      return 'bg-gray-500';
   }
 }

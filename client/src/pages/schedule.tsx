@@ -1,53 +1,25 @@
+import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { 
-  Calendar as CalendarIcon, 
-  MapPin,
-  Clock,
-  Users,
-  ArrowLeft,
-  CheckCircle,
-  XCircle,
-  RefreshCw
-} from "lucide-react";
+import { Calendar as CalendarIcon, ArrowLeft, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
-import { format, isToday, isTomorrow, isThisWeek, isSameDay, parseISO } from "date-fns";
+import { format, isSameDay } from "date-fns";
+import { parseEventMeta, ParsedEvent, getEventTypeDotColor } from "@/lib/parseEventMeta";
+import { UserPreferences, getUserPreferences } from "@/lib/userPrefs";
+import { FiltersBar } from "@/components/FiltersBar";
+import { DayDrawer } from "@/components/DayDrawer";
 
-// Helper function to convert Google Calendar events to our format
-function formatGoogleEvent(event: any) {
-  // Handle both startTime/endTime (from database) and startDate/endDate formats
-  const startDate = event.startTime ? parseISO(event.startTime) : 
-                   event.startDate ? parseISO(event.startDate) : new Date();
-  const endDate = event.endTime ? parseISO(event.endTime) : 
-                 event.endDate ? parseISO(event.endDate) : new Date();
-  
-  console.log('Processing event:', event.title, 'Start:', startDate, 'Original startTime:', event.startTime);
-  
-  return {
-    id: event.id,
-    title: event.title || 'Untitled Event',
-    date: startDate, // This is the key field used for calendar day matching
-    startTime: format(startDate, 'h:mm a'),
-    endTime: format(endDate, 'h:mm a'),
-    location: event.location || 'Location TBD',
-    eventType: event.eventType || 'practice',
-    checkedIn: false, // This would come from check-in data
-    description: event.description || '',
-    googleEventId: event.googleEventId
-  };
-}
+
 
 export default function Schedule() {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedDayEvents, setSelectedDayEvents] = useState<any[]>([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [drawerDate, setDrawerDate] = useState<Date | null>(null);
+  const [filters, setFilters] = useState<UserPreferences>(getUserPreferences());
 
   // Check for demo mode
   const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
@@ -56,29 +28,47 @@ export default function Schedule() {
   // Use demo profile if in demo mode, otherwise use authenticated user
   const currentUser = isDemoMode ? demoProfile : user;
 
-  // Fetch events from Google Calendar API
-  const { data: eventsData, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/events'],
-    enabled: true, // Always fetch events, regardless of auth state
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["/api/events"],
   });
 
-  const events = eventsData && Array.isArray(eventsData) ? eventsData.map(formatGoogleEvent) : [];
-  
-  // Debug: Log event distribution by date
-  console.log(`Total events loaded: ${events.length}`);
-  if (events.length > 0) {
-    const eventsByDate = events.reduce((acc: Record<string, number>, event) => {
-      const dateKey = format(event.date, 'yyyy-MM-dd');
-      acc[dateKey] = (acc[dateKey] || 0) + 1;
-      return acc;
-    }, {});
-    console.log('Events by date:', eventsByDate);
-    console.log('Sample events:', events.slice(0, 3).map(e => ({
-      title: e.title,
-      date: format(e.date, 'yyyy-MM-dd HH:mm'),
-      startTime: e.startTime
-    })));
-  }
+  // Parse events with metadata
+  const parsedEvents: ParsedEvent[] = useMemo(() => {
+    return events.map(parseEventMeta);
+  }, [events]);
+
+  // Filter events based on user preferences
+  const filteredEvents = useMemo(() => {
+    return parsedEvents.filter(event => {
+      if (filters.eventTypes.length > 0 && !filters.eventTypes.includes(event.type)) return false;
+      if (filters.ageTags.length > 0 && !event.ageTags.some(tag => filters.ageTags.includes(tag))) return false;
+      if (filters.teamTags.length > 0 && !event.teamTags.some(tag => filters.teamTags.includes(tag))) return false;
+      if (filters.coaches.length > 0 && !event.coaches.some(coach => filters.coaches.includes(coach))) return false;
+      return true;
+    });
+  }, [parsedEvents, filters]);
+
+  // Get events for drawer
+  const drawerEvents = drawerDate 
+    ? parsedEvents.filter(event => isSameDay(new Date(event.start), drawerDate))
+    : [];
+
+  // Get events by date for calendar display
+  const eventsByDate = useMemo(() => {
+    const result: Record<string, ParsedEvent[]> = {};
+    filteredEvents.forEach(event => {
+      const dateKey = format(new Date(event.start), 'yyyy-MM-dd');
+      if (!result[dateKey]) result[dateKey] = [];
+      result[dateKey].push(event);
+    });
+    return result;
+  }, [filteredEvents]);
+
+  const handleDayClick = (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setDrawerDate(date);
+  };
 
   if (isLoading) {
     return (
@@ -89,57 +79,6 @@ export default function Schedule() {
       </div>
     );
   }
-
-  const getEventTypeColor = (eventType: string) => {
-    switch (eventType) {
-      case "practice":
-        return "bg-blue-100 text-blue-800";
-      case "game":
-        return "bg-green-100 text-green-800";
-      case "tournament":
-        return "bg-purple-100 text-purple-800";
-      case "camp":
-        return "bg-orange-100 text-orange-800";
-      case "skills":
-        return "bg-yellow-100 text-yellow-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const handleDayClick = (date: Date | undefined) => {
-    if (!date) return;
-    
-    const dayEvents = events.filter(event => 
-      isSameDay(event.date, date)
-    );
-    
-    console.log('Day clicked:', format(date, 'yyyy-MM-dd'), 'Events found:', dayEvents.length);
-    console.log('Sample events on this day:', dayEvents.map(e => ({ 
-      title: e.title, 
-      date: format(e.date, 'yyyy-MM-dd HH:mm'),
-      originalTime: e.startTime 
-    })));
-    
-    setSelectedDate(date);
-    if (dayEvents.length > 0) {
-      setSelectedDayEvents(dayEvents);
-      setIsDialogOpen(true);
-    } else {
-      // Show message that no events are on this day
-      console.log('No events found for this day');
-    }
-  };
-
-  const getEventsForDate = (date: Date) => {
-    const matchingEvents = events.filter((event: any) => isSameDay(event.date, date));
-    // Debug logging for calendar dots
-    if (matchingEvents.length > 0) {
-      console.log(`Date ${format(date, 'MMM d')}: ${matchingEvents.length} events`, 
-        matchingEvents.map(e => e.title));
-    }
-    return matchingEvents;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -166,48 +105,45 @@ export default function Schedule() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Calendar Card - Centered */}
-        <Card className="mx-auto">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        {/* Filters */}
+        <FiltersBar 
+          events={parsedEvents}
+          filters={filters}
+          onFiltersChange={setFilters}
+        />
+
+        {/* Calendar Card */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-center">Team Schedule</CardTitle>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <CalendarIcon className="h-5 w-5" />
+              Team Schedule
+            </CardTitle>
+            <div className="text-center text-sm text-gray-600">
+              Showing {filteredEvents.length} of {parsedEvents.length} events from UYP's Google Calendar
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
+                month={currentMonth}
+                onMonthChange={setCurrentMonth}
                 onSelect={handleDayClick}
                 className="w-full max-w-md mx-auto"
-                classNames={{
-                  months: "flex w-full flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 justify-center",
-                  month: "space-y-4 w-full flex flex-col",
-                  caption: "flex justify-center pt-1 relative items-center",
-                  caption_label: "text-sm font-medium",
-                  nav: "space-x-1 flex items-center",
-                  nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                  nav_button_previous: "absolute left-1",
-                  nav_button_next: "absolute right-1",
-                  table: "w-full border-collapse space-y-1",
-                  head_row: "flex justify-center",
-                  head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem] flex justify-center items-center",
-                  row: "flex w-full mt-2 justify-center",
-                  cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
-                  day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                  day_range_end: "day-range-end",
-                  day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                  day_today: "bg-accent text-accent-foreground",
-                  day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-                  day_disabled: "text-muted-foreground opacity-50",
-                  day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                  day_hidden: "invisible",
-                }}
                 components={{
                   Day: ({ date, ...props }) => {
-                    const events = getEventsForDate(date);
-                    const hasEvents = events.length > 0;
-                    const hasCompletedEvent = events.some(e => e.checkedIn);
-                    const hasUpcomingEvent = events.some(e => !e.checkedIn);
+                    const dateKey = format(date, 'yyyy-MM-dd');
+                    const dayEvents = eventsByDate[dateKey] || [];
+                    const hasEvents = dayEvents.length > 0;
+                    
+                    // Group events by type to show different colored dots
+                    const eventTypeGroups = dayEvents.reduce((acc: Record<string, number>, event) => {
+                      acc[event.type] = (acc[event.type] || 0) + 1;
+                      return acc;
+                    }, {});
                     
                     return (
                       <div className="relative">
@@ -217,11 +153,11 @@ export default function Schedule() {
                             e.preventDefault();
                             handleDayClick(date);
                           }}
-                          className={`h-8 w-8 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center justify-center ${
+                          className={`h-8 w-8 p-0 font-normal rounded-md hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground flex items-center justify-center transition-colors ${
                             isSameDay(date, selectedDate || new Date()) 
                               ? 'bg-primary text-primary-foreground' 
-                              : isToday(date) 
-                                ? 'bg-accent text-accent-foreground' 
+                              : hasEvents
+                                ? 'bg-blue-50 text-blue-900 font-medium'
                                 : ''
                           }`}
                         >
@@ -229,11 +165,14 @@ export default function Schedule() {
                         </button>
                         {hasEvents && (
                           <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex space-x-0.5">
-                            {hasCompletedEvent && (
-                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                            )}
-                            {hasUpcomingEvent && (
-                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            {Object.keys(eventTypeGroups).slice(0, 3).map(type => (
+                              <div
+                                key={type}
+                                className={`w-1.5 h-1.5 rounded-full ${getEventTypeDotColor(type as any)}`}
+                              />
+                            ))}
+                            {Object.keys(eventTypeGroups).length > 3 && (
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
                             )}
                           </div>
                         )}
@@ -243,89 +182,16 @@ export default function Schedule() {
                 }}
               />
             </div>
-            
-            {/* Event Summary */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 mb-4">
-                Showing {events.length} events from UYP's Google Calendar
-              </p>
-            </div>
-            
-            {/* Legend */}
-            <div className="mt-2 flex justify-center space-x-6 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600">Completed (QR Check-in)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <span className="text-gray-600">Upcoming</span>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
-        {/* Day Events Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                Events for {selectedDate && format(selectedDate, "MMMM d, yyyy")}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedDayEvents.map((event) => (
-                <Card key={event.id} className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 flex-1">{event.title}</h3>
-                    <Badge className={getEventTypeColor(event.eventType)}>
-                      {event.eventType}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span>{event.startTime} - {event.endTime}</span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      <span>{event.location}</span>
-                    </div>
-
-                    {event.description && (
-                      <div className="mt-2">
-                        <p className="text-sm text-gray-700">{event.description}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Check-in Status */}
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t">
-                    <div className="flex items-center">
-                      {event.checkedIn ? (
-                        <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                      ) : (
-                        <XCircle className="h-5 w-5 text-red-500 mr-2" />
-                      )}
-                      <span className="text-sm">
-                        {event.checkedIn ? 'Checked In' : 'Not Checked In'}
-                      </span>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-
-              {selectedDayEvents.length === 0 && (
-                <div className="text-center py-8">
-                  <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No events scheduled for this day</p>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Day Events Drawer */}
+        <DayDrawer
+          isOpen={!!drawerDate}
+          onClose={() => setDrawerDate(null)}
+          date={drawerDate}
+          events={drawerEvents}
+        />
       </main>
     </div>
   );

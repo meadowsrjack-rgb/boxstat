@@ -1,217 +1,256 @@
-
-import { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { X, Filter, Star } from "lucide-react";
-import { EventType, ParsedEvent } from "@/lib/parseEventMeta";
-import { UserPreferences, getUserPreferences, saveUserPreferences, applyRelevanceProfile } from "@/lib/userPrefs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Filter, X } from "lucide-react";
+import { ParsedEvent } from "@/lib/parseEventMeta";
+import { UserPreferences, saveUserPreferences } from "@/lib/userPrefs";
 
 interface FiltersBarProps {
   events: ParsedEvent[];
-  onFiltersChange: (prefs: UserPreferences) => void;
+  filters: UserPreferences;
+  onFiltersChange: (filters: UserPreferences) => void;
 }
 
-export function FiltersBar({ events, onFiltersChange }: FiltersBarProps) {
-  const [filters, setFilters] = useState<UserPreferences>(getUserPreferences());
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  // Get unique values from events
-  const uniqueEventTypes = Array.from(new Set(events.map(e => e.type)));
-  const uniqueAgeTags = Array.from(new Set(events.flatMap(e => e.ageTags)));
-  const uniqueTeamTags = Array.from(new Set(events.flatMap(e => e.teamTags)));
-  const uniqueCoaches = Array.from(new Set(events.flatMap(e => e.coaches)));
-  const uniqueLocations = Array.from(new Set(events.map(e => e.location).filter(Boolean)));
-
-  useEffect(() => {
-    onFiltersChange(filters);
-  }, [filters, onFiltersChange]);
+export function FiltersBar({ events, filters, onFiltersChange }: FiltersBarProps) {
+  // Extract unique values from events
+  const availableEventTypes = Array.from(new Set(events.map(e => e.type)));
+  const availableAgeTags = Array.from(new Set(events.flatMap(e => e.ageTags)));
+  const availableTeamTags = Array.from(new Set(events.flatMap(e => e.teamTags)));
+  const availableCoaches = Array.from(new Set(events.flatMap(e => e.coaches)));
 
   const updateFilters = (newFilters: UserPreferences) => {
-    setFilters(newFilters);
+    onFiltersChange(newFilters);
     saveUserPreferences(newFilters);
   };
 
-  const toggleEventType = (type: EventType) => {
-    const newTypes = filters.eventTypes.includes(type)
-      ? filters.eventTypes.filter(t => t !== type)
-      : [...filters.eventTypes, type];
-    updateFilters({ ...filters, eventTypes: newTypes });
-  };
-
-  const toggleAgeTag = (tag: string) => {
-    const newTags = filters.ageTags.includes(tag)
-      ? filters.ageTags.filter(t => t !== tag)
-      : [...filters.ageTags, tag];
-    updateFilters({ ...filters, ageTags: newTags });
-  };
-
-  const toggleTeamTag = (tag: string) => {
-    const newTags = filters.teamTags.includes(tag)
-      ? filters.teamTags.filter(t => t !== tag)
-      : [...filters.teamTags, tag];
-    updateFilters({ ...filters, teamTags: newTags });
-  };
-
-  const toggleCoach = (coach: string) => {
-    const newCoaches = filters.coaches.includes(coach)
-      ? filters.coaches.filter(c => c !== coach)
-      : [...filters.coaches, coach];
-    updateFilters({ ...filters, coaches: newCoaches });
-  };
-
   const clearAllFilters = () => {
-    updateFilters({
+    const emptyFilters: UserPreferences = {
       eventTypes: [],
       ageTags: [],
       teamTags: [],
-      coaches: [],
-      locations: [],
-      defaultRelevanceProfile: filters.defaultRelevanceProfile
-    });
+      coaches: []
+    };
+    updateFilters(emptyFilters);
   };
 
-  const applyRelevance = () => {
-    updateFilters(applyRelevanceProfile(filters));
-  };
-
-  const activeFilterCount = filters.eventTypes.length + filters.ageTags.length + 
-                           filters.teamTags.length + filters.coaches.length;
+  const hasActiveFilters = filters.eventTypes.length > 0 || 
+                          filters.ageTags.length > 0 || 
+                          filters.teamTags.length > 0 || 
+                          filters.coaches.length > 0;
 
   return (
     <Card className="mb-4">
       <CardContent className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <Filter className="h-4 w-4" />
             <span className="font-medium">Filters</span>
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {activeFilterCount}
-              </Badge>
-            )}
           </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={applyRelevance}
-              className="flex items-center space-x-1"
-            >
-              <Star className="h-3 w-3" />
-              <span>Relevance</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              {isExpanded ? "Collapse" : "Expand"}
-            </Button>
-          </div>
-        </div>
-
-        {/* Quick filters - always visible */}
-        <div className="flex flex-wrap gap-2 mb-3">
-          {uniqueEventTypes.slice(0, 4).map(type => (
-            <Badge
-              key={type}
-              variant={filters.eventTypes.includes(type) ? "default" : "outline"}
-              className="cursor-pointer hover:bg-primary/10"
-              onClick={() => toggleEventType(type)}
-            >
-              {type}
-            </Badge>
-          ))}
-          {activeFilterCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              className="h-6 px-2 text-xs"
-            >
-              <X className="h-3 w-3 mr-1" />
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+              <X className="h-4 w-4 mr-1" />
               Clear All
             </Button>
           )}
         </div>
 
-        {/* Expanded filters */}
-        {isExpanded && (
-          <div className="space-y-4">
-            {/* Event Types */}
-            <div>
-              <h4 className="text-sm font-medium mb-2">Event Types</h4>
-              <div className="flex flex-wrap gap-2">
-                {uniqueEventTypes.map(type => (
-                  <Badge
-                    key={type}
-                    variant={filters.eventTypes.includes(type) ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/10"
-                    onClick={() => toggleEventType(type)}
-                  >
-                    {type}
-                  </Badge>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {/* Event Type Filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm">
+                Event Types {filters.eventTypes.length > 0 && `(${filters.eventTypes.length})`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56">
+              <div className="space-y-2">
+                {availableEventTypes.map(type => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`type-${type}`}
+                      checked={filters.eventTypes.includes(type)}
+                      onCheckedChange={(checked) => {
+                        const newTypes = checked 
+                          ? [...filters.eventTypes, type]
+                          : filters.eventTypes.filter(t => t !== type);
+                        updateFilters({ ...filters, eventTypes: newTypes });
+                      }}
+                    />
+                    <label htmlFor={`type-${type}`} className="capitalize">
+                      {type}
+                    </label>
+                  </div>
                 ))}
               </div>
-            </div>
+            </PopoverContent>
+          </Popover>
 
-            {/* Age Groups */}
-            {uniqueAgeTags.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2">Age Groups</h4>
-                <div className="flex flex-wrap gap-2">
-                  {uniqueAgeTags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant={filters.ageTags.includes(tag) ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/10"
-                      onClick={() => toggleAgeTag(tag)}
-                    >
-                      {tag}
-                    </Badge>
+          {/* Age Tags Filters */}
+          {availableAgeTags.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Age Groups {filters.ageTags.length > 0 && `(${filters.ageTags.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {availableAgeTags.map(tag => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`age-${tag}`}
+                        checked={filters.ageTags.includes(tag)}
+                        onCheckedChange={(checked) => {
+                          const newTags = checked 
+                            ? [...filters.ageTags, tag]
+                            : filters.ageTags.filter(t => t !== tag);
+                          updateFilters({ ...filters, ageTags: newTags });
+                        }}
+                      />
+                      <label htmlFor={`age-${tag}`} className="uppercase">
+                        {tag}
+                      </label>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              </PopoverContent>
+            </Popover>
+          )}
 
-            {/* Teams */}
-            {uniqueTeamTags.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2">Teams</h4>
-                <div className="flex flex-wrap gap-2">
-                  {uniqueTeamTags.map(tag => (
-                    <Badge
-                      key={tag}
-                      variant={filters.teamTags.includes(tag) ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/10"
-                      onClick={() => toggleTeamTag(tag)}
-                    >
-                      {tag}
-                    </Badge>
+          {/* Team Tags Filters */}
+          {availableTeamTags.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Teams {filters.teamTags.length > 0 && `(${filters.teamTags.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {availableTeamTags.map(tag => (
+                    <div key={tag} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`team-${tag}`}
+                        checked={filters.teamTags.includes(tag)}
+                        onCheckedChange={(checked) => {
+                          const newTags = checked 
+                            ? [...filters.teamTags, tag]
+                            : filters.teamTags.filter(t => t !== tag);
+                          updateFilters({ ...filters, teamTags: newTags });
+                        }}
+                      />
+                      <label htmlFor={`team-${tag}`} className="capitalize">
+                        {tag}
+                      </label>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              </PopoverContent>
+            </Popover>
+          )}
 
-            {/* Coaches */}
-            {uniqueCoaches.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium mb-2">Coaches</h4>
-                <div className="flex flex-wrap gap-2">
-                  {uniqueCoaches.map(coach => (
-                    <Badge
-                      key={coach}
-                      variant={filters.coaches.includes(coach) ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/10"
-                      onClick={() => toggleCoach(coach)}
-                    >
-                      {coach}
-                    </Badge>
+          {/* Coaches Filters */}
+          {availableCoaches.length > 0 && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  Coaches {filters.coaches.length > 0 && `(${filters.coaches.length})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56">
+                <div className="space-y-2">
+                  {availableCoaches.map(coach => (
+                    <div key={coach} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`coach-${coach}`}
+                        checked={filters.coaches.includes(coach)}
+                        onCheckedChange={(checked) => {
+                          const newCoaches = checked 
+                            ? [...filters.coaches, coach]
+                            : filters.coaches.filter(c => c !== coach);
+                          updateFilters({ ...filters, coaches: newCoaches });
+                        }}
+                      />
+                      <label htmlFor={`coach-${coach}`}>
+                        {coach}
+                      </label>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-1">
+            {filters.eventTypes.map(type => (
+              <Badge key={type} variant="secondary" className="text-xs">
+                {type}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-3 w-3 p-0 ml-1 hover:bg-transparent"
+                  onClick={() => updateFilters({
+                    ...filters, 
+                    eventTypes: filters.eventTypes.filter(t => t !== type)
+                  })}
+                >
+                  <X className="h-2 w-2" />
+                </Button>
+              </Badge>
+            ))}
+            {filters.ageTags.map(tag => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag.toUpperCase()}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-3 w-3 p-0 ml-1 hover:bg-transparent"
+                  onClick={() => updateFilters({
+                    ...filters, 
+                    ageTags: filters.ageTags.filter(t => t !== tag)
+                  })}
+                >
+                  <X className="h-2 w-2" />
+                </Button>
+              </Badge>
+            ))}
+            {filters.teamTags.map(tag => (
+              <Badge key={tag} variant="secondary" className="text-xs">
+                {tag}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-3 w-3 p-0 ml-1 hover:bg-transparent"
+                  onClick={() => updateFilters({
+                    ...filters, 
+                    teamTags: filters.teamTags.filter(t => t !== tag)
+                  })}
+                >
+                  <X className="h-2 w-2" />
+                </Button>
+              </Badge>
+            ))}
+            {filters.coaches.map(coach => (
+              <Badge key={coach} variant="secondary" className="text-xs">
+                {coach}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-3 w-3 p-0 ml-1 hover:bg-transparent"
+                  onClick={() => updateFilters({
+                    ...filters, 
+                    coaches: filters.coaches.filter(c => c !== coach)
+                  })}
+                >
+                  <X className="h-2 w-2" />
+                </Button>
+              </Badge>
+            ))}
           </div>
         )}
       </CardContent>

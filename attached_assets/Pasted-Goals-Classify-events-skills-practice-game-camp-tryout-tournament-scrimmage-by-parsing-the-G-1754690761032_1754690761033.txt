@@ -1,0 +1,225 @@
+Goals
+Classify events (skills, practice, game, camp, tryout, tournament, scrimmage) by parsing the Google Calendar event fields (summary, description, location).
+
+Filter by relevance: team/age group (e.g., 12U, 4–6th grade), team color, program (skills vs team practice), location, coach.
+
+Default to user-relevant view (e.g., a parent with a saved profile: 12U Red + Skills for 4–6th) and let them toggle filters.
+
+Fix layout issues: the day drawer/modal must open fully on screen, scroll independently, and never push content off-screen.
+
+Modern UI: compact month view with dots, hover/press states, tags, and a responsive details panel.
+
+Implementation Plan
+1) Event parsing & tagging
+Create a utility that turns raw Google events into normalized event objects with tags:
+
+File: src/lib/parseEventMeta.ts
+
+ts
+Copy
+Edit
+export type EventType = "skills" | "practice" | "game" | "camp" | "tryout" | "tournament" | "scrimmage" | "other";
+export interface ParsedEvent {
+  id: string;
+  start: string; // ISO
+  end: string;   // ISO
+  title: string;
+  location?: string;
+  coaches: string[];
+  ageTags: string[];   // ["12U", "4-6th"]
+  teamTags: string[];  // ["11U Red", "HS Black", etc.]
+  type: EventType;
+  raw: any; // original event
+}
+
+const TYPE_RULES: Array<[EventType, RegExp]> = [
+  ["skills", /\b(skill|skills|clinic|workout)\b/i],
+  ["practice", /\b(practice|training|session)\b/i],
+  ["game", /\b(game|vs\.?|match)\b/i],
+  ["camp", /\b(camp)\b/i],
+  ["tryout", /\b(tryout)\b/i],
+  ["tournament", /\b(tourney|tournament)\b/i],
+  ["scrimmage", /\b(scrim|scrimmage)\b/i],
+];
+
+const AGE_RULES: RegExp[] = [
+  /\b(\d{1,2})U\b/i,                  // 10U, 11U, 12U
+  /\b([1-8])(?:st|nd|rd|th)\s*-\s*([1-8])(?:st|nd|rd|th)\s*grade\b/i, // 4-6th grade
+  /\b([1-8])(?:st|nd|rd|th)\s*grade\b/i
+];
+
+const TEAM_RULES: RegExp[] = [
+  /\b(11U|12U|13U|14U|HS)\s*(Black|Red|White)?\b/i
+];
+
+const COACH_RULE: RegExp = /\b(coach(?:es)?|coach:)\s*([A-Za-z ,&]+)/i;
+
+export function parseEventMeta(ev: any): ParsedEvent {
+  const haystack = `${ev.summary || ""} ${ev.description || ""} ${ev.location || ""}`.trim();
+
+  // type
+  let type: EventType = "other";
+  for (const [t, rx] of TYPE_RULES) if (rx.test(haystack)) { type = t; break; }
+
+  // coaches
+  const coachesMatch = haystack.match(COACH_RULE);
+  const coaches = coachesMatch
+    ? coachesMatch[2].split(/[,&/]+/).map(s => s.trim()).filter(Boolean)
+    : [];
+
+  // ages
+  const ageTags: string[] = [];
+  const uMatch = haystack.match(/\b(\d{1,2})U\b/i);
+  if (uMatch) ageTags.push(`${uMatch[1]}U`);
+  const spanMatch = haystack.match(/\b([1-8])(?:st|nd|rd|th)\s*-\s*([1-8])(?:st|nd|rd|th)\s*grade\b/i);
+  if (spanMatch) ageTags.push(`${spanMatch[1]}-${spanMatch[2]}th`);
+  const singleGradeMatch = haystack.match(/\b([1-8])(?:st|nd|rd|th)\s*grade\b/i);
+  if (singleGradeMatch && !spanMatch) ageTags.push(`${singleGradeMatch[1]}th`);
+
+  // teams
+  const teamTags: string[] = [];
+  const teamMatch = haystack.match(/\b(11U|12U|13U|14U|HS)\s*(Black|Red|White)?\b/i);
+  if (teamMatch) teamTags.push([teamMatch[1], teamMatch[2]].filter(Boolean).join(" "));
+
+  return {
+    id: ev.id,
+    start: ev.start?.dateTime || ev.start?.date,
+    end: ev.end?.dateTime || ev.end?.date,
+    title: ev.summary || "Untitled",
+    location: ev.location,
+    coaches,
+    ageTags,
+    teamTags,
+    type,
+    raw: ev
+  };
+}
+Use this in your Google Calendar fetch code (where events are mapped) so all components work with ParsedEvent.
+
+2) Filters & default relevance
+Files: src/components/FiltersBar.tsx, src/state/userPrefs.ts
+
+Add filter controls:
+
+Event Type (multi-select chips: Skills, Practice, Game, Camp, Tryout…)
+
+Age/Division (e.g., 4–6th, 12U, HS)
+
+Team (11U Black/Red/White, HS Black etc.)
+
+Coach (multi-select)
+
+Location
+
+Persist selected filters in localStorage (e.g., uyp.prefs).
+
+On load, apply saved filters automatically.
+
+Provide a “Relevance” quick filter button that loads a saved profile (e.g., { types: ["practice","skills"], ageTags:["12U","4-6th"], teamTags:["11U Red"] }).
+
+3) Calendar UX refresh
+Files: src/components/CalendarView.tsx, src/components/EventList.tsx, src/components/EventCard.tsx
+
+Month grid with dots for counts; color by type:
+
+Skills = subtle
+
+Practice = primary
+
+Game = accent
+
+Camp = warning
+
+On date click: open a right-side drawer (or modal) that:
+
+Stays on-screen (use portal + focus trap).
+
+Has its own scroll, max-height = 100vh, internal sticky header with date + filter quick toggles.
+
+Sorts events: user-relevant first (matches active filters), then others by start time.
+
+Shows tags: type pill, age/grade, team, coach, location.
+
+Has a “Only my filters” toggle at top.
+
+4) Off-screen & interaction bugs
+Ensure drawer uses viewport units and overflow:auto.
+
+Prevent body scroll when drawer open.
+
+Close on Esc, click outside, and explicit X.
+
+Keep keyboard focus inside (accessibility).
+
+On mobile, use full-screen sheet with swipe-close.
+
+5) Performance & edge cases
+Debounce filter changes.
+
+Lazy render long lists.
+
+Handle all-day events & overlapping times.
+
+If no events match filters → show friendly empty state with “clear filters” button.
+
+6) Styling
+Use current design system (Tailwind/shadcn if present).
+
+Compact spacing, consistent iconography (clock, map pin, tag).
+
+Ensure dark mode support if app has it.
+
+Acceptance Criteria (must pass)
+A parent can set filters (e.g., 12U + Skills) and only see those events when opening a day.
+
+Event chips clearly show Type, Age/Team, Coach, Location.
+
+Opening a day shows a drawer/panel fully on screen on desktop and mobile—no content cut off.
+
+Default view prioritizes user’s saved preferences on load.
+
+All buttons and toggles work (keyboard + mouse + touch).
+
+No layout shift when navigating months.
+
+Lighthouse best practices score ≥ 90 on the calendar route (dev build ok).
+
+Places to Update
+src/lib/parseEventMeta.ts (new)
+
+Where Google events are fetched → map to ParsedEvent
+
+src/state/userPrefs.ts (new) simple localStorage store
+
+src/components/FiltersBar.tsx (new/updated)
+
+src/components/CalendarView.tsx (update)
+
+src/components/DayDrawer.tsx (new) or refactor existing modal
+
+src/components/EventList.tsx, src/components/EventCard.tsx (update)
+
+Dev Notes
+Keep original raw event in ParsedEvent.raw for any missing data.
+
+Add unit tests for parseEventMeta with sample titles like:
+
+"FNH 3rd-4th Skills — Coach Malia — Momentous"
+
+"11U Red Practice"
+
+"Tournament @ Sportsplex"
+
+"HS Black vs Northwood (Game)"
+
+Make parsing rules easy to extend (add regex without touching components).
+
+Deliverables
+
+Updated components + styles.
+
+New parseEventMeta util with tests.
+
+Saved user preferences (filters) and Relevance quick-apply.
+
+Drawer/modal that never renders off-screen and is accessible.

@@ -791,7 +791,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
                       { label: 'Flag', value: '—' },
                       { label: 'Height', value: '—' },
                       { label: 'Weight', value: '—' },
-                      { label: 'Position', value: user.position || '—' }
+                      { label: 'Position', value: currentChild?.position || currentUser.position || '—' }
                     ].map((item, index) => (
                       <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-gray-900">{item.label}</span>

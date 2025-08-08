@@ -21,13 +21,18 @@ import { format, isToday, isTomorrow, isThisWeek, isSameDay, parseISO } from "da
 
 // Helper function to convert Google Calendar events to our format
 function formatGoogleEvent(event: any) {
-  const startDate = event.startDate ? parseISO(event.startDate) : new Date();
-  const endDate = event.endDate ? parseISO(event.endDate) : new Date();
+  // Handle both startTime/endTime (from database) and startDate/endDate formats
+  const startDate = event.startTime ? parseISO(event.startTime) : 
+                   event.startDate ? parseISO(event.startDate) : new Date();
+  const endDate = event.endTime ? parseISO(event.endTime) : 
+                 event.endDate ? parseISO(event.endDate) : new Date();
+  
+  console.log('Processing event:', event.title, 'Start:', startDate, 'Original startTime:', event.startTime);
   
   return {
     id: event.id,
     title: event.title || 'Untitled Event',
-    date: startDate,
+    date: startDate, // This is the key field used for calendar day matching
     startTime: format(startDate, 'h:mm a'),
     endTime: format(endDate, 'h:mm a'),
     location: event.location || 'Location TBD',
@@ -58,6 +63,22 @@ export default function Schedule() {
   });
 
   const events = eventsData && Array.isArray(eventsData) ? eventsData.map(formatGoogleEvent) : [];
+  
+  // Debug: Log event distribution by date
+  console.log(`Total events loaded: ${events.length}`);
+  if (events.length > 0) {
+    const eventsByDate = events.reduce((acc: Record<string, number>, event) => {
+      const dateKey = format(event.date, 'yyyy-MM-dd');
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('Events by date:', eventsByDate);
+    console.log('Sample events:', events.slice(0, 3).map(e => ({
+      title: e.title,
+      date: format(e.date, 'yyyy-MM-dd HH:mm'),
+      startTime: e.startTime
+    })));
+  }
 
   if (isLoading) {
     return (
@@ -93,17 +114,31 @@ export default function Schedule() {
       isSameDay(event.date, date)
     );
     
-    console.log('Day clicked:', date, 'Events found:', dayEvents.length, dayEvents);
+    console.log('Day clicked:', format(date, 'yyyy-MM-dd'), 'Events found:', dayEvents.length);
+    console.log('Sample events on this day:', dayEvents.map(e => ({ 
+      title: e.title, 
+      date: format(e.date, 'yyyy-MM-dd HH:mm'),
+      originalTime: e.startTime 
+    })));
     
     setSelectedDate(date);
     if (dayEvents.length > 0) {
       setSelectedDayEvents(dayEvents);
       setIsDialogOpen(true);
+    } else {
+      // Show message that no events are on this day
+      console.log('No events found for this day');
     }
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter((event: any) => isSameDay(event.date, date));
+    const matchingEvents = events.filter((event: any) => isSameDay(event.date, date));
+    // Debug logging for calendar dots
+    if (matchingEvents.length > 0) {
+      console.log(`Date ${format(date, 'MMM d')}: ${matchingEvents.length} events`, 
+        matchingEvents.map(e => e.title));
+    }
+    return matchingEvents;
   };
 
   return (
@@ -210,7 +245,15 @@ export default function Schedule() {
             </div>
             
             {/* Legend */}
-            <div className="mt-6 flex justify-center space-x-6 text-sm">
+            {/* Event Summary */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600 mb-4">
+                Showing {events.length} events from UYP's Google Calendar
+              </p>
+            </div>
+            
+            {/* Legend */}
+            <div className="mt-2 flex justify-center space-x-6 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span className="text-gray-600">Completed (QR Check-in)</span>

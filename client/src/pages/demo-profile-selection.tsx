@@ -75,6 +75,7 @@ export default function DemoProfileSelection() {
     
     // Store demo profile selection in session storage
     sessionStorage.setItem('demoProfile', JSON.stringify(profile));
+    sessionStorage.setItem('currentProfile', JSON.stringify(profile));
     sessionStorage.setItem('isDemoMode', 'true');
     console.log("Session storage set, navigating to:", profile.profileType);
     

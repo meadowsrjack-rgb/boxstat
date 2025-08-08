@@ -39,6 +39,61 @@ import DemoAccountSetup from "@/pages/demo-account-setup";
 import CalendarSync from "@/pages/calendar-sync";
 
 function Router() {
+  // Check for demo mode first
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
+  const demoProfile = sessionStorage.getItem('demoProfile');
+  
+  // If in demo mode, handle routing based on profile
+  if (isDemoMode && demoProfile) {
+    const profile = JSON.parse(demoProfile);
+    console.log('Demo mode active, current profile:', profile);
+    
+    // Route to appropriate dashboard based on profile type
+    switch (profile.profileType) {
+      case 'player':
+        return (
+          <Switch>
+            <Route path="/" component={() => <PlayerDashboard />} />
+            <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+            <Route path="/demo-profiles" component={DemoProfileSelection} />
+            <Route component={() => <PlayerDashboard />} />
+          </Switch>
+        );
+      case 'parent':
+        return (
+          <Switch>
+            <Route path="/" component={ParentDashboard} />
+            <Route path="/parent-dashboard" component={ParentDashboard} />
+            <Route path="/demo-profiles" component={DemoProfileSelection} />
+            <Route component={ParentDashboard} />
+          </Switch>
+        );
+      case 'coach':
+        return (
+          <Switch>
+            <Route path="/" component={AdminDashboard} />
+            <Route path="/admin-dashboard" component={AdminDashboard} />
+            <Route path="/demo-profiles" component={DemoProfileSelection} />
+            <Route component={AdminDashboard} />
+          </Switch>
+        );
+    }
+  }
+  
+  // Check if we're accessing demo profiles selection
+  const currentPath = window.location.pathname;
+  if (currentPath === '/demo-profiles' || isDemoMode) {
+    return (
+      <Switch>
+        <Route path="/demo-profiles" component={DemoProfileSelection} />
+        <Route path="/parent-dashboard" component={ParentDashboard} />
+        <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+        <Route path="/admin-dashboard" component={AdminDashboard} />
+        <Route component={DemoProfileSelection} />
+      </Switch>
+    );
+  }
+
   // Temporarily bypass auth for debugging white screen
   const user = null;
   const isLoading = false;
@@ -73,8 +128,8 @@ function Router() {
     };
   }, []);
 
-  // Debug: Always show landing page for now
-  console.log('Router: Rendering Landing page to debug white screen');
+  // Default routing for non-demo mode
+  console.log('Router: Non-demo mode, showing landing page');
   
   return (
     <Switch>

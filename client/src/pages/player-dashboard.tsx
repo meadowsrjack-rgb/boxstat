@@ -71,8 +71,8 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
   
   // Get child profiles to find the current child's QR code (use demo data if in demo mode)
   const { data: childProfiles } = useQuery({
-    queryKey: ["/api/child-profiles", user?.id],
-    enabled: !!user?.id && !isDemoMode,
+    queryKey: ["/api/child-profiles", currentUser?.id],
+    enabled: !!currentUser?.id && !isDemoMode,
   });
 
   // Get the selected child ID from URL parameter or prop
@@ -83,8 +83,8 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
     null;
 
   const { data: userTeam } = useQuery<any>({
-    queryKey: ["/api/users", user?.id, "team"],
-    enabled: !!user?.id,
+    queryKey: ["/api/users", currentUser?.id, "team"],
+    enabled: !!currentUser?.id && !isDemoMode,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
@@ -93,8 +93,8 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
   });
 
   const { data: userEvents = [] } = useQuery({
-    queryKey: ["/api/users", user?.id, "events"],
-    enabled: !!user?.id,
+    queryKey: ["/api/users", currentUser?.id, "events"],
+    enabled: !!currentUser?.id && !isDemoMode,
   });
 
   const { data: childEvents = [] } = useQuery({
@@ -103,8 +103,8 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
   });
 
   const { data: userBadges } = useQuery({
-    queryKey: ["/api/users", user?.id, "badges"],
-    enabled: !!user?.id,
+    queryKey: ["/api/users", currentUser?.id, "badges"],
+    enabled: !!currentUser?.id && !isDemoMode,
   });
 
   if (!currentUser) {
@@ -118,7 +118,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
   // Use child-specific events if available, otherwise fall back to user events
   const displayEvents = childEvents || userEvents;
   // Use the selected child's QR code data if available
-  const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${user.id}-${userTeam?.id}-${Date.now()}`;
+  const qrData = currentChild?.qrCodeData || `UYP-PLAYER-${currentUser.id}-${userTeam?.id}-${Date.now()}`;
   
   // Get user initials for avatar
   const getInitials = (firstName: string, lastName: string) => {
@@ -196,7 +196,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
 
   // WebSocket connection for real-time messaging
   useEffect(() => {
-    if (userTeam?.id && user?.id) {
+    if (userTeam?.id && currentUser?.id && !isDemoMode) {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       
@@ -206,7 +206,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
         console.log('WebSocket connected');
         websocket.send(JSON.stringify({
           type: 'join',
-          userId: user.id,
+          userId: currentUser.id,
           teamId: userTeam.id
         }));
         setWs(websocket);
@@ -233,7 +233,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
         websocket.close();
       };
     }
-  }, [userTeam?.id, user?.id, queryClient]);
+  }, [userTeam?.id, currentUser?.id, queryClient, isDemoMode]);
 
   // Example team roster
   const teamRoster = [
@@ -305,7 +305,7 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
               <h3 className="text-lg font-bold text-gray-900 mb-4">Check-In QR Code</h3>
               <QRCode value={qrData} size={200} className="mx-auto mb-4" />
               <p className="text-gray-600 text-sm mb-2 font-medium">
-                {currentChild?.firstName || user.firstName} {currentChild?.lastName || user.lastName}
+                {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
               </p>
               <p className="text-gray-500 text-xs mb-4">
                 {currentChild?.teamName ? `${currentChild.teamAgeGroup} ${currentChild.teamName}` : userTeam?.name || 'Team Member'}
@@ -324,18 +324,18 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
         <div className="px-6 py-6 text-center">
           <Avatar className="h-20 w-20 mx-auto mb-4">
             <AvatarImage 
-              src={user.profileImageUrl || currentChild?.profileImageUrl} 
+              src={currentUser.profileImageUrl || currentChild?.profileImageUrl} 
               alt="Player Avatar" 
             />
             <AvatarFallback className="text-lg font-bold bg-gray-200">
               {getInitials(
-                currentChild?.firstName || user.firstName || '', 
-                currentChild?.lastName || user.lastName || ''
+                currentChild?.firstName || currentUser.firstName || '', 
+                currentChild?.lastName || currentUser.lastName || ''
               )}
             </AvatarFallback>
           </Avatar>
           <h1 className="text-xl font-bold text-gray-900">
-            {currentChild?.firstName || user.firstName} {currentChild?.lastName || user.lastName}
+            {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
           </h1>
         </div>
 

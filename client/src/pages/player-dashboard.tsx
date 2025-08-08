@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TodaySection } from "@/components/TodaySection";
 
 
-export default function PlayerDashboard({ childId }: { childId?: number | null }) {
+export default function PlayerDashboard({ childId, demoProfile }: { childId?: number | null, demoProfile?: any }) {
   const { user } = useAuth();
   const [showQR, setShowQR] = useState(false);
   const [activeTab, setActiveTab] = useState('activity');
@@ -53,19 +53,20 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [location, setLocation] = useLocation();
 
   // Check if we're in demo mode
-  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
-  const demoProfile = isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null;
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true' || !!demoProfile;
+  const profileData = demoProfile || (isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null);
   
   // Use demo user data if in demo mode
   const currentUser = isDemoMode ? {
-    id: demoProfile?.profileType === 'player' ? demoProfile.id : user?.id,
-    firstName: demoProfile?.firstName || user?.firstName,
-    lastName: demoProfile?.lastName || user?.lastName,
+    id: profileData?.id || user?.id,
+    firstName: profileData?.firstName || user?.firstName,
+    lastName: profileData?.lastName || user?.lastName,
     userType: 'player',
-    teamName: demoProfile?.teamName,
-    jerseyNumber: demoProfile?.jerseyNumber,
-    position: demoProfile?.position,
-    grade: demoProfile?.grade
+    teamName: profileData?.teamName,
+    jerseyNumber: profileData?.jerseyNumber,
+    position: profileData?.position,
+    grade: profileData?.grade,
+    profileImageUrl: null
   } : user;
   
   // Get child profiles to find the current child's QR code (use demo data if in demo mode)

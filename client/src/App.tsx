@@ -53,28 +53,28 @@ function Router() {
       case 'player':
         return (
           <Switch>
-            <Route path="/" component={() => <PlayerDashboard />} />
-            <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+            <Route path="/" component={() => <PlayerDashboard demoProfile={profile} />} />
+            <Route path="/player-dashboard" component={() => <PlayerDashboard demoProfile={profile} />} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={() => <PlayerDashboard />} />
+            <Route component={() => <PlayerDashboard demoProfile={profile} />} />
           </Switch>
         );
       case 'parent':
         return (
           <Switch>
-            <Route path="/" component={ParentDashboard} />
-            <Route path="/parent-dashboard" component={ParentDashboard} />
+            <Route path="/" component={() => <ParentDashboard demoProfile={profile} />} />
+            <Route path="/parent-dashboard" component={() => <ParentDashboard demoProfile={profile} />} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={ParentDashboard} />
+            <Route component={() => <ParentDashboard demoProfile={profile} />} />
           </Switch>
         );
       case 'coach':
         return (
           <Switch>
-            <Route path="/" component={AdminDashboard} />
-            <Route path="/admin-dashboard" component={AdminDashboard} />
+            <Route path="/" component={() => <AdminDashboard demoProfile={profile} />} />
+            <Route path="/admin-dashboard" component={() => <AdminDashboard demoProfile={profile} />} />
             <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={AdminDashboard} />
+            <Route component={() => <AdminDashboard demoProfile={profile} />} />
           </Switch>
         );
     }

@@ -27,8 +27,22 @@ import { format } from "date-fns";
 
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
   const { user } = useAuth();
+  
+  // Check if we're in demo mode
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true' || !!demoProfile;
+  const profileData = demoProfile || (isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null);
+  
+  // Use demo user data if in demo mode
+  const currentUser = isDemoMode ? {
+    id: profileData?.id || 'demo-coach-001',
+    firstName: profileData?.firstName || 'Coach',
+    lastName: profileData?.lastName || 'Smith',
+    email: profileData?.email || 'coach.smith@email.com',
+    userType: 'admin',
+    profileImageUrl: null
+  } : user;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();

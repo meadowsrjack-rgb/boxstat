@@ -20,7 +20,7 @@ import { format } from "date-fns";
 
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
-export default function ParentDashboard() {
+export default function ParentDashboard({ demoProfile }: { demoProfile?: any }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -28,11 +28,18 @@ export default function ParentDashboard() {
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   // Check if we're in demo mode
-  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
-  const demoProfile = isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null;
+  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true' || !!demoProfile;
+  const profileData = demoProfile || (isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null);
   
-  // Use demo user data if in demo mode
-  const currentUser = isDemoMode ? demoProfile : user;
+  // Use demo user data if in demo mode - create a user-like object for parent
+  const currentUser = isDemoMode ? {
+    id: profileData?.id || 'demo-parent-001',
+    firstName: profileData?.firstName || 'Sarah',
+    lastName: profileData?.lastName || 'Johnson',
+    email: profileData?.email || 'sarah.johnson@email.com',
+    userType: 'parent',
+    profileImageUrl: null
+  } : user;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

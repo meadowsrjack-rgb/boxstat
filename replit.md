@@ -10,6 +10,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 8, 2025**: Prepared comprehensive GitHub publication package with README, deployment guides, and security configurations
+- **August 8, 2025**: Finalized Google Calendar API integration with 100+ real events displaying in schedule page
+- **August 8, 2025**: Resolved API routing issues - `/api/events` now returns authentic Google Calendar data
 - **August 7, 2025**: Implemented comprehensive Google Calendar API integration to sync UYP's calendar (upyourperformance@gmail.com) with the app
 - **August 7, 2025**: Added Coach account type as third registration option with green theme and graduation cap icon
 - **August 7, 2025**: Enhanced testing infrastructure with "Test New Account Signup" button that bypasses authentication

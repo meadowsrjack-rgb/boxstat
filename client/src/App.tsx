@@ -39,7 +39,11 @@ import DemoAccountSetup from "@/pages/demo-account-setup";
 import CalendarSync from "@/pages/calendar-sync";
 
 function Router() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  // Temporarily bypass auth for debugging white screen
+  const user = null;
+  const isLoading = false;
+  const isAuthenticated = false;
+  // const { user, isLoading, isAuthenticated } = useAuth();
   
   // Show account setup if user is authenticated but profile not completed
   const needsSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
@@ -69,18 +73,25 @@ function Router() {
     };
   }, []);
 
-  // Check if we're on a demo route that doesn't require auth
-  const currentPath = window.location.pathname;
-  const currentSearch = window.location.search;
-  const isDemoRoute = currentPath.includes('demo-profiles') || 
-                     currentPath.includes('demo-account-setup') ||
-                     (currentPath === '/account-setup' && currentSearch.includes('test=true'));
+  // Debug: Always show landing page for now
+  console.log('Router: Rendering Landing page to debug white screen');
   
-  // Debug logging
-  if (currentPath === '/account-setup') {
-    console.log('Account setup route detected:', { currentPath, currentSearch, isDemoRoute });
-  }
+  return (
+    <Switch>
+      <Route path="/" component={Landing} />
+      <Route path="/demo-profiles" component={DemoProfileSelection} />
+      <Route path="/account-setup" component={AccountSetup} />
+      <Route path="/test-accounts" component={TestAccounts} />
+      <Route component={Landing} />
+    </Switch>
+  );
+}
 
+function DeadCode() {
+  // This code is unreachable but kept for reference
+  const isLoading = false;
+  const isDemoRoute = false;
+  
   if (isLoading && !isDemoRoute) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

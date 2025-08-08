@@ -122,6 +122,7 @@ export interface IStorage {
   getTeamPlayers(teamId: number): Promise<User[]>;
   
   // Event operations
+  getAllEvents(): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
   getTeamEvents(teamId: number): Promise<Event[]>;
   getUserEvents(userId: string): Promise<Event[]>;
@@ -501,6 +502,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Event operations
+  async getAllEvents(): Promise<Event[]> {
+    try {
+      const now = new Date();
+      console.log('Getting all events from database...');
+      
+      const eventsList = await db
+        .select()
+        .from(events)
+        .where(
+          and(
+            gte(events.startTime, now), // Today or later
+            eq(events.isActive, true)
+          )
+        )
+        .orderBy(asc(events.startTime));
+      
+      console.log(`Query successful: found ${eventsList.length} events`);
+      return eventsList;
+    } catch (error) {
+      console.error('Database error in getAllEvents:', error);
+      throw error;
+    }
+  }
+
   async getEvent(id: number): Promise<Event | undefined> {
     const [event] = await db.select().from(events).where(eq(events.id, id));
     return event;

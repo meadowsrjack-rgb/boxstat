@@ -12,71 +12,31 @@ import {
   Users,
   ArrowLeft,
   CheckCircle,
-  XCircle
+  XCircle,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
-import { format, isToday, isTomorrow, isThisWeek, isSameDay } from "date-fns";
+import { format, isToday, isTomorrow, isThisWeek, isSameDay, parseISO } from "date-fns";
 
-// Example events data with QR check-in status
-const exampleEvents = [
-  {
-    id: 1,
-    title: "Team Practice",
-    date: new Date(2025, 6, 31), // July 31, 2025
-    startTime: "6:30 PM",
-    endTime: "8:00 PM",
-    location: "Momentous Sports Center - Court A",
-    eventType: "practice",
-    checkedIn: true,
-    description: "Regular team practice session"
-  },
-  {
-    id: 2,
-    title: "Game vs Thunder Hawks",
-    date: new Date(2025, 7, 2), // August 2, 2025
-    startTime: "10:00 AM", 
-    endTime: "11:30 AM",
-    location: "Momentous Sports Center - Court B",
-    eventType: "game",
-    checkedIn: false,
-    opponent: "Thunder Hawks",
-    description: "League game - semifinal match"
-  },
-  {
-    id: 3,
-    title: "Skills Training",
-    date: new Date(2025, 7, 5), // August 5, 2025
-    startTime: "4:00 PM",
-    endTime: "5:30 PM", 
-    location: "Momentous Sports Center - Court A",
-    eventType: "skills",
-    checkedIn: false,
-    description: "Individual skills development session"
-  },
-  {
-    id: 4,
-    title: "Team Practice",
-    date: new Date(2025, 7, 7), // August 7, 2025
-    startTime: "6:30 PM",
-    endTime: "8:00 PM",
-    location: "Momentous Sports Center - Court A", 
-    eventType: "practice",
-    checkedIn: false,
-    description: "Regular team practice session"
-  },
-  {
-    id: 5,
-    title: "Tournament - Summer Championship",
-    date: new Date(2025, 7, 10), // August 10, 2025
-    startTime: "9:00 AM",
-    endTime: "5:00 PM",
-    location: "Regional Sports Complex",
-    eventType: "tournament",
-    checkedIn: false,
-    description: "Summer championship tournament - all day event"
-  }
-];
+// Helper function to convert Google Calendar events to our format
+function formatGoogleEvent(event: any) {
+  const startDate = event.startDate ? parseISO(event.startDate) : new Date();
+  const endDate = event.endDate ? parseISO(event.endDate) : new Date();
+  
+  return {
+    id: event.id,
+    title: event.title || 'Untitled Event',
+    date: startDate,
+    startTime: format(startDate, 'h:mm a'),
+    endTime: format(endDate, 'h:mm a'),
+    location: event.location || 'Location TBD',
+    eventType: event.eventType || 'practice',
+    checkedIn: false, // This would come from check-in data
+    description: event.description || '',
+    googleEventId: event.googleEventId
+  };
+}
 
 export default function Schedule() {
   const { user } = useAuth();
@@ -91,8 +51,22 @@ export default function Schedule() {
   // Use demo profile if in demo mode, otherwise use authenticated user
   const currentUser = isDemoMode ? demoProfile : user;
 
-  if (!currentUser && !isDemoMode) {
-    return <div>Loading...</div>;
+  // Fetch events from Google Calendar API
+  const { data: eventsData, isLoading, error, refetch } = useQuery({
+    queryKey: ['/api/events'],
+    enabled: true, // Always fetch events, regardless of auth state
+  });
+
+  const events = eventsData && Array.isArray(eventsData) ? eventsData.map(formatGoogleEvent) : [];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="flex items-center justify-center min-h-64">
+          <RefreshCw className="h-6 w-6 animate-spin text-gray-500" />
+        </div>
+      </div>
+    );
   }
 
   const getEventTypeColor = (eventType: string) => {
@@ -115,7 +89,7 @@ export default function Schedule() {
   const handleDayClick = (date: Date | undefined) => {
     if (!date) return;
     
-    const dayEvents = exampleEvents.filter(event => 
+    const dayEvents = events.filter(event => 
       isSameDay(event.date, date)
     );
     
@@ -129,7 +103,7 @@ export default function Schedule() {
   };
 
   const getEventsForDate = (date: Date) => {
-    return exampleEvents.filter(event => isSameDay(event.date, date));
+    return events.filter((event: any) => isSameDay(event.date, date));
   };
 
   return (

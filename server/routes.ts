@@ -113,6 +113,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event routes
+  // General events route for all calendar events (no auth required for demo)
+  app.get('/api/events', async (req: any, res) => {
+    try {
+      console.log('API /api/events route hit directly');
+      res.setHeader('Content-Type', 'application/json');
+      const events = await storage.getAllEvents();
+      console.log(`Found ${events.length} events in database`);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching events:", error, error.stack);
+      res.status(500).json({ message: "Failed to fetch events", error: error.message });
+    }
+  });
+
   app.get('/api/users/:userId/events', isAuthenticated, async (req: any, res) => {
     try {
       const events = await storage.getUserEvents(req.params.userId);

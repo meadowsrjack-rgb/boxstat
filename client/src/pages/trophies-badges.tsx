@@ -1,272 +1,293 @@
-import { useState } from "react";
+
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Filter, Trophy, Award, Star, Shield, Target, Zap } from "lucide-react";
-
-// Badge tier colors
-const TIER_COLORS = {
-  grey: { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" },
-  green: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
-  blue: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
-  purple: { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200" },
-  yellow: { bg: "bg-yellow-100", text: "text-yellow-600", border: "border-yellow-200" },
-};
-
-// Sample trophies data based on the attached file
-const SAMPLE_TROPHIES = [
-  {
-    id: 1,
-    name: "Coach's Award",
-    description: "Given to the player who best exemplifies the team's core values and the coach's philosophy",
-    type: "team",
-    earned: true,
-    earnedAt: "2024-05-15",
-  }
-];
-
-// Sample badges data based on the attached file with tier system
-const SAMPLE_BADGES = [
-  // Hall of Famer (Yellow)
-  { id: 1, name: "Practice Legend", description: "For attending 250 total team practices", tier: "yellow", type: "Dedication", earned: false },
-  { id: 2, name: "Dynasty Member", description: "For being an active member of the team for five full years", tier: "yellow", type: "Dedication", earned: false },
-  
-  // Superstar (Purple)  
-  { id: 3, name: "Marquee Player", description: "For being a recognized star and reliable top performer (5× MVP)", tier: "purple", type: "MVP", earned: false },
-  { id: 4, name: "The Workhorse", description: "For having an elite work ethic (5× Hustle)", tier: "purple", type: "Hustle", earned: false },
-  { id: 5, name: "Practice Centurion", description: "For attending 100 total team practices", tier: "purple", type: "Dedication", earned: false },
-  { id: 6, name: "Ironman", description: "For playing in every single game of a season", tier: "purple", type: "Dedication", earned: true, earnedAt: "2024-06-20" },
-  
-  // All-Star (Blue)
-  { id: 7, name: "Game Changer", description: "For consistently making a pivotal impact (3× MVP)", tier: "blue", type: "MVP", earned: false },
-  { id: 8, name: "The Engine", description: "For being a consistent source of energy (3× Hustle)", tier: "blue", type: "Hustle", earned: true, earnedAt: "2024-04-10" },
-  { id: 9, name: "The Glue", description: "For being a positive and unifying presence (3× Teammate)", tier: "blue", type: "Teammate", earned: true, earnedAt: "2024-03-22" },
-  { id: 10, name: "Practice Fiend", description: "For attending 50 total practices", tier: "blue", type: "Dedication", earned: true, earnedAt: "2024-02-14" },
-  { id: 11, name: "Seasoned Competitor", description: "For playing in 50 total games", tier: "blue", type: "Games", earned: true, earnedAt: "2024-05-08" },
-  
-  // Starter (Green)
-  { id: 12, name: "Locked In", description: "For attending 10 consecutive scheduled practices", tier: "green", type: "Dedication", earned: true, earnedAt: "2024-01-15" },
-  { id: 13, name: "Tournament Titan", description: "For checking into all games in a single tournament", tier: "green", type: "Games", earned: true, earnedAt: "2024-03-01" },
-  { id: 14, name: "Game MVP", description: "Instrumental in the team's performance during a single game", tier: "green", type: "MVP", earned: true, earnedAt: "2024-04-05" },
-  { id: 15, name: "Clutch Player", description: "Given for making a game-changing play under pressure", tier: "green", type: "Clutch", earned: true, earnedAt: "2024-04-12" },
-  { id: 16, name: "Hustle Award", description: "Relentless hustle and effort", tier: "green", type: "Hustle", earned: true, earnedAt: "2024-02-28" },
-  { id: 17, name: "Teammate Award", description: "Encouraging, supportive, or unselfish play", tier: "green", type: "Teammate", earned: true, earnedAt: "2024-03-15" },
-  { id: 18, name: "Student of the Game", description: "Exceptional listening skills and attentiveness", tier: "green", type: "Learning", earned: true, earnedAt: "2024-02-10" },
-  { id: 19, name: "Lead by Example", description: "For flawlessly demonstrating a drill or skill", tier: "green", type: "Leadership", earned: true, earnedAt: "2024-01-25" },
-  
-  // Prospect (Grey)
-  { id: 20, name: "Checked In", description: "For checking into any UYP event", tier: "grey", type: "First Steps", earned: true, earnedAt: "2023-12-01" },
-  { id: 21, name: "The Debut", description: "For playing in your very first game", tier: "grey", type: "First Steps", earned: true, earnedAt: "2023-12-05" },
-  { id: 22, name: "Friday Follower", description: "For playing in your first Friday Night Hoops game", tier: "grey", type: "FNH", earned: true, earnedAt: "2023-12-08" },
-  { id: 23, name: "Game Planner", description: "For RSVPing to a Game within its proper window", tier: "grey", type: "Planning", earned: true, earnedAt: "2023-12-12" },
-  { id: 24, name: "Practice Planner", description: "For RSVPing to a Practice, Skill, or FNH event", tier: "grey", type: "Planning", earned: true, earnedAt: "2023-12-10" },
-  { id: 25, name: "First Reps", description: "For attending 10 total practices", tier: "grey", type: "Dedication", earned: true, earnedAt: "2024-01-08" },
-  { id: 26, name: "First Ten", description: "For playing in 10 total games", tier: "grey", type: "Games", earned: true, earnedAt: "2024-01-20" },
-  { id: 27, name: "FNH Fighter", description: "For playing in 10 total FNH games", tier: "grey", type: "FNH", earned: true, earnedAt: "2024-01-30" },
-];
-
-const BADGE_TYPES = [
-  "All Types",
-  "MVP", 
-  "Hustle", 
-  "Teammate", 
-  "Clutch", 
-  "Dedication", 
-  "Leadership", 
-  "Learning", 
-  "Games", 
-  "FNH", 
-  "First Steps", 
-  "Planning"
-];
-
-const TIERS = [
-  "All Tiers",
-  "Hall of Famer",
-  "Superstar", 
-  "All-Star",
-  "Starter",
-  "Prospect"
-];
-
-const TIER_MAPPING = {
-  "All Tiers": "",
-  "Hall of Famer": "yellow",
-  "Superstar": "purple",
-  "All-Star": "blue",
-  "Starter": "green",
-  "Prospect": "grey"
-};
+import { ArrowLeft, Filter, Search } from "lucide-react";
+import { AWARDS, TIER_ORDER } from "@/lib/awards.registry";
+import { MOCK_USER_STATS, getAwardProgress } from "@/lib/awards.progress";
+import { 
+  loadAwardsFilters, 
+  saveAwardsFilters, 
+  AwardsFilterState, 
+  FILTER_OPTIONS 
+} from "@/state/awardsFilters";
+import { AwardCard } from "@/components/awards/AwardCard";
+import { AwardOverlay } from "@/components/awards/AwardOverlay";
+import { Award } from "@/lib/awards.types";
 
 export default function TrophiesBadges() {
   const [, setLocation] = useLocation();
-  const [filterType, setFilterType] = useState("All Types");
-  const [filterTier, setFilterTier] = useState("All Tiers");
+  const [filters, setFilters] = useState<AwardsFilterState>(loadAwardsFilters);
+  const [selectedAward, setSelectedAward] = useState<Award | null>(null);
+  const [isOverlayOpen, setIsOverlayOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter badges based on selected filters
-  const filteredBadges = SAMPLE_BADGES.filter(badge => {
-    const typeMatch = filterType === "All Types" || badge.type === filterType;
-    const tierMatch = filterTier === "All Tiers" || badge.tier === TIER_MAPPING[filterTier as keyof typeof TIER_MAPPING];
-    return typeMatch && tierMatch;
-  });
+  // Mock user stats - in real app, this would come from your user data
+  const userStats = MOCK_USER_STATS;
 
-  const earnedTrophies = SAMPLE_TROPHIES.filter(trophy => trophy.earned);
-  const earnedBadges = SAMPLE_BADGES.filter(badge => badge.earned);
+  // Update filters and persist to localStorage
+  const updateFilters = (newFilters: Partial<AwardsFilterState>) => {
+    const updated = { ...filters, ...newFilters };
+    setFilters(updated);
+    saveAwardsFilters(updated);
+  };
 
-  const getBadgeIcon = (type: string) => {
-    switch (type) {
-      case "MVP": return <Star className="w-6 h-6" />;
-      case "Hustle": return <Zap className="w-6 h-6" />;
-      case "Teammate": return <Shield className="w-6 h-6" />;
-      case "Clutch": return <Target className="w-6 h-6" />;
-      default: return <Award className="w-6 h-6" />;
+  // Filter and sort awards
+  const filteredAndSortedAwards = useMemo(() => {
+    let filtered = AWARDS.filter(award => {
+      // Search query filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        if (!award.name.toLowerCase().includes(query) && 
+            !award.description.toLowerCase().includes(query)) {
+          return false;
+        }
+      }
+
+      // Tier filter
+      if (filters.tier && award.tier !== filters.tier) {
+        return false;
+      }
+
+      // Category filter
+      if (filters.category && award.category !== filters.category) {
+        return false;
+      }
+
+      // Show only earned filter
+      if (filters.showOnlyEarned) {
+        const progress = getAwardProgress(award, userStats);
+        if (!progress.earned) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort awards
+    switch (filters.sort) {
+      case "alpha":
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "tier":
+        filtered.sort((a, b) => {
+          const tierA = TIER_ORDER.indexOf(a.tier);
+          const tierB = TIER_ORDER.indexOf(b.tier);
+          if (tierA !== tierB) return tierA - tierB;
+          return a.name.localeCompare(b.name);
+        });
+        break;
+      case "completion":
+        filtered.sort((a, b) => {
+          const progressA = getAwardProgress(a, userStats);
+          const progressB = getAwardProgress(b, userStats);
+          
+          // Earned awards first
+          if (progressA.earned !== progressB.earned) {
+            return progressA.earned ? -1 : 1;
+          }
+          
+          // Then by progress percentage
+          const percentA = progressA.target ? (progressA.current || 0) / progressA.target : 0;
+          const percentB = progressB.target ? (progressB.current || 0) / progressB.target : 0;
+          return percentB - percentA;
+        });
+        break;
+      case "recent":
+        // For demo purposes, just sort by earned status then tier
+        filtered.sort((a, b) => {
+          const progressA = getAwardProgress(a, userStats);
+          const progressB = getAwardProgress(b, userStats);
+          if (progressA.earned !== progressB.earned) {
+            return progressA.earned ? -1 : 1;
+          }
+          const tierA = TIER_ORDER.indexOf(a.tier);
+          const tierB = TIER_ORDER.indexOf(b.tier);
+          return tierA - tierB;
+        });
+        break;
+      default:
+        break;
     }
+
+    return filtered;
+  }, [filters, searchQuery, userStats]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const totalAwards = AWARDS.length;
+    const earnedAwards = AWARDS.filter(award => 
+      getAwardProgress(award, userStats).earned
+    ).length;
+    const trophies = AWARDS.filter(award => award.kind === "Trophy");
+    const earnedTrophies = trophies.filter(award => 
+      getAwardProgress(award, userStats).earned
+    ).length;
+    const badges = AWARDS.filter(award => award.kind === "Badge");
+    const earnedBadges = badges.filter(award => 
+      getAwardProgress(award, userStats).earned
+    ).length;
+
+    return {
+      totalAwards,
+      earnedAwards,
+      totalTrophies: trophies.length,
+      earnedTrophies,
+      totalBadges: badges.length,
+      earnedBadges
+    };
+  }, [userStats]);
+
+  const handleAwardClick = (award: Award) => {
+    setSelectedAward(award);
+    setIsOverlayOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-md mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setLocation('/player-dashboard')}
               className="p-2 hover:bg-gray-100 rounded-md"
-              data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900">Trophies & Badges</h1>
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-gray-900">Trophies & Badges</h1>
+              <p className="text-sm text-gray-600">
+                {stats.earnedAwards}/{stats.totalAwards} earned • 
+                {stats.earnedTrophies}/{stats.totalTrophies} trophies • 
+                {stats.earnedBadges}/{stats.totalBadges} badges
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="max-w-md mx-auto p-6 space-y-6">
-        {/* Trophies Section */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-600" />
-            Trophies ({earnedTrophies.length})
-          </h2>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="Search awards..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Filters & Sort</span>
+          </div>
           
           <div className="grid grid-cols-2 gap-3">
-            {SAMPLE_TROPHIES.map((trophy) => (
-              <div
-                key={trophy.id}
-                className={`relative p-4 rounded-lg border-2 transition-all duration-200 ${
-                  trophy.earned 
-                    ? 'bg-yellow-50 border-yellow-200' 
-                    : 'bg-gray-100 border-gray-200 opacity-60'
-                }`}
-                data-testid={`trophy-${trophy.id}`}
-                title={`${trophy.name}: ${trophy.description}`}
-              >
-                <div className="flex flex-col items-center text-center space-y-2">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                    trophy.earned ? 'bg-yellow-100' : 'bg-gray-200'
-                  }`}>
-                    <Trophy className={`w-8 h-8 ${
-                      trophy.earned ? 'text-yellow-600' : 'text-gray-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-gray-900">{trophy.name}</p>
-                    <p className="text-xs text-gray-600">{trophy.type}</p>
-                    {trophy.earned && trophy.earnedAt && (
-                      <p className="text-xs text-green-600 mt-1">
-                        Earned {new Date(trophy.earnedAt).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+            <select 
+              value={filters.tier || ""} 
+              onChange={(e) => updateFilters({ tier: e.target.value || undefined })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              {FILTER_OPTIONS.tiers.map((tier) => (
+                <option key={tier.value} value={tier.value}>
+                  {tier.label}
+                </option>
+              ))}
+            </select>
+            
+            <select 
+              value={filters.category || ""} 
+              onChange={(e) => updateFilters({ category: e.target.value || undefined })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              {FILTER_OPTIONS.categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.label}
+                </option>
+              ))}
+            </select>
+            
+            <select 
+              value={filters.sort || "tier"} 
+              onChange={(e) => updateFilters({ sort: e.target.value as any })}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              {FILTER_OPTIONS.sorts.map((sort) => (
+                <option key={sort.value} value={sort.value}>
+                  {sort.label}
+                </option>
+              ))}
+            </select>
+            
+            <div className="flex items-center">
+              <label className="flex items-center text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.showOnlyEarned || false}
+                  onChange={(e) => updateFilters({ showOnlyEarned: e.target.checked })}
+                  className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Only Earned
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* Badges Section */}
+        {/* Awards Grid */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Award className="h-5 w-5 text-blue-600" />
-              Badges ({earnedBadges.length})
+            <h2 className="text-lg font-bold text-gray-900">
+              Awards ({filteredAndSortedAwards.length})
             </h2>
-            
-            {/* Filter Button */}
-            <div className="flex gap-2">
-              <select 
-                value={filterTier} 
-                onChange={(e) => setFilterTier(e.target.value)}
-                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                data-testid="select-tier-filter"
-              >
-                {TIERS.map((tier) => (
-                  <option key={tier} value={tier}>
-                    {tier}
-                  </option>
-                ))}
-              </select>
-              
-              <select 
-                value={filterType} 
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm"
-                data-testid="select-type-filter"
-              >
-                {BADGE_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-3">
-            {filteredBadges.map((badge) => {
-              const tierStyle = TIER_COLORS[badge.tier as keyof typeof TIER_COLORS];
-              
-              return (
-                <div
-                  key={badge.id}
-                  className={`relative p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${
-                    badge.earned 
-                      ? `${tierStyle.bg} ${tierStyle.border}` 
-                      : 'bg-gray-100 border-gray-200 opacity-60'
-                  }`}
-                  data-testid={`badge-${badge.id}`}
-                  title={`${badge.name}: ${badge.description}`}
-                >
-                  <div className="flex flex-col items-center text-center space-y-2">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      badge.earned ? tierStyle.bg : 'bg-gray-200'
-                    }`}>
-                      <div className={badge.earned ? tierStyle.text : 'text-gray-400'}>
-                        {getBadgeIcon(badge.type)}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-xs text-gray-900 leading-tight">
-                        {badge.name}
-                      </p>
-                      <p className="text-xs text-gray-600 capitalize">{badge.tier}</p>
-                      {badge.earned && badge.earnedAt && (
-                        <p className="text-xs text-green-600 mt-1">
-                          {new Date(badge.earnedAt).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Tier indicator in corner */}
-                  <div className={`absolute top-1 right-1 w-3 h-3 rounded-full ${
-                    badge.earned ? tierStyle.bg : 'bg-gray-300'
-                  } ${tierStyle.border} border`} />
-                </div>
-              );
-            })}
-          </div>
+          {filteredAndSortedAwards.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No awards found matching your filters.</p>
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  updateFilters({ 
+                    tier: undefined, 
+                    category: undefined, 
+                    showOnlyEarned: false 
+                  });
+                }}
+                className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+              >
+                Clear all filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              {filteredAndSortedAwards.map((award) => (
+                <AwardCard
+                  key={award.id}
+                  award={award}
+                  userStats={userStats}
+                  onClick={() => handleAwardClick(award)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Award Detail Overlay */}
+      <AwardOverlay
+        award={selectedAward}
+        userStats={userStats}
+        isOpen={isOverlayOpen}
+        onClose={() => {
+          setIsOverlayOpen(false);
+          setSelectedAward(null);
+        }}
+      />
     </div>
   );
 }

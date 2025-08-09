@@ -1,6 +1,6 @@
 export type Tier = "HallOfFamer" | "Superstar" | "AllStar" | "Starter" | "Prospect" | "Legacy" | "Team";
 export type Category = "Attendance" | "TrainingProgram" | "InGamePerformance" | "SeasonalLegacy";
-export type ProgressKind = "none" | "counter" | "streak" | "completeAll";
+export type ProgressKind = "none" | "counter" | "streak" | "completeAll" | "manual";
 
 export interface Award {
   id: string;                // kebab-case unique
@@ -19,7 +19,7 @@ export interface Award {
   tags?: string[];
 
   // NEW — which app events should re-check this award
-  triggerSources?: Array<"attendance"|"coachAward"|"onlineTraining"|"rsvp">;
+  triggerSources?: Array<"attendance"|"coachAward"|"onlineTraining"|"rsvp"|"trainingCompletion">;
 }
 
 export interface UserStats {
@@ -31,7 +31,8 @@ export interface UserStats {
   sportsmanshipCount: number; 
   studentCount: number; 
   leadByExampleCount: number;
-  practiceTotal: number; 
+  practicesTotal: number;
+  trainingProgramsCompleted: number; 
   skillsTotal: number; 
   gamesTotal: number; 
   fnhGamesTotal: number;

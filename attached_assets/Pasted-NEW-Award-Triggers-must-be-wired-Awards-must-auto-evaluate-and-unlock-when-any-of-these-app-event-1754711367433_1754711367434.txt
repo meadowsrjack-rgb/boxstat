@@ -1,0 +1,495 @@
+NEW: Award Triggers (must be wired)
+Awards must auto-evaluate and unlock when any of these app events occur:
+
+QR Attendance Scan — when a coach scans a player’s QR for practice / skills / game / FNH check-in.
+
+Coach Award Grant — when a coach assigns a badge/trophy (e.g., MVP, Hustle) in the coach dashboard.
+
+Online Training Module Completion — when a player completes a Foundation video (Skill, S&C, IQ).
+
+Calendar RSVP — when a player RSVPs within the allowed window.
+
+We will compute earned state from userStats and re-check impacted awards via a trigger handler.
+
+1) Types & Registry
+Create src/lib/awards.types.ts:
+
+ts
+Copy
+Edit
+export type Tier = "HallOfFamer" | "Superstar" | "AllStar" | "Starter" | "Prospect" | "Legacy" | "Team";
+export type Category = "Attendance" | "TrainingProgram" | "InGamePerformance" | "SeasonalLegacy";
+export type ProgressKind = "none" | "counter" | "streak" | "completeAll";
+
+export interface Award {
+  id: string;                // kebab-case unique
+  kind: "Trophy" | "Badge";
+  name: string;
+  tier: Tier;                // Legacy/Team for trophies; others for badges
+  category: Category;
+  description: string;
+  iconName: string;          // e.g., "trophy-heart-hustle", "badge-ironman"
+  progressKind: ProgressKind;
+  counterOf?: { stat: string; target: number; label?: string };        // e.g., mvpCount:10
+  streakOf?: { stat: string; target: number; label?: string };         // e.g., practiceStreak:10
+  completeAll?: { setId: string; label?: string };                     // e.g., foundation_all
+  composite?: Array<{ stat: string; min?: number; seasonScoped?: boolean }>;
+  programTag?: "Foundation";
+  tags?: string[];
+
+  // NEW — which app events should re-check this award
+  triggerSources?: Array<"attendance"|"coachAward"|"onlineTraining"|"rsvp">;
+}
+Create src/lib/awards.registry.ts and fully populate AWARDS: Award[] using the full mapping below. Include sensible iconName slugs. Use these stat keys by default (adapt with a mapper if your schema differs):
+
+Coach-awarded counts (season or lifetime as fits your app):
+mvpCount, clutchCount, comebackCount, hustleCount, teammateCount, sportsmanshipCount, studentCount, leadByExampleCount
+
+Attendance totals:
+practiceTotal, skillsTotal, gamesTotal, fnhGamesTotal
+
+Streaks / season checks:
+practiceStreak, rsvpStreak, tournamentAllGamesCheckedIn, playedEveryPracticeSeason, playedEveryGameSeason, playedEveryFnhSeason, rsvpedEveryEventSeason
+
+Calendar RSVP season totals:
+rsvpsOnTimeSeason
+
+Misc:
+referrals, holidayGamesCount
+
+Program (Foundation):
+foundation.totalVideos, foundation.skillsCompleted, foundation.scCompleted, foundation.iqCompleted,
+foundation.weeklyCompleted12, foundation.weeklyCompleted6, foundation.monthly4,
+foundation.completedOnce, foundation.completedTwice
+
+If your data source uses different names, create a small adapter to map incoming user data to these keys.
+
+Seed a couple examples, then generate the rest programmatically from the mapping below. Ensure every item is included.
+
+Example seeds:
+
+ts
+Copy
+Edit
+import { Award } from "./awards.types";
+
+export const AWARDS: Award[] = [
+  // Legacy Trophies (Yearly)
+  { id:"uyp-heart-and-hustle", kind:"Trophy", name:"The UYP Heart and Hustle Award",
+    tier:"Legacy", category:"SeasonalLegacy",
+    description:"Yearly award recognizing the single player who most consistently gave their all in practices and games.",
+    iconName:"trophy-heart-hustle", progressKind:"none",
+    triggerSources:["coachAward"], tags:["Yearly","Legacy"] },
+
+  { id:"uyp-spirit-award", kind:"Trophy", name:"The Spirit Award",
+    tier:"Legacy", category:"SeasonalLegacy",
+    description:"Yearly award for the one player who best maintained a positive attitude and lifted team morale on and off the court.",
+    iconName:"trophy-spirit", progressKind:"none",
+    triggerSources:["coachAward"], tags:["Yearly","Legacy"] },
+
+  // Team Trophies (Seasonal)
+  { id:"team-mvp", kind:"Trophy", name:"MVP (Most Valuable Player)",
+    tier:"Team", category:"SeasonalLegacy",
+    description:"Coach-awarded seasonal MVP for team impact.",
+    iconName:"trophy-mvp", progressKind:"none",
+    triggerSources:["coachAward"], tags:["Coach Award"] },
+];
+2) Progress Engine
+Create src/lib/awards.progress.ts:
+
+ts
+Copy
+Edit
+import { Award } from "./awards.types";
+
+export interface UserStats {
+  mvpCount:number; clutchCount:number; comebackCount:number; hustleCount:number; teammateCount:number; sportsmanshipCount:number; studentCount:number; leadByExampleCount:number;
+  practiceTotal:number; skillsTotal:number; gamesTotal:number; fnhGamesTotal:number;
+  practiceStreak:number; rsvpStreak:number;
+  tournamentAllGamesCheckedIn?:boolean;
+  playedEveryPracticeSeason?:boolean; playedEveryGameSeason?:boolean; playedEveryFnhSeason?:boolean; rsvpedEveryEventSeason?:boolean;
+  referrals?:number; holidayGamesCount?:number; rsvpsOnTimeSeason?:number;
+  season:{ mvp:number; hustle:number; teammate:number; sportsmanship:number };
+  foundation:{
+    totalVideos:number; skillsCompleted:number; scCompleted:number; iqCompleted:number;
+    weeklyCompleted12?:boolean; weeklyCompleted6?:boolean; monthly4?:boolean;
+    completedOnce?:boolean; completedTwice?:boolean;
+  };
+  awardsEarned?: string[]; // ids already earned (optional)
+}
+
+export function getAwardProgress(award: Award, stats: UserStats) {
+  if (award.progressKind === "none") return { earned:false }; // trophies granted by coach flow
+
+  if (award.progressKind === "counter" && award.counterOf){
+    const cur = (stats as any)[award.counterOf.stat] || 0;
+    return { earned: cur >= award.counterOf.target, current:cur, target:award.counterOf.target };
+  }
+
+  if (award.progressKind === "streak" && award.streakOf){
+    const cur = (stats as any)[award.streakOf.stat] || 0;
+    return { earned: cur >= award.streakOf.target, current:cur, target:award.streakOf.target };
+  }
+
+  if (award.progressKind === "completeAll" && award.completeAll){
+    const f = stats.foundation || {};
+    if (award.completeAll.setId === "foundation_all"){
+      const earned = (f.skillsCompleted>=36) && (f.scCompleted>=12) && (f.iqCompleted>=12);
+      return { earned, current:(f.skillsCompleted+f.scCompleted+f.iqCompleted), target:60 };
+    }
+    // extend with specific setIds if you enumerate sub-collections
+  }
+
+  if (award.composite?.length){
+    const ok = award.composite.every(rule=>{
+      const pool = rule.seasonScoped ? (stats.season as any) : (stats as any);
+      return (pool[rule.stat] || 0) >= (rule.min ?? 1);
+    });
+    return { earned: ok };
+  }
+
+  return { earned:false };
+}
+3) Trigger Handler
+Create src/lib/awards.triggers.ts:
+
+ts
+Copy
+Edit
+import { AWARDS } from "./awards.registry";
+import { getAwardProgress } from "./awards.progress";
+
+export function handleAwardTrigger(userStats:any, trigger:"attendance"|"coachAward"|"onlineTraining"|"rsvp"){
+  const newlyEarned:string[] = [];
+  for (const award of AWARDS){
+    if (!award.triggerSources?.includes(trigger)) continue;
+    const progress = getAwardProgress(award, userStats);
+    const already = userStats.awardsEarned?.includes(award.id);
+    if (progress.earned && !already){ newlyEarned.push(award.id); }
+  }
+  return newlyEarned;
+}
+Integrate this wherever those events are processed:
+
+After QR scan check-in → handleAwardTrigger(stats, "attendance")
+
+After coach grants award → handleAwardTrigger(stats, "coachAward")
+
+After training video completes → handleAwardTrigger(stats, "onlineTraining")
+
+After successful RSVP → handleAwardTrigger(stats, "rsvp")
+
+If newlyEarned.length > 0, update app state and show a toast: “🏆 New Award Unlocked!”
+
+4) Filters State
+Create src/state/awardsFilters.ts (persist to localStorage):
+
+ts
+Copy
+Edit
+export interface AwardsFilterState {
+  tier?: string;
+  category?: string;
+  sort?: "alpha"|"tier"|"completion"|"recent";
+  showOnlyEarned?: boolean;
+}
+export const defaultAwardsFilters: AwardsFilterState = { sort:"tier" };
+export function loadAwardsFilters(){
+  try { return { ...defaultAwardsFilters, ...JSON.parse(localStorage.getItem("uyp.awards.filters")||"{}") }; }
+  catch { return defaultAwardsFilters; }
+}
+export function saveAwardsFilters(f:AwardsFilterState){
+  localStorage.setItem("uyp.awards.filters", JSON.stringify(f));
+}
+5) UI Components
+Create/replace:
+
+src/components/awards/AwardsPage.tsx (filters + grid + overlay)
+
+src/components/awards/AwardCard.tsx (card w/ grayscale when locked)
+
+src/components/awards/AwardOverlay.tsx (sheet/modal with description + progress)
+
+Use the exact component code from my previous prompt (keep Tailwind/shadcn styles). Ensure mobile-responsive, accessible (Esc, focus trap), smooth transitions. Place images in public/assets/awards/ using iconName. Tier color map: HallOfFamer=gold/yellow, Superstar=purple, AllStar=blue, Starter=green, Prospect=gray, Legacy/Team=trophy gold/silver.
+
+6) FULL AWARD MAPPING (build all entries in AWARDS with these triggers)
+A) Trophies (End of Season/Year)
+UYP Legacy Trophies (Yearly) — 1 winner across all UYP
+
+The UYP Heart and Hustle Award
+
+tier:"Legacy", category:"SeasonalLegacy", progressKind:"none", triggerSources:["coachAward"]
+
+The Spirit Award
+
+same config, triggerSources:["coachAward"]
+
+Team Trophies (Seasonal) — coach-awarded per team
+
+MVP (Most Valuable Player)
+
+Coach’s Award
+
+MIP (Most Improved Player)
+
+all: tier:"Team", category:"SeasonalLegacy", progressKind:"none", triggerSources:["coachAward"]
+
+B) Badges — Hall of Famer (Yellow)
+All Hall of Famer badges are top tier.
+
+Superstar (10× MVP) → counterOf:{stat:"mvpCount",target:10}; triggerSources:["coachAward"]
+
+Prime Time (10× Clutch) → counterOf:{stat:"clutchCount",target:10}; ["coachAward"]
+
+Force of Will (10× Comeback) → counterOf:{stat:"comebackCount",target:10}; ["coachAward"]
+
+Relentless (10× Hustle) → counterOf:{stat:"hustleCount",target:10}; ["coachAward"]
+
+The Linchpin (10× Teammate) → counterOf:{stat:"teammateCount",target:10}; ["coachAward"]
+
+Spirit of the Game (10× Sportsmanship) → counterOf:{stat:"sportsmanshipCount",target:10}; ["coachAward"]
+
+Coach on the Court (10× Student) → counterOf:{stat:"studentCount",target:10}; ["coachAward"]
+
+The Paragon (10× Lead by Example) → counterOf:{stat:"leadByExampleCount",target:10}; ["coachAward"]
+
+Coach's Choice (earn each of the 8 core coach awards at least once)
+
+core awards: MVP, Clutch, Comeback, Hustle, Teammate, Sportsmanship, Student, Lead by Example
+
+composite:[{stat:"mvpCount",min:1},{stat:"clutchCount",min:1},{stat:"comebackCount",min:1},{stat:"hustleCount",min:1},{stat:"teammateCount",min:1},{stat:"sportsmanshipCount",min:1},{stat:"studentCount",min:1},{stat:"leadByExampleCount",min:1}]
+
+triggerSources:["coachAward"]
+
+The Trifecta (MVP + Hustle + Teammate in the same season)
+
+composite:[{stat:"mvp",min:1,seasonScoped:true},{stat:"hustle",min:1,seasonScoped:true},{stat:"teammate",min:1,seasonScoped:true}], from stats.season
+
+triggerSources:["coachAward"]
+
+Character Captain (Hustle + Teammate + Sportsmanship in the same season)
+
+composite:[{stat:"hustle",min:1,seasonScoped:true},{stat:"teammate",min:1,seasonScoped:true},{stat:"sportsmanship",min:1,seasonScoped:true}]
+
+triggerSources:["coachAward"]
+
+Practice Legend (250 practices) → counterOf:{stat:"practiceTotal",target:250}; ["attendance"]
+
+Skills Virtuoso (250 skills) → counterOf:{stat:"skillsTotal",target:250}; ["attendance"]
+
+Franchise Player (250 games) → counterOf:{stat:"gamesTotal",target:250}; ["attendance"]
+
+FNH Hall of Famer (250 FNH games) → counterOf:{stat:"fnhGamesTotal",target:250}; ["attendance"]
+
+Dynasty Member (5 years active) → if you track years: counterOf:{stat:"yearsActive",target:5} or composite with join dates; ["attendance"]
+
+Online Foundation Program (Hall of Famer tier)
+
+The Digital Triple Crown → complete all Skill (36), S&C (12), IQ (12)
+
+completeAll:{setId:"foundation_all"}, programTag:"Foundation", triggerSources:["onlineTraining"]
+
+Foundation Alumnus → complete the 12-week program twice
+
+counterOf:{stat:"foundation.completedTwice",target:1,label:"Times completed"} (or composite if boolean); ["onlineTraining"]
+
+C) Badges — Superstar (Purple)
+Marquee Player (5× MVP) → counterOf:{stat:"mvpCount",target:5}; ["coachAward"]
+
+Ice in the Veins (5× Clutch) → counterOf:{stat:"clutchCount",target:5}; ["coachAward"]
+
+Momentum Shifter (5× Comeback) → counterOf:{stat:"comebackCount",target:5}; ["coachAward"]
+
+The Workhorse (5× Hustle) → counterOf:{stat:"hustleCount",target:5}; ["coachAward"]
+
+The Cornerstone (5× Teammate) → counterOf:{stat:"teammateCount",target:5}; ["coachAward"]
+
+The Ambassador (5× Sportsmanship) → counterOf:{stat:"sportsmanshipCount",target:5}; ["coachAward"]
+
+The Tactician (5× Student) → counterOf:{stat:"studentCount",target:5}; ["coachAward"]
+
+The Blueprint (5× Lead by Example) → counterOf:{stat:"leadByExampleCount",target:5}; ["coachAward"]
+
+The Pillar (every practice in a season)
+
+season flag: playedEveryPracticeSeason===true; triggerSources:["attendance","rsvp"]
+
+Ironman (every game in a season)
+
+flag: playedEveryGameSeason===true; ["attendance","rsvp"]
+
+FNH Ironman (every FNH game in a season)
+
+flag: playedEveryFnhSeason===true; ["attendance","rsvp"]
+
+Practice Centurion (100 practices) → counterOf:{stat:"practiceTotal",target:100}; ["attendance"]
+
+Skills Specialist (100 skills) → counterOf:{stat:"skillsTotal",target:100}; ["attendance"]
+
+Century Club (100 games) → counterOf:{stat:"gamesTotal",target:100}; ["attendance"]
+
+FNH Legend (100 FNH games) → counterOf:{stat:"fnhGamesTotal",target:100}; ["attendance"]
+
+Team Veteran (3 years) → counterOf:{stat:"yearsActive",target:3}; ["attendance"]
+
+Online Foundation (Superstar tier)
+
+Foundation Graduate (all 60 videos, 12 weeks)
+
+counterOf:{stat:"foundation.totalVideos",target:60,label:"Videos completed"} or completeAll:{setId:"foundation_all"}; ["onlineTraining"]
+
+Technique Titan (36 Skill videos) → counterOf:{stat:"foundation.skillsCompleted",target:36}; ["onlineTraining"]
+
+Peak Performer (12 S&C videos) → counterOf:{stat:"foundation.scCompleted",target:12}; ["onlineTraining"]
+
+Basketball Savant (12 IQ videos) → counterOf:{stat:"foundation.iqCompleted",target:12}; ["onlineTraining"]
+
+Perfect Attendance: Online (12 consecutive weeks) → streakOf:{stat:"foundation.weeklyCompleted12",target:1,label:"12-week streak"}; ["onlineTraining"]
+
+D) Badges — All-Star (Blue)
+Game Changer (3× MVP) → counterOf:{stat:"mvpCount",target:3}; ["coachAward"]
+
+The Closer (3× Clutch) → counterOf:{stat:"clutchCount",target:3}; ["coachAward"]
+
+The Sparkplug (3× Comeback) → counterOf:{stat:"comebackCount",target:3}; ["coachAward"]
+
+The Engine (3× Hustle) → counterOf:{stat:"hustleCount",target:3}; ["coachAward"]
+
+The Glue (3× Teammate) → counterOf:{stat:"teammateCount",target:3}; ["coachAward"]
+
+Class Act (3× Sportsmanship) → counterOf:{stat:"sportsmanshipCount",target:3}; ["coachAward"]
+
+The Protégé (3× Student) → counterOf:{stat:"studentCount",target:3}; ["coachAward"]
+
+The Standard (3× Lead by Example) → counterOf:{stat:"leadByExampleCount",target:3}; ["coachAward"]
+
+The Dependable (RSVP every event in a season)
+
+rsvpedEveryEventSeason===true; triggerSources:["rsvp"]
+
+Recruiter (refer a new player who joins)
+
+counterOf:{stat:"referrals",target:1,label:"Player referrals"}; ["coachAward"] (or backend event)
+
+Practice Fiend (50 practices) → counterOf:{stat:"practiceTotal",target:50}; ["attendance"]
+
+Skills Devotee (50 skills) → counterOf:{stat:"skillsTotal",target:50}; ["attendance"]
+
+Seasoned Competitor (50 games) → counterOf:{stat:"gamesTotal",target:50}; ["attendance"]
+
+FNH Veteran (50 FNH games) → counterOf:{stat:"fnhGamesTotal",target:50}; ["attendance"]
+
+First Year Anniversary (1 year) → counterOf:{stat:"yearsActive",target:1}; ["attendance"]
+
+Online Foundation (All-Star tier)
+
+Half-Time Adjustments (30 videos) → counterOf:{stat:"foundation.totalVideos",target:30}; ["onlineTraining"]
+
+Monthly Module Master (4 consecutive weeks) → streakOf:{stat:"foundation.monthly4",target:1,label:"4 weeks in a row"}; ["onlineTraining"]
+
+Skills Sharp-Shooter (20 Skill videos) → counterOf:{stat:"foundation.skillsCompleted",target:20}; ["onlineTraining"]
+
+Conditioning Core (6 S&C videos) → counterOf:{stat:"foundation.scCompleted",target:6}; ["onlineTraining"]
+
+Strategic Specialist (6 IQ videos) → counterOf:{stat:"foundation.iqCompleted",target:6}; ["onlineTraining"]
+
+Mid-Season Mentor (6 consecutive weeks) → streakOf:{stat:"foundation.weeklyCompleted6",target:1,label:"6-week streak"}; ["onlineTraining"]
+
+E) Badges — Starter (Green)
+Locked In (10 consecutive practices) → streakOf:{stat:"practiceStreak",target:10}; ["attendance"]
+
+On the Ball (10 consecutive on-time RSVPs) → streakOf:{stat:"rsvpStreak",target:10}; ["rsvp"]
+
+Tournament Titan (checked into all games in a tournament) → tournamentAllGamesCheckedIn===true; ["attendance"]
+
+Dedicated Grinder (25 practices) → counterOf:{stat:"practiceTotal",target:25}; ["attendance"]
+
+Skills Seeker (25 skills) → counterOf:{stat:"skillsTotal",target:25}; ["attendance"]
+
+Regular Competitor (25 games) → counterOf:{stat:"gamesTotal",target:25}; ["attendance"]
+
+FNH Regular (25 FNH games) → counterOf:{stat:"fnhGamesTotal",target:25}; ["attendance"]
+
+Game MVP → counterOf:{stat:"mvpCount",target:1}; ["coachAward"]
+
+Clutch Player → counterOf:{stat:"clutchCount",target:1}; ["coachAward"]
+
+Comeback Kid → counterOf:{stat:"comebackCount",target:1}; ["coachAward"]
+
+Sportsmanship Award → counterOf:{stat:"sportsmanshipCount",target:1}; ["coachAward"]
+
+Hustle Award → counterOf:{stat:"hustleCount",target:1}; ["coachAward"]
+
+Teammate Award → counterOf:{stat:"teammateCount",target:1}; ["coachAward"]
+
+Student of the Game → counterOf:{stat:"studentCount",target:1}; ["coachAward"]
+
+Lead by Example → counterOf:{stat:"leadByExampleCount",target:1}; ["coachAward"]
+
+Online Foundation (Starter tier)
+
+Weekly Warm-Up (complete all 5 in one week) → streakOf:{stat:"foundation.weeklyCompleted1",target:1,label:"One full week"} (or compute from weekly data); ["onlineTraining"]
+
+Film Study (10 total videos) → counterOf:{stat:"foundation.totalVideos",target:10}; ["onlineTraining"]
+
+Skill Builder (5 Skill videos) → counterOf:{stat:"foundation.skillsCompleted",target:5}; ["onlineTraining"]
+
+Foundation Force (5 S&C videos) → counterOf:{stat:"foundation.scCompleted",target:5}; ["onlineTraining"]
+
+Court Visionary (5 IQ videos) → counterOf:{stat:"foundation.iqCompleted",target:5}; ["onlineTraining"]
+
+Back-to-Back Sessions (two consecutive weeks) → streakOf:{stat:"foundation.weeklyCompleted2",target:1,label:"2-week streak"}; ["onlineTraining"]
+
+F) Badges — Prospect (Grey)
+Checked In (any UYP event) → counterOf:{stat:"practiceTotal"/*or any attendance total*/,target:1}; ["attendance"]
+
+Road Warrior (checked in at a different location) → track distinctLocations>=2; ["attendance"]
+
+Holiday Hero (played on major holiday) → counterOf:{stat:"holidayGamesCount",target:1}; ["attendance"]
+
+The Debut (first game) → counterOf:{stat:"gamesTotal",target:1}; ["attendance"]
+
+Friday Follower (first FNH game) → counterOf:{stat:"fnhGamesTotal",target:1}; ["attendance"]
+
+Heating Up (5 consecutive practices) → streakOf:{stat:"practiceStreak",target:5}; ["attendance"]
+
+Game Planner (RSVP to a Game within window) → counterOf:{stat:"rsvpsOnTimeSeason",target:1}; ["rsvp"]
+
+Practice Planner (RSVP to Practice/Skill/FNH) → counterOf:{stat:"rsvpsOnTimeSeason",target:1}; ["rsvp"]
+
+First Reps (10 practices) → counterOf:{stat:"practiceTotal",target:10}; ["attendance"]
+
+Skill Starter (10 skills) → counterOf:{stat:"skillsTotal",target:10}; ["attendance"]
+
+First Ten (10 games) → counterOf:{stat:"gamesTotal",target:10}; ["attendance"]
+
+FNH Fighter (10 FNH games) → counterOf:{stat:"fnhGamesTotal",target:10}; ["attendance"]
+
+Online Foundation (Prospect tier)
+
+Digital First Steps (first program video) → counterOf:{stat:"foundation.totalVideos",target:1}; ["onlineTraining"]
+
+Virtual Handles (first Skill video) → counterOf:{stat:"foundation.skillsCompleted",target:1}; ["onlineTraining"]
+
+Remote Strength (first S&C video) → counterOf:{stat:"foundation.scCompleted",target:1}; ["onlineTraining"]
+
+Mindful Start (first IQ video) → counterOf:{stat:"foundation.iqCompleted",target:1}; ["onlineTraining"]
+
+Ghostwriter: build every award above into AWARDS with tier, category, description, iconName, progress config, and triggerSources set exactly as mapped.
+
+7) Page Behavior & Acceptance
+Grid: All awards visible; unearned greyed (grayscale + reduced opacity).
+
+Overlay: Click → on-screen drawer/sheet with icon, name, tier color, category, description, and live progress (x / target or “Completed/Not yet”).
+
+Filters/Sorting: Tier, Category (Attendance / TrainingProgram / InGamePerformance / SeasonalLegacy), Sort (Tier, A–Z, Completion, Recent), “Only earned” toggle. Persist in localStorage.
+
+Responsive/Accessible: Mobile-friendly, smooth animations, focus trap, Esc to close, no body scroll when open.
+
+Triggers: On QR scan / coach award / training completion / RSVP, call handleAwardTrigger(...) and surface toast if anything unlocked.
+
+Assets: Place images under public/assets/awards/ with filenames from iconName; use placeholder art if needed (but keep names stable).
+
+No console errors; integrate into existing route and nav.
+
+End of Task

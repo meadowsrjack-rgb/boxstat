@@ -1,0 +1,370 @@
+Heck yes—here’s a ready-to-paste Ghostwriter prompt that does the heavy lifting for the Badges & Trophies overhaul. Drop this into Replit’s Ghostwriter and let it update your existing app in-place.
+
+⸻
+
+Prompt for Replit (Ghostwriter): Badges & Trophies Overhaul
+
+You’re upgrading the UYP Basketball PWA “Badges & Trophies” section. Build a sleek, modern, filterable page with a full award registry. All awards must be visible; locked appear greyed, earned are full color. Clicking any award opens a seamless overlay with description + progress. Include filters by tier & type, and sorting (alphabetical, tier, completion, recently earned). Use our existing design system (Tailwind/shadcn if present).
+
+Functional Goals
+	1.	Award Registry: Define every trophy/badge from the spec below (ALL of them) in a central awards.registry.ts with metadata (id, name, tier, type, description, iconName, progressType, thresholds).
+	2.	Locked vs Earned: Show all awards; apply grayscale/opacity to locked. Earned state computed from user stats (counts like 10× MVP, attendance totals, program completion, etc.).
+	3.	Overlay: Clicking an award opens an overlay/modal with: large icon, name, tier color, description, requirements, current progress (e.g., 7 / 10 MVP), and “how to earn” hint.
+	4.	Filters/Sorting: Filter by Tier and Category/Type (Attendance, Training Program, In-Game Performance, Seasonal/Legacy). Sort by A–Z, Tier, Completion status (earned first), Recently earned.
+	5.	Performance/UI: Responsive grid, lazy image load, smooth animations, mobile-friendly. Keyboard accessible (focus trap, ESC to close).
+
+Data Model (create/update these files)
+
+src/lib/awards.types.ts
+
+export type Tier = "HallOfFamer" | "Superstar" | "AllStar" | "Starter" | "Prospect" | "Legacy" | "Team";
+export type Category =
+  | "Attendance"
+  | "TrainingProgram"
+  | "InGamePerformance"
+  | "SeasonalLegacy";
+export type ProgressKind = "none" | "counter" | "streak" | "completeAll"; // counter= N of X, streak= consecutive, completeAll = set completion
+
+export interface Award {
+  id: string;                 // kebab-case unique
+  kind: "Trophy" | "Badge";
+  name: string;
+  tier: Tier;                 // Legacy/Team for trophies, others for badges
+  category: Category;
+  description: string;
+  iconName: string;           // map to asset, e.g., "trophy-heart-hustle"
+  progressKind: ProgressKind;
+  // for counter-based achievements (e.g., 10× MVP, 100 practices, etc.)
+  counterOf?: { stat: string; target: number; label?: string }; // stat keys like "mvpCount", "practiceTotal", "skillsTotal", "fnhGamesTotal"
+  // for streak-based achievements (e.g., 10 consecutive practices)
+  streakOf?: { stat: string; target: number; label?: string };
+  // for complete-all (e.g., all Foundation videos)
+  completeAll?: { setId: string; label?: string };
+  // composite requirements (e.g., Trifecta: MVP + Hustle + Teammate same season)
+  composite?: Array<{ stat: string; min?: number; seasonScoped?: boolean }>;
+  // program paths (online program series)
+  programTag?: "Foundation";
+  // display hints
+  tags?: string[];            // ["MVP","Hustle","Attendance","Foundation"]
+}
+
+src/lib/awards.registry.ts
+	•	Build a full array AWARDS: Award[] containing every item in the user’s spec.
+	•	Use Tier:
+	•	Trophies: Legacy (UYP Heart and Hustle, Spirit Award), Team (MVP, Coach’s Award, MIP)
+	•	Badges: HallOfFamer (Yellow), Superstar (Purple), AllStar (Blue), Starter (Green), Prospect (Grey)
+	•	Use Category:
+	•	SeasonalLegacy for trophies and multi-award composites (Trifecta, Character Captain)
+	•	Attendance for practice/skills/games/FNH counts & streaks
+	•	TrainingProgram for Foundation Program badges
+	•	InGamePerformance for MVP/Clutch/Hustle/etc. accumulations
+
+Seed a couple entries exactly; then generate the remainder from the spec:
+
+import { Award } from "./awards.types";
+
+export const AWARDS: Award[] = [
+  // --- Legacy Trophies (Yearly) ---
+  {
+    id: "uyp-heart-and-hustle",
+    kind: "Trophy",
+    name: "The UYP Heart and Hustle Award",
+    tier: "Legacy",
+    category: "SeasonalLegacy",
+    description: "Yearly award recognizing the single player who most consistently gave their all in every practice and game.",
+    iconName: "trophy-heart-hustle",
+    progressKind: "none",
+    tags: ["Yearly","Legacy"]
+  },
+  {
+    id: "uyp-spirit-award",
+    kind: "Trophy",
+    name: "The Spirit Award",
+    tier: "Legacy",
+    category: "SeasonalLegacy",
+    description: "Yearly award to the one player who best maintained a positive attitude and lifted team morale on and off the court.",
+    iconName: "trophy-spirit",
+    progressKind: "none",
+    tags: ["Yearly","Legacy"]
+  },
+
+  // --- Team Trophies (Seasonal) ---
+  { id: "team-mvp", kind: "Trophy", name: "MVP (Most Valuable Player)", tier: "Team", category: "SeasonalLegacy",
+    description: "Coach-awarded seasonal MVP for team impact.", iconName: "trophy-mvp", progressKind: "none", tags: ["Coach Award"] },
+  { id: "team-coachs-award", kind: "Trophy", name: "Coach’s Award", tier: "Team", category: "SeasonalLegacy",
+    description: "Coach-awarded seasonal honor for values, coachability, and attitude.", iconName: "trophy-coach", progressKind: "none", tags: ["Coach Award"] },
+  { id: "team-mip", kind: "Trophy", name: "MIP (Most Improved Player)", tier: "Team", category: "SeasonalLegacy",
+    description: "Coach-awarded seasonal honor for most improvement.", iconName: "trophy-mip", progressKind: "none", tags: ["Coach Award"] },
+
+  // --- Hall of Famer (Yellow) examples ---
+  { id: "superstar-10x-mvp", kind: "Badge", name: "Superstar (10× MVP)", tier: "HallOfFamer", category: "InGamePerformance",
+    description: "For demonstrating a consistent pattern of dominance.", iconName: "badge-10x-mvp",
+    progressKind: "counter", counterOf: { stat: "mvpCount", target: 10, label: "MVP awards" }, tags: ["MVP"] },
+
+  { id: "digital-triple-crown", kind: "Badge", name: "The Digital Triple Crown", tier: "HallOfFamer", category: "TrainingProgram",
+    description: "Complete all Skill, all S&C, and all Basketball IQ videos in Foundation (Technique Titan + Peak Performer + Basketball Savant).",
+    iconName: "badge-triple-crown",
+    progressKind: "completeAll", completeAll: { setId: "foundation_all" }, programTag: "Foundation", tags: ["Foundation"] },
+
+  // --- Add ALL remaining awards from the spec below following the same pattern ---
+];
+
+Ghostwriter: Parse the full list below and add every missing award to AWARDS.
+Use sensible iconName slugs (e.g., badge-ironman, badge-pillars, badge-hustle-5x).
+For counters, map to stats like:
+	•	MVP/Clutch/Comeback/Hustle/Teammate/Sportsmanship/Student/LeadByExample → mvpCount, clutchCount, comebackCount, hustleCount, teammateCount, sportsmanshipCount, studentCount, leadByExampleCount (and season-scoped variants if needed)
+	•	Attendance totals → practiceTotal, skillsTotal, gamesTotal, fnhGamesTotal
+	•	Streaks → practiceStreak, rsvpStreak, practiceConsecutive, etc.
+	•	Online program → set IDs: foundation_all, foundation_skills_all, foundation_sc_all, foundation_iq_all, foundation_weekly_12, etc.
+For composites (Coach’s Choice, Trifecta, Character Captain), use composite definitions crossing multiple stats (seasonScoped true where needed).
+
+src/lib/awards.progress.ts
+	•	Given AWARDS + userStats, compute earned/progress.
+
+import { Award } from "./awards.types";
+
+export interface UserStats {
+  // season or lifetime counts
+  mvpCount: number; clutchCount: number; comebackCount: number;
+  hustleCount: number; teammateCount: number; sportsmanshipCount: number;
+  studentCount: number; leadByExampleCount: number;
+
+  practiceTotal: number; skillsTotal: number; gamesTotal: number; fnhGamesTotal: number;
+
+  practiceStreak: number; rsvpStreak: number; tournamentAllGamesCheckedIn?: boolean;
+
+  // season-scoped bundles (e.g., earned MVP/Hustle/Teammate this season)
+  season: {
+    mvp: number; hustle: number; teammate: number; sportsmanship: number;
+  };
+
+  // program progress
+  foundation: {
+    totalVideos: number; skillsCompleted: number; scCompleted: number; iqCompleted: number;
+    weeklyCompleted12?: boolean; weeklyCompleted6?: boolean; monthly4?: boolean;
+    completedOnce?: boolean; completedTwice?: boolean;
+  };
+
+  referrals?: number;
+  rsvpsOnTimeSeason?: number;
+  fnhHolidayGames?: number;
+  // extend as needed
+}
+
+export function getAwardProgress(award: Award, stats: UserStats): { earned: boolean; current?: number; target?: number; note?: string } {
+  if (award.progressKind === "none") return { earned: false }; // trophies are manually awarded elsewhere
+
+  if (award.progressKind === "counter" && award.counterOf) {
+    const current = (stats as any)[award.counterOf.stat] || 0;
+    return { earned: current >= award.counterOf.target, current, target: award.counterOf.target };
+  }
+  if (award.progressKind === "streak" && award.streakOf) {
+    const current = (stats as any)[award.streakOf.stat] || 0;
+    return { earned: current >= award.streakOf.target, current, target: award.streakOf.target };
+  }
+  if (award.progressKind === "completeAll" && award.completeAll) {
+    // interpret setId based on stats.foundation
+    // example for foundation_all:
+    const f = stats.foundation || {};
+    if (award.completeAll.setId === "foundation_all") {
+      const earned = (f.skillsCompleted >= 36) && (f.scCompleted >= 12) && (f.iqCompleted >= 12);
+      return { earned, current: (f.skillsCompleted + f.scCompleted + f.iqCompleted), target: 60 };
+    }
+  }
+  if (award.composite?.length) {
+    const ok = award.composite.every(rule => {
+      const v = rule.seasonScoped ? (stats.season as any)[rule.stat] : (stats as any)[rule.stat];
+      return (v || 0) >= (rule.min ?? 1);
+    });
+    return { earned: ok };
+  }
+  return { earned: false };
+}
+
+src/state/awardsFilters.ts
+
+export interface AwardsFilterState {
+  tier?: string;           // e.g., "AllStar"
+  category?: string;       // e.g., "Attendance"
+  sort?: "alpha" | "tier" | "completion" | "recent";
+  showOnlyEarned?: boolean;
+}
+export const defaultAwardsFilters: AwardsFilterState = { sort: "tier" };
+export function loadAwardsFilters(): AwardsFilterState {
+  try { return { ...defaultAwardsFilters, ...JSON.parse(localStorage.getItem("uyp.awards.filters") || "{}") }; } catch { return defaultAwardsFilters; }
+}
+export function saveAwardsFilters(f: AwardsFilterState) {
+  localStorage.setItem("uyp.awards.filters", JSON.stringify(f));
+}
+
+UI Components (create/update)
+
+src/components/awards/AwardsPage.tsx
+	•	Top bar: Tier filter, Type filter, Sort menu, toggle “Only earned”
+	•	Grid of awards (all visible; earned = color, locked = grayscale/opacity-60)
+	•	Clicking an item opens AwardOverlay
+
+import { useMemo, useState } from "react";
+import { AWARDS } from "@/lib/awards.registry";
+import { getAwardProgress } from "@/lib/awards.progress";
+import { loadAwardsFilters, saveAwardsFilters } from "@/state/awardsFilters";
+import AwardCard from "./AwardCard";
+import AwardOverlay from "./AwardOverlay";
+
+export default function AwardsPage({ userStats }: { userStats: any }) {
+  const [filters, setFilters] = useState(loadAwardsFilters());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const items = useMemo(() => {
+    const enriched = AWARDS.map(a => ({ award: a, progress: getAwardProgress(a, userStats) }));
+    let out = enriched;
+    if (filters.tier) out = out.filter(x => x.award.tier === filters.tier);
+    if (filters.category) out = out.filter(x => x.award.category === filters.category);
+    if (filters.showOnlyEarned) out = out.filter(x => x.progress.earned);
+
+    switch (filters.sort) {
+      case "alpha": out.sort((a,b)=>a.award.name.localeCompare(b.award.name)); break;
+      case "tier": out.sort((a,b)=>a.award.tier.localeCompare(b.award.tier)); break;
+      case "completion": out.sort((a,b)=>Number(b.progress.earned)-Number(a.progress.earned)); break;
+      case "recent": /* optional: sort by user’s earnedAt timestamps if available */ break;
+    }
+    return out;
+  }, [filters, userStats]);
+
+  function updateFilters(patch: Partial<typeof filters>) {
+    const next = { ...filters, ...patch };
+    setFilters(next); saveAwardsFilters(next);
+  }
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center mb-6">
+        {/* Tier select */}
+        {/* Category select */}
+        {/* Sort select */}
+        {/* Toggle Only Earned */}
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+        {items.map(({award, progress}) => (
+          <AwardCard key={award.id} award={award} progress={progress} onClick={()=>setSelectedId(award.id)} />
+        ))}
+      </div>
+
+      {selectedId && (
+        <AwardOverlay
+          award={AWARDS.find(a=>a.id===selectedId)!}
+          progress={getAwardProgress(AWARDS.find(a=>a.id===selectedId)!, userStats)}
+          onClose={()=>setSelectedId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+src/components/awards/AwardCard.tsx
+	•	Shows image + name; applies grayscale if locked
+
+export default function AwardCard({ award, progress, onClick }:{
+  award: any, progress: { earned: boolean, current?: number, target?: number }, onClick: ()=>void
+}) {
+  const locked = !progress.earned;
+  return (
+    <button onClick={onClick} className="group rounded-lg border bg-card hover:shadow-md transition p-3 text-left">
+      <div className={`aspect-square rounded flex items-center justify-center overflow-hidden bg-muted`}>
+        <img
+          src={`/assets/awards/${award.iconName}.png`}
+          alt={award.name}
+          className={`w-4/5 h-4/5 object-contain ${locked ? "grayscale opacity-60" : ""}`}
+          loading="lazy"
+        />
+      </div>
+      <div className="mt-2 text-sm font-medium leading-tight">{award.name}</div>
+      {award.progressKind !== "none" && award.counterOf?.target && (
+        <div className="text-xs text-muted-foreground">
+          {progress.current ?? 0} / {award.counterOf.target} {award.counterOf.label || ""}
+        </div>
+      )}
+    </button>
+  );
+}
+
+src/components/awards/AwardOverlay.tsx
+	•	Full-screen modal/sheet; large image; tier color; description; progress
+
+export default function AwardOverlay({ award, progress, onClose }:{ award:any, progress:any, onClose:()=>void }) {
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:w-[520px] bg-background rounded-t-2xl md:rounded-l-2xl shadow-xl overflow-auto">
+        <div className="p-4 sticky top-0 bg-background border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{award.name}</h2>
+          <button onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-4">
+            <img src={`/assets/awards/${award.iconName}.png`} alt={award.name} className="w-24 h-24 object-contain" />
+            <div>
+              <div className="text-sm uppercase tracking-wide text-muted-foreground">{award.tier}</div>
+              <div className="text-xs">{award.category}</div>
+            </div>
+          </div>
+          <p className="text-sm leading-relaxed">{award.description}</p>
+
+          {/* Progress */}
+          {award.progressKind !== "none" && (
+            <div className="text-sm">
+              {progress.target
+                ? <div>Progress: <b>{progress.current ?? 0} / {progress.target}</b></div>
+                : <div>{progress.earned ? "Completed" : "Not yet earned"}</div>}
+            </div>
+          )}
+
+          {/* How to earn (derive from definition) */}
+          {/* Optional: show related stats */}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Assets & Styling
+	•	Put images in public/assets/awards/. Use consistent names from iconName.
+	•	Tier→color idea (map in CSS or a small util):
+	•	HallOfFamer = gold/yellow accent
+	•	Superstar = purple
+	•	AllStar = blue
+	•	Starter = green
+	•	Prospect = gray
+	•	Legacy/Team trophies = premium gold/silver
+	•	Apply smooth hover, focus, and modal transitions.
+
+Wire up data
+	•	Wherever you fetch/compute userStats, pass it to <AwardsPage userStats={stats} />.
+	•	Confirm stat keys match what awards.progress.ts expects. If your current schema differs, add a mapper.
+
+Acceptance Criteria (must pass)
+	•	All awards from the list are visible; unearned are greyed; earned full color.
+	•	Clicking shows an on-screen overlay with full info + progress.
+	•	Filter by Tier and Type, sort as specified.
+	•	Responsive grid; fast image load; accessible (Esc to close, focus trap).
+	•	Composite awards (e.g., Trifecta, Character Captain, Coach’s Choice) compute correctly from season-scoped stats.
+	•	Foundation Program badges reflect real program progress.
+
+⸻
+
+Source Spec (parse into registry)
+
+Use the exact list the user provided (Trophies + Badges across tiers) and generate all entries:
+	•	Trophies (Legacy yearly: Heart and Hustle, Spirit Award; Team seasonal: MVP, Coach’s Award, MIP)
+	•	Badges: Hall of Famer (Yellow), Superstar (Purple), All-Star (Blue), Starter (Green), Prospect (Grey), each with all sub-badges as specified (including 10×/5×/3×, attendance totals, streaks, online program completions, and composites like Trifecta/Character Captain/Coach’s Choice, etc.).
+
+Important: Implement every single item. Use counter/streak/completeAll/composite as appropriate. For “every game/practice in a season,” add season-scoped flags in UserStats as needed.
+
+⸻
+
+Integrate this into the existing app’s route (Badges/Trophies page). Replace the old page with this implementation, keeping existing nav. Ensure no console errors, and ship with placeholder images if real art isn’t available yet (but keep the filenames stable).
+
+If anything in our current project structure differs (framework/paths), adapt the file locations but keep the same feature set and acceptance criteria.

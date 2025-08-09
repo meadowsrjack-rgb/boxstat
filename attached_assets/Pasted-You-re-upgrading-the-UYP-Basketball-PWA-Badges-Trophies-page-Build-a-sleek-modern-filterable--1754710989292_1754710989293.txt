@@ -1,0 +1,338 @@
+You’re upgrading the UYP Basketball PWA “Badges & Trophies” page. Build a sleek, modern, filterable experience with ALL awards from the spec below. Show every award (earned in full color, unearned greyed). Clicking any award opens a seamless overlay with description + progress. Include filters by Tier and Type/Category, plus sorting (A–Z, Tier, Completion status, Recently earned). Use my current UI stack (Tailwind/shadcn if present) and integrate into the existing route (replace the old page).
+
+Functional Requirements
+Registry + Types
+
+Create src/lib/awards.types.ts:
+
+ts
+Copy
+Edit
+export type Tier = "HallOfFamer" | "Superstar" | "AllStar" | "Starter" | "Prospect" | "Legacy" | "Team";
+export type Category = "Attendance" | "TrainingProgram" | "InGamePerformance" | "SeasonalLegacy";
+export type ProgressKind = "none" | "counter" | "streak" | "completeAll";
+
+export interface Award {
+  id: string;              // kebab-case
+  kind: "Trophy" | "Badge";
+  name: string;
+  tier: Tier;              // Legacy/Team for trophies; other tiers for badges
+  category: Category;
+  description: string;
+  iconName: string;        // e.g., "trophy-heart-hustle", "badge-ironman"
+  progressKind: ProgressKind;
+  counterOf?: { stat: string; target: number; label?: string };      // e.g., mvpCount:10
+  streakOf?: { stat: string; target: number; label?: string };       // e.g., practiceStreak:10
+  completeAll?: { setId: string; label?: string };                   // e.g., foundation_all
+  composite?: Array<{ stat: string; min?: number; seasonScoped?: boolean }>;
+  programTag?: "Foundation";
+  tags?: string[];
+}
+Create src/lib/awards.registry.ts with every award from the spec (see “Awards Spec” at bottom). Include metadata: id, name, tier, category, description, iconName, and appropriate progress config (counterOf, streakOf, completeAll, composite).
+
+Seed a few, then add the rest:
+
+ts
+Copy
+Edit
+import { Award } from "./awards.types";
+
+export const AWARDS: Award[] = [
+  // Legacy Trophies (Yearly)
+  { id:"uyp-heart-and-hustle", kind:"Trophy", name:"The UYP Heart and Hustle Award", tier:"Legacy", category:"SeasonalLegacy",
+    description:"Yearly award recognizing the single player who most consistently gave their all in practices and games.",
+    iconName:"trophy-heart-hustle", progressKind:"none", tags:["Yearly","Legacy"] },
+  { id:"uyp-spirit-award", kind:"Trophy", name:"The Spirit Award", tier:"Legacy", category:"SeasonalLegacy",
+    description:"Yearly award for the one player who best maintained a positive attitude and lifted team morale on and off the court.",
+    iconName:"trophy-spirit", progressKind:"none", tags:["Yearly","Legacy"] },
+
+  // Team Trophies (Seasonal)
+  { id:"team-mvp", kind:"Trophy", name:"MVP (Most Valuable Player)", tier:"Team", category:"SeasonalLegacy",
+    description:"Coach-awarded seasonal MVP for team impact.", iconName:"trophy-mvp", progressKind:"none", tags:["Coach Award"] },
+  { id:"team-coachs-award", kind:"Trophy", name:"Coach’s Award", tier:"Team", category:"SeasonalLegacy",
+    description:"Coach-awarded honor for values, coachability, and attitude.", iconName:"trophy-coach", progressKind:"none", tags:["Coach Award"] },
+  { id:"team-mip", kind:"Trophy", name:"MIP (Most Improved Player)", tier:"Team", category:"SeasonalLegacy",
+    description:"Coach-awarded honor for most improvement.", iconName:"trophy-mip", progressKind:"none", tags:["Coach Award"] },
+
+  // Hall of Famer (examples)
+  { id:"superstar-10x-mvp", kind:"Badge", name:"Superstar (10× MVP)", tier:"HallOfFamer", category:"InGamePerformance",
+    description:"For demonstrating a consistent pattern of dominance.", iconName:"badge-10x-mvp",
+    progressKind:"counter", counterOf:{ stat:"mvpCount", target:10, label:"MVP awards" }, tags:["MVP"] },
+
+  { id:"digital-triple-crown", kind:"Badge", name:"The Digital Triple Crown", tier:"HallOfFamer", category:"TrainingProgram",
+    description:"Complete all Skill, all S&C, and all Basketball IQ videos in the Foundation Program.",
+    iconName:"badge-triple-crown", progressKind:"completeAll", completeAll:{ setId:"foundation_all" }, programTag:"Foundation", tags:["Foundation"] },
+
+  // TODO: Ghostwriter — parse the full Awards Spec below and add EVERY remaining award with correct config.
+];
+Progress Computation
+
+Create src/lib/awards.progress.ts:
+
+ts
+Copy
+Edit
+import { Award } from "./awards.types";
+
+export interface UserStats {
+  mvpCount:number; clutchCount:number; comebackCount:number; hustleCount:number; teammateCount:number;
+  sportsmanshipCount:number; studentCount:number; leadByExampleCount:number;
+  practiceTotal:number; skillsTotal:number; gamesTotal:number; fnhGamesTotal:number;
+  practiceStreak:number; rsvpStreak:number; tournamentAllGamesCheckedIn?:boolean;
+  referrals?:number; rsvpsOnTimeSeason?:number; fnhHolidayGames?:number;
+  season:{ mvp:number; hustle:number; teammate:number; sportsmanship:number };
+  foundation:{ totalVideos:number; skillsCompleted:number; scCompleted:number; iqCompleted:number;
+               weeklyCompleted12?:boolean; weeklyCompleted6?:boolean; monthly4?:boolean; completedOnce?:boolean; completedTwice?:boolean; };
+}
+
+export function getAwardProgress(award: Award, stats: UserStats) {
+  if (award.progressKind==="none") return { earned:false };
+  if (award.progressKind==="counter" && award.counterOf){
+    const cur=(stats as any)[award.counterOf.stat]||0;
+    return { earned: cur>=award.counterOf.target, current:cur, target:award.counterOf.target };
+  }
+  if (award.progressKind==="streak" && award.streakOf){
+    const cur=(stats as any)[award.streakOf.stat]||0;
+    return { earned: cur>=award.streakOf.target, current:cur, target:award.streakOf.target };
+  }
+  if (award.progressKind==="completeAll" && award.completeAll){
+    const f=stats.foundation||{};
+    if (award.completeAll.setId==="foundation_all"){
+      const earned=(f.skillsCompleted>=36)&&(f.scCompleted>=12)&&(f.iqCompleted>=12);
+      return { earned, current:(f.skillsCompleted+f.scCompleted+f.iqCompleted), target:60 };
+    }
+    // extend for other setIds as needed
+  }
+  if (award.composite?.length){
+    const ok=award.composite.every(r=>{
+      const src = r.seasonScoped ? (stats.season as any) : (stats as any);
+      return (src[r.stat]||0) >= (r.min ?? 1);
+    });
+    return { earned: ok };
+  }
+  return { earned:false };
+}
+Filters State
+
+Create src/state/awardsFilters.ts:
+
+ts
+Copy
+Edit
+export interface AwardsFilterState {
+  tier?: string;
+  category?: string;
+  sort?: "alpha"|"tier"|"completion"|"recent";
+  showOnlyEarned?: boolean;
+}
+export const defaultAwardsFilters: AwardsFilterState = { sort:"tier" };
+export function loadAwardsFilters(){
+  try { return { ...defaultAwardsFilters, ...JSON.parse(localStorage.getItem("uyp.awards.filters")||"{}") }; }
+  catch { return defaultAwardsFilters; }
+}
+export function saveAwardsFilters(f:AwardsFilterState){
+  localStorage.setItem("uyp.awards.filters", JSON.stringify(f));
+}
+UI Components
+
+Create/replace:
+
+src/components/awards/AwardsPage.tsx (page with filters, grid, overlay)
+
+src/components/awards/AwardCard.tsx (card with grayscale when locked)
+
+src/components/awards/AwardOverlay.tsx (full-screen modal/sheet)
+
+AwardCard.tsx (use Tailwind/shadcn styling if available):
+
+tsx
+Copy
+Edit
+export default function AwardCard({ award, progress, onClick }:{
+  award:any, progress:{earned:boolean; current?:number; target?:number}, onClick:()=>void
+}){
+  const locked=!progress.earned;
+  return (
+    <button onClick={onClick} className="group rounded-lg border bg-card hover:shadow-md transition p-3 text-left">
+      <div className="aspect-square rounded flex items-center justify-center overflow-hidden bg-muted">
+        <img
+          src={`/assets/awards/${award.iconName}.png`}
+          alt={award.name}
+          className={`w-4/5 h-4/5 object-contain ${locked?"grayscale opacity-60":""}`}
+          loading="lazy"
+        />
+      </div>
+      <div className="mt-2 text-sm font-medium leading-tight">{award.name}</div>
+      {award.counterOf?.target && (
+        <div className="text-xs text-muted-foreground">
+          {progress.current ?? 0} / {award.counterOf.target} {award.counterOf.label || ""}
+        </div>
+      )}
+    </button>
+  );
+}
+AwardOverlay.tsx:
+
+tsx
+Copy
+Edit
+export default function AwardOverlay({ award, progress, onClose }:{ award:any; progress:any; onClose:()=>void }){
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose}/>
+      <div className="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:w-[520px] bg-background rounded-t-2xl md:rounded-l-2xl shadow-xl overflow-auto">
+        <div className="p-4 sticky top-0 bg-background border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">{award.name}</h2>
+          <button onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="flex items-center gap-4">
+            <img src={`/assets/awards/${award.iconName}.png`} alt={award.name} className="w-24 h-24 object-contain"/>
+            <div>
+              <div className="text-sm uppercase tracking-wide text-muted-foreground">{award.tier}</div>
+              <div className="text-xs">{award.category}</div>
+            </div>
+          </div>
+          <p className="text-sm leading-relaxed">{award.description}</p>
+          {award.progressKind!=="none" && (
+            <div className="text-sm">
+              {progress?.target ? <>Progress: <b>{progress.current ?? 0} / {progress.target}</b></> : (progress?.earned ? "Completed" : "Not yet earned")}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+AwardsPage.tsx (filters + grid + overlay):
+
+tsx
+Copy
+Edit
+import { useMemo, useState } from "react";
+import { AWARDS } from "@/lib/awards.registry";
+import { getAwardProgress } from "@/lib/awards.progress";
+import { loadAwardsFilters, saveAwardsFilters } from "@/state/awardsFilters";
+import AwardCard from "./AwardCard";
+import AwardOverlay from "./AwardOverlay";
+
+export default function AwardsPage({ userStats }: { userStats:any }){
+  const [filters,setFilters]=useState(loadAwardsFilters());
+  const [selectedId,setSelectedId]=useState<string|null>(null);
+
+  const items = useMemo(()=>{
+    const enriched = AWARDS.map(a=>({ award:a, progress:getAwardProgress(a,userStats)}));
+    let out = enriched;
+    if (filters.tier) out = out.filter(x=>x.award.tier===filters.tier);
+    if (filters.category) out = out.filter(x=>x.award.category===filters.category);
+    if (filters.showOnlyEarned) out = out.filter(x=>x.progress.earned);
+    switch(filters.sort){
+      case "alpha": out.sort((a,b)=>a.award.name.localeCompare(b.award.name)); break;
+      case "tier": out.sort((a,b)=>a.award.tier.localeCompare(b.award.tier)); break;
+      case "completion": out.sort((a,b)=>Number(b.progress.earned)-Number(a.progress.earned)); break;
+      case "recent": /* optional if you store earnedAt */ break;
+      default: break;
+    }
+    return out;
+  },[filters,userStats]);
+
+  function updateFilters(patch:any){ const next={...filters,...patch}; setFilters(next); saveAwardsFilters(next); }
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 py-6">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 items-center mb-6">
+        <select value={filters.tier||""} onChange={e=>updateFilters({tier:e.target.value||undefined})} className="select">
+          <option value="">All Tiers</option>
+          <option>HallOfFamer</option><option>Superstar</option><option>AllStar</option><option>Starter</option><option>Prospect</option><option>Legacy</option><option>Team</option>
+        </select>
+        <select value={filters.category||""} onChange={e=>updateFilters({category:e.target.value||undefined})} className="select">
+          <option value="">All Types</option>
+          <option>Attendance</option><option>TrainingProgram</option><option>InGamePerformance</option><option>SeasonalLegacy</option>
+        </select>
+        <select value={filters.sort||"tier"} onChange={e=>updateFilters({sort:e.target.value})} className="select">
+          <option value="tier">Sort: Tier</option>
+          <option value="alpha">Sort: A–Z</option>
+          <option value="completion">Sort: Completion</option>
+          <option value="recent">Sort: Recent</option>
+        </select>
+        <label className="inline-flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={!!filters.showOnlyEarned} onChange={e=>updateFilters({showOnlyEarned:e.target.checked})}/>
+          Only earned
+        </label>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+        {items.map(({award,progress})=>(
+          <AwardCard key={award.id} award={award} progress={progress} onClick={()=>setSelectedId(award.id)} />
+        ))}
+      </div>
+
+      {selectedId && (
+        <AwardOverlay
+          award={AWARDS.find(a=>a.id===selectedId)!}
+          progress={getAwardProgress(AWARDS.find(a=>a.id===selectedId)!, userStats)}
+          onClose={()=>setSelectedId(null)}
+        />
+      )}
+    </div>
+  );
+}
+Assets
+
+Put images at public/assets/awards/ using names from iconName.
+
+Tier colors: HallOfFamer=gold/yellow, Superstar=purple, AllStar=blue, Starter=green, Prospect=gray, Legacy/Team=trophy gold/silver.
+
+Integration
+
+Replace the existing Badges/Trophies route/page with AwardsPage.
+
+Pass real userStats from your store/API. If your stat keys differ, add a mapper so awards.progress.ts gets the expected fields.
+
+Acceptance
+
+All awards visible; unearned greyed, earned full color.
+
+Clicking shows overlay with name, description, tier/type, and progress.
+
+Filters + sorting work; state persists in localStorage.
+
+Mobile-responsive, accessible (Esc to close, click-outside, focus trap).
+
+Awards Spec (add ALL of these to the registry)
+Trophies (End of Season/Year)
+
+UYP Legacy Trophies (Yearly) — one winner across all UYP:
+
+The UYP Heart and Hustle Award
+
+The Spirit Award
+
+Team Trophies (Seasonal) — coach-awarded per team:
+
+MVP (Most Valuable Player)
+
+Coach’s Award
+
+MIP (Most Improved Player)
+
+Badges
+
+Hall of Famer (Yellow)
+Superstar (10× MVP); Prime Time (10× Clutch); Force of Will (10× Comeback); Relentless (10× Hustle); The Linchpin (10× Teammate); Spirit of the Game (10× Sportsmanship); Coach on the Court (10× Student); The Paragon (10× Lead by Example); Coach’s Choice (earn each of the 8 core coach awards at least once); The Trifecta (MVP+Hustle+Teammate same season); Character Captain (Hustle+Teammate+Sportsmanship same season); Practice Legend (250 practices); Skills Virtuoso (250 skills sessions); Franchise Player (250 games); FNH Hall of Famer (250 FNH games); Dynasty Member (5 years active); Online Foundation Program: The Digital Triple Crown; Foundation Alumnus (complete 12-week program twice).
+
+Superstar (Purple)
+Marquee Player (5× MVP); Ice in the Veins (5× Clutch); Momentum Shifter (5× Comeback); The Workhorse (5× Hustle); The Cornerstone (5× Teammate); The Ambassador (5× Sportsmanship); The Tactician (5× Student); The Blueprint (5× Lead by Example); The Pillar (every practice in a season); Ironman (every game in a season); FNH Ironman (every FNH game in a season); Practice Centurion (100 practices); Skills Specialist (100 skills); Century Club (100 games); FNH Legend (100 FNH games); Team Veteran (3 years); Online Foundation: Foundation Graduate; Technique Titan; Peak Performer; Basketball Savant; Perfect Attendance (Online 12 weeks).
+
+All-Star (Blue)
+Game Changer (3× MVP); The Closer (3× Clutch); The Sparkplug (3× Comeback); The Engine (3× Hustle); The Glue (3× Teammate); Class Act (3× Sportsmanship); The Protégé (3× Student); The Standard (3× Lead by Example); The Dependable (RSVP every event in a season); Recruiter (refer a new player who joins); Practice Fiend (50 practices); Skills Devotee (50 skills); Seasoned Competitor (50 games); FNH Veteran (50 FNH games); First Year Anniversary (1 year); Online Foundation: Half-Time Adjustments (30 total videos); Monthly Module Master (4 consecutive weeks complete); Skills Sharp-Shooter (20 Skill videos); Conditioning Core (6 S&C videos); Strategic Specialist (6 IQ videos); Mid-Season Mentor (6 consecutive weeks).
+
+Starter (Green)
+Locked In (10 consecutive practices); On the Ball (10 consecutive on-time RSVPs); Tournament Titan (checked into all games in a tournament); Dedicated Grinder (25 practices); Skills Seeker (25 skills); Regular Competitor (25 games); FNH Regular (25 FNH games); Game MVP; Clutch Player; Comeback Kid; Sportsmanship Award; Hustle Award; Teammate Award; Student of the Game; Lead by Example; Online Foundation: Weekly Warm-Up (complete weekly 5); Film Study (10 total videos); Skill Builder (5 Skill videos); Foundation Force (5 S&C videos); Court Visionary (5 IQ videos); Back-to-Back Sessions (2 consecutive weeks).
+
+Prospect (Grey)
+Checked In; Road Warrior (new location); Holiday Hero (game on major holiday); The Debut (first game); Friday Follower (first FNH game); Heating Up (5 consecutive practices); Game Planner (RSVP to a Game in window); Practice Planner (RSVP to Practice/Skill/FNH); First Reps (10 practices); Skill Starter (10 skills); First Ten (10 games); FNH Fighter (10 FNH games); Online Foundation: Digital First Steps (first video); Virtual Handles (first Skill video); Remote Strength (first S&C video); Mindful Start (first IQ video).
+
+Implement every item above in AWARDS. Map counters/streaks/programs/composites to sensible UserStats fields. If my schema differs, add a lightweight mapper so the progress engine works.

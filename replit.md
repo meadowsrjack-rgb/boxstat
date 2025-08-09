@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 9, 2025**: Implemented comprehensive schedule page enhancements with advanced filtering and event parsing system
+- **August 9, 2025**: Added FiltersBar component with interactive dropdowns for event types, age groups, teams, and coaches with localStorage persistence
+- **August 9, 2025**: Created DayDrawer component with sliding sheet interface for detailed event viewing with independent scrolling
+- **August 9, 2025**: Built parseEventMeta system to intelligently extract metadata from Google Calendar event titles (age groups, team names, coaches)
+- **August 9, 2025**: Enhanced calendar with color-coded dots for different event types and real-time filtering capabilities
 - **August 8, 2025**: Prepared comprehensive GitHub publication package with README, deployment guides, and security configurations
 - **August 8, 2025**: Finalized Google Calendar API integration with 100+ real events displaying in schedule page
 - **August 8, 2025**: Resolved API routing issues - `/api/events` now returns authentic Google Calendar data
@@ -101,7 +106,11 @@ Preferred communication style: Simple, everyday language.
 - **Google Calendar Integration**: Automatic sync with UYP's public calendar (upyourperformance@gmail.com)
 - **Calendar Sync**: Hourly automated sync with manual trigger capability
 - **Event Management**: Automatic team assignment based on event titles and descriptions
-- **Calendar Integration**: Color-coded events with team-specific views
+- **Advanced Event Parsing**: Smart extraction of age groups, team names, and coaches from calendar event titles
+- **Interactive Filtering**: Real-time filtering by event type, age groups, teams, and coaches with persistent preferences
+- **Enhanced Calendar UI**: Color-coded dots for different event types with visual indicators on calendar dates
+- **Modern Event Details**: Sliding drawer interface (DayDrawer) for comprehensive event information display
+- **Calendar Integration**: Color-coded events with team-specific views and filterable display
 - **Attendance Tracking**: QR code-based check-in system
 
 ### Payment Integration

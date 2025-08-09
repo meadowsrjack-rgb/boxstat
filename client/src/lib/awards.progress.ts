@@ -1,7 +1,7 @@
 import { Award, UserStats } from "./awards.types";
 
 export function getAwardProgress(award: Award, stats: UserStats) {
-  if (award.progressKind === "none") {
+  if (award.progressKind === "none" || award.progressKind === "manual") {
     // Trophies granted by coach flow - check if already earned
     return { earned: stats.awardsEarned?.includes(award.id) || false };
   }
@@ -69,51 +69,53 @@ function getStatValue(statsObj: any, statPath: string): number {
   return 0;
 }
 
-// Mock user stats for demo purposes
+// Mock user stats for demo purposes - showing player with some earned awards but many still locked
 export const MOCK_USER_STATS: UserStats = {
   mvpCount: 2,
   clutchCount: 1,
-  comebackCount: 1,
+  comebackCount: 0,
   hustleCount: 3,
-  teammateCount: 2,
-  sportsmanshipCount: 1,
-  studentCount: 1,
-  leadByExampleCount: 1,
-  practiceTotal: 45,
-  skillsTotal: 12,
-  gamesTotal: 20,
-  fnhGamesTotal: 6,
-  practiceStreak: 8,
-  rsvpStreak: 5,
-  tournamentAllGamesCheckedIn: true,
+  teammateCount: 1,
+  sportsmanshipCount: 0,
+  studentCount: 0,
+  leadByExampleCount: 0,
+  practicesTotal: 15,
+  trainingProgramsCompleted: 3,
+  skillsTotal: 25,
+  gamesTotal: 8,
+  fnhGamesTotal: 2,
+  practiceStreak: 5,
+  rsvpStreak: 3,
+  tournamentAllGamesCheckedIn: false,
   playedEveryPracticeSeason: false,
   playedEveryGameSeason: false,
   playedEveryFnhSeason: false,
   rsvpedEveryEventSeason: false,
-  referrals: 1,
-  holidayGamesCount: 1,
-  rsvpsOnTimeSeason: 12,
+  referrals: 0,
+  holidayGamesCount: 0,
+  rsvpsOnTimeSeason: 0,
   yearsActive: 1,
   season: {
     mvp: 1,
     hustle: 2,
     teammate: 1,
     sportsmanship: 0,
-    clutch: 1,
-    comeback: 1,
-    student: 1,
+    clutch: 0,
+    comeback: 0,
+    student: 0,
     leadByExample: 0
   },
   foundation: {
-    totalVideos: 25,
-    skillsCompleted: 15,
-    scCompleted: 5,
-    iqCompleted: 5,
+    totalVideos: 15,
+    skillsCompleted: 10,
+    scCompleted: 3,
+    iqCompleted: 2,
     weeklyCompleted12: false,
-    weeklyCompleted6: true,
-    monthly4: true,
-    completedOnce: false,
+    weeklyCompleted6: false,
+    monthly4: false,
+    completedOnce: true,
     completedTwice: false
   },
-  awardsEarned: ["game-mvp", "hustle-award", "comeback-kid", "first-ten", "skill-starter", "checked-in", "the-debut", "friday-follower"]
+  // Only a few awards earned to show the greyout functionality
+  awardsEarned: ["first-mvp", "first-hustle", "first-practice", "first-training", "rising-star", "hustler"]
 };

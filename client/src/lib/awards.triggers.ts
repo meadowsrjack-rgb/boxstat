@@ -1,6 +1,6 @@
-
 import { AWARDS } from "./awards.registry";
-import { getAwardProgress, UserStats } from "./awards.progress";
+import { getAwardProgress } from "./awards.progress";
+import { UserStats } from "./awards.types";
 
 export function handleAwardTrigger(
   userStats: UserStats, 
@@ -12,51 +12,19 @@ export function handleAwardTrigger(
     if (!award.triggerSources?.includes(trigger)) continue;
     
     const progress = getAwardProgress(award, userStats);
-    const alreadyEarned = userStats.awardsEarned?.includes(award.id);
+    const already = userStats.awardsEarned?.includes(award.id);
     
-    if (progress.earned && !alreadyEarned) {
-      newlyEarned.push(award.id);
+    if (progress.earned && !already) { 
+      newlyEarned.push(award.id); 
     }
   }
   
   return newlyEarned;
 }
 
-// Helper function to show toast notification for new awards
-export function showAwardNotification(awardIds: string[]) {
-  if (awardIds.length === 0) return;
-  
-  const awardNames = awardIds.map(id => {
-    const award = AWARDS.find(a => a.id === id);
-    return award?.name || id;
-  });
-  
-  // This would integrate with your existing toast system
-  console.log(`🏆 New Award${awardIds.length > 1 ? 's' : ''} Unlocked: ${awardNames.join(', ')}`);
-}
-
-// Integration points - call these in your existing event handlers:
-
-export function onQRScanCheckIn(userStats: UserStats) {
-  const newAwards = handleAwardTrigger(userStats, "attendance");
-  showAwardNotification(newAwards);
-  return newAwards;
-}
-
-export function onCoachAwardGrant(userStats: UserStats) {
-  const newAwards = handleAwardTrigger(userStats, "coachAward");
-  showAwardNotification(newAwards);
-  return newAwards;
-}
-
-export function onTrainingVideoComplete(userStats: UserStats) {
-  const newAwards = handleAwardTrigger(userStats, "onlineTraining");
-  showAwardNotification(newAwards);
-  return newAwards;
-}
-
-export function onRSVPSubmit(userStats: UserStats) {
-  const newAwards = handleAwardTrigger(userStats, "rsvp");
-  showAwardNotification(newAwards);
-  return newAwards;
-}
+// Integration points for the trigger system:
+// After QR scan check-in → handleAwardTrigger(stats, "attendance")
+// After coach grants award → handleAwardTrigger(stats, "coachAward")
+// After training video completes → handleAwardTrigger(stats, "onlineTraining")
+// After successful RSVP → handleAwardTrigger(stats, "rsvp")
+// If newlyEarned.length > 0, update app state and show toast: "🏆 New Award Unlocked!"

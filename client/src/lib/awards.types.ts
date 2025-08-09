@@ -1,4 +1,3 @@
-
 export type Tier = "HallOfFamer" | "Superstar" | "AllStar" | "Starter" | "Prospect" | "Legacy" | "Team";
 export type Category = "Attendance" | "TrainingProgram" | "InGamePerformance" | "SeasonalLegacy";
 export type ProgressKind = "none" | "counter" | "streak" | "completeAll";
@@ -47,7 +46,16 @@ export interface UserStats {
   holidayGamesCount?: number; 
   rsvpsOnTimeSeason?: number;
   yearsActive?: number;
-  season: { mvp: number; hustle: number; teammate: number; sportsmanship: number };
+  season: { 
+    mvp: number; 
+    hustle: number; 
+    teammate: number; 
+    sportsmanship: number; 
+    clutch: number; 
+    comeback: number; 
+    student: number; 
+    leadByExample: number; 
+  };
   foundation: {
     totalVideos: number; 
     skillsCompleted: number; 
@@ -55,8 +63,6 @@ export interface UserStats {
     iqCompleted: number;
     weeklyCompleted12?: boolean; 
     weeklyCompleted6?: boolean; 
-    weeklyCompleted2?: boolean;
-    weeklyCompleted1?: boolean;
     monthly4?: boolean;
     completedOnce?: boolean; 
     completedTwice?: boolean;

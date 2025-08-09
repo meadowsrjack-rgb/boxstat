@@ -1,96 +1,79 @@
-
 import { Award } from "@/lib/awards.types";
-import { getAwardProgress, UserStats } from "@/lib/awards.progress";
-import { TIER_COLORS } from "@/lib/awards.registry";
-import { Trophy, Award as AwardIcon, Star, Zap, Shield, Target } from "lucide-react";
 
 interface AwardCardProps {
   award: Award;
-  userStats: UserStats;
+  progress: { earned: boolean; current?: number; target?: number; label?: string };
   onClick: () => void;
 }
 
-export function AwardCard({ award, userStats, onClick }: AwardCardProps) {
-  const progress = getAwardProgress(award, userStats);
-  const tierStyle = TIER_COLORS[award.tier];
-  const isEarned = progress.earned;
+const TIER_COLORS = {
+  HallOfFamer: "from-yellow-400 to-yellow-600",
+  Superstar: "from-purple-400 to-purple-600", 
+  AllStar: "from-blue-400 to-blue-600",
+  Starter: "from-green-400 to-green-600",
+  Prospect: "from-gray-400 to-gray-600",
+  Legacy: "from-amber-400 to-amber-600",
+  Team: "from-orange-400 to-orange-600"
+};
 
-  const getIcon = () => {
-    if (award.kind === "Trophy") {
-      return <Trophy className="w-6 h-6" />;
-    }
-    
-    // Badge icons based on category or specific award types
-    if (award.name.includes("MVP")) return <Star className="w-6 h-6" />;
-    if (award.name.includes("Hustle")) return <Zap className="w-6 h-6" />;
-    if (award.name.includes("Teammate")) return <Shield className="w-6 h-6" />;
-    if (award.name.includes("Clutch")) return <Target className="w-6 h-6" />;
-    
-    return <AwardIcon className="w-6 h-6" />;
-  };
-
-  const getProgressDisplay = () => {
-    if (progress.current !== undefined && progress.target !== undefined) {
-      return `${progress.current}/${progress.target}`;
-    }
-    return isEarned ? "✓" : "—";
-  };
-
+export function AwardCard({ award, progress, onClick }: AwardCardProps) {
+  const locked = !progress.earned;
+  const tierColor = TIER_COLORS[award.tier];
+  
   return (
-    <div
-      onClick={onClick}
-      className={`relative cursor-pointer rounded-lg border-2 p-3 transition-all duration-200 hover:scale-105 hover:shadow-md ${
-        isEarned 
-          ? `${tierStyle.bg.replace('bg-', 'bg-opacity-10 bg-')} ${tierStyle.border}` 
-          : 'bg-gray-100 border-gray-200 opacity-60 grayscale'
-      }`}
-      title={award.description}
+    <button 
+      onClick={onClick} 
+      className="group rounded-lg border bg-card hover:shadow-md transition-all duration-200 p-3 text-left relative overflow-hidden"
+      data-testid={`card-award-${award.id}`}
     >
-      <div className="flex flex-col items-center text-center space-y-2">
-        {/* Icon */}
-        <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-          isEarned ? tierStyle.bg.replace('bg-', 'bg-opacity-20 bg-') : 'bg-gray-200'
-        }`}>
-          <div className={isEarned ? tierStyle.text : 'text-gray-400'}>
-            {getIcon()}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="min-h-[60px] flex flex-col justify-between">
-          <div>
-            <p className="font-semibold text-xs text-gray-900 leading-tight line-clamp-2">
-              {award.name}
-            </p>
-            <p className="text-xs text-gray-600 capitalize mt-1">
-              {tierStyle.name}
-            </p>
-          </div>
-          
-          {/* Progress indicator */}
-          <div className="mt-2">
-            <p className={`text-xs font-medium ${
-              isEarned ? 'text-green-600' : 'text-gray-500'
-            }`}>
-              {getProgressDisplay()}
-            </p>
-          </div>
-        </div>
+      {/* Tier indicator */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${tierColor} ${locked ? 'opacity-40' : ''}`} />
+      
+      <div className={`aspect-square rounded flex items-center justify-center overflow-hidden bg-muted mb-2`}>
+        <img
+          src={`/assets/awards/${award.iconName}.png`}
+          alt={award.name}
+          className={`w-4/5 h-4/5 object-contain transition-all duration-200 ${
+            locked ? "grayscale opacity-50" : "group-hover:scale-105"
+          }`}
+          loading="lazy"
+          onError={(e) => {
+            // Fallback to a default trophy/badge icon
+            (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+              '/assets/awards/default-trophy.png' : 
+              '/assets/awards/default-badge.png';
+          }}
+        />
       </div>
       
-      {/* Tier indicator corner */}
-      <div className={`absolute top-1 right-1 w-3 h-3 rounded-full ${
-        isEarned ? tierStyle.bg : 'bg-gray-300'
-      } ${tierStyle.border} border`} />
-      
-      {/* Trophy/Badge type indicator */}
-      <div className="absolute top-1 left-1">
-        {award.kind === "Trophy" ? (
-          <Trophy className="w-3 h-3 text-yellow-500" />
-        ) : (
-          <AwardIcon className="w-3 h-3 text-blue-500" />
-        )}
+      <div className={`text-sm font-medium leading-tight mb-1 ${locked ? 'text-muted-foreground' : ''}`}>
+        {award.name}
       </div>
-    </div>
+      
+      <div className="text-xs text-muted-foreground mb-1">
+        {award.tier} • {award.kind}
+      </div>
+      
+      {award.progressKind !== "none" && (progress.current !== undefined && progress.target !== undefined) && (
+        <div className="text-xs space-y-1">
+          <div className="flex justify-between">
+            <span>{progress.current} / {progress.target}</span>
+            <span>{Math.round((progress.current / progress.target) * 100)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <div 
+              className={`h-1.5 rounded-full bg-gradient-to-r ${tierColor} transition-all duration-300`}
+              style={{ width: `${Math.min((progress.current / progress.target) * 100, 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+      
+      {locked && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-lg">
+          <div className="text-white/80 text-xl">🔒</div>
+        </div>
+      )}
+    </button>
   );
 }

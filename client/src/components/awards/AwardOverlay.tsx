@@ -1,186 +1,178 @@
-
 import { Award } from "@/lib/awards.types";
-import { getAwardProgress, UserStats } from "@/lib/awards.progress";
-import { TIER_COLORS } from "@/lib/awards.registry";
-import { Trophy, Award as AwardIcon, Star, Zap, Shield, Target, X } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface AwardOverlayProps {
-  award: Award | null;
-  userStats: UserStats;
+  award: Award;
+  progress: { earned: boolean; current?: number; target?: number; label?: string };
   isOpen: boolean;
   onClose: () => void;
 }
 
-export function AwardOverlay({ award, userStats, isOpen, onClose }: AwardOverlayProps) {
-  if (!award) return null;
+const TIER_COLORS = {
+  HallOfFamer: "border-yellow-400 bg-yellow-50 text-yellow-800",
+  Superstar: "border-purple-400 bg-purple-50 text-purple-800", 
+  AllStar: "border-blue-400 bg-blue-50 text-blue-800",
+  Starter: "border-green-400 bg-green-50 text-green-800",
+  Prospect: "border-gray-400 bg-gray-50 text-gray-800",
+  Legacy: "border-amber-400 bg-amber-50 text-amber-800",
+  Team: "border-orange-400 bg-orange-50 text-orange-800"
+};
 
-  const progress = getAwardProgress(award, userStats);
-  const tierStyle = TIER_COLORS[award.tier];
-  const isEarned = progress.earned;
+const TIER_GRADIENTS = {
+  HallOfFamer: "from-yellow-400 to-yellow-600",
+  Superstar: "from-purple-400 to-purple-600", 
+  AllStar: "from-blue-400 to-blue-600",
+  Starter: "from-green-400 to-green-600",
+  Prospect: "from-gray-400 to-gray-600",
+  Legacy: "from-amber-400 to-amber-600",
+  Team: "from-orange-400 to-orange-600"
+};
 
-  const getIcon = () => {
-    if (award.kind === "Trophy") {
-      return <Trophy className="w-12 h-12" />;
-    }
-    
-    if (award.name.includes("MVP")) return <Star className="w-12 h-12" />;
-    if (award.name.includes("Hustle")) return <Zap className="w-12 h-12" />;
-    if (award.name.includes("Teammate")) return <Shield className="w-12 h-12" />;
-    if (award.name.includes("Clutch")) return <Target className="w-12 h-12" />;
-    
-    return <AwardIcon className="w-12 h-12" />;
-  };
-
-  const getProgressSection = () => {
-    if (award.progressKind === "none") {
-      return (
-        <div className="text-center">
-          <p className={`text-lg font-semibold ${
-            isEarned ? 'text-green-600' : 'text-gray-500'
-          }`}>
-            {isEarned ? '✅ Earned' : '⏳ Not Yet Earned'}
-          </p>
-          <p className="text-sm text-gray-600 mt-1">
-            This award is granted by coaches
-          </p>
-        </div>
-      );
-    }
-
-    if (progress.current !== undefined && progress.target !== undefined) {
-      const percentage = Math.min((progress.current / progress.target) * 100, 100);
-      
-      return (
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">
-              {progress.label || "Progress"}
-            </span>
-            <span className={`text-sm font-semibold ${
-              isEarned ? 'text-green-600' : 'text-gray-600'
-            }`}>
-              {progress.current}/{progress.target}
-            </span>
-          </div>
-          
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div 
-              className={`h-3 rounded-full transition-all duration-500 ${
-                isEarned ? 'bg-green-500' : tierStyle.bg
-              }`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-          
-          {isEarned && (
-            <p className="text-center text-green-600 font-semibold text-sm">
-              🎉 Congratulations! Award Earned! 🎉
-            </p>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div className="text-center">
-        <p className={`text-lg font-semibold ${
-          isEarned ? 'text-green-600' : 'text-gray-500'
-        }`}>
-          {isEarned ? '✅ Requirements Met' : '⏳ Requirements Not Met'}
-        </p>
-      </div>
-    );
-  };
+export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayProps) {
+  const tierColor = TIER_COLORS[award.tier];
+  const tierGradient = TIER_GRADIENTS[award.tier];
+  const locked = !progress.earned;
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-md overflow-y-auto" data-testid="overlay-award">
         <SheetHeader className="space-y-4">
-          {/* Award Icon and Name */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className={`w-20 h-20 rounded-xl flex items-center justify-center ${
-              isEarned ? tierStyle.bg.replace('bg-', 'bg-opacity-20 bg-') : 'bg-gray-200'
-            }`}>
-              <div className={isEarned ? tierStyle.text : 'text-gray-400'}>
-                {getIcon()}
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-lg">{award.name}</SheetTitle>
+            <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-close-overlay">
+              ✕
+            </Button>
+          </div>
+        </SheetHeader>
+        
+        <div className="space-y-6 mt-6">
+          {/* Award Icon & Status */}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${tierGradient} p-1`}>
+                <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+                  <img 
+                    src={`/assets/awards/${award.iconName}.png`} 
+                    alt={award.name} 
+                    className={`w-12 h-12 object-contain ${locked ? 'grayscale opacity-60' : ''}`}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = award.kind === 'Trophy' ? 
+                        '/assets/awards/default-trophy.png' : 
+                        '/assets/awards/default-badge.png';
+                    }}
+                  />
+                </div>
               </div>
+              {locked && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-2xl">🔒</div>
+                </div>
+              )}
             </div>
             
-            <div className="text-center space-y-2">
-              <SheetTitle className="text-xl font-bold text-gray-900">
-                {award.name}
-              </SheetTitle>
-              
-              <div className="flex items-center justify-center space-x-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  isEarned ? tierStyle.bg + ' ' + tierStyle.text : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {tierStyle.name}
-                </span>
-                
-                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                  {award.kind}
-                </span>
-                
-                <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-medium">
-                  {award.category.replace(/([A-Z])/g, ' $1').trim()}
-                </span>
+            <div className="flex-1">
+              <Badge variant="outline" className={tierColor}>
+                {award.tier} {award.kind}
+              </Badge>
+              <div className="text-sm text-muted-foreground mt-1">
+                {award.category}
               </div>
+              {progress.earned && (
+                <Badge variant="default" className="mt-2 bg-green-100 text-green-800 border-green-300">
+                  ✓ Earned
+                </Badge>
+              )}
             </div>
           </div>
-          
+
           {/* Description */}
-          <SheetDescription className="text-base text-gray-700 text-center leading-relaxed">
-            {award.description}
-          </SheetDescription>
-        </SheetHeader>
+          <div>
+            <h3 className="font-medium mb-2">Description</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {award.description}
+            </p>
+          </div>
 
-        {/* Progress Section */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
-            Progress
-          </h3>
-          {getProgressSection()}
-        </div>
-
-        {/* Additional Info */}
-        <div className="mt-4 space-y-2">
-          {award.programTag && (
-            <div className="flex items-center justify-center">
-              <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-medium">
-                {award.programTag} Program
-              </span>
+          {/* Progress Section */}
+          {award.progressKind !== "none" && (
+            <div>
+              <h3 className="font-medium mb-3">Progress</h3>
+              
+              {progress.current !== undefined && progress.target !== undefined ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{progress.label || "Progress"}</span>
+                    <span className="font-medium">{progress.current} / {progress.target}</span>
+                  </div>
+                  <Progress 
+                    value={(progress.current / progress.target) * 100} 
+                    className="h-2"
+                  />
+                  <div className="text-xs text-muted-foreground text-center">
+                    {Math.round((progress.current / progress.target) * 100)}% Complete
+                  </div>
+                </div>
+              ) : progress.earned ? (
+                <div className="text-sm text-green-600 font-medium">
+                  ✓ Requirements met
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  {award.progressKind === "completeAll" && "Complete all required items"}
+                  {award.progressKind === "counter" && `Reach the target count`}
+                  {award.progressKind === "streak" && `Maintain the required streak`}
+                </div>
+              )}
             </div>
           )}
-          
+
+          {/* Requirements/How to Earn */}
+          <div>
+            <h3 className="font-medium mb-2">How to Earn</h3>
+            <div className="text-sm text-muted-foreground space-y-1">
+              {award.counterOf && (
+                <p>• Earn {award.counterOf.target} {award.counterOf.label || "achievements"}</p>
+              )}
+              {award.streakOf && (
+                <p>• Maintain a streak of {award.streakOf.target} {award.streakOf.label || "consecutive events"}</p>
+              )}
+              {award.composite && (
+                <div>
+                  <p>• Meet all requirements:</p>
+                  {award.composite.map((req, idx) => (
+                    <p key={idx} className="ml-4">
+                      - {req.stat.replace(/([A-Z])/g, ' $1').toLowerCase()}: {req.min || 1}
+                      {req.seasonScoped && " (same season)"}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {award.completeAll && (
+                <p>• Complete all items in the {award.completeAll.setId.replace('_', ' ')} collection</p>
+              )}
+              {award.progressKind === "none" && (
+                <p>• Awarded by coach recognition</p>
+              )}
+            </div>
+          </div>
+
+          {/* Tags */}
           {award.tags && award.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {award.tags.map((tag, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs"
-                >
-                  {tag}
-                </span>
-              ))}
+            <div>
+              <h3 className="font-medium mb-2">Tags</h3>
+              <div className="flex flex-wrap gap-1">
+                {award.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
         </div>
-
-        <SheetClose asChild>
-          <button className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100">
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </button>
-        </SheetClose>
       </SheetContent>
     </Sheet>
   );

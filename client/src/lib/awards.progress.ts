@@ -1,4 +1,3 @@
-
 import { Award, UserStats } from "./awards.types";
 
 export function getAwardProgress(award: Award, stats: UserStats) {
@@ -41,12 +40,12 @@ export function getAwardProgress(award: Award, stats: UserStats) {
   }
 
   if (award.composite?.length) {
-    const results = award.composite.map(rule => {
+    const results = award.composite.map((rule: any) => {
       const pool = rule.seasonScoped ? stats.season : stats;
       const value = getStatValue(pool, rule.stat);
       return value >= (rule.min ?? 1);
     });
-    const earned = results.every(r => r);
+    const earned = results.every((r: boolean) => r);
     return { 
       earned,
       label: "Requirements met"
@@ -81,33 +80,40 @@ export const MOCK_USER_STATS: UserStats = {
   studentCount: 1,
   leadByExampleCount: 1,
   practiceTotal: 45,
-  skillsTotal: 30,
-  gamesTotal: 35,
-  fnhGamesTotal: 15,
+  skillsTotal: 12,
+  gamesTotal: 20,
+  fnhGamesTotal: 6,
   practiceStreak: 8,
-  rsvpStreak: 12,
+  rsvpStreak: 5,
   tournamentAllGamesCheckedIn: true,
   playedEveryPracticeSeason: false,
-  playedEveryGameSeason: true,
+  playedEveryGameSeason: false,
   playedEveryFnhSeason: false,
-  rsvpedEveryEventSeason: true,
+  rsvpedEveryEventSeason: false,
   referrals: 1,
-  holidayGamesCount: 2,
-  rsvpsOnTimeSeason: 25,
+  holidayGamesCount: 1,
+  rsvpsOnTimeSeason: 12,
   yearsActive: 1,
-  season: { mvp: 1, hustle: 2, teammate: 1, sportsmanship: 1 },
+  season: {
+    mvp: 1,
+    hustle: 2,
+    teammate: 1,
+    sportsmanship: 0,
+    clutch: 1,
+    comeback: 1,
+    student: 1,
+    leadByExample: 0
+  },
   foundation: {
-    totalVideos: 15,
-    skillsCompleted: 8,
-    scCompleted: 4,
-    iqCompleted: 3,
+    totalVideos: 25,
+    skillsCompleted: 15,
+    scCompleted: 5,
+    iqCompleted: 5,
     weeklyCompleted12: false,
     weeklyCompleted6: true,
-    weeklyCompleted2: true,
-    weeklyCompleted1: true,
     monthly4: true,
     completedOnce: false,
     completedTwice: false
   },
-  awardsEarned: ["ironman", "the-dependable", "recruiter"]
+  awardsEarned: ["game-mvp", "hustle-award", "comeback-kid", "first-ten", "skill-starter", "checked-in", "the-debut", "friday-follower"]
 };

@@ -359,6 +359,29 @@ export default function PlayerDashboard({ childId, demoProfile }: { childId?: nu
           <h1 className="text-xl font-bold text-gray-900">
             {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
           </h1>
+          
+          {/* Badge/Trophy Icons */}
+          <div className="flex items-center justify-center space-x-4 mt-3">
+            {/* Trophies */}
+            <div className="flex items-center space-x-1">
+              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M7 4V2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v2h4a1 1 0 0 1 1 1v4a7 7 0 0 1-7 7v1h2a1 1 0 0 1 0 2H7a1 1 0 0 1 0-2h2v-1a7 7 0 0 1-7-7V5a1 1 0 0 1 1-1h4zM9 3v1h6V3H9zm-6 6V7h4v2H3zm14 0V7h4v2h-4z"/>
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700">1</span>
+            </div>
+
+            {/* Badges */}
+            <div className="flex items-center space-x-1">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </div>
+              <span className="text-sm font-medium text-gray-700">18</span>
+            </div>
+          </div>
         </div>
 
         {/* Main Navigation Tabs */}

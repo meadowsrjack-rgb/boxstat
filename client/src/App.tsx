@@ -158,14 +158,11 @@ function Router() {
     );
   }
 
-  // Show account setup if profile not completed
-  if (needsSetup) {
-    return <AccountSetup />;
-  }
-
-  // Check if user needs to select a profile
-  const needsProfileSelection = (user as any)?.needsProfileSelection;
-  if (needsProfileSelection) {
+  // Check if user needs to select a profile first (before account setup)
+  // All users who haven't completed profile setup should go to profile selection
+  const shouldShowProfileSelection = !(user as any)?.profileCompleted;
+  
+  if (shouldShowProfileSelection) {
     return (
       <Switch>
         <Route path="/profile-selection" component={ProfileSelection} />
@@ -173,6 +170,11 @@ function Router() {
         <Route component={ProfileSelection} />
       </Switch>
     );
+  }
+
+  // Show account setup if profile not completed but basic info exists
+  if (needsSetup) {
+    return <AccountSetup />;
   }
 
   // Route based on user type

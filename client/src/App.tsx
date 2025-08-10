@@ -22,7 +22,6 @@ import Training from "@/pages/training";
 import TrainingLibrary from "@/pages/training-library";
 import Profile from "@/pages/profile";
 import FamilyManagement from "@/pages/family-management";
-import TestAccounts from "@/pages/test-accounts";
 import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
@@ -32,75 +31,9 @@ import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
-import DemoProfileSelection from "@/pages/demo-profile-selection";
-import DemoAccountSetup from "@/pages/demo-account-setup";
 import CalendarSync from "@/pages/calendar-sync";
 
 function Router() {
-  // Check for demo mode first
-  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true';
-  const demoProfile = sessionStorage.getItem('demoProfile');
-  
-  // If in demo mode, handle routing based on profile
-  if (isDemoMode && demoProfile) {
-    const profile = JSON.parse(demoProfile);
-    console.log('Demo mode active, current profile:', profile);
-    
-    // Route to appropriate dashboard based on profile type
-    switch (profile.profileType) {
-      case 'player':
-        return (
-          <Switch>
-            <Route path="/" component={() => <PlayerDashboard demoProfile={profile} />} />
-            <Route path="/player-dashboard" component={() => <PlayerDashboard demoProfile={profile} />} />
-            <Route path="/schedule" component={Schedule} />
-            <Route path="/trophies-badges" component={TrophiesBadges} />
-            <Route path="/training" component={Training} />
-            <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={() => <PlayerDashboard demoProfile={profile} />} />
-          </Switch>
-        );
-      case 'parent':
-        return (
-          <Switch>
-            <Route path="/" component={() => <ParentDashboard demoProfile={profile} />} />
-            <Route path="/parent-dashboard" component={() => <ParentDashboard demoProfile={profile} />} />
-            <Route path="/schedule" component={Schedule} />
-            <Route path="/training" component={Training} />
-            <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={() => <ParentDashboard demoProfile={profile} />} />
-          </Switch>
-        );
-      case 'coach':
-        return (
-          <Switch>
-            <Route path="/" component={() => <AdminDashboard demoProfile={profile} />} />
-            <Route path="/admin-dashboard" component={() => <AdminDashboard demoProfile={profile} />} />
-            <Route path="/schedule" component={Schedule} />
-            <Route path="/demo-profiles" component={DemoProfileSelection} />
-            <Route component={() => <AdminDashboard demoProfile={profile} />} />
-          </Switch>
-        );
-    }
-  }
-  
-  // Check if we're accessing demo profiles selection
-  const currentPath = window.location.pathname;
-  if (currentPath === '/demo-profiles') {
-    return (
-      <Switch>
-        <Route path="/demo-profiles" component={DemoProfileSelection} />
-        <Route path="/parent-dashboard" component={ParentDashboard} />
-        <Route path="/player-dashboard" component={PlayerDashboard} />
-        <Route path="/admin-dashboard" component={AdminDashboard} />
-        <Route path="/schedule" component={Schedule} />
-        <Route path="/training" component={Training} />
-        <Route path="/trophies-badges" component={TrophiesBadges} />
-        <Route component={DemoProfileSelection} />
-      </Switch>
-    );
-  }
-
   const { user, isLoading, isAuthenticated } = useAuth();
   
   // Show account setup if user is authenticated but profile not completed
@@ -143,26 +76,16 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
-        <Route path="/demo-profiles" component={DemoProfileSelection} />
-        <Route path="/test-accounts" component={TestAccounts} />
-        <Route path="/account-setup">
-          {() => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const isTest = urlParams.get('test') === 'true';
-            console.log('Account setup route accessed, isTest:', isTest);
-            return isTest ? <AccountSetup /> : <Landing />;
-          }}
-        </Route>
         <Route component={Landing} />
       </Switch>
     );
   }
 
-  // Check if user needs to select a profile first (before account setup)
-  // All users who haven't completed profile setup should go to profile selection
-  const shouldShowProfileSelection = !(user as any)?.profileCompleted;
+  // Always redirect authenticated users to profile selection if they haven't completed setup
+  // This ensures new users go through profile selection after sign-in
+  const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
-  if (shouldShowProfileSelection) {
+  if (!hasCompletedProfileSetup) {
     return (
       <Switch>
         <Route path="/profile-selection" component={ProfileSelection} />
@@ -211,8 +134,6 @@ function Router() {
       <Route path="/trophies-badges" component={TrophiesBadges} />
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
-      <Route path="/demo-profiles" component={DemoProfileSelection} />
-      <Route path="/demo-setup" component={DemoAccountSetup} />
       
       {/* Parent-specific routes */}
       {(user as any)?.userType === 'parent' && (

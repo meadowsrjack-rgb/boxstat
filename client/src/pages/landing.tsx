@@ -101,16 +101,7 @@ export default function Landing() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Test Accounts Button at Top */}
-        <div className="absolute top-6 right-6 z-20">
-          <Button 
-            variant="outline" 
-            onClick={() => setLocation('/test-accounts')}
-            className="bg-white/10 hover:bg-white/20 text-white border border-white/30 backdrop-blur-sm text-sm px-6 py-2"
-          >
-            View Test Accounts
-          </Button>
-        </div>
+
 
         {/* Spacer to push content to bottom */}
         <div className="flex-1"></div>

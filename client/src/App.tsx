@@ -8,7 +8,6 @@ import { useEffect } from "react";
 
 // Pages
 import Landing from "@/pages/landing";
-
 import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
@@ -29,7 +28,6 @@ import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
 import TrophiesBadges from "@/pages/trophies-badges";
-
 import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
@@ -93,7 +91,7 @@ function Router() {
       <Switch>
         <Route path="/demo-profiles" component={DemoProfileSelection} />
         <Route path="/parent-dashboard" component={ParentDashboard} />
-        <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+        <Route path="/player-dashboard" component={PlayerDashboard} />
         <Route path="/admin-dashboard" component={AdminDashboard} />
         <Route path="/schedule" component={Schedule} />
         <Route path="/training" component={Training} />
@@ -103,11 +101,7 @@ function Router() {
     );
   }
 
-  // Temporarily bypass auth for debugging white screen
-  const user = null;
-  const isLoading = false;
-  const isAuthenticated = false;
-  // const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   
   // Show account setup if user is authenticated but profile not completed
   const needsSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
@@ -137,32 +131,7 @@ function Router() {
     };
   }, []);
 
-  // Default routing for non-demo mode
-  console.log('Router: Non-demo mode, showing landing page');
-  
-  return (
-    <Switch>
-      <Route path="/" component={Landing} />
-      <Route path="/demo-profiles" component={DemoProfileSelection} />
-      <Route path="/schedule" component={Schedule} />
-      <Route path="/training" component={Training} />
-      <Route path="/trophies-badges" component={TrophiesBadges} />
-      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
-      <Route path="/parent-dashboard" component={ParentDashboard} />
-      <Route path="/admin-dashboard" component={AdminDashboard} />
-      <Route path="/account-setup" component={AccountSetup} />
-      <Route path="/test-accounts" component={TestAccounts} />
-      <Route component={Landing} />
-    </Switch>
-  );
-}
-
-function DeadCode() {
-  // This code is unreachable but kept for reference
-  const isLoading = false;
-  const isDemoRoute = false;
-  
-  if (isLoading && !isDemoRoute) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -170,10 +139,11 @@ function DeadCode() {
     );
   }
 
-  if (!isAuthenticated && !isDemoRoute) {
+  if (!isAuthenticated) {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/demo-profiles" component={DemoProfileSelection} />
         <Route path="/test-accounts" component={TestAccounts} />
         <Route path="/account-setup">
           {() => {
@@ -184,36 +154,6 @@ function DeadCode() {
           }}
         </Route>
         <Route component={Landing} />
-      </Switch>
-    );
-  }
-
-  // Handle demo routes separately without authentication
-  if (isDemoRoute) {
-    return (
-      <Switch>
-        <Route path="/demo-profiles" component={DemoProfileSelection} />
-        <Route path="/demo-setup" component={DemoAccountSetup} />
-        <Route path="/account-setup" component={AccountSetup} />
-        <Route path="/test-accounts" component={TestAccounts} />
-        <Route component={AccountSetup} />
-      </Switch>
-    );
-  }
-
-  // Check for demo mode in dashboards
-  const urlParams = new URLSearchParams(window.location.search);
-  const isDashboardDemo = urlParams.get('demo') === 'true' || sessionStorage.getItem('isDemoMode') === 'true';
-  
-  if (isDashboardDemo && !isAuthenticated) {
-    // Handle demo dashboard routes without authentication
-    return (
-      <Switch>
-        <Route path="/parent-dashboard" component={ParentDashboard} />
-        <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
-        <Route path="/admin-dashboard" component={AdminDashboard} />
-        <Route path="/demo-profiles" component={DemoProfileSelection} />
-        <Route component={DemoProfileSelection} />
       </Switch>
     );
   }
@@ -241,7 +181,7 @@ function DeadCode() {
       case "admin":
         return AdminDashboard;
       case "player":
-        return () => <PlayerDashboard />;
+        return PlayerDashboard;
       case "parent":
       default:
         return ParentDashboard;
@@ -251,7 +191,7 @@ function DeadCode() {
   return (
     <Switch>
       <Route path="/" component={getDashboardComponent()} />
-      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+      <Route path="/player-dashboard" component={PlayerDashboard} />
       <Route path="/parent-dashboard" component={ParentDashboard} />
       <Route path="/admin-dashboard" component={AdminDashboard} />
       <Route path="/admin" component={AdminDashboard} />
@@ -266,7 +206,6 @@ function DeadCode() {
       <Route path="/training" component={Training} />
       <Route path="/training-library" component={TrainingLibrary} />
       <Route path="/test-route" component={TestRoute} />
-
       <Route path="/trophies-badges" component={TrophiesBadges} />
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />

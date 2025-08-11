@@ -123,26 +123,23 @@ function Router() {
 
   // This section is handled above - users without completed profiles go to profile selection
 
-  // Route based on user type
-  const getDashboardComponent = () => {
-    switch ((user as any)?.userType) {
-      case "admin":
-        return AdminDashboard;
-      case "player":
-        return PlayerDashboard;
-      case "parent":
-      default:
-        return ParentDashboard;
-    }
-  };
-
   return (
     <Switch>
-      <Route path="/" component={getDashboardComponent()} />
-      <Route path="/player-dashboard" component={PlayerDashboard} />
-      <Route path="/parent-dashboard" component={ParentDashboard} />
-      <Route path="/admin-dashboard" component={AdminDashboard} />
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/" component={() => {
+        switch ((user as any)?.userType) {
+          case "admin":
+            return <AdminDashboard />;
+          case "player":
+            return <PlayerDashboard />;
+          case "parent":
+          default:
+            return <ParentDashboard />;
+        }
+      }} />
+      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+      <Route path="/parent-dashboard" component={() => <ParentDashboard />} />
+      <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
+      <Route path="/admin" component={() => <AdminDashboard />} />
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />

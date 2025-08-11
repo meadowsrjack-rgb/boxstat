@@ -168,8 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Found ${events.length} events in database`);
       res.json(events);
     } catch (error) {
-      console.error("Error fetching events:", error, error.stack);
-      res.status(500).json({ message: "Failed to fetch events", error: error.message });
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events", error: (error as Error).message || "Unknown error" });
     }
   });
 
@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/child-profiles/:childId/events', isAuthenticated, async (req: any, res) => {
     try {
-      const events = []; // TODO: Implement getChildEvents - temporary empty array
+      const events: any[] = []; // TODO: Implement getChildEvents - temporary empty array
       res.json(events);
     } catch (error) {
       console.error("Error fetching child events:", error);
@@ -1057,7 +1057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let account = await storage.getAccount(userId);
         if (!account) {
           console.log("Account not found, creating new account");
-          account = await storage.createAccount({
+          account = await storage.upsertUser({
             id: userId,
             email: req.user.claims.email,
             primaryAccountType: req.body.profileType || "parent",
@@ -1103,7 +1103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the user's current profile status
       await storage.updateUser(userId, { 
         profileCompleted: true,
-        userType: profile.profileType
+        userType: profile.profileType as "parent" | "player" | "admin"
       });
       
       res.json(profile);

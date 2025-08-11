@@ -99,37 +99,38 @@ export default function SchedulePage() {
   const calendarDays = renderCalendar();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-700 to-red-800 p-5">
+    <div className="min-h-screen bg-white p-5">
       <div className="max-w-sm mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-5 py-8 text-center">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setLocation("/player-dashboard")}
-                data-testid="button-back"
-                className="bg-white/20 hover:bg-white/30 text-white hover:text-white"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
+        <div className="bg-white text-gray-900 px-5 py-4 text-center border-b border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setLocation("/player-dashboard")}
+              data-testid="button-back"
+              className="text-gray-700 hover:text-red-600 hover:bg-gray-100"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-3">
               <button 
-                className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="text-gray-600 hover:text-red-600 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
                 onClick={previousMonth}
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="text-lg font-medium">
+                {format(currentDate, 'MMMM yyyy')}
+              </div>
+              <button 
+                className="text-gray-600 hover:text-red-600 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                onClick={nextMonth}
+              >
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-            <div className="text-2xl font-semibold">
-              {format(currentDate, 'MMMM yyyy')}
-            </div>
-            <button 
-              className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-              onClick={nextMonth}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            <div className="w-10"></div> {/* Spacer to balance the layout */}
           </div>
         </div>
         

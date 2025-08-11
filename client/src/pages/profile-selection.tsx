@@ -1,226 +1,225 @@
-import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Settings, User, Users, Briefcase, UserPlus } from "lucide-react";
-import { Profile } from "@shared/schema";
+import { Plus, User } from "lucide-react";
 
 export default function ProfileSelection() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  
-  // Get all profiles for the current account
-  const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["/api/profiles", user?.id],
+
+  // Get user's profiles
+  const { data: profiles = [], isLoading } = useQuery<Array<{
+    id: string;
+    profileType: "parent" | "player" | "coach";
+    firstName: string;
+    lastName: string;
+    profileImageUrl?: string;
+    teamId?: number;
+    jerseyNumber?: number;
+    position?: string;
+  }>>({
+    queryKey: [`/api/profiles/${user?.id}`],
     enabled: !!user?.id,
   });
 
-  // Select a profile and navigate to appropriate dashboard
+  // Profile selection mutation
   const selectProfileMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const response = await fetch(`/api/profiles/${profileId}/select`, {
+      console.log("Selecting profile:", profileId);
+      const response = await apiRequest(`/api/profiles/${profileId}/select`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
       });
-      return response.json();
+      console.log("Profile selection response:", response);
+      return response;
     },
-    onSuccess: (data: any) => {
-      // Update the user context with selected profile
+    onSuccess: (data) => {
+      console.log("Profile selected successfully:", data);
+      // Invalidate auth user query to get updated profile status
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      // Navigate based on profile type
-      const profileType = data.profileType;
-      switch (profileType) {
-        case "player":
-          setLocation("/player-dashboard");
-          break;
-        case "parent":
-          setLocation("/parent-dashboard");
-          break;
-        case "coach":
-          setLocation("/admin-dashboard");
-          break;
-        default:
-          setLocation("/");
+      // Redirect to appropriate dashboard based on profile type
+      const profileType = data.profileType || "parent";
+      if (profileType === "player") {
+        setLocation("/player-dashboard");
+      } else if (profileType === "coach") {
+        setLocation("/coach-dashboard");
+      } else {
+        setLocation("/parent-dashboard");
       }
     },
+    onError: (error) => {
+      console.error("Error selecting profile:", error);
+    },
   });
+
+  const handleSelectProfile = (profileId: string) => {
+    selectProfileMutation.mutate(profileId);
+  };
 
   const handleCreateProfile = () => {
     setLocation("/create-profile");
   };
 
-  const handleProfileSelect = (profile: any) => {
-    selectProfileMutation.mutate(profile.id);
-  };
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+          <p className="mt-2 text-gray-400">Loading profiles...</p>
+        </div>
       </div>
     );
   }
 
+  const getProfileTypeBadgeColor = (profileType: string) => {
+    switch (profileType) {
+      case "player":
+        return "bg-red-500 text-white";
+      case "coach":
+        return "bg-gray-600 text-white";
+      default:
+        return "bg-green-600 text-white";
+    }
+  };
+
+  const getDefaultImage = (profileType: string) => {
+    switch (profileType) {
+      case "player":
+        return "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=250&fit=crop&crop=face";
+      case "coach":
+        return "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=250&fit=crop&crop=face";
+      default:
+        return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=250&fit=crop&crop=face";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-2xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Select Profile</h1>
-              <p className="text-sm text-gray-600">Choose which profile to use</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/settings")}
-              data-testid="button-settings"
-            >
-              <Settings className="h-4 w-4" />
-            </Button>
-          </div>
+    <div className="min-h-screen bg-black text-white">
+      <main className="max-w-md mx-auto px-6 py-12">
+        {/* Title */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-2" data-testid="text-page-title">
+            Who's ball?
+          </h1>
         </div>
-      </div>
 
-      <main className="max-w-2xl mx-auto p-6 space-y-6">
-        {/* Current Account Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Account: {(user as any)?.email}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600">
-              You have {Array.isArray(profiles) ? profiles.length : 0} profile{Array.isArray(profiles) && profiles.length !== 1 ? 's' : ''} in this account
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Profiles Grid */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Your Profiles</h2>
-            <Button
-              onClick={handleCreateProfile}
-              size="sm"
-              data-testid="button-create-profile"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Profile
-            </Button>
+        {profiles.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-32 h-32 bg-gray-800 rounded-full flex items-center justify-center mb-6">
+              <User className="h-16 w-16 text-gray-400" />
+            </div>
+            <h3 className="text-xl font-medium text-white mb-4">No profiles yet</h3>
+            <p className="text-gray-400 mb-8">Create your first profile to get started</p>
+            
+            {/* Create Profile Button */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleCreateProfile}
+                className="w-16 h-16 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center border-2 border-gray-600 hover:border-gray-500 transition-colors"
+                data-testid="button-create-first-profile"
+              >
+                <Plus className="h-6 w-6 text-white" />
+              </button>
+            </div>
           </div>
-
-          {!Array.isArray(profiles) || profiles.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <UserPlus className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No profiles yet</h3>
-                <p className="text-gray-600 text-center mb-4">
-                  Create your first profile to get started with UYP Basketball
-                </p>
-                <Button onClick={handleCreateProfile} data-testid="button-create-first-profile">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Profile
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {profiles.map((profile: any) => (
-                <Card 
+        ) : (
+          <div className="space-y-8">
+            {/* Profile Grid */}
+            <div className="grid grid-cols-2 gap-6 justify-items-center">
+              {profiles.slice(0, 4).map((profile) => (
+                <div 
                   key={profile.id} 
-                  className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleProfileSelect(profile)}
-                  data-testid={`profile-card-${profile.id}`}
+                  className="cursor-pointer transition-transform hover:scale-105"
+                  onClick={() => handleSelectProfile(profile.id)}
+                  data-testid={`card-profile-${profile.id}`}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {profile.firstName} {profile.lastName}
-                        </h3>
-                        <p className="text-sm text-gray-600 capitalize">
-                          {profile.profileType}
-                        </p>
-                      </div>
+                  <div className="relative">
+                    {/* Profile Image */}
+                    <div className="w-32 h-40 rounded-lg overflow-hidden mb-3 relative">
+                      <Avatar className="w-full h-full rounded-lg">
+                        <AvatarImage 
+                          src={profile.profileImageUrl || getDefaultImage(profile.profileType)}
+                          alt={`${profile.firstName} ${profile.lastName}`}
+                          className="object-cover w-full h-full"
+                        />
+                        <AvatarFallback className="bg-gray-700 text-white text-lg w-full h-full rounded-lg flex items-center justify-center">
+                          {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
                       
+                      {/* Profile Type Badge */}
                       <Badge 
-                        variant={profile.profileType === 'player' ? 'default' : 
-                                profile.profileType === 'parent' ? 'secondary' : 'outline'}
-                        className="capitalize"
+                        className={`absolute top-2 left-2 ${getProfileTypeBadgeColor(profile.profileType)} text-xs px-2 py-1 rounded-sm`}
+                        data-testid={`badge-profile-type-${profile.id}`}
                       >
-                        {profile.profileType}
+                        {profile.profileType.charAt(0).toUpperCase() + profile.profileType.slice(1)}
                       </Badge>
                     </div>
-
-                    {/* Profile-specific info */}
-                    {profile.profileType === 'player' && profile.teamId && (
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Team:</span> {/* Team name would be loaded separately */}
-                        </p>
-                        {profile.jerseyNumber && (
-                          <p className="text-sm text-gray-600">
-                            <span className="font-medium">Jersey:</span> #{profile.jerseyNumber}
-                          </p>
-                        )}
-                        {profile.position && (
-                          <p className="text-sm text-gray-600">
-                            <span className="font-medium">Position:</span> {profile.position}
-                          </p>
-                        )}
-                      </div>
-                    )}
-
-                    {profile.profileType === 'parent' && (
-                      <p className="text-sm text-gray-600">
-                        Manage family profiles and payments
-                      </p>
-                    )}
-
-                    {profile.profileType === 'coach' && (
-                      <p className="text-sm text-gray-600">
-                        Team management and coaching tools
-                      </p>
-                    )}
-
-                    <div className="mt-4 pt-4 border-t">
-                      <Button 
-                        className="w-full" 
-                        disabled={selectProfileMutation.isPending}
-                        data-testid={`button-select-${profile.id}`}
-                      >
-                        {selectProfileMutation.isPending ? "Selecting..." : "Select Profile"}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    
+                    {/* Profile Name */}
+                    <h3 className="text-lg font-semibold text-center text-white" data-testid={`text-profile-name-${profile.id}`}>
+                      {profile.firstName}
+                    </h3>
+                  </div>
+                </div>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* Example Account Note */}
-        {profiles.length > 0 && (
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <h4 className="font-medium text-blue-900 mb-2">Multi-Profile Account</h4>
-              <p className="text-sm text-blue-800">
-                This account demonstrates the unified profile system where parents can manage 
-                multiple children, coaches can access team tools, and players have their own spaces - 
-                all within one account.
-              </p>
-            </CardContent>
-          </Card>
+            {/* Center single profile if odd number */}
+            {profiles.length > 4 && profiles.slice(4).map((profile) => (
+              <div key={profile.id} className="flex justify-center">
+                <div 
+                  className="cursor-pointer transition-transform hover:scale-105"
+                  onClick={() => handleSelectProfile(profile.id)}
+                  data-testid={`card-profile-${profile.id}`}
+                >
+                  <div className="relative">
+                    {/* Profile Image */}
+                    <div className="w-32 h-40 rounded-lg overflow-hidden mb-3 relative">
+                      <Avatar className="w-full h-full rounded-lg">
+                        <AvatarImage 
+                          src={profile.profileImageUrl || getDefaultImage(profile.profileType)}
+                          alt={`${profile.firstName} ${profile.lastName}`}
+                          className="object-cover w-full h-full"
+                        />
+                        <AvatarFallback className="bg-gray-700 text-white text-lg w-full h-full rounded-lg flex items-center justify-center">
+                          {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      {/* Profile Type Badge */}
+                      <Badge 
+                        className={`absolute top-2 left-2 ${getProfileTypeBadgeColor(profile.profileType)} text-xs px-2 py-1 rounded-sm`}
+                        data-testid={`badge-profile-type-${profile.id}`}
+                      >
+                        {profile.profileType.charAt(0).toUpperCase() + profile.profileType.slice(1)}
+                      </Badge>
+                    </div>
+                    
+                    {/* Profile Name */}
+                    <h3 className="text-lg font-semibold text-center text-white" data-testid={`text-profile-name-${profile.id}`}>
+                      {profile.firstName}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Create New Profile Button - Circular at bottom */}
+            <div className="flex justify-center pt-12">
+              <button
+                onClick={handleCreateProfile}
+                className="w-16 h-16 bg-transparent hover:bg-gray-800 rounded-full flex items-center justify-center border-2 border-white hover:border-gray-400 transition-colors"
+                data-testid="button-create-profile"
+              >
+                <Plus className="h-6 w-6 text-white" />
+              </button>
+            </div>
+          </div>
         )}
       </main>
     </div>

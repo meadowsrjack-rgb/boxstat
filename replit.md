@@ -10,6 +10,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 11, 2025**: Fixed React duplicate key warnings by removing duplicate award entries from awards registry and cleaned up trophy/badge pages by removing redundant fixed and working versions, leaving only the main comprehensive trophies-badges page
 - **August 10, 2025**: Cleaned up trophy/badge page structure by removing redundant simple-trophies test page, leaving only the main comprehensive trophies-badges page and dashboard section
 - **August 9, 2025**: Implemented comprehensive schedule page enhancements with advanced filtering and event parsing system
 - **August 9, 2025**: Added FiltersBar component with interactive dropdowns for event types, age groups, teams, and coaches with localStorage persistence

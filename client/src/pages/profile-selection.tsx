@@ -19,6 +19,44 @@ type Profile = {
 
 const UYP_RED = "#d82428";
 
+// Helper functions
+const badgeStyle = (profileType: Profile["profileType"]) => {
+  switch (profileType) {
+    case "player":
+      return { backgroundColor: "#10b981", color: "white" };
+    case "coach":
+      return { backgroundColor: "#3b82f6", color: "white" };
+    case "parent":
+    default:
+      return { backgroundColor: "#6b7280", color: "white" };
+  }
+};
+
+const labelFor = (profileType: Profile["profileType"]) => {
+  switch (profileType) {
+    case "player":
+      return "Player";
+    case "coach":
+      return "Coach";
+    case "parent":
+    default:
+      return "Parent";
+  }
+};
+
+const getDefaultImage = (profileType: Profile["profileType"]) => {
+  // Return a default image URL based on profile type
+  switch (profileType) {
+    case "player":
+      return "/images/default-player.jpg";
+    case "coach":
+      return "/images/default-coach.jpg";
+    case "parent":
+    default:
+      return "/images/default-parent.jpg";
+  }
+};
+
 export default function ProfileSelection() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
@@ -26,16 +64,14 @@ export default function ProfileSelection() {
 
   // Fetch profiles
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
-    queryKey: [`/api/profiles/${user?.id}`],
-    enabled: !!user?.id,
+    queryKey: [`/api/profiles/${(user as any)?.id}`],
+    enabled: !!(user as any)?.id,
   });
 
   // Select profile
   const selectProfileMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const response = await apiRequest(`/api/profiles/${profileId}/select`, {
-        method: "POST",
-      });
+      const response = await apiRequest(`/api/profiles/${profileId}/select`, "POST");
       return response;
     },
     onSuccess: (data: any) => {
@@ -68,7 +104,8 @@ export default function ProfileSelection() {
   }
 
   return (
-    <div className="min-h-screen text-white"
+    <div 
+      className="min-h-screen text-white"
       style={{
         // subtle radial glow with UYP red
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`,
@@ -82,7 +119,7 @@ export default function ProfileSelection() {
             style={{ textShadow: "0 2px 30px rgba(216,36,40,0.45)" }}
             data-testid="text-page-title"
           >
-            Who’s ball?
+            Who's ball?
           </h1>
         </div>
 
@@ -174,4 +211,16 @@ export default function ProfileSelection() {
               <button
                 onClick={handleCreateProfile}
                 className="w-20 h-20 rounded-full border-2 border-white/90 hover:border-white
-                           flex it
+                           flex items-center justify-center transition transform hover:scale-105 active:scale-95"
+                style={{ boxShadow: "0 0 0 6px rgba(255,255,255,0.06)" }}
+                data-testid="button-create-profile"
+              >
+                <Plus className="h-6 w-6 text-white" />
+              </button>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

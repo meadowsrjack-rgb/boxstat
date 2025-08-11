@@ -8,31 +8,45 @@ import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, User, Users, Briefcase } from "lucide-react";
 import { insertProfileSchema } from "@shared/schema";
 
-const createProfileSchema = insertProfileSchema.omit({
-  id: true,
-  accountId: true,
-  qrCodeData: true,
-  createdAt: true,
-  updatedAt: true,
-  profileCompleted: true,
-  isActive: true,
-}).extend({
-  profileType: z.enum(["parent", "player", "coach"]),
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  // Make player-specific fields optional for parent/coach profiles
-  teamId: z.number().optional(),
-  jerseyNumber: z.number().optional(),
-  position: z.string().optional(),
-  schoolGrade: z.string().optional(),
-});
+const UYP_RED = "#d82428";
+
+const createProfileSchema = z.object({
+    profileType: z.enum(["parent", "player", "coach"]),
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    phoneNumber: z.string().optional(),
+    address: z.string().optional(),
+    dateOfBirth: z.string().optional(),
+    emergencyContact: z.string().optional(),
+    emergencyPhone: z.string().optional(),
+    medicalInfo: z.string().optional(),
+    allergies: z.string().optional(),
+    // player-only (optional otherwise)
+    teamId: z.number().optional(),
+    jerseyNumber: z.number().optional(),
+    position: z.string().optional(),
+    schoolGrade: z.string().optional()
+  });
 
 type CreateProfileForm = z.infer<typeof createProfileSchema>;
 
@@ -40,17 +54,20 @@ export default function CreateProfile() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  const [selectedType, setSelectedType] = useState<"parent" | "player" | "coach" | null>(null);
+  const [selectedType, setSelectedType] =
+    useState<"parent" | "player" | "coach" | null>(null);
 
-  // Get available teams for player profiles
-  const { data: teams = [] } = useQuery<Array<{id: number, name: string, ageGroup: string}>>({
+  // Teams (only when player selected)
+  const { data: teams = [] } = useQuery<
+    Array<{ id: number; name: string; ageGroup: string }>
+  >({
     queryKey: ["/api/teams"],
-    enabled: selectedType === "player",
+    enabled: selectedType === "player"
   });
 
   const form = useForm<CreateProfileForm>({
     resolver: zodResolver(createProfileSchema),
-    mode: "onChange", // Enable real-time validation
+    mode: "onChange",
     defaultValues: {
       profileType: selectedType || "parent",
       firstName: "",
@@ -60,11 +77,11 @@ export default function CreateProfile() {
       teamId: undefined,
       jerseyNumber: undefined,
       position: "",
-      schoolGrade: "",
-    },
+      schoolGrade: ""
+    }
   });
 
-  // Watch for form changes and log them
+  // debug (kept)
   const watchedValues = form.watch();
   console.log("Current form values:", watchedValues);
   console.log("Selected type:", selectedType);
@@ -72,40 +89,34 @@ export default function CreateProfile() {
   const createProfileMutation = useMutation({
     mutationFn: async (data: CreateProfileForm) => {
       console.log("Starting profile creation mutation with data:", data);
-      
       const response = await fetch("/api/profiles", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include cookies for authentication
-        body: JSON.stringify({
-          ...data,
-          // accountId will be added by the server from authentication
-        }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...data })
       });
-      
+
       console.log("Profile creation response status:", response.status);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Profile creation failed with error:", errorData);
         throw new Error(errorData.message || "Failed to create profile");
       }
-      
+
       const result = await response.json();
       console.log("Profile creation successful:", result);
       return result;
     },
     onSuccess: (data) => {
       console.log("Profile created successfully:", data);
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
       setLocation("/profile-selection");
     },
     onError: (error: Error) => {
       console.error("Profile creation failed:", error);
       console.error("Error details:", error.message);
-    },
+    }
   });
 
   const onSubmit = (data: CreateProfileForm) => {
@@ -119,154 +130,136 @@ export default function CreateProfile() {
     console.log("Type selected:", type);
     setSelectedType(type);
     form.setValue("profileType", type);
-    form.trigger(); // Trigger validation after type selection
+    form.trigger();
   };
 
   const handleBack = () => {
-    if (selectedType) {
-      setSelectedType(null);
-    } else {
-      setLocation("/profile-selection");
-    }
+    if (selectedType) setSelectedType(null);
+    else setLocation("/profile-selection");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen text-white"
+      style={{
+        background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`
+      }}
+    >
       {/* Header */}
-      <div className="bg-white border-b">
+      <header className="sticky top-0 z-10">
         <div className="max-w-md mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={handleBack}
-              className="p-2 hover:bg-gray-100 rounded-md"
+              className="p-2 rounded-md border border-white/15 hover:bg-white/5 transition"
               data-testid="button-back"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h1 className="text-xl font-bold text-gray-900">Create Profile</h1>
+            <h1 className="text-xl font-bold">Create Profile</h1>
           </div>
         </div>
-      </div>
+      </header>
 
-      <main className="max-w-md mx-auto p-6">
+      <main className="max-w-md mx-auto px-6 pb-16">
         {!selectedType ? (
-          /* Profile Type Selection */
-          <div className="space-y-6">
+          // ---------------- TYPE PICKER ----------------
+          <div className="space-y-8 pt-4">
             <div className="text-center">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              <h2 className="text-lg font-semibold mb-2">
                 What type of profile would you like to create?
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-white/70">
                 Choose the type that best describes your role
               </p>
             </div>
 
             <div className="space-y-4">
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+              <TypeCard
+                icon={<Users className="h-6 w-6" />}
+                title="Parent / Guardian"
+                subtitle="Manage family profiles, payments, and stay connected"
                 onClick={() => handleTypeSelect("parent")}
-                data-testid="card-parent-type"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Users className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Parent/Guardian</h3>
-                      <p className="text-sm text-gray-600">
-                        Manage family profiles, payments, and stay connected with teams
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                testId="card-parent-type"
+              />
+              <TypeCard
+                icon={<User className="h-6 w-6" />}
+                title="Player"
+                subtitle="Track progress, communicate with team, and access training"
                 onClick={() => handleTypeSelect("player")}
-                data-testid="card-player-type"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                      <User className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Player</h3>
-                      <p className="text-sm text-gray-600">
-                        Track progress, communicate with team, and access training
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card 
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                testId="card-player-type"
+                accent="green"
+              />
+              <TypeCard
+                icon={<Briefcase className="h-6 w-6" />}
+                title="Coach"
+                subtitle="Manage teams, create schedules, communicate with families"
                 onClick={() => handleTypeSelect("coach")}
-                data-testid="card-coach-type"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Briefcase className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">Coach</h3>
-                      <p className="text-sm text-gray-600">
-                        Manage teams, create schedules, and communicate with families
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                testId="card-coach-type"
+                accent="purple"
+              />
             </div>
           </div>
         ) : (
-          /* Profile Creation Form */
+          // ---------------- FORM ----------------
           <Form {...form}>
-            <form 
+            <form
               onSubmit={(e) => {
                 console.log("Form onSubmit triggered!");
                 console.log("Form data:", form.getValues());
                 console.log("Form valid:", form.formState.isValid);
                 console.log("Form errors:", form.formState.errors);
                 form.handleSubmit(onSubmit)(e);
-              }} 
-              className="space-y-6"
+              }}
+              className="space-y-6 pt-2"
             >
-              <Card>
+              <Card className="bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]">
                 <CardHeader>
                   <CardTitle className="text-lg">
-                    Create {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)} Profile
+                    Create{" "}
+                    {selectedType.charAt(0).toUpperCase() +
+                      selectedType.slice(1)}{" "}
+                    Profile
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Basic Information */}
+                  {/* Basic Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel className="text-white/80">
+                            First Name
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="John" {...field} data-testid="input-first-name" />
+                            <Input
+                              placeholder="John"
+                              {...field}
+                              data-testid="input-first-name"
+                              className="bg-white/5 border-white/20 text-white placeholder-white/40"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Last Name</FormLabel>
+                          <FormLabel className="text-white/80">
+                            Last Name
+                          </FormLabel>
                           <FormControl>
-                            <Input placeholder="Doe" {...field} data-testid="input-last-name" />
+                            <Input
+                              placeholder="Doe"
+                              {...field}
+                              data-testid="input-last-name"
+                              className="bg-white/5 border-white/20 text-white placeholder-white/40"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -279,13 +272,16 @@ export default function CreateProfile() {
                     name="phoneNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel className="text-white/80">
+                          Phone Number
+                        </FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="(555) 123-4567" 
+                          <Input
+                            placeholder="(555) 123-4567"
                             {...field}
                             value={field.value || ""}
                             data-testid="input-phone"
+                            className="bg-white/5 border-white/20 text-white placeholder-white/40"
                           />
                         </FormControl>
                         <FormMessage />
@@ -293,7 +289,7 @@ export default function CreateProfile() {
                     )}
                   />
 
-                  {/* Player-specific fields */}
+                  {/* Player fields */}
                   {selectedType === "player" && (
                     <>
                       <FormField
@@ -301,20 +297,30 @@ export default function CreateProfile() {
                         name="teamId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Team</FormLabel>
-                            <Select 
-                              onValueChange={(value) => field.onChange(parseInt(value))}
+                            <FormLabel className="text-white/80">
+                              Team
+                            </FormLabel>
+                            <Select
+                              onValueChange={(value) =>
+                                field.onChange(parseInt(value))
+                              }
                               defaultValue={field.value?.toString()}
                             >
                               <FormControl>
-                                <SelectTrigger data-testid="select-team">
+                                <SelectTrigger
+                                  data-testid="select-team"
+                                  className="bg-white/5 border-white/20 text-white"
+                                >
                                   <SelectValue placeholder="Select a team" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
+                              <SelectContent className="bg-[#111] text-white border-white/10">
                                 {teams.map((team) => (
-                                  <SelectItem key={team.id} value={team.id.toString()}>
-                                    {team.name} - {team.ageGroup}
+                                  <SelectItem
+                                    key={team.id}
+                                    value={team.id.toString()}
+                                  >
+                                    {team.name} — {team.ageGroup}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -330,15 +336,22 @@ export default function CreateProfile() {
                           name="jerseyNumber"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Jersey Number</FormLabel>
+                              <FormLabel className="text-white/80">
+                                Jersey #
+                              </FormLabel>
                               <FormControl>
-                                <Input 
+                                <Input
                                   type="number"
                                   placeholder="23"
                                   {...field}
                                   value={field.value || ""}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || ""
+                                    )
+                                  }
                                   data-testid="input-jersey"
+                                  className="bg-white/5 border-white/20 text-white placeholder-white/40"
                                 />
                               </FormControl>
                               <FormMessage />
@@ -351,18 +364,34 @@ export default function CreateProfile() {
                           name="position"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Position</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                              <FormLabel className="text-white/80">
+                                Position
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value || ""}
+                              >
                                 <FormControl>
-                                  <SelectTrigger data-testid="select-position">
+                                  <SelectTrigger
+                                    data-testid="select-position"
+                                    className="bg-white/5 border-white/20 text-white"
+                                  >
                                     <SelectValue placeholder="Select position" />
                                   </SelectTrigger>
                                 </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="Point Guard">Point Guard</SelectItem>
-                                  <SelectItem value="Shooting Guard">Shooting Guard</SelectItem>
-                                  <SelectItem value="Small Forward">Small Forward</SelectItem>
-                                  <SelectItem value="Power Forward">Power Forward</SelectItem>
+                                <SelectContent className="bg-[#111] text-white border-white/10">
+                                  <SelectItem value="Point Guard">
+                                    Point Guard
+                                  </SelectItem>
+                                  <SelectItem value="Shooting Guard">
+                                    Shooting Guard
+                                  </SelectItem>
+                                  <SelectItem value="Small Forward">
+                                    Small Forward
+                                  </SelectItem>
+                                  <SelectItem value="Power Forward">
+                                    Power Forward
+                                  </SelectItem>
                                   <SelectItem value="Center">Center</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -377,19 +406,32 @@ export default function CreateProfile() {
                         name="schoolGrade"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>School Grade</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                            <FormLabel className="text-white/80">
+                              School Grade
+                            </FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value || ""}
+                            >
                               <FormControl>
-                                <SelectTrigger data-testid="select-grade">
+                                <SelectTrigger
+                                  data-testid="select-grade"
+                                  className="bg-white/5 border-white/20 text-white"
+                                >
                                   <SelectValue placeholder="Select grade" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent>
-                                {Array.from({ length: 12 }, (_, i) => i + 1).map((grade) => (
-                                  <SelectItem key={grade} value={grade.toString()}>
-                                    {grade}th Grade
-                                  </SelectItem>
-                                ))}
+                              <SelectContent className="bg-[#111] text-white border-white/10">
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                                  (grade) => (
+                                    <SelectItem
+                                      key={grade}
+                                      value={grade.toString()}
+                                    >
+                                      {grade}th Grade
+                                    </SelectItem>
+                                  )
+                                )}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -400,13 +442,10 @@ export default function CreateProfile() {
                   )}
 
                   {(selectedType === "parent" || selectedType === "coach") && (
-                    <div className="space-y-4">
-                      <div className="text-sm text-gray-600">
-                        {selectedType === "parent" 
-                          ? "As a parent, you can manage your children's profiles and access team information."
-                          : "As a coach, you can manage team rosters and communicate with families."
-                        }
-                      </div>
+                    <div className="rounded-lg bg-white/5 border border-white/10 p-3 text-sm text-white/80">
+                      {selectedType === "parent"
+                        ? "As a parent, you can manage your children's profiles and access team information."
+                        : "As a coach, you can manage team rosters and communicate with families."}
                     </div>
                   )}
 
@@ -415,13 +454,14 @@ export default function CreateProfile() {
                     name="address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Address</FormLabel>
+                        <FormLabel className="text-white/80">Address</FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <Textarea
                             placeholder="123 Main St, City, State 12345"
                             {...field}
                             value={field.value || ""}
                             data-testid="input-address"
+                            className="bg-white/5 border-white/20 text-white placeholder-white/40"
                           />
                         </FormControl>
                         <FormMessage />
@@ -435,7 +475,7 @@ export default function CreateProfile() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-white/30 text-white hover:bg-white/10"
                   onClick={() => setSelectedType(null)}
                   data-testid="button-back-to-type"
                 >
@@ -443,14 +483,14 @@ export default function CreateProfile() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  className="flex-1 text-white"
+                  style={{ backgroundColor: UYP_RED }}
                   disabled={createProfileMutation.isPending}
                   data-testid="button-create-profile"
-                  onClick={(e) => {
+                  onClick={() => {
                     console.log("Create Profile button clicked!");
                     console.log("Form valid:", form.formState.isValid);
                     console.log("Form errors:", form.formState.errors);
-                    // Let the form handle submission
                   }}
                 >
                   {createProfileMutation.isPending ? "Creating..." : "Create Profile"}
@@ -461,5 +501,50 @@ export default function CreateProfile() {
         )}
       </main>
     </div>
+  );
+}
+
+/* ---------------- components ---------------- */
+
+function TypeCard({
+  icon,
+  title,
+  subtitle,
+  onClick,
+  testId,
+  accent
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+  testId: string;
+  accent?: "green" | "purple";
+}) {
+  const ring =
+    accent === "green"
+      ? "ring-1 ring-emerald-400/20"
+      : accent === "purple"
+      ? "ring-1 ring-purple-400/20"
+      : "ring-1 ring-white/10";
+
+  return (
+    <Card
+      onClick={onClick}
+      data-testid={testId}
+      className={`cursor-pointer bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)] hover:bg-white/[0.07] transition ${ring}`}
+    >
+      <CardContent className="p-5">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-lg bg-white/10 grid place-items-center text-white">
+            {icon}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold">{title}</h3>
+            <p className="text-sm text-white/70">{subtitle}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

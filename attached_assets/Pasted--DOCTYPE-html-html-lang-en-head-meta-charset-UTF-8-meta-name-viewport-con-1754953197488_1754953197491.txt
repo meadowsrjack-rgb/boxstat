@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Achievement Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: white;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2rem;
+        }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .achievement-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .achievement-card.achieved {
+            background: #d82428;
+            color: white;
+        }
+
+        .achievement-card.hall-of-fame {
+            border: 3px solid #ffd700;
+            background: linear-gradient(135deg, #fff9c4 0%, #f7e98e 100%);
+        }
+
+        .achievement-card.hall-of-fame.achieved {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            color: #2c3e50;
+            border: 3px solid #ffb347;
+        }
+
+        .achievement-card.achieved::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+            transform: rotate(45deg);
+            animation: shine 2s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        }
+
+        .icon-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .achievement-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        .achievement-card:not(.achieved) .achievement-icon {
+            opacity: 0.4;
+            filter: grayscale(100%) drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        .progress-ring {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            width: calc(100% + 20px);
+            height: calc(100% + 20px);
+            border-radius: 50%;
+        }
+
+        .progress-indicator {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .progress-indicator.completed {
+            background: #27ae60;
+        }
+
+
+
+        .achievement-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .achievement-card.achieved .achievement-title {
+            color: white;
+        }
+
+        .achievement-card.hall-of-fame.achieved .achievement-title {
+            color: #2c3e50;
+        }
+
+        .achievement-description {
+            display: none;
+        }
+
+        .achievement-card.achieved .achievement-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .achievement-card.hall-of-fame.achieved .achievement-description {
+            color: #2c3e50;
+        }
+
+        .achievement-card.superstar {
+            border: 3px solid #8e44ad;
+            background: linear-gradient(135deg, #e8d5f2 0%, #d1a3e0 100%);
+        }
+
+        .achievement-card.superstar.achieved {
+            background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            color: white;
+            border: 3px solid #9b59b6;
+        }
+
+        .achievement-card.superstar.achieved .achievement-title {
+            color: white;
+        }
+
+        .achievement-card.superstar.achieved .achievement-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .achievement-card.all-star {
+            border: 3px solid #3498db;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        }
+
+        .achievement-card.all-star.achieved {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: 3px solid #2980b9;
+        }
+
+        .achievement-card.all-star.achieved .achievement-title {
+            color: white;
+        }
+
+        .achievement-card.all-star.achieved .achievement-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .achievement-card.starter {
+            border: 3px solid #27ae60;
+            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+        }
+
+        .achievement-card.starter.achieved {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: 3px solid #2ecc71;
+        }
+
+        .achievement-card.starter.achieved .achievement-title {
+            color: white;
+        }
+
+        .achievement-card.starter.achieved .achievement-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .achievement-card.prospect {
+            border: 3px solid #95a5a6;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .achievement-card.prospect.achieved {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+            border: 3px solid #7f8c8d;
+        }
+
+        .achievement-card.prospect.achieved .achievement-title {
+            color: white;
+        }
+
+        .achievement-card.prospect.achieved .achievement-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .trophies-section {
+            margin-bottom: 4rem;
+        }
+
+        .badges-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .trophies-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .trophy-subsection {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .subsection-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .subsection-description {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            font-style: italic;
+        }
+
+        .trophy-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .trophy-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: 3px solid transparent;
+        }
+
+        .trophy-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .legacy-trophy {
+            border: 4px solid #ffd700;
+            background: linear-gradient(135deg, #fff9c4 0%, #f7e98e 100%);
+        }
+
+        .legacy-trophy.achieved {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+            color: #2c3e50;
+        }
+
+        .team-trophy {
+            border: 4px solid #e74c3c;
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+        }
+
+        .team-trophy.achieved {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .trophy-card.achieved::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.4), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        .trophy-icon-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+
+        .trophy-icon {
+            font-size: 3rem;
+            margin-bottom: 0.8rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .trophy-card:not(.achieved) .trophy-icon {
+            opacity: 0.5;
+            filter: grayscale(100%) drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+
+        .trophy-status {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #95a5a6;
+            color: white;
+            border-radius: 15px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .trophy-status.awarded {
+            background: #27ae60;
+        }
+
+        .trophy-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.4rem;
+        }
+
+        .trophy-card.achieved .trophy-title {
+            color: white;
+        }
+
+        .legacy-trophy.achieved .trophy-title {
+            color: #2c3e50;
+        }
+
+        .trophy-description {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            font-weight: 500;
+        }
+
+        .trophy-card.achieved .trophy-description {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .legacy-trophy.achieved .trophy-description {
+            color: #2c3e50;
+        }
+
+        .stats-bar {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .filter-btn {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 10px;
+            padding: 0.5rem;
+        }
+
+        .filter-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .filter-btn.active .stat-number,
+        .filter-btn.active .stat-label {
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2c3e50;
+            display: block;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+        }
+
+        .modal-icon {
+            font-size: 5rem;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        .modal-description {
+            color: #7f8c8d;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .close-modal {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: #5a6fd8;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .section-title {
+                font-size: 2rem;
+            }
+            
+            .subsection-title {
+                font-size: 1.4rem;
+            }
+            
+            .trophy-card {
+                padding: 1rem;
+            }
+            
+            .trophy-icon {
+                font-size: 2.5rem;
+            }
+            
+            .trophy-title {
+                font-size: 1rem;
+            }
+            
+            .trophy-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .trophy-subsection {
+                padding: 1.5rem;
+            }
+            
+            .achievements-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+            
+            .achievement-card {
+                padding: 1.5rem;
+            }
+            
+            .achievement-icon {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+        </div>
+
+        <!-- Trophies Section -->
+        <div class="trophies-section">
+            <h2 class="section-title">🏆 Trophies</h2>
+            <p class="section-subtitle">The most prestigious awards recognizing exceptional season-long achievements</p>
+            
+            <div class="trophies-grid">
+                <!-- UYP Legacy Trophies -->
+                <div class="trophy-subsection">
+                    <h3 class="subsection-title">🌟 UYP Legacy Trophies (Yearly)</h3>
+                    <p class="subsection-description">Premier organization-wide honors - only one recipient selected from all UYP teams</p>
+                    
+                    <div class="trophy-cards-grid">
+                        <div class="trophy-card legacy-trophy" onclick="openModal('heart-hustle', '❤️‍🔥', 'The UYP Heart and Hustle Award', 'The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.')">
+                            <div class="trophy-icon-container">
+                                <div class="trophy-icon">❤️‍🔥</div>
+                                <div class="trophy-status">Not Awarded</div>
+                            </div>
+                            <div class="trophy-title">The UYP Heart and Hustle Award</div>
+                            <div class="trophy-description">Organization's highest honor for effort and determination</div>
+                        </div>
+
+                        <div class="trophy-card legacy-trophy" onclick="openModal('spirit-award', '✨', 'The Spirit Award', 'The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.')">
+                            <div class="trophy-icon-container">
+                                <div class="trophy-icon">✨</div>
+                                <div class="trophy-status">Not Awarded</div>
+                            </div>
+                            <div class="trophy-title">The Spirit Award</div>
+                            <div class="trophy-description">Highest character honor across entire organization</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Trophies -->
+                <div class="trophy-subsection">
+                    <h3 class="subsection-title">🏅 Team Trophies (Seasonal)</h3>
+                    <p class="subsection-description">Coach-awarded recognition for standout team contributions</p>
+                    
+                    <div class="trophy-cards-grid">
+                        <div class="trophy-card team-trophy achieved" onclick="openModal('team-mvp', '👑', 'MVP (Most Valuable Player)', 'Outstanding season achievement! You were awarded MVP by your coach for having the most significant impact on the team\'s success during the season. Your contributions were essential to the team\'s performance and achievements.')">
+                            <div class="trophy-icon-container">
+                                <div class="trophy-icon">👑</div>
+                                <div class="trophy-status awarded">2023 Season</div>
+                            </div>
+                            <div class="trophy-title">MVP (Most Valuable Player)</div>
+                            <div class="trophy-description">Most significant impact on team's success</div>
+                        </div>
+
+                        <div class="trophy-card team-trophy" onclick="openModal('coaches-award', '🎖️', 'Coach\'s Award', 'The coach\'s highest recognition! This award goes to the player who best exemplifies the team\'s core values and the coach\'s philosophy, demonstrating exceptional coachability, dedication, and a positive attitude throughout the entire season.')">
+                            <div class="trophy-icon-container">
+                                <div class="trophy-icon">🎖️</div>
+                                <div class="trophy-status">Not Awarded</div>
+                            </div>
+                            <div class="trophy-title">Coach's Award</div>
+                            <div class="trophy-description">Exemplifies team values and coach's philosophy</div>
+                        </div>
+
+                        <div class="trophy-card team-trophy achieved" onclick="openModal('mip-trophy', '📈', 'MIP (Most Improved Player)', 'Incredible growth recognition! You were awarded Most Improved Player by your coach for showing the most significant development in skills and game sense over the course of the season. Your dedication to improvement was truly exceptional.')">
+                            <div class="trophy-icon-container">
+                                <div class="trophy-icon">📈</div>
+                                <div class="trophy-status awarded">2022 Season</div>
+                            </div>
+                            <div class="trophy-title">MIP (Most Improved Player)</div>
+                            <div class="trophy-description">Most significant growth and development</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Badges Section -->
+        <div class="badges-section">
+            <h2 class="section-title">🏅 Badges</h2>
+            <p class="section-subtitle">Earn badges by reaching milestones and demonstrating excellence in various areas</p>
+            
+            <div class="stats-bar">
+                <div class="stat-item filter-btn" data-filter="all" onclick="filterBadges('all')">
+                    <span class="stat-number">100</span>
+                    <span class="stat-label">Total</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="completed" onclick="filterBadges('completed')">
+                    <span class="stat-number">57</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="in-progress" onclick="filterBadges('in-progress')">
+                    <span class="stat-number">43</span>
+                    <span class="stat-label">In Progress</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="hall-of-fame" onclick="filterBadges('hall-of-fame')">
+                    <span class="stat-number">7</span>
+                    <span class="stat-label">Hall of Fame</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="superstar" onclick="filterBadges('superstar')">
+                    <span class="stat-number">9</span>
+                    <span class="stat-label">Superstar</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="all-star" onclick="filterBadges('all-star')">
+                    <span class="stat-number">12</span>
+                    <span class="stat-label">All-Star</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="starter" onclick="filterBadges('starter')">
+                    <span class="stat-number">14</span>
+                    <span class="stat-label">Starter</span>
+                </div>
+                <div class="stat-item filter-btn" data-filter="prospect" onclick="filterBadges('prospect')">
+                    <span class="stat-number">15</span>
+                    <span class="stat-label">Prospect</span>
+                </div>
+            </div>
+            
+            <div class="achievements-grid">
+
+            <!-- Hall of Famer Badges -->
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('superstar', '⭐', 'Superstar', 'Elite achievement! You have demonstrated a consistent pattern of dominance by earning 10 MVP awards. Your exceptional skill and leadership set you apart from all others.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⭐</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Superstar</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('prime-time', '🌟', 'Prime Time', 'You are known for delivering in the biggest moments! Earn 10 Clutch awards to prove you can perform when it matters most.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="progress-indicator">7/10</div>
+                </div>
+                <div class="achievement-title">Prime Time</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('force-of-will', '💪', 'Force of Will', 'Your unbreakable spirit refuses to lose! Earn 10 Comeback awards to show your incredible resilience and determination.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💪</div>
+                    <div class="progress-indicator">4/10</div>
+                </div>
+                <div class="achievement-title">Force of Will</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('relentless', '🔋', 'Relentless', 'Your motor never stops! You have earned 10 Hustle awards, proving your incredible work ethic and determination on every play.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔋</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Relentless</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('linchpin', '🔗', 'The Linchpin', 'You are absolutely essential to team cohesion! Earn 10 Teammate awards to prove your vital role in bringing everyone together.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔗</div>
+                    <div class="progress-indicator">6/10</div>
+                </div>
+                <div class="achievement-title">The Linchpin</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('spirit-of-game', '🏅', 'Spirit of the Game', 'You embody the highest ideals of fair play! Your 10 Sportsmanship awards show your commitment to playing the game the right way.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏅</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Spirit of the Game</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('coach-on-court', '🧠', 'Coach on the Court', 'You understand the game on a deeper, strategic level! Earn 10 Student awards to show your basketball IQ and dedication to learning.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🧠</div>
+                    <div class="progress-indicator">8/10</div>
+                </div>
+                <div class="achievement-title">Coach on the Court</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('paragon', '👑', 'The Paragon', 'You are the ultimate embodiment of how to prepare and play! Earn 10 Lead by Example awards to achieve this prestigious status.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">👑</div>
+                    <div class="progress-indicator">5/10</div>
+                </div>
+                <div class="achievement-title">The Paragon</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('coaches-choice', '🎖️', 'Coach\'s Choice', 'Outstanding achievement! You have earned each of the eight core coach awards at least once, showing your well-rounded excellence in all aspects of the game.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎖️</div>
+                    <div class="progress-indicator completed">8/8</div>
+                </div>
+                <div class="achievement-title">Coach's Choice</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('trifecta', '🎯', 'The Trifecta', 'Incredible season performance! Earn an MVP, Hustle, and Teammate award all in the same season to achieve this rare combination.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator">2/3</div>
+                </div>
+                <div class="achievement-title">The Trifecta</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('character-captain', '🛡️', 'Character Captain', 'Exemplary character! You earned Hustle, Teammate, and Sportsmanship awards in the same season, showing your commitment to doing things the right way.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🛡️</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">Character Captain</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('practice-legend', '🏃‍♂️', 'Practice Legend', 'Incredible dedication! You are working towards attending 250 total team practices, showing your commitment to improvement and team success.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏃‍♂️</div>
+                    <div class="progress-indicator">187/250</div>
+                </div>
+                <div class="achievement-title">Practice Legend</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('skills-virtuoso', '🎨', 'Skills Virtuoso', 'Master of fundamentals! You are progressing towards attending 250 total skills sessions, demonstrating your dedication to perfecting your craft.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎨</div>
+                    <div class="progress-indicator">203/250</div>
+                </div>
+                <div class="achievement-title">Skills Virtuoso</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('franchise-player', '🏢', 'Franchise Player', 'Cornerstone achievement! You have played in 250 total games, establishing yourself as a true franchise player with incredible longevity and commitment.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏢</div>
+                    <div class="progress-indicator completed">250/250</div>
+                </div>
+                <div class="achievement-title">Franchise Player</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('fnh-hall-of-famer', '🌙', 'FNH Hall of Famer', 'Friday Night Hoops legend! You are working towards playing in 250 total FNH games, cementing your legacy in this special program.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌙</div>
+                    <div class="progress-indicator">142/250</div>
+                </div>
+                <div class="achievement-title">FNH Hall of Famer</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('dynasty-member', '🏰', 'Dynasty Member', 'Ultimate loyalty! You are building towards being an active member of the team for five full years, showing incredible dedication and commitment.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏰</div>
+                    <div class="progress-indicator">3/5</div>
+                </div>
+                <div class="achievement-title">Dynasty Member</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame" onclick="openModal('digital-triple-crown', '🏆', 'The Digital Triple Crown', 'Online mastery! Complete all Skill, Strength & Conditioning, and Basketball IQ videos to earn this comprehensive achievement requiring Technique Titan, Peak Performer, and Basketball Savant badges.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="progress-indicator">2/3</div>
+                </div>
+                <div class="achievement-title">The Digital Triple Crown</div>
+            </div>
+
+            <div class="achievement-card hall-of-fame achieved" onclick="openModal('foundation-alumnus', '🎓', 'Foundation Alumnus', 'Elite commitment! You have completed the entire 12-week Foundation Program a second time, demonstrating an exceptional dedication to mastering the fundamentals.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎓</div>
+                    <div class="progress-indicator completed">2/2</div>
+                </div>
+                <div class="achievement-title">Foundation Alumnus</div>
+            </div>
+
+            <!-- Superstar Purple Badges -->
+            <div class="achievement-card superstar achieved" onclick="openModal('marquee-player', '🌟', 'Marquee Player', 'Impressive achievement! You are a recognized star and reliable top performer, having earned 5 MVP awards. Your consistent excellence makes you a marquee player.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Marquee Player</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('ice-in-veins', '🧊', 'Ice in the Veins', 'You thrive under pressure! Earn 5 Clutch awards to show you have ice in your veins when the game is on the line.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🧊</div>
+                    <div class="progress-indicator">3/5</div>
+                </div>
+                <div class="achievement-title">Ice in the Veins</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('momentum-shifter', '⚡', 'Momentum Shifter', 'You change the tone of the game! Earn 5 Comeback awards to prove you can shift momentum when your team needs it most.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⚡</div>
+                    <div class="progress-indicator">2/5</div>
+                </div>
+                <div class="achievement-title">Momentum Shifter</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('workhorse', '🐎', 'The Workhorse', 'Elite work ethic! You have earned 5 Hustle awards, proving you are a true workhorse who never takes a play off.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🐎</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">The Workhorse</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('cornerstone', '🏗️', 'The Cornerstone', 'You are a player the team is built around emotionally! Earn 5 Teammate awards to become the cornerstone of team chemistry.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏗️</div>
+                    <div class="progress-indicator">4/5</div>
+                </div>
+                <div class="achievement-title">The Cornerstone</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('ambassador', '🤝', 'The Ambassador', 'Positive representative! You have earned 5 Sportsmanship awards, making you a true ambassador for the team and the sport.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🤝</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">The Ambassador</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('tactician', '🎯', 'The Tactician', 'High in-game IQ! Earn 5 Student awards to prove you are a true tactician who understands the strategic aspects of basketball.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator">3/5</div>
+                </div>
+                <div class="achievement-title">The Tactician</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('blueprint', '📐', 'The Blueprint', 'Model for others! Earn 5 Lead by Example awards to become the blueprint that other players follow.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📐</div>
+                    <div class="progress-indicator">2/5</div>
+                </div>
+                <div class="achievement-title">The Blueprint</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('pillar', '🏛️', 'The Pillar', 'Perfect dedication! Attend every single scheduled practice in a season to become a pillar of consistency and commitment.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏛️</div>
+                    <div class="progress-indicator">18/20</div>
+                </div>
+                <div class="achievement-title">The Pillar</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('ironman', '🦾', 'Ironman', 'Incredible durability! You played in every single game of a season, proving your reliability and toughness as a true ironman.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🦾</div>
+                    <div class="progress-indicator completed">25/25</div>
+                </div>
+                <div class="achievement-title">Ironman</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('fnh-ironman', '🌙', 'FNH Ironman', 'Friday Night dedication! Play in every FNH game in a single season to earn this special ironman status.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌙</div>
+                    <div class="progress-indicator">8/12</div>
+                </div>
+                <div class="achievement-title">FNH Ironman</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('practice-centurion', '💯', 'Practice Centurion', 'Dedication milestone! You have attended 100 total team practices, earning your status as a practice centurion.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💯</div>
+                    <div class="progress-indicator completed">100/100</div>
+                </div>
+                <div class="achievement-title">Practice Centurion</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('skills-specialist', '🎨', 'Skills Specialist', 'Skill development focus! You are working towards attending 100 total skills sessions to become a true skills specialist.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎨</div>
+                    <div class="progress-indicator">78/100</div>
+                </div>
+                <div class="achievement-title">Skills Specialist</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('century-club-games', '🎮', 'Century Club', 'Game milestone! You have played in 100 total games, joining the prestigious century club of experienced players.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎮</div>
+                    <div class="progress-indicator completed">100/100</div>
+                </div>
+                <div class="achievement-title">Century Club</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('fnh-legend', '🌟', 'FNH Legend', 'Friday Night legacy! You are building towards playing in 100 total FNH games to become a true FNH legend.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌟</div>
+                    <div class="progress-indicator">67/100</div>
+                </div>
+                <div class="achievement-title">FNH Legend</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('team-veteran', '🎖️', 'Team Veteran', 'Long-term commitment! You have been an active member of the team for three full years, earning your veteran status.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎖️</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">Team Veteran</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('foundation-graduate', '🎓', 'Foundation Graduate', 'Premier online achievement! You have completed all 60 videos in the 12-week Foundation Program, earning your graduate status.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎓</div>
+                    <div class="progress-indicator completed">60/60</div>
+                </div>
+                <div class="achievement-title">Foundation Graduate</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('technique-titan', '⚙️', 'Technique Titan', 'Skill mastery! You have completed all 36 Skill videos in the Foundation Program, becoming a true technique titan.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⚙️</div>
+                    <div class="progress-indicator completed">36/36</div>
+                </div>
+                <div class="achievement-title">Technique Titan</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('peak-performer', '💪', 'Peak Performer', 'Strength focus! Complete all 12 Strength & Conditioning videos in the program to achieve peak performer status.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💪</div>
+                    <div class="progress-indicator">9/12</div>
+                </div>
+                <div class="achievement-title">Peak Performer</div>
+            </div>
+
+            <div class="achievement-card superstar achieved" onclick="openModal('basketball-savant', '🧠', 'Basketball Savant', 'IQ excellence! You have completed all 12 Basketball IQ videos in the program, proving you are a true basketball savant.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🧠</div>
+                    <div class="progress-indicator completed">12/12</div>
+                </div>
+                <div class="achievement-title">Basketball Savant</div>
+            </div>
+
+            <div class="achievement-card superstar" onclick="openModal('perfect-attendance', '📅', 'Perfect Attendance: Online', 'Consistency champion! Complete all required videos each week for 12 consecutive weeks without missing a week.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📅</div>
+                    <div class="progress-indicator">10/12</div>
+                </div>
+                <div class="achievement-title">Perfect Attendance: Online</div>
+            </div>
+
+            <!-- All-Star Blue Badges -->
+            <div class="achievement-card all-star achieved" onclick="openModal('game-changer', '🎯', 'Game Changer', 'Significant impact! You have earned 3 MVP awards, proving you consistently make a pivotal impact on the game.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">Game Changer</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('closer', '🎪', 'The Closer', 'High-pressure performer! Earn 3 Clutch awards to prove you can make multiple high-pressure plays when it matters most.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎪</div>
+                    <div class="progress-indicator">2/3</div>
+                </div>
+                <div class="achievement-title">The Closer</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('sparkplug', '⚡', 'The Sparkplug', 'Rally igniter! Earn 3 Comeback awards to show you consistently ignite team rallies when momentum needs to shift.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⚡</div>
+                    <div class="progress-indicator">1/3</div>
+                </div>
+                <div class="achievement-title">The Sparkplug</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('engine', '🔥', 'The Engine', 'Consistent energy source! You have earned 3 Hustle awards, proving you are the engine that drives the team forward.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔥</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">The Engine</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('glue', '🤝', 'The Glue', 'Unifying presence! You have earned 3 Teammate awards, making you the glue that holds the team together.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🤝</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">The Glue</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('class-act', '🎭', 'Class Act', 'Respectful conduct! You have earned 3 Sportsmanship awards, proving you are a true class act on and off the court.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎭</div>
+                    <div class="progress-indicator completed">3/3</div>
+                </div>
+                <div class="achievement-title">Class Act</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('protege', '📚', 'The Protégé', 'Exceptionally coachable! Earn 3 Student awards to prove you are an attentive protégé who absorbs knowledge.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📚</div>
+                    <div class="progress-indicator">2/3</div>
+                </div>
+                <div class="achievement-title">The Protégé</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('standard', '📏', 'The Standard', 'Setting the bar! Earn 3 Lead by Example awards to become the standard for effort and execution.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📏</div>
+                    <div class="progress-indicator">1/3</div>
+                </div>
+                <div class="achievement-title">The Standard</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('dependable', '📋', 'The Dependable', 'Perfect communication! Submit a timely RSVP for every event in a season to prove your dependability.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📋</div>
+                    <div class="progress-indicator">18/20</div>
+                </div>
+                <div class="achievement-title">The Dependable</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('recruiter', '🎯', 'Recruiter', 'Team builder! You successfully referred a new player who joined the team, helping grow our basketball community.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Recruiter</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('practice-fiend', '🏃‍♂️', 'Practice Fiend', 'Practice dedication! You have attended 50 total practices, proving your commitment to improvement and team preparation.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏃‍♂️</div>
+                    <div class="progress-indicator completed">50/50</div>
+                </div>
+                <div class="achievement-title">Practice Fiend</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('skills-devotee', '🎨', 'Skills Devotee', 'Skill development focus! You are working towards attending 50 total skills sessions to become a true skills devotee.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎨</div>
+                    <div class="progress-indicator">38/50</div>
+                </div>
+                <div class="achievement-title">Skills Devotee</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('seasoned-competitor', '🏀', 'Seasoned Competitor', 'Game experience! You have played in 50 total games, establishing yourself as a seasoned competitor.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏀</div>
+                    <div class="progress-indicator completed">50/50</div>
+                </div>
+                <div class="achievement-title">Seasoned Competitor</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('fnh-veteran', '🌙', 'FNH Veteran', 'Friday Night experience! You are building towards playing in 50 total FNH games to become a true FNH veteran.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌙</div>
+                    <div class="progress-indicator">34/50</div>
+                </div>
+                <div class="achievement-title">FNH Veteran</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('first-year-anniversary', '🎂', 'First Year Anniversary', 'One year milestone! You have been an active member of the team for one full year, marking an important anniversary.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎂</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">First Year Anniversary</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('half-time-adjustments', '⏰', 'Half-Time Adjustments', 'Halfway milestone! You have completed 30 total videos in the Foundation Program, reaching the halfway point of your journey.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⏰</div>
+                    <div class="progress-indicator completed">30/30</div>
+                </div>
+                <div class="achievement-title">Half-Time Adjustments</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('monthly-module-master', '📅', 'Monthly Module Master', 'Consistent completion! Complete all assigned videos for four consecutive weeks to master the monthly modules.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📅</div>
+                    <div class="progress-indicator">3/4</div>
+                </div>
+                <div class="achievement-title">Monthly Module Master</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('skills-sharp-shooter', '🎯', 'Skills Sharp-Shooter', 'Skill variety! You have completed 20 different Skill videos, proving your dedication to developing diverse basketball skills.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator completed">20/20</div>
+                </div>
+                <div class="achievement-title">Skills Sharp-Shooter</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('conditioning-core', '💪', 'Conditioning Core', 'Strength focus! Complete 6 different Strength & Conditioning videos to build your conditioning core.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💪</div>
+                    <div class="progress-indicator">4/6</div>
+                </div>
+                <div class="achievement-title">Conditioning Core</div>
+            </div>
+
+            <div class="achievement-card all-star achieved" onclick="openModal('strategic-specialist', '🧠', 'Strategic Specialist', 'IQ development! You have completed 6 different Basketball IQ videos, becoming a strategic specialist.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🧠</div>
+                    <div class="progress-indicator completed">6/6</div>
+                </div>
+                <div class="achievement-title">Strategic Specialist</div>
+            </div>
+
+            <div class="achievement-card all-star" onclick="openModal('mid-season-mentor', '🎓', 'Mid-Season Mentor', 'Consistent learning! Complete all weekly videos for 6 consecutive weeks to become a mid-season mentor.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎓</div>
+                    <div class="progress-indicator">5/6</div>
+                </div>
+                <div class="achievement-title">Mid-Season Mentor</div>
+            </div>
+
+            <!-- Starter Green Badges -->
+            <div class="achievement-card starter achieved" onclick="openModal('locked-in', '🔒', 'Locked In', 'Excellent consistency! You attended 10 consecutive scheduled practices, showing you are truly locked in to team preparation.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔒</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Locked In</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('on-the-ball', '⚽', 'On the Ball', 'Great communication! Submit timely RSVPs for 10 consecutive events to prove you are always on the ball.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⚽</div>
+                    <div class="progress-indicator">7/10</div>
+                </div>
+                <div class="achievement-title">On the Ball</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('tournament-titan', '🏆', 'Tournament Titan', 'Tournament dedication! You checked into all games in a single tournament, proving your commitment when it matters most.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏆</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Tournament Titan</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('dedicated-grinder', '⚙️', 'Dedicated Grinder', 'Practice commitment! You have attended 25 total practices, proving you are a dedicated grinder who puts in the work.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⚙️</div>
+                    <div class="progress-indicator completed">25/25</div>
+                </div>
+                <div class="achievement-title">Dedicated Grinder</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('skills-seeker', '🔍', 'Skills Seeker', 'Skill development! You are working towards attending 25 total skills sessions to become a true skills seeker.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔍</div>
+                    <div class="progress-indicator">19/25</div>
+                </div>
+                <div class="achievement-title">Skills Seeker</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('regular-competitor', '🎯', 'Regular Competitor', 'Game experience! You have played in 25 total games, establishing yourself as a regular competitor.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator completed">25/25</div>
+                </div>
+                <div class="achievement-title">Regular Competitor</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('fnh-regular', '🌙', 'FNH Regular', 'Friday Night commitment! You are building towards playing in 25 total FNH games to become a regular.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌙</div>
+                    <div class="progress-indicator">17/25</div>
+                </div>
+                <div class="achievement-title">FNH Regular</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('game-mvp', '⭐', 'Game MVP', 'Outstanding performance! You were instrumental in the team\'s performance during a single game, earning MVP recognition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">⭐</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Game MVP</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('clutch-player', '🎪', 'Clutch Player', 'Pressure performer! You made a game-changing play under pressure, proving you can deliver in clutch moments.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎪</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Clutch Player</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('comeback-kid', '🔄', 'Comeback Kid', 'Rally energy! Show the energy that is instrumental in a team rally to earn this comeback recognition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔄</div>
+                    <div class="progress-indicator">0/1</div>
+                </div>
+                <div class="achievement-title">Comeback Kid</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('sportsmanship-award', '🤝', 'Sportsmanship Award', 'Outstanding character! You displayed exceptional sportsmanship, earning recognition for your positive conduct.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🤝</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Sportsmanship Award</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('hustle-award', '🏃‍♂️', 'Hustle Award', 'Relentless effort! You showed exceptional hustle and effort, earning recognition for your tireless work ethic.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏃‍♂️</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Hustle Award</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('teammate-award', '🤗', 'Teammate Award', 'Team spirit! You demonstrated encouraging, supportive, and unselfish play, earning teammate recognition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🤗</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Teammate Award</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('student-of-game', '📚', 'Student of the Game', 'Exceptional learning! You showed outstanding listening skills and attentiveness, proving you are a true student.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📚</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Student of the Game</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('lead-by-example', '👑', 'Lead by Example', 'Perfect demonstration! Flawlessly demonstrate a drill or skill to earn this leadership recognition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">👑</div>
+                    <div class="progress-indicator">0/1</div>
+                </div>
+                <div class="achievement-title">Lead by Example</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('weekly-warm-up', '📅', 'Weekly Warm-Up', 'Weekly completion! You completed all 5 assigned videos in a single week (3 Skill, 1 S&C, 1 IQ), earning your weekly warm-up badge.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📅</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Weekly Warm-Up</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('film-study', '🎬', 'Film Study', 'Video dedication! You have completed 10 total online training videos, showing your commitment to film study.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎬</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Film Study</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('skill-builder', '🔨', 'Skill Builder', 'Skill variety! You have completed 5 different Skill videos, proving you are building a diverse skill set.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔨</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Skill Builder</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('foundation-force', '💪', 'Foundation Force', 'Strength foundation! Complete 5 different Strength & Conditioning videos to build your foundation force.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💪</div>
+                    <div class="progress-indicator">3/5</div>
+                </div>
+                <div class="achievement-title">Foundation Force</div>
+            </div>
+
+            <div class="achievement-card starter achieved" onclick="openModal('court-visionary', '👁️', 'Court Visionary', 'Basketball IQ! You have completed 5 different Basketball IQ videos, proving you are developing court vision.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">👁️</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Court Visionary</div>
+            </div>
+
+            <div class="achievement-card starter" onclick="openModal('back-to-back-sessions', '🔄', 'Back-to-Back Sessions', 'Consistent learning! Complete all weekly videos two weeks in a row to earn this back-to-back achievement.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔄</div>
+                    <div class="progress-indicator">1/2</div>
+                </div>
+                <div class="achievement-title">Back-to-Back Sessions</div>
+            </div>
+
+            <!-- Prospect Grey Badges -->
+            <div class="achievement-card prospect achieved" onclick="openModal('checked-in', '✅', 'Checked In', 'Welcome to the team! You have successfully checked into your first UYP event, marking the beginning of your basketball journey.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">✅</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Checked In</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('road-warrior', '🚗', 'Road Warrior', 'Adventure awaits! You checked into an event at a different location, proving you are ready to take your game on the road.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🚗</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Road Warrior</div>
+            </div>
+
+            <div class="achievement-card prospect" onclick="openModal('holiday-hero', '🎄', 'Holiday Hero', 'Dedication during the holidays! Play in a game on a major holiday to earn this special recognition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎄</div>
+                    <div class="progress-indicator">0/1</div>
+                </div>
+                <div class="achievement-title">Holiday Hero</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('the-debut', '🎬', 'The Debut', 'Historic moment! You played in your very first game, marking the official start of your competitive basketball career.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎬</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">The Debut</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('friday-follower', '🌙', 'Friday Follower', 'Friday Night debut! You played in your first Friday Night Hoops game, joining this special weekly tradition.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🌙</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Friday Follower</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('heating-up', '🔥', 'Heating Up', 'Building momentum! You attended 5 consecutive scheduled practices, showing you are starting to heat up with consistency.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔥</div>
+                    <div class="progress-indicator completed">5/5</div>
+                </div>
+                <div class="achievement-title">Heating Up</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('game-planner', '📋', 'Game Planner', 'Great communication! You RSVPed to a game within its proper window, showing excellent planning skills.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📋</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Game Planner</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('practice-planner', '📝', 'Practice Planner', 'Organized approach! You RSVPed to a Practice, Skill, or FNH event, demonstrating good planning habits.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">📝</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Practice Planner</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('first-reps', '🏃‍♂️', 'First Reps', 'Building the foundation! You have attended 10 total practices, establishing your commitment to improvement.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🏃‍♂️</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">First Reps</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('skill-starter', '🎯', 'Skill Starter', 'Skill development begins! You have attended 10 total skills sessions, starting your journey to basketball mastery.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎯</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">Skill Starter</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('first-ten', '🔟', 'First Ten', 'Double digits! You have played in 10 total games, reaching your first major game milestone.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🔟</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">First Ten</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('fnh-fighter', '🥊', 'FNH Fighter', 'Friday Night warrior! You have played in 10 total FNH games, proving you are a true Friday Night fighter.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🥊</div>
+                    <div class="progress-indicator completed">10/10</div>
+                </div>
+                <div class="achievement-title">FNH Fighter</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('digital-first-steps', '👶', 'Digital First Steps', 'Online journey begins! You watched your very first video in the Online Foundation Program, taking your first digital steps.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">👶</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Digital First Steps</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('virtual-handles', '🎮', 'Virtual Handles', 'Skill video debut! You completed your first Skill video, beginning your virtual skill development journey.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🎮</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Virtual Handles</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('remote-strength', '💻', 'Remote Strength', 'Strength foundation! You completed your first Strength & Conditioning video, building remote strength.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">💻</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Remote Strength</div>
+            </div>
+
+            <div class="achievement-card prospect achieved" onclick="openModal('mindful-start', '🧘', 'Mindful Start', 'IQ development begins! You completed your first Basketball IQ video, making a mindful start to strategic learning.')">
+                <div class="icon-container">
+                    <div class="achievement-icon">🧘</div>
+                    <div class="progress-indicator completed">1/1</div>
+                </div>
+                <div class="achievement-title">Mindful Start</div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="modal" id="achievementModal">
+        <div class="modal-content">
+            <div class="modal-icon" id="modalIcon"></div>
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-description" id="modalDescription"></div>
+            <button class="close-modal" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id, icon, title, description) {
+            document.getElementById('modalIcon').textContent = icon;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDescription').textContent = description;
+            document.getElementById('achievementModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('achievementModal').style.display = 'none';
+        }
+
+        function filterBadges(filterType) {
+            const achievementsGrid = document.querySelector('.achievements-grid');
+            const allCards = Array.from(achievementsGrid.querySelectorAll('.achievement-card'));
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            
+            // Remove active class from all buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to clicked button
+            document.querySelector(`[data-filter="${filterType}"]`).classList.add('active');
+            
+            // Reset all cards to full opacity first
+            allCards.forEach(card => {
+                card.style.opacity = '1';
+            });
+            
+            let filteredCards = [];
+            
+            switch(filterType) {
+                case 'completed':
+                    filteredCards = allCards.filter(card => card.classList.contains('achieved'));
+                    break;
+                case 'in-progress':
+                    filteredCards = allCards.filter(card => !card.classList.contains('achieved'));
+                    break;
+                case 'hall-of-fame':
+                    filteredCards = allCards.filter(card => card.classList.contains('hall-of-fame'));
+                    break;
+                case 'superstar':
+                    filteredCards = allCards.filter(card => card.classList.contains('superstar'));
+                    break;
+                case 'all-star':
+                    filteredCards = allCards.filter(card => card.classList.contains('all-star'));
+                    break;
+                case 'starter':
+                    filteredCards = allCards.filter(card => card.classList.contains('starter'));
+                    break;
+                case 'prospect':
+                    filteredCards = allCards.filter(card => card.classList.contains('prospect'));
+                    break;
+                case 'all':
+                default:
+                    filteredCards = allCards;
+                    break;
+            }
+            
+            // Clear the grid
+            achievementsGrid.innerHTML = '';
+            
+            // For tier-specific filters, sort by completion status (completed first)
+            if (['hall-of-fame', 'superstar', 'all-star', 'starter', 'prospect'].includes(filterType)) {
+                const completedCards = filteredCards.filter(card => card.classList.contains('achieved'));
+                const inProgressCards = filteredCards.filter(card => !card.classList.contains('achieved'));
+                
+                // Add completed cards first
+                completedCards.forEach(card => {
+                    card.style.opacity = '1';
+                    achievementsGrid.appendChild(card);
+                });
+                
+                // Add in-progress cards second
+                inProgressCards.forEach(card => {
+                    card.style.opacity = '1';
+                    achievementsGrid.appendChild(card);
+                });
+                
+                // Add remaining cards with reduced opacity
+                const remainingCards = allCards.filter(card => !filteredCards.includes(card));
+                remainingCards.forEach(card => {
+                    card.style.opacity = '0.3';
+                    achievementsGrid.appendChild(card);
+                });
+            } else {
+                // For other filters, add filtered cards first (full opacity)
+                filteredCards.forEach(card => {
+                    card.style.opacity = '1';
+                    achievementsGrid.appendChild(card);
+                });
+                
+                // Add remaining cards with reduced opacity (except for 'all' filter)
+                if (filterType !== 'all') {
+                    const remainingCards = allCards.filter(card => !filteredCards.includes(card));
+                    remainingCards.forEach(card => {
+                        card.style.opacity = '0.3';
+                        achievementsGrid.appendChild(card);
+                    });
+                }
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('achievementModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Add keyboard support
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Add click sound effect simulation
+        document.querySelectorAll('.achievement-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // Initialize with "Overall" filter active
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('[data-filter="all"]').classList.add('active');
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96db52e0e48e7cef',t:'MTc1NDk1Mjk2MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

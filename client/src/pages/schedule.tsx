@@ -1,14 +1,9 @@
 import { useMemo, useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { DayDrawer } from "@/components/DayDrawer";
-import { format, isSameDay, parseISO } from "date-fns";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 
-// Expected event shape coming from your Google Calendar adapter
+// Expected event shape coming from Google Calendar adapter
 type UypEvent = {
   id: string;
   title: string;
@@ -17,121 +12,182 @@ type UypEvent = {
   eventType?: "Practice" | "Skills" | "Game" | "Other" | string;
 };
 
-const FILTERS = ["All", "Practice", "Skills", "Games", "Other"] as const;
-type Filter = typeof FILTERS[number];
-
 export default function SchedulePage() {
-  const { user } = useAuth();
-
   // Fetch events from API
   const { data: events = [], isLoading } = useQuery<UypEvent[]>({
     queryKey: ["/api/events"],
     enabled: true,
   });
 
-  const [filter, setFilter] = useState<Filter>("All");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-
-  const filtered = useMemo(() => {
-    if (filter === "All") return events;
-    if (filter === "Games") return events.filter(e => (e.eventType || "Other").toLowerCase() === "game");
-    return events.filter(e => (e.eventType || "Other").toLowerCase() === filter.toLowerCase());
-  }, [events, filter]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Get events for selected date
   const eventsForSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-    return filtered.filter(event => 
+    return events.filter(event => 
       isSameDay(parseISO(event.startTime), selectedDate)
     );
-  }, [filtered, selectedDate]);
+  }, [events, selectedDate]);
 
   // Get dates that have events for calendar display
-  const eventDates = useMemo(() => {
-    return filtered.map(event => parseISO(event.startTime));
-  }, [filtered]);
+  const eventDateStrings = useMemo(() => {
+    const eventDates = new Set<string>();
+    events.forEach(event => {
+      eventDates.add(parseISO(event.startTime).toDateString());
+    });
+    return eventDates;
+  }, [events]);
 
-  const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date);
-    if (date) {
-      setIsDrawerOpen(true);
+  const renderCalendar = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const firstDay = startOfMonth(currentDate);
+    const lastDay = endOfMonth(currentDate);
+    const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
+    const startingDayOfWeek = getDay(firstDay);
+    
+    const calendarDays = [];
+    
+    // Previous month's trailing days
+    const prevMonth = new Date(year, month - 1, 0);
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      const day = new Date(year, month - 1, prevMonth.getDate() - i);
+      calendarDays.push({ date: day, isCurrentMonth: false });
+    }
+    
+    // Current month's days
+    daysInMonth.forEach(day => {
+      calendarDays.push({ date: day, isCurrentMonth: true });
+    });
+    
+    // Next month's leading days (fill to complete the grid if needed)
+    const totalCells = calendarDays.length;
+    const remainingCells = totalCells < 35 ? 35 - totalCells : 42 - totalCells;
+    for (let day = 1; day <= remainingCells; day++) {
+      const nextMonthDay = new Date(year, month + 1, day);
+      calendarDays.push({ date: nextMonthDay, isCurrentMonth: false });
+    }
+    
+    return calendarDays;
+  };
+
+  const formatEventTime = (startTime: string) => {
+    try {
+      return format(parseISO(startTime), 'h:mm a');
+    } catch {
+      return 'Time TBD';
     }
   };
 
-  return (
-    <div className="min-h-screen bg-white">
-      <main className="max-w-md mx-auto px-4 py-4">
-        {/* Top row: filter + count */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-44">
-            <Select value={filter} onValueChange={(v) => setFilter(v as Filter)}>
-              <SelectTrigger className="h-10">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                {FILTERS.map((f) => (
-                  <SelectItem key={f} value={f}>
-                    {f}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+  const previousMonth = () => {
+    setCurrentDate(subMonths(currentDate, 1));
+  };
 
-          {/* Count (replaces 'Team Schedule' text) */}
-          <div className="text-sm font-semibold text-gray-700">
-            {filtered.length} {filtered.length === 1 ? "event" : "events"}
+  const nextMonth = () => {
+    setCurrentDate(addMonths(currentDate, 1));
+  };
+
+  const selectDate = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const calendarDays = renderCalendar();
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-red-600 via-red-700 to-red-800 p-5">
+      <div className="max-w-sm mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-5 py-8 text-center">
+          <div className="flex justify-between items-center mb-4">
+            <button 
+              className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              onClick={previousMonth}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div className="text-2xl font-semibold">
+              {format(currentDate, 'MMMM yyyy')}
+            </div>
+            <button 
+              className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+              onClick={nextMonth}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
-
-        {/* Calendar Display */}
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
+        
+        {/* Calendar */}
+        <div className="p-5">
+          {/* Weekdays */}
+          <div className="grid grid-cols-7 gap-1 mb-4">
+            {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
+              <div key={day} className="text-center font-semibold text-gray-600 text-xs py-2">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          {/* Days */}
+          <div className="grid grid-cols-7 gap-1">
+            {calendarDays.map((dayObj, index) => {
+              const { date, isCurrentMonth } = dayObj;
+              const isToday = isDateToday(date);
+              const isSelected = isSameDay(date, selectedDate);
+              const hasEvent = eventDateStrings.has(date.toDateString());
+              
+              return (
+                <div
+                  key={index}
+                  className={`
+                    aspect-square flex items-center justify-center rounded-xl text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-gray-100 relative
+                    ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-800'}
+                    ${isToday ? 'bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold' : ''}
+                    ${isSelected && !isToday ? 'bg-red-600 text-white' : ''}
+                  `}
+                  onClick={() => selectDate(date)}
+                >
+                  {format(date, 'd')}
+                  {hasEvent && (
+                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Events Section */}
+        <div className="px-5 pb-5 border-t border-gray-100 mt-2">
+          <div className="font-semibold text-gray-800 text-lg my-5">
+            {isSameDay(selectedDate, new Date()) ? "Today's Events" : `Events for ${format(selectedDate, 'MMM d')}`}
+          </div>
+          <div>
             {isLoading ? (
-              <div className="p-8 text-center text-gray-500">Loading calendar...</div>
+              <div className="text-center text-gray-500 py-5">Loading events...</div>
+            ) : eventsForSelectedDate.length > 0 ? (
+              eventsForSelectedDate.map(event => (
+                <div 
+                  key={event.id} 
+                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
+                >
+                  <div className="text-xs text-gray-600 font-medium">
+                    {formatEventTime(event.startTime)}
+                  </div>
+                  <div className="text-sm text-gray-800 font-semibold mt-1">
+                    {event.title}
+                  </div>
+                </div>
+              ))
             ) : (
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={handleDateSelect}
-                className="w-full"
-                modifiers={{
-                  eventDate: eventDates,
-                }}
-                modifiersStyles={{
-                  eventDate: {
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    borderRadius: '50%',
-                    fontWeight: 'bold'
-                  }
-                }}
-              />
+              <div className="text-center text-gray-400 py-5">
+                No events for this day
+              </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Day Drawer for event details */}
-        <DayDrawer
-          isOpen={isDrawerOpen}
-          onClose={() => setIsDrawerOpen(false)}
-          date={selectedDate}
-          events={eventsForSelectedDate.map(event => ({
-            id: parseInt(event.id.toString()),
-            title: event.title,
-            description: "",
-            start: event.startTime,
-            end: event.endTime || event.startTime,
-            location: "Momentous Sports Center",
-            type: (event.eventType?.toLowerCase() as any) || "other",
-            ageTags: [],
-            teamTags: [],
-            coaches: [],
-            originalEventType: event.eventType || "other"
-          }))}
-        />
-      </main>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

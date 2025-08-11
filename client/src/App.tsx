@@ -36,8 +36,8 @@ import CalendarSync from "@/pages/calendar-sync";
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
   
-  // Show account setup if user is authenticated but profile not completed
-  const needsSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
+  // Check if user needs profile setup
+  const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
   // Register service worker for PWA
   useEffect(() => {
@@ -101,10 +101,7 @@ function Router() {
   
   console.log('User has completed profile setup, proceeding to dashboard');
 
-  // Show account setup if profile not completed but basic info exists
-  if (needsSetup) {
-    return <AccountSetup />;
-  }
+  // This section is handled above - users without completed profiles go to profile selection
 
   // Route based on user type
   const getDashboardComponent = () => {

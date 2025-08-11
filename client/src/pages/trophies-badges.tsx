@@ -121,7 +121,7 @@ export default function TrophiesBadges() {
             <Button 
               variant="ghost" 
               size="sm" 
-              onClick={() => setLocation("/player")}
+              onClick={() => setLocation("/player-dashboard")}
               data-testid="button-back"
             >
               <ArrowLeft className="w-4 h-4" />

@@ -510,7 +510,7 @@ export const AWARDS: Award[] = [
     tags: ["HallOfFame", "Honor"]
   },
   {
-    id: "game-god",
+    id: "game-god-hof",
     kind: "Badge",
     name: "Game God",
     tier: "HallOfFamer",
@@ -523,7 +523,7 @@ export const AWARDS: Award[] = [
     tags: ["Games", "God"]
   },
   {
-    id: "skills-legend",
+    id: "skills-legend-hof",
     kind: "Badge",
     name: "Skills Legend",
     tier: "HallOfFamer",
@@ -536,7 +536,7 @@ export const AWARDS: Award[] = [
     tags: ["Skills", "Legend"]
   },
   {
-    id: "leadership-legend",
+    id: "leadership-legend-hof",
     kind: "Badge",
     name: "Leadership Legend",
     tier: "HallOfFamer",
@@ -752,7 +752,7 @@ export const AWARDS: Award[] = [
     tags: ["Complete", "Superstar"]
   },
   {
-    id: "iron-man",
+    id: "iron-man-superstar",
     kind: "Badge",
     name: "Iron Man",
     tier: "Superstar",

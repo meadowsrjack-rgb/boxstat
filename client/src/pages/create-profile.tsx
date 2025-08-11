@@ -37,6 +37,7 @@ export default function CreateProfile() {
 
   const form = useForm<CreateProfileForm>({
     resolver: zodResolver(createProfileSchema),
+    mode: "onChange", // Enable real-time validation
     defaultValues: {
       profileType: selectedType || "parent",
       firstName: "",
@@ -49,6 +50,11 @@ export default function CreateProfile() {
       schoolGrade: "",
     },
   });
+
+  // Watch for form changes and log them
+  const watchedValues = form.watch();
+  console.log("Current form values:", watchedValues);
+  console.log("Selected type:", selectedType);
 
   const createProfileMutation = useMutation({
     mutationFn: async (data: CreateProfileForm) => {
@@ -97,8 +103,10 @@ export default function CreateProfile() {
   };
 
   const handleTypeSelect = (type: "parent" | "player" | "coach") => {
+    console.log("Type selected:", type);
     setSelectedType(type);
     form.setValue("profileType", type);
+    form.trigger(); // Trigger validation after type selection
   };
 
   const handleBack = () => {
@@ -205,7 +213,16 @@ export default function CreateProfile() {
         ) : (
           /* Profile Creation Form */
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form 
+              onSubmit={(e) => {
+                console.log("Form onSubmit triggered!");
+                console.log("Form data:", form.getValues());
+                console.log("Form valid:", form.formState.isValid);
+                console.log("Form errors:", form.formState.errors);
+                form.handleSubmit(onSubmit)(e);
+              }} 
+              className="space-y-6"
+            >
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">

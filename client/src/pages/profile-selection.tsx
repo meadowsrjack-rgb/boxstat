@@ -71,8 +71,8 @@ export default function ProfileSelection() {
   // Select profile
   const selectProfileMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      const response = await apiRequest(`/api/profiles/${profileId}/select`, "POST");
-      return response;
+      const response = await apiRequest("POST", `/api/profiles/${profileId}/select`);
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

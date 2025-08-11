@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { DayDrawer } from "@/components/DayDrawer";
+import { format, isSameDay, parseISO } from "date-fns";
 
 // Expected event shape coming from your Google Calendar adapter
 type UypEvent = {
@@ -20,19 +23,41 @@ type Filter = typeof FILTERS[number];
 export default function SchedulePage() {
   const { user } = useAuth();
 
-  // Fetch events the same way you already do (kept as-is)
+  // Fetch events from API
   const { data: events = [], isLoading } = useQuery<UypEvent[]>({
-    queryKey: ["/api/users", user?.id, "events"], // if your key differs, keep your original one
-    enabled: !!user?.id,
+    queryKey: ["/api/events"],
+    enabled: true,
   });
 
   const [filter, setFilter] = useState<Filter>("All");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const filtered = useMemo(() => {
     if (filter === "All") return events;
     if (filter === "Games") return events.filter(e => (e.eventType || "Other").toLowerCase() === "game");
     return events.filter(e => (e.eventType || "Other").toLowerCase() === filter.toLowerCase());
   }, [events, filter]);
+
+  // Get events for selected date
+  const eventsForSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    return filtered.filter(event => 
+      isSameDay(parseISO(event.startTime), selectedDate)
+    );
+  }, [filtered, selectedDate]);
+
+  // Get dates that have events for calendar display
+  const eventDates = useMemo(() => {
+    return filtered.map(event => parseISO(event.startTime));
+  }, [filtered]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      setIsDrawerOpen(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -60,37 +85,52 @@ export default function SchedulePage() {
           </div>
         </div>
 
-        {/* Calendar wrapper — keep your existing calendar component here */}
+        {/* Calendar Display */}
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-0">
-            {/* If you render a calendar component, keep it exactly as before.
-                Only spacing has been tightened: remove extra titles/margins above it. */}
-
-            {/* Example list fallback (keep your real calendar instead) */}
-            <div className="divide-y">
-              {isLoading ? (
-                <div className="p-4 text-sm text-gray-500">Loading…</div>
-              ) : filtered.length === 0 ? (
-                <div className="p-6 text-center text-gray-500">No events for this filter.</div>
-              ) : (
-                filtered.map((e) => (
-                  <div key={e.id} className="p-4 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-md bg-gray-100 grid place-items-center">
-                      <CalendarIcon className="w-4 h-4 text-gray-700" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-gray-900">{e.title}</div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(e.startTime).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                        {e.eventType ? ` • ${e.eventType}` : ""}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+          <CardContent className="p-4">
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-500">Loading calendar...</div>
+            ) : (
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                className="w-full"
+                modifiers={{
+                  eventDate: eventDates,
+                }}
+                modifiersStyles={{
+                  eventDate: {
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    borderRadius: '50%',
+                    fontWeight: 'bold'
+                  }
+                }}
+              />
+            )}
           </CardContent>
         </Card>
+
+        {/* Day Drawer for event details */}
+        <DayDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          date={selectedDate}
+          events={eventsForSelectedDate.map(event => ({
+            id: parseInt(event.id.toString()),
+            title: event.title,
+            description: "",
+            start: event.startTime,
+            end: event.endTime || event.startTime,
+            location: "Momentous Sports Center",
+            type: (event.eventType?.toLowerCase() as any) || "other",
+            ageTags: [],
+            teamTags: [],
+            coaches: [],
+            originalEventType: event.eventType || "other"
+          }))}
+        />
       </main>
     </div>
   );

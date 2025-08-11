@@ -52,6 +52,8 @@ export default function CreateProfile() {
 
   const createProfileMutation = useMutation({
     mutationFn: async (data: CreateProfileForm) => {
+      console.log("Starting profile creation mutation with data:", data);
+      
       const response = await fetch("/api/profiles", {
         method: "POST",
         headers: { 
@@ -64,12 +66,17 @@ export default function CreateProfile() {
         }),
       });
       
+      console.log("Profile creation response status:", response.status);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Profile creation failed with error:", errorData);
         throw new Error(errorData.message || "Failed to create profile");
       }
       
-      return response.json();
+      const result = await response.json();
+      console.log("Profile creation successful:", result);
+      return result;
     },
     onSuccess: (data) => {
       console.log("Profile created successfully:", data);
@@ -395,9 +402,15 @@ export default function CreateProfile() {
                 </Button>
                 <Button
                   type="submit"
-                  className="flex-1"
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
                   disabled={createProfileMutation.isPending}
                   data-testid="button-create-profile"
+                  onClick={(e) => {
+                    console.log("Create Profile button clicked!");
+                    console.log("Form valid:", form.formState.isValid);
+                    console.log("Form errors:", form.formState.errors);
+                    // Let the form handle submission
+                  }}
                 >
                   {createProfileMutation.isPending ? "Creating..." : "Create Profile"}
                 </Button>

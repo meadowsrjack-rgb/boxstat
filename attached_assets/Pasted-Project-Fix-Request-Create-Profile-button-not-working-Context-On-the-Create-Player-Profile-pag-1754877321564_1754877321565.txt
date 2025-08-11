@@ -1,0 +1,63 @@
+Project Fix Request: “Create Profile” button not working
+
+Context
+On the “Create Player Profile” page (UI shows fields: First Name, Last Name, Phone Number, Team, Jersey Number, Position, School Grade, Address), the red Create Profile button does nothing when clicked.
+
+What I need
+
+Find the component that renders the form (likely CreatePlayerProfile.jsx/tsx or similar) and the button with text “Create Profile”.
+
+Make the button submit the form and call an async createPlayerProfile function.
+
+Add basic validation and show user feedback.
+
+Implementation details
+
+Ensure there is a <form> around the fields and the button has type="submit".
+
+Add onSubmit={handleSubmit} on the form. In handleSubmit:
+
+event.preventDefault()
+
+Build a payload from controlled inputs:
+{ firstName, lastName, phone, team, jerseyNumber, position, grade, address }
+
+Validate: required → firstName, lastName, phone, team, position; phone = 10–15 digits.
+
+Show inline errors under each invalid field.
+
+Set a loading state; disable the button while loading.
+
+await fetch('/api/players', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+
+If 200/201 → show success toast “Profile created”, then navigate to the roster/list page.
+
+If error → show error toast/message.
+
+If there is no backend route yet, add a simple Express (or Next.js API route) handler:
+
+POST /api/players → validate body, return 201 with {id: ...}.
+
+Make sure the button is not disabled by default and not wrapped in a disabled parent.
+
+Remove any e.stopPropagation() / pointer-events: none CSS that could block clicks.
+
+Acceptance criteria
+
+Clicking Create Profile with valid inputs sends a POST to /api/players and navigates on success.
+
+With invalid inputs, the form prevents submit and shows clear error messages.
+
+The button shows a loading state (e.g., spinner/text) and is disabled during the request.
+
+Errors from the API display a readable message.
+
+Works in the Replit preview and when opened in a new tab.
+
+Nice to have (if quick)
+
+Input masks: phone auto-formats to digits only.
+
+Persist draft values in state so users don’t lose what they typed on validation errors.
+
+Add simple unit test for handleSubmit happy path and validation.

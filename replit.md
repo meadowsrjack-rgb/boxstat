@@ -10,6 +10,11 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **August 11, 2025**: Added comprehensive skills progress system with red progress bars in profile tab showing SHOOTING, DRIBBLING, and PASSING with "View All Skills" button navigation
+- **August 11, 2025**: Created detailed skills assessment page with all 7 skill categories (SHOOTING, DRIBBLING, PASSING, DEFENSE, REBOUNDING, ATHLETIC ABILITY, COACHABILITY) and individual skill breakdowns
+- **August 11, 2025**: Removed trophy and badge icons from top of player dashboard for cleaner layout
+- **August 11, 2025**: Updated plus icon next to profile picture to simple red outline design
+- **August 11, 2025**: Added functional back button to schedule page that navigates to player dashboard
 - **August 11, 2025**: Added trophy and badge icons with counts next to profile circle in player dashboard, made them clickable to navigate to trophies-badges page
 - **August 11, 2025**: Created photo upload page with camera and gallery options for changing profile pictures via + button next to avatar
 - **August 11, 2025**: Enhanced player dashboard profile section with interactive trophy/badge counters and profile photo upload functionality

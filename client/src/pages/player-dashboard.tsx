@@ -1076,6 +1076,73 @@
                                                   </div>
                                                 </CardContent>
                                               </Card>
+
+                                              {/* Skills Progress */}
+                                              <Card>
+                                                <CardContent className="p-4">
+                                                  <div className="flex items-center justify-between mb-4">
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                      Skills Progress
+                                                    </h3>
+                                                  </div>
+
+                                                  <div className="space-y-4">
+                                                    {/* Shooting */}
+                                                    <div className="space-y-2">
+                                                      <div className="flex justify-between text-sm">
+                                                        <span className="font-medium text-gray-700">SHOOTING</span>
+                                                        <span className="text-red-600 font-semibold">72%</span>
+                                                      </div>
+                                                      <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div 
+                                                          className="bg-red-600 h-2 rounded-full transition-all duration-300" 
+                                                          style={{ width: '72%' }}
+                                                        />
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Dribbling */}
+                                                    <div className="space-y-2">
+                                                      <div className="flex justify-between text-sm">
+                                                        <span className="font-medium text-gray-700">DRIBBLING</span>
+                                                        <span className="text-red-600 font-semibold">85%</span>
+                                                      </div>
+                                                      <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div 
+                                                          className="bg-red-600 h-2 rounded-full transition-all duration-300" 
+                                                          style={{ width: '85%' }}
+                                                        />
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Passing */}
+                                                    <div className="space-y-2">
+                                                      <div className="flex justify-between text-sm">
+                                                        <span className="font-medium text-gray-700">PASSING</span>
+                                                        <span className="text-red-600 font-semibold">68%</span>
+                                                      </div>
+                                                      <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div 
+                                                          className="bg-red-600 h-2 rounded-full transition-all duration-300" 
+                                                          style={{ width: '68%' }}
+                                                        />
+                                                      </div>
+                                                    </div>
+
+                                                    {/* View All Button */}
+                                                    <div className="pt-2">
+                                                      <Button 
+                                                        variant="outline" 
+                                                        className="w-full text-red-600 border-red-600 hover:bg-red-50"
+                                                        onClick={() => setLocation("/skills")}
+                                                      >
+                                                        View All Skills
+                                                        <ChevronRight className="w-4 h-4 ml-1" />
+                                                      </Button>
+                                                    </div>
+                                                  </div>
+                                                </CardContent>
+                                              </Card>
                                             </div>
                                           )}
                                         </div>

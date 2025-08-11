@@ -27,6 +27,7 @@ import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
 import TrophiesBadges from "@/pages/trophies-badges";
+import Skills from "@/pages/skills";
 import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
@@ -154,6 +155,7 @@ function Router() {
       <Route path="/training-library" component={TrainingLibrary} />
       <Route path="/test-route" component={TestRoute} />
       <Route path="/trophies-badges" component={TrophiesBadges} />
+      <Route path="/skills" component={Skills} />
       <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />

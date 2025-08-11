@@ -510,32 +510,6 @@ export const AWARDS: Award[] = [
     tags: ["HallOfFame", "Honor"]
   },
   {
-    id: "teammate-god",
-    kind: "Badge",
-    name: "Teammate God",
-    tier: "HallOfFamer",
-    category: "InGamePerformance",
-    description: "Earned 8 Teammate awards - godlike teammate spirit.",
-    iconName: "badge-teammate-god",
-    progressKind: "counter",
-    counterOf: { stat: "teammateCount", target: 8, label: "Teammate awards" },
-    triggerSources: ["coachAward"],
-    tags: ["Teammate", "God"]
-  },
-  {
-    id: "comeback-legend",
-    kind: "Badge",
-    name: "Comeback Legend",
-    tier: "HallOfFamer",
-    category: "InGamePerformance",
-    description: "Earned 8 Comeback awards - legendary comeback ability.",
-    iconName: "badge-comeback-legend",
-    progressKind: "counter",
-    counterOf: { stat: "comebackCount", target: 8, label: "Comeback awards" },
-    triggerSources: ["coachAward"],
-    tags: ["Comeback", "Legend"]
-  },
-  {
     id: "game-god",
     kind: "Badge",
     name: "Game God",
@@ -560,32 +534,6 @@ export const AWARDS: Award[] = [
     counterOf: { stat: "skillsTotal", target: 100, label: "skills sessions" },
     triggerSources: ["attendance"],
     tags: ["Skills", "Legend"]
-  },
-  {
-    id: "sportsmanship-god",
-    kind: "Badge",
-    name: "Sportsmanship God",
-    tier: "HallOfFamer",
-    category: "InGamePerformance",
-    description: "Earned 8 Sportsmanship awards - godlike character.",
-    iconName: "badge-sportsmanship-god",
-    progressKind: "counter",
-    counterOf: { stat: "sportsmanshipCount", target: 8, label: "sportsmanship awards" },
-    triggerSources: ["coachAward"],
-    tags: ["Sportsmanship", "God"]
-  },
-  {
-    id: "student-legend",
-    kind: "Badge",
-    name: "Student Legend",
-    tier: "HallOfFamer",
-    category: "InGamePerformance",
-    description: "Earned 8 Student awards - legendary dedication to learning.",
-    iconName: "badge-student-legend",
-    progressKind: "counter",
-    counterOf: { stat: "studentCount", target: 8, label: "student awards" },
-    triggerSources: ["coachAward"],
-    tags: ["Learning", "Legend"]
   },
   {
     id: "leadership-legend",

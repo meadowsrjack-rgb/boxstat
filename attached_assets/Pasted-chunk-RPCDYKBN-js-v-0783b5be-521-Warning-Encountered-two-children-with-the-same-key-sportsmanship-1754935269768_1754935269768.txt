@@ -1,0 +1,123 @@
+chunk-RPCDYKBN.js?v=0783b5be:521 Warning: Encountered two children with the same key, `sportsmanship-god`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at TrophiesBadges (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/trophies-badges.tsx:37:27)
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:323:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:379:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=hEJBqIBGANENBqf_N3wwO:51:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0783b5be:2805:3)
+    at Provider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0783b5be:38:15)
+    at TooltipProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0783b5be:64:5)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=0783b5be:521
+error @ chunk-RPCDYKBN.js?v=0783b5be:505
+warnOnInvalidKey @ chunk-RPCDYKBN.js?v=0783b5be:10219
+reconcileChildrenArray @ chunk-RPCDYKBN.js?v=0783b5be:10235
+reconcileChildFibers2 @ chunk-RPCDYKBN.js?v=0783b5be:10559
+reconcileChildren @ chunk-RPCDYKBN.js?v=0783b5be:14292
+updateHostComponent @ chunk-RPCDYKBN.js?v=0783b5be:14807
+beginWork @ chunk-RPCDYKBN.js?v=0783b5be:15935
+beginWork$1 @ chunk-RPCDYKBN.js?v=0783b5be:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0783b5be:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0783b5be:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0783b5be:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0783b5be:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0783b5be:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:18627
+chunk-RPCDYKBN.js?v=0783b5be:521 Warning: Encountered two children with the same key, `student-legend`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at TrophiesBadges (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/trophies-badges.tsx:37:27)
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:323:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:379:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=hEJBqIBGANENBqf_N3wwO:51:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0783b5be:2805:3)
+    at Provider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0783b5be:38:15)
+    at TooltipProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0783b5be:64:5)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=0783b5be:521
+error @ chunk-RPCDYKBN.js?v=0783b5be:505
+warnOnInvalidKey @ chunk-RPCDYKBN.js?v=0783b5be:10219
+reconcileChildrenArray @ chunk-RPCDYKBN.js?v=0783b5be:10235
+reconcileChildFibers2 @ chunk-RPCDYKBN.js?v=0783b5be:10559
+reconcileChildren @ chunk-RPCDYKBN.js?v=0783b5be:14292
+updateHostComponent @ chunk-RPCDYKBN.js?v=0783b5be:14807
+beginWork @ chunk-RPCDYKBN.js?v=0783b5be:15935
+beginWork$1 @ chunk-RPCDYKBN.js?v=0783b5be:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0783b5be:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0783b5be:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0783b5be:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0783b5be:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0783b5be:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:18627
+chunk-RPCDYKBN.js?v=0783b5be:521 Warning: Encountered two children with the same key, `teammate-god`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version.
+    at div
+    at div
+    at div
+    at TrophiesBadges (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/trophies-badges.tsx:37:27)
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:323:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0783b5be:379:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=hEJBqIBGANENBqf_N3wwO:51:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0783b5be:2805:3)
+    at Provider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=0783b5be:38:15)
+    at TooltipProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0783b5be:64:5)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=0783b5be:521
+error @ chunk-RPCDYKBN.js?v=0783b5be:505
+warnOnInvalidKey @ chunk-RPCDYKBN.js?v=0783b5be:10219
+reconcileChildrenArray @ chunk-RPCDYKBN.js?v=0783b5be:10235
+reconcileChildFibers2 @ chunk-RPCDYKBN.js?v=0783b5be:10559
+reconcileChildren @ chunk-RPCDYKBN.js?v=0783b5be:14292
+updateHostComponent @ chunk-RPCDYKBN.js?v=0783b5be:14807
+beginWork @ chunk-RPCDYKBN.js?v=0783b5be:15935
+beginWork$1 @ chunk-RPCDYKBN.js?v=0783b5be:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=0783b5be:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=0783b5be:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=0783b5be:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=0783b5be:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=0783b5be:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:18627
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true

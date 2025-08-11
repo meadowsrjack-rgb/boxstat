@@ -425,10 +425,10 @@
 
                                       {/* Main */}
                                       <main className="max-w-md mx-auto">
-                                        {/* Avatar header with trophies, badges, and + button */}
+                                        {/* Avatar header with trophies and badges on sides */}
                                         <div className="px-6 py-6 text-center">
-                                          <div className="flex items-center justify-center space-x-6 mb-2">
-                                            {/* Trophy count - clickable */}
+                                          <div className="flex items-center justify-between mb-2">
+                                            {/* Trophy count - left side */}
                                             <div 
                                               className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
                                               onClick={() => setLocation("/trophies-badges")}
@@ -442,7 +442,7 @@
                                               <span className="text-xs text-gray-600 mt-1">Trophies</span>
                                             </div>
 
-                                            {/* Main Avatar */}
+                                            {/* Main Avatar - center */}
                                             <div className="relative">
                                               <Avatar className="h-20 w-20">
                                                 <AvatarImage
@@ -463,7 +463,7 @@
                                               </Button>
                                             </div>
 
-                                            {/* Badge count - clickable */}
+                                            {/* Badge count - right side */}
                                             <div 
                                               className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
                                               onClick={() => setLocation("/trophies-badges")}

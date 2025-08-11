@@ -9,8 +9,26 @@ import { db } from "./db";
 import { z } from "zod";
 import sportsEngineRoutes from "./sportsengine-routes";
 import calendarRoutes from "./routes/calendar";
+import multer from "multer";
+import path from "path";
+import fs from "fs/promises";
 
 let wss: WebSocketServer | null = null;
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -68,6 +86,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user payments:", error);
       res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  // Photo upload route
+  app.post('/api/upload-profile-photo', isAuthenticated, upload.single('photo'), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+
+      // Convert buffer to base64 for simple storage (in a real app, you'd save to file storage/cloud)
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      
+      // Update user profile with new image URL
+      await db.update(users)
+        .set({ profileImageUrl: base64Image })
+        .where(eq(users.id, userId));
+
+      res.json({ 
+        message: 'Profile photo updated successfully',
+        profileImageUrl: base64Image
+      });
+    } catch (error) {
+      console.error('Error uploading profile photo:', error);
+      res.status(500).json({ message: 'Failed to upload photo' });
     }
   });
 

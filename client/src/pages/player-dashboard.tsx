@@ -960,21 +960,7 @@
                                                     />
                                                   </div>
 
-                                                  {/* Edit actions */}
-                                                  {isEditingProfile && (
-                                                    <div className="flex justify-end gap-3 pt-4">
-                                                      <Button variant="outline" onClick={() => setIsEditingProfile(false)}>
-                                                        Cancel
-                                                      </Button>
-                                                      <Button
-                                                        className="bg-red-600 hover:bg-red-700"
-                                                        onClick={() => updateProfile.mutate(editableProfile)}
-                                                        disabled={updateProfile.isPending}
-                                                      >
-                                                        {updateProfile.isPending ? "Saving…" : "Save Changes"}
-                                                      </Button>
-                                                    </div>
-                                                  )}
+
                                                 </CardContent>
                                               </Card>
 

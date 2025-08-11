@@ -72,13 +72,27 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated) {
+  // Only show landing page if we're not loading and definitely not authenticated
+  if (!isLoading && !user) {
     console.log("User not authenticated, showing landing page");
     return (
       <Switch>
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
+    );
+  }
+  
+  // If still loading, show loading state
+  if (isLoading) {
+    console.log("Authentication loading, showing spinner");
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
     );
   }
 
@@ -91,7 +105,8 @@ function Router() {
   
   const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
-  if (isAuthenticated && !hasCompletedProfileSetup) {
+  // If we have a user and they haven't completed profile setup, show profile selection
+  if (user && !hasCompletedProfileSetup) {
     console.log('Redirecting to profile selection - profile not completed');
     return (
       <Switch>

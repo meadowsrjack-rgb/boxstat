@@ -425,23 +425,9 @@
 
                                       {/* Main */}
                                       <main className="max-w-md mx-auto">
-                                        {/* Avatar header with trophies and badges on sides */}
+                                        {/* Avatar header */}
                                         <div className="px-6 py-6 text-center">
-                                          <div className="flex items-center justify-between mb-2">
-                                            {/* Trophy count - left side */}
-                                            <div 
-                                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-                                              onClick={() => setLocation("/trophies-badges")}
-                                            >
-                                              <div className="relative">
-                                                <Trophy className="h-8 w-8 text-yellow-500" />
-                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                                  {awardsSummary?.filter((award: any) => award.category === 'trophy').length || 0}
-                                                </div>
-                                              </div>
-                                              <span className="text-xs text-gray-600 mt-1">Trophies</span>
-                                            </div>
-
+                                          <div className="flex justify-center mb-2">
                                             {/* Main Avatar - center */}
                                             <div className="relative">
                                               <Avatar className="h-20 w-20">
@@ -461,20 +447,6 @@
                                               >
                                                 <span className="text-lg font-bold">+</span>
                                               </Button>
-                                            </div>
-
-                                            {/* Badge count - right side */}
-                                            <div 
-                                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-                                              onClick={() => setLocation("/trophies-badges")}
-                                            >
-                                              <div className="relative">
-                                                <Award className="h-8 w-8 text-blue-500" />
-                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                                  {awardsSummary?.filter((award: any) => award.category === 'badge').length || 0}
-                                                </div>
-                                              </div>
-                                              <span className="text-xs text-gray-600 mt-1">Badges</span>
                                             </div>
                                           </div>
                                         </div>

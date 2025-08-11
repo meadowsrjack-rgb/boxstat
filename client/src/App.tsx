@@ -73,6 +73,7 @@ function Router() {
   }
 
   if (!isAuthenticated) {
+    console.log("User not authenticated, showing landing page");
     return (
       <Switch>
         <Route path="/" component={Landing} />

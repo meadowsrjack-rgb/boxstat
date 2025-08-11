@@ -27,14 +27,23 @@ export default function ProfileSelection() {
   });
 
   const selectProfileMutation = useMutation({
-    mutationFn: async (profileId: string) =>
-      apiRequest(`/api/profiles/${profileId}/select`, { method: "POST" }),
+    mutationFn: async (profileId: string) => {
+      console.log("Selecting profile:", profileId);
+      const result = await apiRequest(`/api/profiles/${profileId}/select`, { method: "POST" });
+      console.log("Profile selection result:", result);
+      return result;
+    },
     onSuccess: (data: any) => {
+      console.log("Profile selected successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       const t = (data?.profileType as Profile["profileType"]) || "parent";
+      console.log("Navigating to dashboard for profile type:", t);
       if (t === "player") setLocation("/player-dashboard");
       else if (t === "coach") setLocation("/coach-dashboard");
       else setLocation("/parent-dashboard");
+    },
+    onError: (error: any) => {
+      console.error("Profile selection failed:", error);
     },
   });
 

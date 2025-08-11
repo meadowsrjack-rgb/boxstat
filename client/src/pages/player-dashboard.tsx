@@ -15,7 +15,6 @@
                                   Shirt,
                                   User,
                                   ChevronRight,
-                                  ChevronLeft,
                                   Calendar as CalendarIcon,
                                   MessageCircle,
                                   Send,
@@ -27,7 +26,7 @@
                                   Award,
                                 } from "lucide-react";
                                 import { useEffect, useMemo, useState } from "react";
-                                import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
+                                import { format, isSameDay, isAfter, startOfDay } from "date-fns";
                                 import { Input } from "@/components/ui/input";
                                 import { useToast } from "@/hooks/use-toast";
                                 import {
@@ -115,10 +114,6 @@
                                     tiktok: "",
                                   });
 
-                                  // Calendar state for activity tab
-                                  const [currentDate, setCurrentDate] = useState(new Date());
-                                  const [selectedDate, setSelectedDate] = useState(new Date());
-
                                   // ---- Early guard
                                   const currentUser = user; // demo mode removed
                                   if (!currentUser) {
@@ -154,10 +149,9 @@
                                     refetchInterval: false,
                                   });
 
-                                  // Fetch events from Google Calendar API instead
-                                  const { data: allEvents = [] as UypEvent[], isLoading: eventsLoading } = useQuery({
-                                    queryKey: ["/api/events"],
-                                    enabled: true,
+                                  const { data: userEvents = [] as UypEvent[] } = useQuery({
+                                    queryKey: ["/api/users", currentUser.id, "events"],
+                                    enabled: !!currentUser.id,
                                   });
 
                                   const { data: childEvents = [] as UypEvent[] } = useQuery({
@@ -165,8 +159,8 @@
                                     enabled: !!selectedChildId,
                                   });
 
-                                  // Use Google Calendar events for display
-                                  const displayEvents: UypEvent[] = allEvents || [];
+                                  const displayEvents: UypEvent[] =
+                                    (childEvents?.length ? childEvents : userEvents) || [];
 
                                   // Player Tasks (non-clickable items; completion is trigger-based)
                                   const { data: tasks = [] as Task[] } = useQuery({
@@ -323,80 +317,6 @@
                                     return () => socket.close();
                                   }, [currentUser?.id, userTeam?.id, queryClient]);
 
-                                  // Calendar helper functions
-                                  const eventsForSelectedDate = useMemo(() => {
-                                    return displayEvents.filter(event => 
-                                      isSameDay(parseISO(event.startTime || event.start_time || ""), selectedDate)
-                                    );
-                                  }, [displayEvents, selectedDate]);
-
-                                  const eventDateStrings = useMemo(() => {
-                                    const eventDates = new Set<string>();
-                                    displayEvents.forEach(event => {
-                                      try {
-                                        const eventDate = parseISO(event.startTime || event.start_time || "");
-                                        eventDates.add(eventDate.toDateString());
-                                      } catch {
-                                        // Skip invalid dates
-                                      }
-                                    });
-                                    return eventDates;
-                                  }, [displayEvents]);
-
-                                  const renderCalendar = () => {
-                                    const year = currentDate.getFullYear();
-                                    const month = currentDate.getMonth();
-                                    
-                                    const firstDay = startOfMonth(currentDate);
-                                    const lastDay = endOfMonth(currentDate);
-                                    const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
-                                    const startingDayOfWeek = getDay(firstDay);
-                                    
-                                    const calendarDays = [];
-                                    
-                                    // Previous month's trailing days
-                                    const prevMonth = new Date(year, month - 1, 0);
-                                    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
-                                      const day = new Date(year, month - 1, prevMonth.getDate() - i);
-                                      calendarDays.push({ date: day, isCurrentMonth: false });
-                                    }
-                                    
-                                    // Current month's days
-                                    daysInMonth.forEach(day => {
-                                      calendarDays.push({ date: day, isCurrentMonth: true });
-                                    });
-                                    
-                                    // Next month's leading days (fill to complete the grid if needed)
-                                    const totalCells = calendarDays.length;
-                                    const remainingCells = totalCells < 35 ? 35 - totalCells : 42 - totalCells;
-                                    for (let day = 1; day <= remainingCells; day++) {
-                                      const nextMonthDay = new Date(year, month + 1, day);
-                                      calendarDays.push({ date: nextMonthDay, isCurrentMonth: false });
-                                    }
-                                    
-                                    return calendarDays;
-                                  };
-
-                                  const formatEventTime = (startTime: string) => {
-                                    try {
-                                      return format(parseISO(startTime), 'h:mm a');
-                                    } catch {
-                                      return 'Time TBD';
-                                    }
-                                  };
-
-                                  const previousMonth = () => {
-                                    setCurrentDate(subMonths(currentDate, 1));
-                                  };
-
-                                  const nextMonth = () => {
-                                    setCurrentDate(addMonths(currentDate, 1));
-                                  };
-
-                                  const selectDate = (date: Date) => {
-                                    setSelectedDate(date);
-                                  };
-
                                   // Helpers
                                   const initials = `${(currentChild?.firstName || currentUser.firstName || "")
                                     .charAt(0)}${(currentChild?.lastName || currentUser.lastName || "")
@@ -534,106 +454,145 @@
                                         <div className="px-6">
                                           {/* Activity */}
                                           {activeTab === "activity" && (
-                                            <div>
-                                              {/* Beautiful Calendar Component */}
-                                              <div className="bg-gradient-to-br from-red-600 via-red-700 to-red-800 p-3 rounded-3xl mx-auto max-w-sm">
-                                                <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-                                                  {/* Header */}
-                                                  <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-5 py-6 text-center">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                      <button 
-                                                        className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                                                        onClick={previousMonth}
-                                                      >
-                                                        <ChevronLeft className="w-5 h-5" />
-                                                      </button>
-                                                      <div className="text-xl font-semibold">
-                                                        {format(currentDate, 'MMMM yyyy')}
-                                                      </div>
-                                                      <button 
-                                                        className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-                                                        onClick={nextMonth}
-                                                      >
-                                                        <ChevronRight className="w-5 h-5" />
-                                                      </button>
-                                                    </div>
-                                                  </div>
-                                                  
-                                                  {/* Calendar */}
-                                                  <div className="p-4">
-                                                    {eventsLoading ? (
-                                                      <div className="text-center text-gray-500 py-8">Loading calendar...</div>
-                                                    ) : (
-                                                      <>
-                                                        {/* Weekdays */}
-                                                        <div className="grid grid-cols-7 gap-1 mb-3">
-                                                          {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
-                                                            <div key={day} className="text-center font-semibold text-gray-600 text-xs py-2">
-                                                              {day}
-                                                            </div>
-                                                          ))}
-                                                        </div>
-                                                        
-                                                        {/* Days */}
-                                                        <div className="grid grid-cols-7 gap-1 mb-4">
-                                                          {renderCalendar().map((dayObj, index) => {
-                                                            const { date, isCurrentMonth } = dayObj;
-                                                            const isToday = isDateToday(date);
-                                                            const isSelected = isSameDay(date, selectedDate);
-                                                            const hasEvent = eventDateStrings.has(date.toDateString());
-                                                            
-                                                            return (
-                                                              <div
-                                                                key={index}
-                                                                className={`
-                                                                  aspect-square flex items-center justify-center rounded-xl text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-gray-100 relative
-                                                                  ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-800'}
-                                                                  ${isToday ? 'bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold' : ''}
-                                                                  ${isSelected && !isToday ? 'bg-red-600 text-white' : ''}
-                                                                `}
-                                                                onClick={() => selectDate(date)}
-                                                              >
-                                                                {format(date, 'd')}
-                                                                {hasEvent && (
-                                                                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                                                                )}
-                                                              </div>
-                                                            );
-                                                          })}
-                                                        </div>
-                                                      </>
-                                                    )}
-                                                  </div>
-                                                  
-                                                  {/* Events Section */}
-                                                  <div className="px-4 pb-4 border-t border-gray-100 mt-2">
-                                                    <div className="font-semibold text-gray-800 text-base my-4">
-                                                      {isSameDay(selectedDate, new Date()) ? "Today's Events" : `Events for ${format(selectedDate, 'MMM d')}`}
-                                                    </div>
-                                                    <div className="max-h-40 overflow-y-auto">
-                                                      {eventsForSelectedDate.length > 0 ? (
-                                                        eventsForSelectedDate.map(event => (
-                                                          <div 
-                                                            key={event.id} 
-                                                            className="bg-red-50 border-l-4 border-red-600 px-3 py-2 mb-2 rounded-lg"
-                                                          >
-                                                            <div className="text-xs text-gray-600 font-medium">
-                                                              {formatEventTime(event.startTime || event.start_time || "")}
-                                                            </div>
-                                                            <div className="text-sm text-gray-800 font-semibold mt-1">
-                                                              {event.title}
-                                                            </div>
-                                                          </div>
-                                                        ))
-                                                      ) : (
-                                                        <div className="text-center text-gray-400 py-4 text-sm">
-                                                          No events for this day
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  </div>
+                                            <div className="space-y-8">
+                                              {/* Today */}
+                                              <section className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                  <h3 className="text-lg font-bold text-gray-900">Today</h3>
                                                 </div>
-                                              </div>
+
+                                                <div className="space-y-3">
+                                                  {todayEvents.length > 0 ? (
+                                                    todayEvents.map((event) => (
+                                                      <div
+                                                        key={event.id}
+                                                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+                                                      >
+                                                        <div className="flex-1">
+                                                          <div className="flex items-center gap-2 mb-1">
+                                                            <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
+                                                              {event.eventType || "Event"}
+                                                            </Badge>
+                                                          </div>
+                                                          <h4 className="font-semibold text-gray-900 text-sm">
+                                                            {event.title}
+                                                          </h4>
+                                                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                                                            <span className="flex items-center gap-1">
+                                                              <CalendarIcon className="w-3 h-3" />
+                                                              {format(
+                                                                new Date(event.startTime || (event as any).start_time),
+                                                                "h:mm a"
+                                                              )}
+                                                            </span>
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    ))
+                                                  ) : (
+                                                    <div className="text-sm text-gray-500">No events today.</div>
+                                                  )}
+                                                </div>
+
+                                                {/* Tasks */}
+                                                <div className="space-y-2">
+                                                  {tasks.length ? (
+                                                    tasks
+                                                      .filter((t) => t.status === "PENDING")
+                                                      .map((t) => (
+                                                        <div
+                                                          key={t.id}
+                                                          className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+                                                        >
+                                                          <div className="flex items-center gap-2">
+                                                            <Badge variant="secondary" className="text-[10px]">
+                                                              {t.type === "ATTENDANCE"
+                                                                ? "Attendance"
+                                                                : t.type === "PROFILE_BIO"
+                                                                ? "Complete Bio"
+                                                                : t.type === "HOMEWORK"
+                                                                ? "Homework"
+                                                                : "Module"}
+                                                            </Badge>
+                                                            <span className="text-sm text-gray-800">
+                                                              {t.title}
+                                                            </span>
+                                                          </div>
+
+                                                          {t.type === "HOMEWORK" ? (
+                                                            <Button
+                                                              size="sm"
+                                                              onClick={() => completeTaskMutation.mutate(t.id)}
+                                                              disabled={completeTaskMutation.isPending}
+                                                              className="h-8"
+                                                            >
+                                                              Mark Done
+                                                            </Button>
+                                                          ) : (
+                                                            <span className="text-[11px] text-gray-500">auto</span>
+                                                          )}
+                                                        </div>
+                                                      ))
+                                                  ) : (
+                                                    <div className="text-sm text-gray-500">No tasks pending.</div>
+                                                  )}
+                                                </div>
+                                              </section>
+
+                                              {/* Upcoming */}
+                                              <section className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                  <h3 className="text-lg font-bold text-gray-900">Upcoming</h3>
+                                                  <Button
+                                                    variant="ghost"
+                                                    className="text-sm text-gray-600 hover:text-gray-800"
+                                                    onClick={() => setLocation("/schedule")}
+                                                  >
+                                                    Full calendar
+                                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                                  </Button>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                  {upcomingEvents.length ? (
+                                                    upcomingEvents.map((event) => (
+                                                      <div
+                                                        key={event.id}
+                                                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
+                                                      >
+                                                        <div className="flex-1">
+                                                          <div className="flex items-center gap-2 mb-1">
+                                                            <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">
+                                                              {event.eventType || "Event"}
+                                                            </Badge>
+                                                          </div>
+                                                          <h4 className="font-semibold text-gray-900 text-sm">
+                                                            {event.title}
+                                                          </h4>
+                                                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                                                            <span className="flex items-center gap-1">
+                                                              <CalendarIcon className="w-3 h-3" />
+                                                              {format(
+                                                                new Date(event.startTime || (event as any).start_time),
+                                                                "MMM d"
+                                                              )}
+                                                            </span>
+                                                            <span className="flex items-center gap-1">
+                                                              🕐{" "}
+                                                              {format(
+                                                                new Date(event.startTime || (event as any).start_time),
+                                                                "h:mm a"
+                                                              )}
+                                                            </span>
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    ))
+                                                  ) : (
+                                                    <div className="text-sm text-gray-500">No upcoming events.</div>
+                                                  )}
+                                                </div>
+                                              </section>
                                             </div>
                                           )}
 

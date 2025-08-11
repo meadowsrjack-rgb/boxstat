@@ -60,19 +60,19 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
 
   // Get team events/schedule
   const { data: teamEvents = [] } = useQuery({
-    queryKey: ["/api/team-events", selectedTeam || coachTeams?.[0]?.id],
-    enabled: !!(selectedTeam || coachTeams?.[0]?.id),
+    queryKey: ["/api/team-events", selectedTeam || (coachTeams as any[])?.[0]?.id],
+    enabled: !!(selectedTeam || (coachTeams as any[])?.[0]?.id),
   });
 
   // Get team players
   const { data: teamPlayers = [] } = useQuery({
-    queryKey: ["/api/team-players", selectedTeam || coachTeams?.[0]?.id],
-    enabled: !!(selectedTeam || coachTeams?.[0]?.id),
+    queryKey: ["/api/team-players", selectedTeam || (coachTeams as any[])?.[0]?.id],
+    enabled: !!(selectedTeam || (coachTeams as any[])?.[0]?.id),
   });
 
   const currentTeam = selectedTeam 
-    ? coachTeams?.find(team => team.id === selectedTeam) 
-    : coachTeams?.[0];
+    ? (coachTeams as any[])?.find((team: any) => team.id === selectedTeam) 
+    : (coachTeams as any[])?.[0];
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (announcementData: any) => {
@@ -117,7 +117,7 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
       const playerId = playerIdMatch ? playerIdMatch[1] : qrData;
       
       // Find the player in the team roster
-      const player = teamPlayers?.find(p => p.id === playerId);
+      const player = (teamPlayers as any[])?.find((p: any) => p.id === playerId);
       
       if (!player) {
         toast({
@@ -141,9 +141,9 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
         : "⚠ Registration or payment issues";
 
       toast({
-        title: `${player.firstName} ${player.lastName} Checked In`,
+        title: `${player?.firstName || 'Player'} ${player?.lastName || ''} Checked In`,
         description: `${statusText}\nAttendance: ${currentAttendance + 1} practices`,
-        variant: statusColor,
+        variant: statusColor as any,
       });
 
       // TODO: Update SportsEngine attendance via API
@@ -176,7 +176,7 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
     );
   }
 
-  if (user?.userType !== "admin") {
+  if ((user as any)?.userType !== "admin") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -184,7 +184,7 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
             <div className="text-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
               <p className="text-gray-600">You don't have permission to access this page.</p>
-              <p className="text-sm text-gray-500 mt-2">Current user type: {user?.userType}</p>
+              <p className="text-sm text-gray-500 mt-2">Current user type: {(user as any)?.userType}</p>
             </div>
           </CardContent>
         </Card>
@@ -209,7 +209,7 @@ export default function AdminDashboard({ demoProfile }: { demoProfile?: any }) {
                   Coach Dashboard
                 </h1>
                 <p className="text-sm text-gray-600">
-                  Welcome back, Coach {user?.firstName}!
+                  Welcome back, Coach {(user as any)?.firstName}!
                 </p>
               </div>
             </div>

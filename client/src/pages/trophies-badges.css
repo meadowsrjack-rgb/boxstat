@@ -1,0 +1,239 @@
+/* Trophies & Badges Page Styles */
+
+.container {
+  @apply max-w-6xl mx-auto px-4 py-8;
+}
+
+.header {
+  @apply mb-8;
+}
+
+/* Section Titles */
+.section-title {
+  @apply text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent;
+}
+
+.section-subtitle {
+  @apply text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto;
+}
+
+/* Trophies Section */
+.trophies-section {
+  @apply mb-12;
+}
+
+.trophies-grid {
+  @apply space-y-8;
+}
+
+.trophy-subsection {
+  @apply space-y-6;
+}
+
+.subsection-title {
+  @apply text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200;
+}
+
+.subsection-description {
+  @apply text-gray-600 dark:text-gray-300 mb-4;
+}
+
+.trophy-cards-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+/* Trophy Cards */
+.trophy-card {
+  @apply bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 
+         p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105;
+}
+
+.trophy-card.legacy-trophy {
+  @apply bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20
+         border-yellow-200 dark:border-yellow-700;
+}
+
+.trophy-card.team-trophy {
+  @apply bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20
+         border-blue-200 dark:border-blue-700;
+}
+
+.trophy-card.achieved {
+  @apply bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20
+         border-green-200 dark:border-green-700;
+}
+
+.trophy-icon-container {
+  @apply flex items-center justify-between mb-4;
+}
+
+.trophy-icon {
+  @apply text-4xl;
+}
+
+.trophy-status {
+  @apply text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 
+         text-gray-600 dark:text-gray-300;
+}
+
+.trophy-status.awarded {
+  @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400;
+}
+
+.trophy-title {
+  @apply text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200;
+}
+
+.trophy-description {
+  @apply text-sm text-gray-600 dark:text-gray-300;
+}
+
+/* Badges Section */
+.badges-section {
+  @apply space-y-8;
+}
+
+/* Stats Bar */
+.stats-bar {
+  @apply flex flex-wrap gap-2 justify-center mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl;
+}
+
+.stat-item {
+  @apply flex flex-col items-center p-3 rounded-lg cursor-pointer transition-all duration-200
+         bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600
+         hover:shadow-md hover:scale-105;
+}
+
+.stat-item.active {
+  @apply bg-blue-500 text-white border-blue-600 shadow-lg;
+}
+
+.stat-number {
+  @apply text-xl font-bold;
+}
+
+.stat-label {
+  @apply text-xs mt-1 font-medium;
+}
+
+/* Achievement Grid */
+.achievements-grid {
+  @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4;
+}
+
+/* Achievement Cards */
+.achievement-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700
+         p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105
+         flex flex-col items-center text-center;
+}
+
+/* Tier-based colors */
+.achievement-card.hall-of-fame {
+  @apply bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20
+         border-yellow-300 dark:border-yellow-600;
+}
+
+.achievement-card.superstar {
+  @apply bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20
+         border-purple-300 dark:border-purple-600;
+}
+
+.achievement-card.all-star {
+  @apply bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20
+         border-blue-300 dark:border-blue-600;
+}
+
+.achievement-card.starter {
+  @apply bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20
+         border-green-300 dark:border-green-600;
+}
+
+.achievement-card.prospect {
+  @apply bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20
+         border-gray-300 dark:border-gray-600;
+}
+
+.achievement-card.achieved {
+  @apply bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20
+         border-emerald-300 dark:border-emerald-600;
+}
+
+.icon-container {
+  @apply mb-3;
+}
+
+.achievement-icon {
+  @apply text-3xl mb-2;
+}
+
+.progress-indicator {
+  @apply text-xs font-semibold px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700
+         text-gray-600 dark:text-gray-300;
+}
+
+.progress-indicator.completed {
+  @apply bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400;
+}
+
+.achievement-title {
+  @apply text-sm font-semibold text-gray-800 dark:text-gray-200;
+}
+
+/* Filtering - hide non-matching cards */
+.achievements-grid[data-filter="completed"] .achievement-card:not(.achieved) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="in-progress"] .achievement-card.achieved {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="hall-of-fame"] .achievement-card:not(.hall-of-fame) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="superstar"] .achievement-card:not(.superstar) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="all-star"] .achievement-card:not(.all-star) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="starter"] .achievement-card:not(.starter) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+.achievements-grid[data-filter="prospect"] .achievement-card:not(.prospect) {
+  @apply opacity-30 scale-95 pointer-events-none;
+}
+
+/* Modal styles (if needed) */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white dark:bg-gray-800 rounded-xl p-6 m-4 max-w-md w-full;
+}
+
+.modal-header {
+  @apply flex items-center gap-3 mb-4;
+}
+
+.modal-icon {
+  @apply text-4xl;
+}
+
+.modal-title {
+  @apply text-xl font-semibold text-gray-800 dark:text-gray-200;
+}
+
+.modal-description {
+  @apply text-gray-600 dark:text-gray-300 leading-relaxed mb-4;
+}
+
+.modal-close {
+  @apply w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors;
+}

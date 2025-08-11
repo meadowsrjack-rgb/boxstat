@@ -80,12 +80,12 @@ export default function ParentDashboard({ demoProfile }: { demoProfile?: any }) 
   ];
 
   // Get child profiles (use demo data if in demo mode)
-  const { data: childProfiles } = useQuery({
+  const { data: childProfiles = [] } = useQuery({
     queryKey: ["/api/child-profiles", user?.id],
     enabled: !!user?.id && !isDemoMode,
   });
   
-  const displayChildProfiles = isDemoMode ? demoChildProfiles : childProfiles;
+  const displayChildProfiles = isDemoMode ? demoChildProfiles : (childProfiles as any[]);
 
   const { data: userEvents = [] } = useQuery({
     queryKey: ["/api/users", user?.id, "events"],
@@ -204,13 +204,13 @@ export default function ParentDashboard({ demoProfile }: { demoProfile?: any }) 
               </div>
               <div className="flex items-center space-x-2">
                 <img 
-                  src={user.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
+                  src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
                   alt="Profile" 
                   className="w-8 h-8 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
                   onClick={() => setLocation('/profile')}
                 />
                 <span className="text-sm font-medium text-gray-700">
-                  {user.firstName} {user.lastName}
+                  {(user as any)?.firstName} {(user as any)?.lastName}
                 </span>
               </div>
             </div>
@@ -295,7 +295,7 @@ export default function ParentDashboard({ demoProfile }: { demoProfile?: any }) 
               <div className="text-center p-4 bg-purple-50 rounded-lg">
                 <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
                 <h4 className="font-semibold text-gray-900 text-sm">Players</h4>
-                <p className="text-xs text-purple-600">{displayChildProfiles?.length || 0} Registered</p>
+                <p className="text-xs text-purple-600">{Array.isArray(displayChildProfiles) ? displayChildProfiles.length : 0} Registered</p>
               </div>
             </div>
           </CardContent>

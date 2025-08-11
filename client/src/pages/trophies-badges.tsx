@@ -1,15 +1,15 @@
-                    import React, { useEffect, useState } from "react";
+                    import { useEffect, useState } from "react";
                     import "./trophies-badges.css";
 
                     export default function TrophiesBadges() {
                       const [filter, setFilter] = useState("all");
                       const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "" });
 
-                      const openModal = (icon, title, desc) => setModal({ open: true, icon, title, desc });
+                      const openModal = (icon: string, title: string, desc: string) => setModal({ open: true, icon, title, desc });
                       const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "" });
 
                       useEffect(() => {
-                        const onKey = (e) => e.key === "Escape" && closeModal();
+                        const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
                         window.addEventListener("keydown", onKey);
                         return () => window.removeEventListener("keydown", onKey);
                       }, []);

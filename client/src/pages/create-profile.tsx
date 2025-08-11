@@ -30,7 +30,7 @@ export default function CreateProfile() {
   const [selectedType, setSelectedType] = useState<"parent" | "player" | "coach" | null>(null);
 
   // Get available teams for player profiles
-  const { data: teams = [] } = useQuery({
+  const { data: teams = [] } = useQuery<Array<{id: number, name: string, ageGroup: string}>>({
     queryKey: ["/api/teams"],
     enabled: selectedType === "player",
   });
@@ -44,7 +44,7 @@ export default function CreateProfile() {
       phoneNumber: "",
       address: "",
       teamId: undefined,
-      jerseyNumber: undefined,
+      jerseyNumber: "",
       position: "",
       schoolGrade: "",
     },
@@ -60,7 +60,7 @@ export default function CreateProfile() {
         credentials: "include", // Include cookies for authentication
         body: JSON.stringify({
           ...data,
-          accountId: user?.id,
+          accountId: user.id,
         }),
       });
       
@@ -71,19 +71,21 @@ export default function CreateProfile() {
       
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
+    onSuccess: (data) => {
+      console.log("Profile created successfully:", data);
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user.id] });
       setLocation("/profile-selection");
     },
     onError: (error: Error) => {
       console.error("Profile creation failed:", error);
-      // You could add toast notification here if needed
+      console.error("Error details:", error.message);
     },
   });
 
   const onSubmit = (data: CreateProfileForm) => {
     console.log("Form submitted with data:", data);
     console.log("Current user:", user);
+    console.log("Submitting profile creation...");
     createProfileMutation.mutate(data);
   };
 
@@ -244,7 +246,8 @@ export default function CreateProfile() {
                         <FormControl>
                           <Input 
                             placeholder="(555) 123-4567" 
-                            {...field} 
+                            {...field}
+                            value={field.value || ""}
                             data-testid="input-phone"
                           />
                         </FormControl>
@@ -272,7 +275,7 @@ export default function CreateProfile() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {teams.map((team: any) => (
+                                {teams.map((team) => (
                                   <SelectItem key={team.id} value={team.id.toString()}>
                                     {team.name} - {team.ageGroup}
                                   </SelectItem>
@@ -296,7 +299,8 @@ export default function CreateProfile() {
                                   type="number"
                                   placeholder="23"
                                   {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || undefined)}
+                                  value={field.value || ""}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || "")}
                                   data-testid="input-jersey"
                                 />
                               </FormControl>
@@ -311,7 +315,7 @@ export default function CreateProfile() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Position</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                                 <FormControl>
                                   <SelectTrigger data-testid="select-position">
                                     <SelectValue placeholder="Select position" />
@@ -337,7 +341,7 @@ export default function CreateProfile() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>School Grade</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-grade">
                                   <SelectValue placeholder="Select grade" />
@@ -368,6 +372,7 @@ export default function CreateProfile() {
                           <Textarea 
                             placeholder="123 Main St, City, State 12345"
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-address"
                           />
                         </FormControl>

@@ -1,0 +1,433 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=LlL526--zzwM' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=LlL526--zzwM' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=0783b5be:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+App.tsx:47 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:101 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+App.tsx:102 Profile completed status: false
+App.tsx:103 IsAuthenticated: true
+App.tsx:104 IsLoading: false
+App.tsx:110 Redirecting to profile selection - profile not completed
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'parent', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: null
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:101 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+App.tsx:102 Profile completed status: false
+App.tsx:103 IsAuthenticated: true
+App.tsx:104 IsLoading: false
+App.tsx:110 Redirecting to profile selection - profile not completed
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'parent', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: null
+create-profile.tsx:110 Type selected: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'a', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'a', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'ac', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'ack', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'ac', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'a', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: '', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'j', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'j', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'ja', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jac', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: '', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+create-profile.tsx:430 Create Profile button clicked!
+create-profile.tsx:431 Form valid: false
+create-profile.tsx:432 Form errors: {}
+create-profile.tsx:222 Form onSubmit triggered!
+create-profile.tsx:223 Form data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:224 Form valid: false
+create-profile.tsx:225 Form errors: {}
+create-profile.tsx:103 Form submitted with data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:104 Current user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+create-profile.tsx:105 Submitting profile creation...
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+create-profile.tsx:65 Starting profile creation mutation with data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:67  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 500 (Internal Server Error)
+mutationFn @ create-profile.tsx:67
+fn @ @tanstack_react-query.js?v=0783b5be:1189
+run @ @tanstack_react-query.js?v=0783b5be:494
+start @ @tanstack_react-query.js?v=0783b5be:536
+execute @ @tanstack_react-query.js?v=0783b5be:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:79 Profile creation response status: 500
+create-profile.tsx:83 Profile creation failed with error: {message: 'Failed to create profile'}
+mutationFn @ create-profile.tsx:83
+await in mutationFn
+fn @ @tanstack_react-query.js?v=0783b5be:1189
+run @ @tanstack_react-query.js?v=0783b5be:494
+start @ @tanstack_react-query.js?v=0783b5be:536
+execute @ @tanstack_react-query.js?v=0783b5be:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:97 Profile creation failed: Error: Failed to create profile
+    at Object.mutationFn (create-profile.tsx:84:15)
+onError @ create-profile.tsx:97
+execute @ @tanstack_react-query.js?v=0783b5be:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:98 Error details: Failed to create profile
+onError @ create-profile.tsx:98
+execute @ @tanstack_react-query.js?v=0783b5be:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+create-profile.tsx:430 Create Profile button clicked!
+create-profile.tsx:431 Form valid: false
+create-profile.tsx:432 Form errors: {}
+create-profile.tsx:222 Form onSubmit triggered!
+create-profile.tsx:223 Form data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:224 Form valid: false
+create-profile.tsx:225 Form errors: {}
+create-profile.tsx:103 Form submitted with data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:104 Current user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+create-profile.tsx:105 Submitting profile creation...
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player
+create-profile.tsx:65 Starting profile creation mutation with data: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:67  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 500 (Internal Server Error)
+mutationFn @ create-profile.tsx:67
+fn @ @tanstack_react-query.js?v=0783b5be:1189
+run @ @tanstack_react-query.js?v=0783b5be:494
+start @ @tanstack_react-query.js?v=0783b5be:536
+execute @ @tanstack_react-query.js?v=0783b5be:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:79 Profile creation response status: 500
+create-profile.tsx:83 Profile creation failed with error: {message: 'Failed to create profile'}
+mutationFn @ create-profile.tsx:83
+await in mutationFn
+fn @ @tanstack_react-query.js?v=0783b5be:1189
+run @ @tanstack_react-query.js?v=0783b5be:494
+start @ @tanstack_react-query.js?v=0783b5be:536
+execute @ @tanstack_react-query.js?v=0783b5be:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:97 Profile creation failed: Error: Failed to create profile
+    at Object.mutationFn (create-profile.tsx:84:15)
+onError @ create-profile.tsx:97
+execute @ @tanstack_react-query.js?v=0783b5be:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+create-profile.tsx:98 Error details: Failed to create profile
+onError @ create-profile.tsx:98
+execute @ @tanstack_react-query.js?v=0783b5be:1254
+await in execute
+mutate @ @tanstack_react-query.js?v=0783b5be:2630
+(anonymous) @ @tanstack_react-query.js?v=0783b5be:3295
+onSubmit @ create-profile.tsx:106
+(anonymous) @ chunk-4BFJKWC4.js?v=0783b5be:1465
+await in (anonymous)
+onSubmit @ create-profile.tsx:226
+callCallback2 @ chunk-RPCDYKBN.js?v=0783b5be:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=0783b5be:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=0783b5be:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=0783b5be:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=0783b5be:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=0783b5be:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=0783b5be:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=0783b5be:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=0783b5be:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=0783b5be:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=0783b5be:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=0783b5be:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=0783b5be:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=0783b5be:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=0783b5be:5449
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:60 Current form values: {profileType: 'player', firstName: 'jack', lastName: 'm', phoneNumber: '', address: '', …}
+create-profile.tsx:61 Selected type: player

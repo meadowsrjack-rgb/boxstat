@@ -1004,13 +1004,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating profile with request body:", req.body);
       console.log("User claims:", req.user.claims);
       
+      const userId = req.user.claims.sub;
+      
+      // Ensure account exists (create if needed)
+      try {
+        let account = await storage.getAccount(userId);
+        if (!account) {
+          console.log("Account not found, creating new account");
+          account = await storage.createAccount({
+            id: userId,
+            email: req.user.claims.email,
+            primaryAccountType: req.body.profileType || "parent",
+            accountCompleted: false,
+          });
+          console.log("Account created:", account);
+        }
+      } catch (accountError) {
+        console.error("Error handling account:", accountError);
+        return res.status(500).json({ message: "Failed to create account" });
+      }
+      
       const profileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const qrCodeData = `UYP-${Date.now()}-${req.user.claims.sub}`;
+      const qrCodeData = `UYP-${Date.now()}-${userId}`;
       
       const profileData = {
         ...req.body,
         id: profileId,
-        accountId: req.user.claims.sub,
+        accountId: userId,
         qrCodeData: qrCodeData,
         profileCompleted: false,
         isActive: true,

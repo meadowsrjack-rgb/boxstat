@@ -980,6 +980,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google Calendar integration routes
   app.use('/api/calendar', calendarRoutes);
 
+  // Profile Management Routes (new unified system)
+  app.get('/api/profiles/:accountId', isAuthenticated, async (req: any, res) => {
+    try {
+      const accountId = req.params.accountId;
+      const userId = req.user.claims.sub;
+      
+      // Ensure user can only access their own profiles
+      if (accountId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const profiles = await storage.getAccountProfiles(accountId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
+      res.status(500).json({ message: "Failed to fetch profiles" });
+    }
+  });
+
+  app.post('/api/profiles', isAuthenticated, async (req: any, res) => {
+    try {
+      const { insertProfileSchema } = await import("@shared/schema");
+      const profileData = insertProfileSchema.parse({
+        ...req.body,
+        accountId: req.user.claims.sub,
+        id: `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        qrCodeData: `UYP-${Date.now()}-${req.user.claims.sub}`,
+      });
+      const profile = await storage.createProfile(profileData);
+      res.json(profile);
+    } catch (error) {
+      console.error("Error creating profile:", error);
+      res.status(500).json({ message: "Failed to create profile" });
+    }
+  });
+
+  app.post('/api/profiles/:profileId/select', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = req.params.profileId;
+      const userId = req.user.claims.sub;
+      
+      const profile = await storage.selectProfile(userId, profileId);
+      
+      // Update the user's current profile status
+      await storage.updateUser(userId, { 
+        profileCompleted: true,
+        userType: profile.profileType
+      });
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error selecting profile:", error);
+      res.status(500).json({ message: "Failed to select profile" });
+    }
+  });
+
   // Child Profile Management Routes
   app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {
     try {

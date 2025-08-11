@@ -52,16 +52,18 @@ export default function CreateProfile() {
 
   const createProfileMutation = useMutation({
     mutationFn: async (data: CreateProfileForm) => {
-      return apiRequest("/api/profiles", {
+      const response = await fetch("/api/profiles", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           accountId: user?.id,
         }),
       });
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
       setLocation("/profile-selection");
     },
   });

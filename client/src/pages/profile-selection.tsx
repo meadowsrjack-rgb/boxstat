@@ -6,7 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, UserPlus, Settings, Plus } from "lucide-react";
+import { Plus, Settings, User, Users, Briefcase, UserPlus } from "lucide-react";
 import { Profile } from "@shared/schema";
 
 export default function ProfileSelection() {
@@ -23,11 +23,13 @@ export default function ProfileSelection() {
   // Select a profile and navigate to appropriate dashboard
   const selectProfileMutation = useMutation({
     mutationFn: async (profileId: string) => {
-      return apiRequest(`/api/profiles/${profileId}/select`, {
+      const response = await fetch(`/api/profiles/${profileId}/select`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
+      return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       // Update the user context with selected profile
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
@@ -53,7 +55,7 @@ export default function ProfileSelection() {
     setLocation("/create-profile");
   };
 
-  const handleProfileSelect = (profile: Profile) => {
+  const handleProfileSelect = (profile: any) => {
     selectProfileMutation.mutate(profile.id);
   };
 
@@ -93,12 +95,12 @@ export default function ProfileSelection() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <User className="h-5 w-5" />
-              Account: {user?.email}
+              Account: {(user as any)?.email}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-600">
-              You have {profiles.length} profile{profiles.length !== 1 ? 's' : ''} in this account
+              You have {Array.isArray(profiles) ? profiles.length : 0} profile{Array.isArray(profiles) && profiles.length !== 1 ? 's' : ''} in this account
             </p>
           </CardContent>
         </Card>
@@ -117,7 +119,7 @@ export default function ProfileSelection() {
             </Button>
           </div>
 
-          {profiles.length === 0 ? (
+          {!Array.isArray(profiles) || profiles.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <UserPlus className="h-12 w-12 text-gray-400 mb-4" />
@@ -133,7 +135,7 @@ export default function ProfileSelection() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {profiles.map((profile: Profile) => (
+              {profiles.map((profile: any) => (
                 <Card 
                   key={profile.id} 
                   className="cursor-pointer hover:shadow-md transition-shadow"

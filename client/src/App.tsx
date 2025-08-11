@@ -195,11 +195,11 @@ function Router() {
 
 export default function App() {
   return (
-    <TooltipProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
         <Router />
         <Toaster />
-      </QueryClientProvider>
-    </TooltipProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }

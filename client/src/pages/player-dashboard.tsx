@@ -24,7 +24,7 @@
                                   Save,
                                   Trophy,
                                   Award,
-                                  Plus,
+                                  CirclePlus,
                                 } from "lucide-react";
                                 import { useEffect, useMemo, useState } from "react";
                                 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -443,10 +443,10 @@
                                               {/* + button for photo upload */}
                                               <Button
                                                 size="icon"
-                                                className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white hover:bg-gray-50 text-red-600 border-2 border-red-600 hover:border-red-700"
+                                                className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-white hover:bg-gray-50 text-red-600"
                                                 onClick={() => setLocation("/photo-upload")}
                                               >
-                                                <Plus className="w-4 h-4" />
+                                                <CirclePlus className="w-4 h-4" />
                                               </Button>
                                             </div>
                                           </div>

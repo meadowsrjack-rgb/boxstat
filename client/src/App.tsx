@@ -85,10 +85,12 @@ function Router() {
   // This ensures new users go through profile selection after sign-in
   console.log('User data for profile check:', user);
   console.log('Profile completed status:', (user as any)?.profileCompleted);
+  console.log('IsAuthenticated:', isAuthenticated);
+  console.log('IsLoading:', isLoading);
   
   const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
-  if (!hasCompletedProfileSetup) {
+  if (isAuthenticated && !hasCompletedProfileSetup) {
     console.log('Redirecting to profile selection - profile not completed');
     return (
       <Switch>

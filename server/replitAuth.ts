@@ -57,7 +57,8 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
-  await storage.upsertUser({
+  console.log("Upserting user with claims:", claims);
+  const userData = {
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
@@ -65,7 +66,10 @@ async function upsertUser(
     profileImageUrl: claims["profile_image_url"],
     userType: "parent", // Default to parent, can be changed later in account setup
     profileCompleted: false, // Ensure new users go to profile selection
-  });
+  };
+  console.log("User data to upsert:", userData);
+  await storage.upsertUser(userData);
+  console.log("User upserted successfully");
 }
 
 export async function setupAuth(app: Express) {
@@ -112,7 +116,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
+      successRedirect: "/",
       failureRedirect: "/api/login",
     })(req, res, next);
   });

@@ -54,21 +54,36 @@ export default function CreateProfile() {
     mutationFn: async (data: CreateProfileForm) => {
       const response = await fetch("/api/profiles", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies for authentication
         body: JSON.stringify({
           ...data,
           accountId: user?.id,
         }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create profile");
+      }
+      
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", user?.id] });
       setLocation("/profile-selection");
     },
+    onError: (error: Error) => {
+      console.error("Profile creation failed:", error);
+      // You could add toast notification here if needed
+    },
   });
 
   const onSubmit = (data: CreateProfileForm) => {
+    console.log("Form submitted with data:", data);
+    console.log("Current user:", user);
     createProfileMutation.mutate(data);
   };
 

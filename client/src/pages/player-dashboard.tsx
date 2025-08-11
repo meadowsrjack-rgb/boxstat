@@ -796,6 +796,40 @@
 
                                                   {/* Fields */}
                                                   <div className="space-y-4">
+                                                    {/* First Name */}
+                                                    <Row
+                                                      label="First Name"
+                                                      editing={isEditingProfile}
+                                                      viewValue={editableProfile.firstName || currentChild?.firstName || "—"}
+                                                      editControl={
+                                                        <Input
+                                                          value={editableProfile.firstName || ""}
+                                                          onChange={(e) =>
+                                                            setEditableProfile((p) => ({ ...p, firstName: e.target.value }))
+                                                          }
+                                                          placeholder="First name"
+                                                          className="w-48 text-right"
+                                                        />
+                                                      }
+                                                    />
+
+                                                    {/* Last Name */}
+                                                    <Row
+                                                      label="Last Name"
+                                                      editing={isEditingProfile}
+                                                      viewValue={editableProfile.lastName || currentChild?.lastName || "—"}
+                                                      editControl={
+                                                        <Input
+                                                          value={editableProfile.lastName || ""}
+                                                          onChange={(e) =>
+                                                            setEditableProfile((p) => ({ ...p, lastName: e.target.value }))
+                                                          }
+                                                          placeholder="Last name"
+                                                          className="w-48 text-right"
+                                                        />
+                                                      }
+                                                    />
+
                                                     {/* Team */}
                                                     <Row
                                                       label="Team"

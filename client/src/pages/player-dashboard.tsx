@@ -425,18 +425,57 @@
 
                                       {/* Main */}
                                       <main className="max-w-md mx-auto">
-                                        {/* Avatar header (no duplicate name below tabs) */}
+                                        {/* Avatar header with trophies, badges, and + button */}
                                         <div className="px-6 py-6 text-center">
-                                          <div className="flex items-center justify-center space-x-4 mb-2">
-                                            <Avatar className="h-20 w-20">
-                                              <AvatarImage
-                                                src={currentUser.profileImageUrl || currentChild?.profileImageUrl}
-                                                alt="Player Avatar"
-                                              />
-                                              <AvatarFallback className="text-lg font-bold bg-gray-200">
-                                                {initials}
-                                              </AvatarFallback>
-                                            </Avatar>
+                                          <div className="flex items-center justify-center space-x-6 mb-2">
+                                            {/* Trophy count - clickable */}
+                                            <div 
+                                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                                              onClick={() => setLocation("/trophies-badges")}
+                                            >
+                                              <div className="relative">
+                                                <Trophy className="h-8 w-8 text-yellow-500" />
+                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                                  {userAwards?.filter(award => award.category === 'trophy').length || 0}
+                                                </div>
+                                              </div>
+                                              <span className="text-xs text-gray-600 mt-1">Trophies</span>
+                                            </div>
+
+                                            {/* Main Avatar */}
+                                            <div className="relative">
+                                              <Avatar className="h-20 w-20">
+                                                <AvatarImage
+                                                  src={currentUser.profileImageUrl || currentChild?.profileImageUrl}
+                                                  alt="Player Avatar"
+                                                />
+                                                <AvatarFallback className="text-lg font-bold bg-gray-200">
+                                                  {initials}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              {/* + button for photo upload */}
+                                              <Button
+                                                size="icon"
+                                                className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-red-600 hover:bg-red-700 text-white border-2 border-white"
+                                                onClick={() => setLocation("/photo-upload")}
+                                              >
+                                                <span className="text-lg font-bold">+</span>
+                                              </Button>
+                                            </div>
+
+                                            {/* Badge count - clickable */}
+                                            <div 
+                                              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
+                                              onClick={() => setLocation("/trophies-badges")}
+                                            >
+                                              <div className="relative">
+                                                <Award className="h-8 w-8 text-blue-500" />
+                                                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                                                  {userAwards?.filter(award => award.category === 'badge').length || 0}
+                                                </div>
+                                              </div>
+                                              <span className="text-xs text-gray-600 mt-1">Badges</span>
+                                            </div>
                                           </div>
                                         </div>
 

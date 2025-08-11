@@ -32,6 +32,7 @@ import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
 import CalendarSync from "@/pages/calendar-sync";
+import PhotoUpload from "@/pages/photo-upload";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -153,6 +154,7 @@ function Router() {
       <Route path="/training-library" component={TrainingLibrary} />
       <Route path="/test-route" component={TestRoute} />
       <Route path="/trophies-badges" component={TrophiesBadges} />
+      <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
       

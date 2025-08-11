@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useLocation } from "wouter";
+import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 
 // Expected event shape coming from Google Calendar adapter
@@ -13,6 +15,8 @@ type UypEvent = {
 };
 
 export default function SchedulePage() {
+  const [, setLocation] = useLocation();
+  
   // Fetch events from API
   const { data: events = [], isLoading } = useQuery<UypEvent[]>({
     queryKey: ["/api/events"],
@@ -100,12 +104,23 @@ export default function SchedulePage() {
         {/* Header */}
         <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-5 py-8 text-center">
           <div className="flex justify-between items-center mb-4">
-            <button 
-              className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
-              onClick={previousMonth}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setLocation("/player-dashboard")}
+                data-testid="button-back"
+                className="bg-white/20 hover:bg-white/30 text-white hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <button 
+                className="bg-white/20 hover:bg-white/30 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                onClick={previousMonth}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
             <div className="text-2xl font-semibold">
               {format(currentDate, 'MMMM yyyy')}
             </div>

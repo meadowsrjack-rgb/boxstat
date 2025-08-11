@@ -237,10 +237,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProfile(profile: InsertProfile): Promise<Profile> {
-    const [result] = await db.insert(profiles).values({
-      ...profile,
-      qrCodeData: `UYP-${profile.id}-${Date.now()}` // Generate QR code data
-    }).returning();
+    console.log("DatabaseStorage.createProfile called with:", profile);
+    const [result] = await db.insert(profiles).values(profile).returning();
+    console.log("DatabaseStorage.createProfile result:", result);
     return result;
   }
 

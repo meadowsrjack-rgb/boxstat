@@ -1001,14 +1001,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/profiles', isAuthenticated, async (req: any, res) => {
     try {
-      const { insertProfileSchema } = await import("@shared/schema");
-      const profileData = insertProfileSchema.parse({
+      console.log("Creating profile with request body:", req.body);
+      console.log("User claims:", req.user.claims);
+      
+      const profileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const qrCodeData = `UYP-${Date.now()}-${req.user.claims.sub}`;
+      
+      const profileData = {
         ...req.body,
+        id: profileId,
         accountId: req.user.claims.sub,
-        id: `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        qrCodeData: `UYP-${Date.now()}-${req.user.claims.sub}`,
-      });
+        qrCodeData: qrCodeData,
+        profileCompleted: false,
+        isActive: true,
+      };
+      
+      console.log("Profile data to create:", profileData);
+      
       const profile = await storage.createProfile(profileData);
+      console.log("Profile created successfully:", profile);
       res.json(profile);
     } catch (error) {
       console.error("Error creating profile:", error);

@@ -5,41 +5,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
-// All skill categories from the image
+// All skill categories with correct breakdown
 const SKILL_CATEGORIES = [
   {
     name: "SHOOTING",
-    skills: ["LAYUP", "MID RANGE", "LONG RANGE", "LEFT", "RIGHT", "CONTROL"],
+    skills: ["LAYUP", "2PT RANGE", "3PT RANGE"],
     averageScore: 72
   },
   {
     name: "DRIBBLING", 
-    skills: ["SPEED", "BOUNCE", "CHEST", "OVERHEAD", "CATCHING"],
+    skills: ["LEFT", "RIGHT", "CONTROL", "SPEED"],
     averageScore: 85
   },
   {
     name: "PASSING",
-    skills: ["TALKING", "STANCE", "CLOSEOUT", "BOX OUT"],
+    skills: ["BOUNCE", "CHEST", "OVERHEAD", "CATCHING"],
     averageScore: 68
   },
   {
     name: "DEFENSE",
-    skills: ["PROTECT", "ANTICIPATES", "STAMINA", "QUICKNESS"],
+    skills: ["TALKING", "STANCE", "CLOSEOUT"],
     averageScore: 74
   },
   {
     name: "REBOUNDING",
-    skills: ["COORDINATION", "ATTITUDE", "FOCUS"],
+    skills: ["BOX OUT", "BALL PROTECTION", "ANTICIPATION"],
     averageScore: 78
   },
   {
     name: "ATHLETIC ABILITY",
-    skills: ["WORK ETHIC", "CRITICISM"],
+    skills: ["STAMINA", "QUICKNESS", "COORDINATION"],
     averageScore: 82
   },
   {
     name: "COACHABILITY",
-    skills: [],
+    skills: ["ATTITUDE", "FOCUS", "WORK ETHIC", "ACCEPTS CRITICISM"],
     averageScore: 88
   }
 ];

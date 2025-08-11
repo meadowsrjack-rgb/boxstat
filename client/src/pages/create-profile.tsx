@@ -215,7 +215,7 @@ export default function CreateProfile() {
             >
               <Card className="bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]">
                 <CardHeader>
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg text-white">
                     Create{" "}
                     {selectedType.charAt(0).toUpperCase() +
                       selectedType.slice(1)}{" "}
@@ -241,7 +241,7 @@ export default function CreateProfile() {
                               className="bg-white/5 border-white/20 text-white placeholder-white/40"
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -261,7 +261,7 @@ export default function CreateProfile() {
                               className="bg-white/5 border-white/20 text-white placeholder-white/40"
                             />
                           </FormControl>
-                          <FormMessage />
+                          <FormMessage className="text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -284,7 +284,7 @@ export default function CreateProfile() {
                             className="bg-white/5 border-white/20 text-white placeholder-white/40"
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -325,7 +325,7 @@ export default function CreateProfile() {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-red-400" />
                           </FormItem>
                         )}
                       />
@@ -354,7 +354,7 @@ export default function CreateProfile() {
                                   className="bg-white/5 border-white/20 text-white placeholder-white/40"
                                 />
                               </FormControl>
-                              <FormMessage />
+                              <FormMessage className="text-red-400" />
                             </FormItem>
                           )}
                         />
@@ -395,7 +395,7 @@ export default function CreateProfile() {
                                   <SelectItem value="Center">Center</SelectItem>
                                 </SelectContent>
                               </Select>
-                              <FormMessage />
+                              <FormMessage className="text-red-400" />
                             </FormItem>
                           )}
                         />
@@ -434,7 +434,7 @@ export default function CreateProfile() {
                                 )}
                               </SelectContent>
                             </Select>
-                            <FormMessage />
+                            <FormMessage className="text-red-400" />
                           </FormItem>
                         )}
                       />
@@ -464,7 +464,7 @@ export default function CreateProfile() {
                             className="bg-white/5 border-white/20 text-white placeholder-white/40"
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-red-400" />
                       </FormItem>
                     )}
                   />
@@ -540,7 +540,7 @@ function TypeCard({
             {icon}
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold">{title}</h3>
+            <h3 className="font-semibold text-white">{title}</h3>
             <p className="text-sm text-white/70">{subtitle}</p>
           </div>
         </div>

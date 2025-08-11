@@ -83,9 +83,13 @@ function Router() {
 
   // Always redirect authenticated users to profile selection if they haven't completed setup
   // This ensures new users go through profile selection after sign-in
+  console.log('User data for profile check:', user);
+  console.log('Profile completed status:', (user as any)?.profileCompleted);
+  
   const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
   if (!hasCompletedProfileSetup) {
+    console.log('Redirecting to profile selection - profile not completed');
     return (
       <Switch>
         <Route path="/profile-selection" component={ProfileSelection} />
@@ -94,6 +98,8 @@ function Router() {
       </Switch>
     );
   }
+  
+  console.log('User has completed profile setup, proceeding to dashboard');
 
   // Show account setup if profile not completed but basic info exists
   if (needsSetup) {

@@ -436,7 +436,7 @@
                                               <div className="relative">
                                                 <Trophy className="h-8 w-8 text-yellow-500" />
                                                 <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                                  {userAwards?.filter(award => award.category === 'trophy').length || 0}
+                                                  {awardsSummary?.filter((award: any) => award.category === 'trophy').length || 0}
                                                 </div>
                                               </div>
                                               <span className="text-xs text-gray-600 mt-1">Trophies</span>
@@ -471,7 +471,7 @@
                                               <div className="relative">
                                                 <Award className="h-8 w-8 text-blue-500" />
                                                 <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                                                  {userAwards?.filter(award => award.category === 'badge').length || 0}
+                                                  {awardsSummary?.filter((award: any) => award.category === 'badge').length || 0}
                                                 </div>
                                               </div>
                                               <span className="text-xs text-gray-600 mt-1">Badges</span>

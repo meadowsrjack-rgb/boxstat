@@ -15,7 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, User, Users, Briefcase } from "lucide-react";
 import { insertProfileSchema } from "@shared/schema";
 
-const createProfileSchema = insertProfileSchema.extend({
+const createProfileSchema = insertProfileSchema.omit({
+  id: true,
+  accountId: true,
+  qrCodeData: true,
+}).extend({
   profileType: z.enum(["parent", "player", "coach"]),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -68,7 +72,7 @@ export default function CreateProfile() {
         credentials: "include", // Include cookies for authentication
         body: JSON.stringify({
           ...data,
-          accountId: user.id,
+          // accountId will be added by the server from authentication
         }),
       });
       

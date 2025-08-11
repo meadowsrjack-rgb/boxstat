@@ -19,10 +19,19 @@ const createProfileSchema = insertProfileSchema.omit({
   id: true,
   accountId: true,
   qrCodeData: true,
+  createdAt: true,
+  updatedAt: true,
+  profileCompleted: true,
+  isActive: true,
 }).extend({
   profileType: z.enum(["parent", "player", "coach"]),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
+  // Make player-specific fields optional for parent/coach profiles
+  teamId: z.number().optional(),
+  jerseyNumber: z.number().optional(),
+  position: z.string().optional(),
+  schoolGrade: z.string().optional(),
 });
 
 type CreateProfileForm = z.infer<typeof createProfileSchema>;
@@ -49,7 +58,7 @@ export default function CreateProfile() {
       phoneNumber: "",
       address: "",
       teamId: undefined,
-      jerseyNumber: "",
+      jerseyNumber: undefined,
       position: "",
       schoolGrade: "",
     },
@@ -388,6 +397,17 @@ export default function CreateProfile() {
                         )}
                       />
                     </>
+                  )}
+
+                  {(selectedType === "parent" || selectedType === "coach") && (
+                    <div className="space-y-4">
+                      <div className="text-sm text-gray-600">
+                        {selectedType === "parent" 
+                          ? "As a parent, you can manage your children's profiles and access team information."
+                          : "As a coach, you can manage team rosters and communicate with families."
+                        }
+                      </div>
+                    </div>
                   )}
 
                   <FormField

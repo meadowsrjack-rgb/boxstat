@@ -1,6 +1,7 @@
                                 import { useAuth } from "@/hooks/useAuth";
                                 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
                                 import { useLocation } from "wouter";
+                                import type { User as UserType, Team, Event } from "@shared/schema";
                                 import { Card, CardContent } from "@/components/ui/card";
                                 import { Button } from "@/components/ui/button";
                                 import { Badge } from "@/components/ui/badge";
@@ -67,13 +68,7 @@
                                 const JERSEY_OPTIONS = Array.from({ length: 100 }, (_, i) => `${i}`); // 0–99
 
                                 /* ===== Types ===== */
-                                type UypEvent = {
-                                  id: string | number;
-                                  title: string;
-                                  startTime?: string;
-                                  start_time?: string;
-                                  eventType?: string;
-                                };
+                                type UypEvent = Event;
 
                                 type Task = {
                                   id: string | number;
@@ -103,6 +98,8 @@
                                   // Profile editing (Profile tab)
                                   const [isEditingProfile, setIsEditingProfile] = useState(false);
                                   const [editableProfile, setEditableProfile] = useState({
+                                    firstName: "",
+                                    lastName: "",
                                     teamName: "",
                                     age: "",
                                     height: "",
@@ -116,7 +113,7 @@
                                   });
 
                                   // ---- Early guard
-                                  const currentUser = user; // demo mode removed
+                                  const currentUser = user as UserType | null; // demo mode removed
                                   if (!currentUser) {
                                     return (
                                       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -140,7 +137,7 @@
                                       childProfiles[0]
                                     : null;
 
-                                  const { data: userTeam } = useQuery<any>({
+                                  const { data: userTeam } = useQuery<Team>({
                                     queryKey: ["/api/users", currentUser.id, "team"],
                                     enabled: !!currentUser.id,
                                     staleTime: 5 * 60 * 1000,
@@ -150,12 +147,12 @@
                                     refetchInterval: false,
                                   });
 
-                                  const { data: userEvents = [] as UypEvent[] } = useQuery({
+                                  const { data: userEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
                                     queryKey: ["/api/users", currentUser.id, "events"],
                                     enabled: !!currentUser.id,
                                   });
 
-                                  const { data: childEvents = [] as UypEvent[] } = useQuery({
+                                  const { data: childEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
                                     queryKey: ["/api/child-profiles", selectedChildId, "events"],
                                     enabled: !!selectedChildId,
                                   });
@@ -164,7 +161,7 @@
                                     (childEvents?.length ? childEvents : userEvents) || [];
 
                                   // Player Tasks (non-clickable items; completion is trigger-based)
-                                  const { data: tasks = [] as Task[] } = useQuery({
+                                  const { data: tasks = [] as Task[] } = useQuery<Task[]>({
                                     queryKey: ["/api/users", currentUser.id, "tasks"],
                                     enabled: !!currentUser.id,
                                   });
@@ -307,7 +304,7 @@
                                           });
                                         if (data.type === "new_team_message" && data.teamId === userTeam?.id)
                                           queryClient.invalidateQueries({
-                                            queryKey: ["/api/teams", userTeam.id, "messages"],
+                                            queryKey: ["/api/teams", userTeam?.id, "messages"],
                                           });
                                       } catch (e) {
                                         console.error("WS parse error", e);
@@ -637,28 +634,14 @@
                                                           <h3 className="font-bold text-gray-900 text-lg">
                                                             {userTeam.name}
                                                           </h3>
-                                                          {userTeam.division && (
-                                                            <p className="text-sm text-gray-600 mb-2">
-                                                              {userTeam.division}
-                                                            </p>
-                                                          )}
+                                                          <p className="text-sm text-gray-600 mb-2">
+                                                            {userTeam.ageGroup}
+                                                          </p>
                                                           <div className="space-y-1 text-sm text-gray-500">
-                                                            {userTeam.coach && (
+                                                            {userTeam.coachId && (
                                                               <div className="flex items-center space-x-2">
                                                                 <UserCheck className="h-4 w-4" />
-                                                                <span>{userTeam.coach}</span>
-                                                              </div>
-                                                            )}
-                                                            {userTeam.location && (
-                                                              <div className="flex items-center space-x-2">
-                                                                <MapPin className="h-4 w-4" />
-                                                                <span>{userTeam.location}</span>
-                                                              </div>
-                                                            )}
-                                                            {userTeam.schedule && (
-                                                              <div className="flex items-center space-x-2">
-                                                                <CalendarIcon className="h-4 w-4" />
-                                                                <span>{userTeam.schedule}</span>
+                                                                <span>Coach</span>
                                                               </div>
                                                             )}
                                                           </div>

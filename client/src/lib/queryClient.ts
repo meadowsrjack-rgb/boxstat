@@ -8,18 +8,44 @@ async function throwIfResNotOk(res: Response) {
 }
 
 export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+  urlOrMethod: string,
+  urlOrOptions?: string | { method?: string; data?: unknown },
+  data?: unknown,
+): Promise<any> {
+  let url: string;
+  let method: string;
+  let requestData: unknown;
+
+  // Handle both calling patterns:
+  // apiRequest(method, url, data) - old pattern
+  // apiRequest(url, { method, data }) - new pattern
+  if (typeof urlOrOptions === 'string') {
+    // Old pattern: apiRequest(method, url, data)
+    method = urlOrMethod;
+    url = urlOrOptions;
+    requestData = data;
+  } else {
+    // New pattern: apiRequest(url, { method, data })
+    url = urlOrMethod;
+    const options = urlOrOptions || {};
+    method = options.method || 'GET';
+    requestData = options.data;
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers: requestData ? { "Content-Type": "application/json" } : {},
+    body: requestData ? JSON.stringify(requestData) : undefined,
     credentials: "include",
   });
 
   await throwIfResNotOk(res);
+  
+  // Return JSON if response has content, otherwise return the response
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await res.json();
+  }
   return res;
 }
 

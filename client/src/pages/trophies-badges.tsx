@@ -290,13 +290,6 @@ export default function TrophiesBadges() {
         </p>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
-            <span className="text-3xl mr-3">🏆</span>
-            Trophy Collection
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
-            Organization-wide honors and season achievements
-          </p>
 
             <div className="relative">
               <div className="flex justify-center">

@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AWARDS } from "../lib/awards.registry";
 
+// Import trophy images
+import heartHustleImage from "@assets/Heart & Hustle Award_1754973783768.png";
+import spiritAwardImage from "@assets/Spirit Award_1754973783769.png";
+import coachAwardImage from "@assets/Coach Award_1754973783767.png";
+import mostImprovedImage from "@assets/Season MIP Award_1754973783767.png";
+import seasonMvpImage from "@assets/Season MVP Award_1754973783769.png";
+
 export default function TrophiesBadges() {
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "", progress: "" });
@@ -90,6 +97,16 @@ export default function TrophiesBadges() {
 
     
     return "0/1";
+  };
+
+  // Get trophy image for specific trophies
+  const getTrophyImage = (trophyId: string) => {
+    const imageMap: Record<string, string> = {
+      "coach-choice": coachAwardImage,
+      "most-improved": mostImprovedImage,
+      "mvp-season": seasonMvpImage,
+    };
+    return imageMap[trophyId];
   };
 
   // Get icon for award type
@@ -256,7 +273,11 @@ export default function TrophiesBadges() {
                 data-testid="trophy-heart-hustle"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-4xl">❤️‍🔥</div>
+                  <img 
+                    src={heartHustleImage} 
+                    alt="Heart & Hustle Award" 
+                    className="w-16 h-16 object-contain"
+                  />
                   <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     Not Awarded
                   </div>
@@ -281,7 +302,11 @@ export default function TrophiesBadges() {
                 data-testid="trophy-spirit"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-4xl">✨</div>
+                  <img 
+                    src={spiritAwardImage} 
+                    alt="Spirit Award" 
+                    className="w-16 h-16 object-contain"
+                  />
                   <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     Not Awarded
                   </div>
@@ -306,33 +331,45 @@ export default function TrophiesBadges() {
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {trophies.map((trophy) => (
-                <div
-                  key={trophy.id}
-                  className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
-                  onClick={() =>
-                    openModal(
-                      getAwardIcon(trophy),
-                      trophy.name,
-                      trophy.description
-                    )
-                  }
-                  data-testid={`trophy-${trophy.id}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-4xl">{getAwardIcon(trophy)}</div>
-                    <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                      Not Awarded
+              {trophies.map((trophy) => {
+                const trophyImage = getTrophyImage(trophy.id);
+                
+                return (
+                  <div
+                    key={trophy.id}
+                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
+                    onClick={() =>
+                      openModal(
+                        trophyImage ? "🏆" : getAwardIcon(trophy),
+                        trophy.name,
+                        trophy.description
+                      )
+                    }
+                    data-testid={`trophy-${trophy.id}`}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      {trophyImage ? (
+                        <img 
+                          src={trophyImage} 
+                          alt={trophy.name} 
+                          className="w-16 h-16 object-contain"
+                        />
+                      ) : (
+                        <div className="text-4xl">{getAwardIcon(trophy)}</div>
+                      )}
+                      <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        Not Awarded
+                      </div>
+                    </div>
+                    <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
+                      {trophy.name}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                      {trophy.description}
                     </div>
                   </div>
-                  <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
-                    {trophy.name}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                    {trophy.description}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

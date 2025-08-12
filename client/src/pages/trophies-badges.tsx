@@ -267,17 +267,29 @@ export default function TrophiesBadges() {
 
   // Badges filtering
   
-  const filteredBadges = badges.filter(badge => {
-    if (filter === "all") return true;
-    if (filter === "earned") return isBadgeEarned(badge);
-    if (filter === "progress") return !isBadgeEarned(badge);
-    if (filter === "hall-of-famer") return badge.tier === "HallOfFamer";
-    if (filter === "superstar") return badge.tier === "Superstar";
-    if (filter === "all-star") return badge.tier === "AllStar";
-    if (filter === "starter") return badge.tier === "Starter";
-    if (filter === "prospect") return badge.tier === "Prospect";
-    return true;
-  });
+  // Define tier order for sorting
+  const tierOrder = {
+    "HallOfFamer": 1,
+    "Superstar": 2,
+    "AllStar": 3,
+    "Starter": 4,
+    "Prospect": 5
+  };
+
+  const filteredBadges = badges
+    .filter(badge => {
+      if (filter === "all") return true;
+      if (filter === "earned") return isBadgeEarned(badge);
+      if (filter === "progress") return !isBadgeEarned(badge);
+      return true;
+    })
+    .sort((a, b) => {
+      // When showing all badges, sort by tier order (HOF to Prospect)
+      if (filter === "all") {
+        return tierOrder[a.tier as keyof typeof tierOrder] - tierOrder[b.tier as keyof typeof tierOrder];
+      }
+      return 0;
+    });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -398,61 +410,7 @@ export default function TrophiesBadges() {
           >
             In Progress
           </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "hall-of-famer"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("hall-of-famer")}
-            data-testid="filter-hall-of-famer"
-          >
-            Hall of Famer
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "superstar"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("superstar")}
-            data-testid="filter-superstar"
-          >
-            Superstar
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "all-star"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("all-star")}
-            data-testid="filter-all-star"
-          >
-            All-Star
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "starter"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("starter")}
-            data-testid="filter-starter"
-          >
-            Starter
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "prospect"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("prospect")}
-            data-testid="filter-prospect"
-          >
-            Prospect
-          </button>
+
         </div>
 
         {/* Achievement Cards Grid */}

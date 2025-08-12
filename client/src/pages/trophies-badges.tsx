@@ -1,383 +1,468 @@
-                    import { useEffect, useState } from "react";
-                    import "./trophies-badges.css";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { AWARDS } from "../lib/awards.registry";
+import "./trophies-badges.css";
 
-                    export default function TrophiesBadges() {
-                      const [filter, setFilter] = useState("all");
-                      const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "" });
+export default function TrophiesBadges() {
+  const [filter, setFilter] = useState("all");
+  const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "", progress: "" });
 
-                      const openModal = (icon: string, title: string, desc: string) => setModal({ open: true, icon, title, desc });
-                      const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "" });
+  // Mock user stats for demo - in real app this would come from API
+  const mockUserStats = {
+    mvpCount: 10,
+    clutchCount: 7,
+    comebackCount: 4,
+    hustleCount: 10,
+    teammateCount: 6,
+    sportsmanshipCount: 10,
+    studentCount: 8,
+    leadByExampleCount: 5,
+    practicesTotal: 150,
+    skillsTotal: 75,
+    gamesTotal: 80,
+    fnhGamesTotal: 25,
+    practiceStreak: 8,
+    rsvpStreak: 12,
+    referrals: 2,
+    holidayGamesCount: 1,
+    yearsActive: 2,
+    season: {
+      mvp: 2,
+      hustle: 3,
+      teammate: 1,
+      sportsmanship: 2,
+      clutch: 1,
+      comeback: 1,
+      student: 2,
+      leadByExample: 1
+    },
+    foundation: {
+      totalVideos: 45,
+      skillsCompleted: 25,
+      scCompleted: 8,
+      iqCompleted: 7
+    }
+  };
 
-                      useEffect(() => {
-                        const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
-                        window.addEventListener("keydown", onKey);
-                        return () => window.removeEventListener("keydown", onKey);
-                      }, []);
+  const openModal = (icon: string, title: string, desc: string, progress: string = "") => 
+    setModal({ open: true, icon, title, desc, progress });
+  
+  const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "", progress: "" });
 
-                      return (
-                        <div className="container">
-                          <div className="header" />
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
-                          {/* Trophies */}
-                          <div className="trophies-section">
-                            <h2 className="section-title">🏆 Trophies</h2>
-                            <p className="section-subtitle">
-                              The most prestigious awards recognizing exceptional season-long achievements
-                            </p>
+  // Helper function to check if badge is earned
+  const isBadgeEarned = (award: typeof AWARDS[0]) => {
+    if (award.progressKind === "manual") return false; // Manual awards handled by coaches
+    
+    if (award.progressKind === "counter" && award.counterOf) {
+      const statValue = mockUserStats[award.counterOf.stat as keyof typeof mockUserStats] as number;
+      return statValue >= award.counterOf.target;
+    }
+    
+    if (award.progressKind === "streak" && award.streakOf) {
+      const statValue = mockUserStats[award.streakOf.stat as keyof typeof mockUserStats] as number;
+      return statValue >= award.streakOf.target;
+    }
+    
+    if (award.progressKind === "composite" && award.composite) {
+      return award.composite.every(req => {
+        if (req.seasonScoped) {
+          const seasonValue = mockUserStats.season[req.stat as keyof typeof mockUserStats.season] as number;
+          return seasonValue >= (req.min || 1);
+        } else {
+          const statValue = mockUserStats[req.stat as keyof typeof mockUserStats] as number;
+          return statValue >= (req.min || 1);
+        }
+      });
+    }
+    
+    return false;
+  };
 
-                            <div className="trophies-grid">
-                              {/* UYP Legacy Trophies */}
-                              <div className="trophy-subsection">
-                                <h3 className="subsection-title">🌟 UYP Legacy Trophies (Yearly)</h3>
-                                <p className="subsection-description">
-                                  Premier organization-wide honors - only one recipient selected from all UYP teams
-                                </p>
+  // Helper function to get progress for badge
+  const getBadgeProgress = (award: typeof AWARDS[0]) => {
+    if (award.progressKind === "manual") return "Coach Awarded";
+    
+    if (award.progressKind === "counter" && award.counterOf) {
+      const statValue = mockUserStats[award.counterOf.stat as keyof typeof mockUserStats] as number;
+      return `${Math.min(statValue, award.counterOf.target)}/${award.counterOf.target}`;
+    }
+    
+    if (award.progressKind === "streak" && award.streakOf) {
+      const statValue = mockUserStats[award.streakOf.stat as keyof typeof mockUserStats] as number;
+      return `${Math.min(statValue, award.streakOf.target)}/${award.streakOf.target}`;
+    }
+    
+    if (award.progressKind === "composite" && award.composite) {
+      const completed = award.composite.filter(req => {
+        if (req.seasonScoped) {
+          const seasonValue = mockUserStats.season[req.stat as keyof typeof mockUserStats.season] as number;
+          return seasonValue >= (req.min || 1);
+        } else {
+          const statValue = mockUserStats[req.stat as keyof typeof mockUserStats] as number;
+          return statValue >= (req.min || 1);
+        }
+      }).length;
+      return `${completed}/${award.composite.length}`;
+    }
+    
+    return "0/1";
+  };
 
-                                <div className="trophy-cards-grid">
-                                  <div
-                                    className="trophy-card legacy-trophy"
-                                    onClick={() =>
-                                      openModal(
-                                        "❤️‍🔥",
-                                        "The UYP Heart and Hustle Award",
-                                        "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization."
-                                      )
-                                    }
-                                  >
-                                    <div className="trophy-icon-container">
-                                      <div className="trophy-icon">❤️‍🔥</div>
-                                      <div className="trophy-status">Not Awarded</div>
-                                    </div>
-                                    <div className="trophy-title">The UYP Heart and Hustle Award</div>
-                                    <div className="trophy-description">
-                                      Organization&apos;s highest honor for effort and determination
-                                    </div>
-                                  </div>
+  // Get icon for award type
+  const getAwardIcon = (award: typeof AWARDS[0]) => {
+    const iconMap: Record<string, string> = {
+      // Hall of Famer icons
+      "superstar-10x-mvp": "⭐",
+      "prime-time-10x-clutch": "🌟",
+      "force-of-will-10x-comeback": "💪",
+      "relentless-10x-hustle": "🔋",
+      "the-linchpin-10x-teammate": "🔗",
+      "spirit-of-game-10x-sportsmanship": "🏅",
+      "coach-on-court-10x-student": "🧠",
+      "the-paragon-10x-lead-by-example": "👑",
+      "coaches-choice-collection": "🎖️",
+      "the-trifecta": "🎯",
+      "character-captain": "🛡️",
+      "practice-legend": "🏋️",
+      "skills-virtuoso": "🎪",
+      "franchise-player": "🏆",
+      "fnh-hall-of-famer": "🌙",
+      "dynasty-member": "👑",
+      "foundation-alumnus": "🎓",
+      
+      // Superstar icons
+      "marquee-player-5x-mvp": "🌟",
+      "ice-in-veins-5x-clutch": "🧊",
+      "momentum-shifter-5x-comeback": "⚡",
+      "the-workhorse-5x-hustle": "🐎",
+      "the-cornerstone-5x-teammate": "🗿",
+      "the-ambassador-5x-sportsmanship": "🤝",
+      "the-tactician-5x-student": "🎯",
+      "the-blueprint-5x-lead-by-example": "📐",
+      "the-pillar": "🏛️",
+      "ironman": "🤖",
+      "fnh-ironman": "🌙",
+      "practice-centurion": "💯",
+      "skills-specialist": "🔧",
+      "century-club": "💯",
+      "fnh-legend": "🌟",
+      "team-veteran": "🎖️",
+      "foundation-graduate": "🎓",
+      "technique-titan": "⚒️",
+      "peak-performer": "💪",
+      "basketball-savant": "🧠",
+      "perfect-attendance-online": "✅",
+      
+      // All-Star icons
+      "game-changer-3x-mvp": "🎮",
+      "the-closer-3x-clutch": "🎯",
+      "the-sparkplug-3x-comeback": "⚡",
+      "the-engine-3x-hustle": "🔧",
+      "the-glue-3x-teammate": "🧲",
+      "class-act-3x-sportsmanship": "🎭",
+      "the-protege-3x-student": "👨‍🎓",
+      "the-standard-3x-lead-by-example": "📏",
+      "the-dependable": "⏰",
+      "recruiter": "👥",
+      "practice-fiend": "🔥",
+      "skills-devotee": "🙏",
+      "seasoned-competitor": "🏀",
+      "fnh-veteran": "🌙",
+      "first-year-anniversary": "🎂",
+      "half-time-adjustments": "⚡",
+      "monthly-module-master": "📅",
+      "skills-sharp-shooter": "🎯",
+      "conditioning-core": "💪",
+      "strategic-specialist": "🎯",
+      "mid-season-mentor": "👨‍🏫",
+      
+      // Starter icons
+      "locked-in": "🔒",
+      "on-the-ball": "⚽",
+      "tournament-titan": "🏆",
+      "dedicated-grinder": "⚙️",
+      "skills-seeker": "🔍",
+      "regular-competitor": "🏀",
+      "fnh-regular": "🌙",
+      "game-mvp": "🏆",
+      "clutch-player": "⏰",
+      "comeback-kid": "↩️",
+      "sportsmanship-award": "🤝",
+      "hustle-award": "🏃",
+      "teammate-award": "👥",
+      "student-of-the-game": "📚",
+      "lead-by-example": "👨‍🏫",
+      "weekly-warm-up": "📅",
+      "film-study": "🎬",
+      "skill-builder": "🔨",
+      "foundation-force": "💪",
+      "court-visionary": "👁️",
+      "back-to-back-sessions": "🔄",
+      
+      // Prospect icons
+      "checked-in": "✅",
+      "road-warrior": "🚗",
+      "holiday-hero": "🎄",
+      "the-debut": "🆕",
+      "friday-follower": "🌙",
+      "heating-up": "🔥",
+      "game-planner": "📋",
+      "practice-planner": "📝",
+      "first-reps": "1️⃣",
+      "skill-starter": "🚀",
+      "first-ten": "🔟",
+      "fnh-fighter": "🥊",
+      "digital-first-steps": "👶",
+      "virtual-handles": "🎮",
+      "remote-strength": "💪",
+      "mindful-start": "🧘"
+    };
+    
+    return iconMap[award.id] || "🏆";
+  };
 
-                                  <div
-                                    className="trophy-card legacy-trophy"
-                                    onClick={() =>
-                                      openModal(
-                                        "✨",
-                                        "The Spirit Award",
-                                        "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball."
-                                      )
-                                    }
-                                  >
-                                    <div className="trophy-icon-container">
-                                      <div className="trophy-icon">✨</div>
-                                      <div className="trophy-status">Not Awarded</div>
-                                    </div>
-                                    <div className="trophy-title">The Spirit Award</div>
-                                    <div className="trophy-description">Highest character honor across entire organization</div>
-                                  </div>
-                                </div>
-                              </div>
+  // Filter badges and trophies
+  const trophies = AWARDS.filter(award => award.kind === "Trophy");
+  const badges = AWARDS.filter(award => award.kind === "Badge");
+  
+  const filteredBadges = badges.filter(badge => {
+    if (filter === "all") return true;
+    if (filter === "earned") return isBadgeEarned(badge);
+    if (filter === "progress") return !isBadgeEarned(badge);
+    if (filter === "hall-of-famer") return badge.tier === "HallOfFamer";
+    if (filter === "superstar") return badge.tier === "Superstar";
+    if (filter === "all-star") return badge.tier === "AllStar";
+    if (filter === "starter") return badge.tier === "Starter";
+    if (filter === "prospect") return badge.tier === "Prospect";
+    return true;
+  });
 
-                              {/* Team Trophies */}
-                              <div className="trophy-subsection">
-                                <h3 className="subsection-title">🏅 Team Trophies (Seasonal)</h3>
-                                <p className="subsection-description">Coach-awarded recognition for standout team contributions</p>
+  return (
+    <div className="container">
+      <div className="header" />
 
-                                <div className="trophy-cards-grid">
-                                  <div
-                                    className="trophy-card team-trophy achieved"
-                                    onClick={() =>
-                                      openModal(
-                                        "👑",
-                                        "MVP (Most Valuable Player)",
-                                        "Outstanding season achievement! You were awarded MVP by your coach for having the most significant impact on the team's success during the season. Your contributions were essential to the team's performance and achievements."
-                                      )
-                                    }
-                                  >
-                                    <div className="trophy-icon-container">
-                                      <div className="trophy-icon">👑</div>
-                                      <div className="trophy-status awarded">2023 Season</div>
-                                    </div>
-                                    <div className="trophy-title">MVP (Most Valuable Player)</div>
-                                    <div className="trophy-description">Most significant impact on team&apos;s success</div>
-                                  </div>
+      {/* Trophies Section */}
+      <div className="trophies-section">
+        <h2 className="section-title">🏆 Trophies</h2>
+        <p className="section-subtitle">
+          The most prestigious awards recognizing exceptional season-long achievements
+        </p>
 
-                                  <div
-                                    className="trophy-card team-trophy"
-                                    onClick={() =>
-                                      openModal(
-                                        "🎖️",
-                                        "Coach's Award",
-                                        "The coach's highest recognition! This award goes to the player who best exemplifies the team's core values and the coach's philosophy, demonstrating exceptional coachability, dedication, and a positive attitude throughout the entire season."
-                                      )
-                                    }
-                                  >
-                                    <div className="trophy-icon-container">
-                                      <div className="trophy-icon">🎖️</div>
-                                      <div className="trophy-status">Not Awarded</div>
-                                    </div>
-                                    <div className="trophy-title">Coach&apos;s Award</div>
-                                    <div className="trophy-description">Exemplifies team values and coach&apos;s philosophy</div>
-                                  </div>
+        <div className="trophies-grid">
+          <div className="trophy-subsection">
+            <h3 className="subsection-title">🌟 UYP Legacy Trophies (Yearly)</h3>
+            <p className="subsection-description">
+              Premier organization-wide honors - only one recipient selected from all UYP teams
+            </p>
 
-                                  <div
-                                    className="trophy-card team-trophy achieved"
-                                    onClick={() =>
-                                      openModal(
-                                        "📈",
-                                        "MIP (Most Improved Player)",
-                                        "Incredible growth recognition! You were awarded Most Improved Player by your coach for showing the most significant development in skills and game sense over the course of the season. Your dedication to improvement was truly exceptional."
-                                      )
-                                    }
-                                  >
-                                    <div className="trophy-icon-container">
-                                      <div className="trophy-icon">📈</div>
-                                      <div className="trophy-status awarded">2022 Season</div>
-                                    </div>
-                                    <div className="trophy-title">MIP (Most Improved Player)</div>
-                                    <div className="trophy-description">Most significant growth and development</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+            <div className="trophy-cards-grid">
+              <div
+                className="trophy-card legacy-trophy"
+                onClick={() =>
+                  openModal(
+                    "❤️‍🔥",
+                    "The UYP Heart and Hustle Award",
+                    "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization."
+                  )
+                }
+                data-testid="trophy-heart-hustle"
+              >
+                <div className="trophy-icon-container">
+                  <div className="trophy-icon">❤️‍🔥</div>
+                  <div className="trophy-status">Not Awarded</div>
+                </div>
+                <div className="trophy-title">The UYP Heart and Hustle Award</div>
+                <div className="trophy-description">
+                  Organization's highest honor for effort and determination
+                </div>
+              </div>
 
-                          {/* Badges */}
-                          <div className="badges-section">
-                            <h2 className="section-title">🏅 Badges</h2>
-                            <p className="section-subtitle">
-                              Earn badges by reaching milestones and demonstrating excellence in various areas
-                            </p>
+              <div
+                className="trophy-card legacy-trophy"
+                onClick={() =>
+                  openModal(
+                    "✨",
+                    "The Spirit Award",
+                    "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball."
+                  )
+                }
+                data-testid="trophy-spirit"
+              >
+                <div className="trophy-icon-container">
+                  <div className="trophy-icon">✨</div>
+                  <div className="trophy-status">Not Awarded</div>
+                </div>
+                <div className="trophy-title">The Spirit Award</div>
+                <div className="trophy-description">Highest character honor across entire organization</div>
+              </div>
+            </div>
+          </div>
 
-                            <div className="stats-bar">
-                              {[
-                                ["all", "Total", "100"],
-                                ["completed", "Completed", "57"],
-                                ["in-progress", "In Progress", "43"],
-                                ["hall-of-fame", "Hall of Fame", "7"],
-                                ["superstar", "Superstar", "9"],
-                                ["all-star", "All-Star", "12"],
-                                ["starter", "Starter", "14"],
-                                ["prospect", "Prospect", "15"],
-                              ].map(([key, label, num]) => (
-                                <div
-                                  key={key}
-                                  className={`stat-item filter-btn ${filter === key ? "active" : ""}`}
-                                  onClick={() => setFilter(key)}
-                                >
-                                  <span className="stat-number">{num}</span>
-                                  <span className="stat-label">{label}</span>
-                                </div>
-                              ))}
-                            </div>
+          {/* Coach-Awarded Team Trophies */}
+          <div className="trophy-subsection">
+            <h3 className="subsection-title">🏆 Coach-Awarded Team Trophies</h3>
+            <p className="subsection-description">
+              Season-long achievements recognized by your coach
+            </p>
 
-                            {/* data-filter is used by CSS to dim/hide non-matching cards */}
-                            <div className="achievements-grid" data-filter={filter}>
-                              {/* HALL OF FAME */}
-                              <div
-                                className="achievement-card hall-of-fame achieved"
-                                onClick={() =>
-                                  openModal(
-                                    "⭐",
-                                    "Superstar",
-                                    "Elite achievement! You have demonstrated a consistent pattern of dominance by earning 10 MVP awards. Your exceptional skill and leadership set you apart from all others."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">⭐</div>
-                                  <div className="progress-indicator completed">10/10</div>
-                                </div>
-                                <div className="achievement-title">Superstar</div>
-                              </div>
+            <div className="trophy-cards-grid">
+              {trophies.map((trophy) => (
+                <div
+                  key={trophy.id}
+                  className="trophy-card team-trophy"
+                  onClick={() =>
+                    openModal(
+                      getAwardIcon(trophy),
+                      trophy.name,
+                      trophy.description
+                    )
+                  }
+                  data-testid={`trophy-${trophy.id}`}
+                >
+                  <div className="trophy-icon-container">
+                    <div className="trophy-icon">{getAwardIcon(trophy)}</div>
+                    <div className="trophy-status">Not Awarded</div>
+                  </div>
+                  <div className="trophy-title">{trophy.name}</div>
+                  <div className="trophy-description">{trophy.description}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
 
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "🌟",
-                                    "Prime Time",
-                                    "You are known for delivering in the biggest moments! Earn 10 Clutch awards to prove you can perform when it matters most."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🌟</div>
-                                  <div className="progress-indicator">7/10</div>
-                                </div>
-                                <div className="achievement-title">Prime Time</div>
-                              </div>
+      {/* Badges Section */}
+      <div className="badges-section">
+        <h2 className="section-title">🎖️ Achievement Badges</h2>
+        <p className="section-subtitle">
+          Unlock these badges by reaching milestones and demonstrating consistent excellence
+        </p>
 
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "💪",
-                                    "Force of Will",
-                                    "Your unbreakable spirit refuses to lose! Earn 10 Comeback awards to show your incredible resilience and determination."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">💪</div>
-                                  <div className="progress-indicator">4/10</div>
-                                </div>
-                                <div className="achievement-title">Force of Will</div>
-                              </div>
+        {/* Filter Buttons */}
+        <div className="filter-buttons">
+          <button
+            className={`filter-btn ${filter === "all" ? "active" : ""}`}
+            onClick={() => setFilter("all")}
+            data-testid="filter-all"
+          >
+            All Badges
+          </button>
+          <button
+            className={`filter-btn ${filter === "earned" ? "active" : ""}`}
+            onClick={() => setFilter("earned")}
+            data-testid="filter-earned"
+          >
+            Earned
+          </button>
+          <button
+            className={`filter-btn ${filter === "progress" ? "active" : ""}`}
+            onClick={() => setFilter("progress")}
+            data-testid="filter-progress"
+          >
+            In Progress
+          </button>
+          <button
+            className={`filter-btn ${filter === "hall-of-famer" ? "active" : ""}`}
+            onClick={() => setFilter("hall-of-famer")}
+            data-testid="filter-hall-of-famer"
+          >
+            Hall of Famer
+          </button>
+          <button
+            className={`filter-btn ${filter === "superstar" ? "active" : ""}`}
+            onClick={() => setFilter("superstar")}
+            data-testid="filter-superstar"
+          >
+            Superstar
+          </button>
+          <button
+            className={`filter-btn ${filter === "all-star" ? "active" : ""}`}
+            onClick={() => setFilter("all-star")}
+            data-testid="filter-all-star"
+          >
+            All-Star
+          </button>
+          <button
+            className={`filter-btn ${filter === "starter" ? "active" : ""}`}
+            onClick={() => setFilter("starter")}
+            data-testid="filter-starter"
+          >
+            Starter
+          </button>
+          <button
+            className={`filter-btn ${filter === "prospect" ? "active" : ""}`}
+            onClick={() => setFilter("prospect")}
+            data-testid="filter-prospect"
+          >
+            Prospect
+          </button>
+        </div>
 
-                              <div
-                                className="achievement-card hall-of-fame achieved"
-                                onClick={() =>
-                                  openModal(
-                                    "🔋",
-                                    "Relentless",
-                                    "Your motor never stops! You have earned 10 Hustle awards, proving your incredible work ethic and determination on every play."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🔋</div>
-                                  <div className="progress-indicator completed">10/10</div>
-                                </div>
-                                <div className="achievement-title">Relentless</div>
-                              </div>
+        {/* Achievement Cards Grid */}
+        <div className="achievements-grid">
+          {filteredBadges.map((badge) => {
+            const isEarned = isBadgeEarned(badge);
+            const progress = getBadgeProgress(badge);
+            const tierClass = badge.tier.toLowerCase().replace("of", "-of").replace(/([A-Z])/g, "-$1").toLowerCase();
+            
+            return (
+              <div
+                key={badge.id}
+                className={`achievement-card ${tierClass} ${isEarned ? "achieved" : ""}`}
+                onClick={() =>
+                  openModal(
+                    getAwardIcon(badge),
+                    badge.name,
+                    badge.description,
+                    progress
+                  )
+                }
+                data-testid={`badge-${badge.id}`}
+              >
+                <div className="icon-container">
+                  <div className="achievement-icon">{getAwardIcon(badge)}</div>
+                  <div className={`progress-indicator ${isEarned ? "completed" : ""}`}>
+                    {progress}
+                  </div>
+                </div>
+                <div className="achievement-title">{badge.name}</div>
+              </div>
+            );
+          })}
+        </div>
 
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "🔗",
-                                    "The Linchpin",
-                                    "You are absolutely essential to team cohesion! Earn 10 Teammate awards to prove your vital role in bringing everyone together."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🔗</div>
-                                  <div className="progress-indicator">6/10</div>
-                                </div>
-                                <div className="achievement-title">The Linchpin</div>
-                              </div>
+        {filteredBadges.length === 0 && (
+          <div className="no-results" data-testid="no-results">
+            <p>No badges found for the selected filter.</p>
+          </div>
+        )}
+      </div>
 
-                              <div
-                                className="achievement-card hall-of-fame achieved"
-                                onClick={() =>
-                                  openModal(
-                                    "🏅",
-                                    "Spirit of the Game",
-                                    "You embody the highest ideals of fair play! Your 10 Sportsmanship awards show your commitment to playing the game the right way."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🏅</div>
-                                  <div className="progress-indicator completed">10/10</div>
-                                </div>
-                                <div className="achievement-title">Spirit of the Game</div>
-                              </div>
-
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "🧠",
-                                    "Coach on the Court",
-                                    "You understand the game on a deeper, strategic level! Earn 10 Student awards to show your basketball IQ and dedication to learning."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🧠</div>
-                                  <div className="progress-indicator">8/10</div>
-                                </div>
-                                <div className="achievement-title">Coach on the Court</div>
-                              </div>
-
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "👑",
-                                    "The Paragon",
-                                    "You are the ultimate embodiment of how to prepare and play! Earn 10 Lead by Example awards to achieve this prestigious status."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">👑</div>
-                                  <div className="progress-indicator">5/10</div>
-                                </div>
-                                <div className="achievement-title">The Paragon</div>
-                              </div>
-
-                              <div
-                                className="achievement-card hall-of-fame achieved"
-                                onClick={() =>
-                                  openModal(
-                                    "🎖️",
-                                    "Coach's Choice",
-                                    "Outstanding achievement! You have earned each of the eight core coach awards at least once, showing your well-rounded excellence in all aspects of the game."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🎖️</div>
-                                  <div className="progress-indicator completed">8/8</div>
-                                </div>
-                                <div className="achievement-title">Coach&apos;s Choice</div>
-                              </div>
-
-                              <div
-                                className="achievement-card hall-of-fame"
-                                onClick={() =>
-                                  openModal(
-                                    "🎯",
-                                    "The Trifecta",
-                                    "Incredible season performance! Earn an MVP, Hustle, and Teammate award all in the same season to achieve this rare combination."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🎯</div>
-                                  <div className="progress-indicator">2/3</div>
-                                </div>
-                                <div className="achievement-title">The Trifecta</div>
-                              </div>
-
-                              <div
-                                className="achievement-card hall-of-fame achieved"
-                                onClick={() =>
-                                  openModal(
-                                    "🛡️",
-                                    "Character Captain",
-                                    "Exemplary character! You earned Hustle, Teammate, and Sportsmanship awards in the same season, showing your commitment to doing things the right way."
-                                  )
-                                }
-                              >
-                                <div className="icon-container">
-                                  <div className="achievement-icon">🛡️</div>
-                                  <div className="progress-indicator completed">3/3</div>
-                                </div>
-                                <div className="achievement-title">Character Captain</div>
-                              </div>
-
-                              {/* ...all the remaining Superstar / All-Star / Starter / Prospect cards from your HTML...
-                                  Keep the same classNames (e.g., "superstar", "all-star", "starter", "prospect")
-                                  and add onClick={() => openModal(icon, title, `description`)} for each.
-                                  For brevity, I didn't paste the entire block again, but your content can be
-                                  copied over 1:1 as JSX (only change: use onClick + backticks for strings). */}
-                            </div>
-                          </div>
-
-                          {/* Modal */}
-                          {modal.open && (
-                            <div className="modal" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-                              <div className="modal-content">
-                                <div className="modal-icon">{modal.icon}</div>
-                                <div className="modal-title">{modal.title}</div>
-                                <div className="modal-description">{modal.desc}</div>
-                                <button className="close-modal" onClick={closeModal}>
-                                  Close
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
+      {/* Modal */}
+      {modal.open && (
+        <div className="modal" onClick={(e) => e.target === e.currentTarget && closeModal()}>
+          <div className="modal-content">
+            <div className="modal-icon">{modal.icon}</div>
+            <div className="modal-title">{modal.title}</div>
+            <div className="modal-description">{modal.desc}</div>
+            {modal.progress && (
+              <div className="modal-progress">
+                Progress: {modal.progress}
+              </div>
+            )}
+            <button className="close-modal" onClick={closeModal} data-testid="close-modal">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

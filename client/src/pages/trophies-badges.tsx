@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AWARDS } from "../lib/awards.registry";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
 
 // Import trophy images
 import heartHustleImage from "@assets/Heart & Hustle Award_1754973783768.png";
@@ -11,6 +13,7 @@ import mostImprovedImage from "@assets/Season MIP Award_1754973783767.png";
 import seasonMvpImage from "@assets/Season MVP Award_1754973783769.png";
 
 export default function TrophiesBadges() {
+  const [, setLocation] = useLocation();
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "", progress: "" });
   
@@ -278,6 +281,19 @@ export default function TrophiesBadges() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setLocation("/player-dashboard")}
+          data-testid="button-back"
+          className="text-gray-700 hover:text-red-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-red-400 dark:hover:bg-gray-800"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Button>
+      </div>
+      
       <div className="mb-8" />
 
       {/* Trophies Section */}

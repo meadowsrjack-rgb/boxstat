@@ -60,8 +60,12 @@ export default function TrophiesBadges() {
   
   const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "", progress: "" });
 
-  // Organization-wide trophies data
-  const orgTrophies = [
+  // Filter badges and trophies first
+  const trophies = AWARDS.filter(award => award.kind === "Trophy");
+  const badges = AWARDS.filter(award => award.kind === "Badge");
+  
+  // All trophies combined
+  const allTrophies = [
     {
       id: "heart-hustle",
       name: "The UYP Heart and Hustle Award",
@@ -73,24 +77,23 @@ export default function TrophiesBadges() {
       name: "The Spirit Award", 
       description: "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.",
       image: spiritAwardImage
-    }
+    },
+    ...trophies.map(trophy => ({
+      id: trophy.id,
+      name: trophy.name,
+      description: trophy.description,
+      image: getTrophyImage(trophy.id)
+    }))
   ];
 
-  // Auto-advance carousels
+  // Auto-advance carousel
   useEffect(() => {
-    const orgInterval = setInterval(() => {
-      setOrgCarouselIndex((prev) => (prev + 1) % orgTrophies.length);
+    const interval = setInterval(() => {
+      setOrgCarouselIndex((prev) => (prev + 1) % allTrophies.length);
     }, 3000);
 
-    const seasonInterval = setInterval(() => {
-      setSeasonCarouselIndex((prev) => (prev + 1) % trophies.length);
-    }, 3500);
-
-    return () => {
-      clearInterval(orgInterval);
-      clearInterval(seasonInterval);
-    };
-  }, [orgTrophies.length]);
+    return () => clearInterval(interval);
+  }, [allTrophies.length]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
@@ -259,9 +262,7 @@ export default function TrophiesBadges() {
     return iconMap[award.id] || "🏆";
   };
 
-  // Filter badges and trophies
-  const trophies = AWARDS.filter(award => award.kind === "Trophy");
-  const badges = AWARDS.filter(award => award.kind === "Badge");
+  // Badges filtering
   
   const filteredBadges = badges.filter(badge => {
     if (filter === "all") return true;
@@ -288,147 +289,78 @@ export default function TrophiesBadges() {
           The most prestigious awards recognizing exceptional season-long achievements
         </p>
 
-        <div className="space-y-8">
-          <div className="space-y-6">
-            <h3 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200">
-              🌟 UYP Legacy Trophies (Yearly)
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Premier organization-wide honors - only one recipient selected from all UYP teams
-            </p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center">
+            <span className="text-3xl mr-3">🏆</span>
+            Trophy Collection
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Organization-wide honors and season achievements
+          </p>
 
             <div className="relative">
               <div className="flex justify-center">
-                <div
-                  className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center w-64 h-64"
-                  onClick={() => {
-                    const currentTrophy = orgTrophies[orgCarouselIndex];
-                    openModal("", currentTrophy.name, currentTrophy.description);
-                  }}
-                  data-testid={`trophy-${orgTrophies[orgCarouselIndex].id}`}
-                >
-                  <img 
-                    src={orgTrophies[orgCarouselIndex].image} 
-                    alt={orgTrophies[orgCarouselIndex].name}
-                    className="w-32 h-32 object-contain transition-opacity duration-500"
-                  />
-                </div>
-              </div>
-
-              {/* Navigation buttons */}
-              <button
-                onClick={() => setOrgCarouselIndex((prev) => (prev - 1 + orgTrophies.length) % orgTrophies.length)}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                data-testid="org-carousel-prev"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </button>
-              
-              <button
-                onClick={() => setOrgCarouselIndex((prev) => (prev + 1) % orgTrophies.length)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                data-testid="org-carousel-next"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </button>
-
-              {/* Dots indicator */}
-              <div className="flex justify-center mt-4 space-x-2">
-                {orgTrophies.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setOrgCarouselIndex(index)}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      index === orgCarouselIndex 
-                        ? 'bg-yellow-500' 
-                        : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    data-testid={`org-dot-${index}`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Coach-Awarded Team Trophies */}
-          <div className="space-y-6">
-            <h3 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200">
-              🏆 Coach-Awarded Team Trophies
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
-              Season-long achievements recognized by your coach
-            </p>
-
-            <div className="relative">
-              <div className="flex justify-center">
-                {trophies.length > 0 && (
+                {allTrophies.length > 0 && (
                   <div
-                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-8 cursor-pointer transition-all duration-500 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center w-64 h-64"
+                    className="cursor-pointer transition-all duration-500 hover:scale-105 flex flex-col items-center text-center"
                     onClick={() => {
-                      const currentTrophy = trophies[seasonCarouselIndex];
-                      const trophyImage = getTrophyImage(currentTrophy.id);
+                      const currentTrophy = allTrophies[orgCarouselIndex];
                       openModal("", currentTrophy.name, currentTrophy.description);
                     }}
-                    data-testid={`trophy-${trophies[seasonCarouselIndex]?.id}`}
+                    data-testid={`trophy-${allTrophies[orgCarouselIndex]?.id}`}
                   >
-                    {(() => {
-                      const currentTrophy = trophies[seasonCarouselIndex];
-                      const trophyImage = getTrophyImage(currentTrophy.id);
-                      
-                      return trophyImage ? (
-                        <img 
-                          src={trophyImage} 
-                          alt={currentTrophy.name} 
-                          className="w-32 h-32 object-contain transition-opacity duration-500"
-                        />
-                      ) : (
-                        <div className="text-8xl text-gray-400 dark:text-gray-500 transition-opacity duration-500">
-                          {getAwardIcon(currentTrophy)}
-                        </div>
-                      );
-                    })()}
+                    {allTrophies[orgCarouselIndex]?.image ? (
+                      <img 
+                        src={allTrophies[orgCarouselIndex].image} 
+                        alt={allTrophies[orgCarouselIndex].name}
+                        className="w-48 h-48 object-contain transition-opacity duration-500"
+                      />
+                    ) : (
+                      <div className="text-8xl text-gray-400 dark:text-gray-500 transition-opacity duration-500">
+                        {getAwardIcon(trophies.find(t => t.id === allTrophies[orgCarouselIndex]?.id) || trophies[0])}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Navigation buttons */}
-              {trophies.length > 1 && (
+              {allTrophies.length > 1 && (
                 <>
                   <button
-                    onClick={() => setSeasonCarouselIndex((prev) => (prev - 1 + trophies.length) % trophies.length)}
+                    onClick={() => setOrgCarouselIndex((prev) => (prev - 1 + allTrophies.length) % allTrophies.length)}
                     className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    data-testid="season-carousel-prev"
+                    data-testid="trophy-carousel-prev"
                   >
                     <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                   </button>
                   
                   <button
-                    onClick={() => setSeasonCarouselIndex((prev) => (prev + 1) % trophies.length)}
+                    onClick={() => setOrgCarouselIndex((prev) => (prev + 1) % allTrophies.length)}
                     className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    data-testid="season-carousel-next"
+                    data-testid="trophy-carousel-next"
                   >
                     <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                   </button>
 
                   {/* Dots indicator */}
                   <div className="flex justify-center mt-4 space-x-2">
-                    {trophies.map((_, index) => (
+                    {allTrophies.map((_, index: number) => (
                       <button
                         key={index}
-                        onClick={() => setSeasonCarouselIndex(index)}
+                        onClick={() => setOrgCarouselIndex(index)}
                         className={`w-2 h-2 rounded-full transition-colors ${
-                          index === seasonCarouselIndex 
-                            ? 'bg-blue-500' 
+                          index === orgCarouselIndex 
+                            ? 'bg-yellow-500' 
                             : 'bg-gray-300 dark:bg-gray-600'
                         }`}
-                        data-testid={`season-dot-${index}`}
+                        data-testid={`trophy-dot-${index}`}
                       />
                     ))}
                   </div>
                 </>
               )}
             </div>
-          </div>
         </div>
       </div>
 

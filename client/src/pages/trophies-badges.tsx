@@ -60,6 +60,16 @@ export default function TrophiesBadges() {
   
   const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "", progress: "" });
 
+  // Get trophy image for specific trophies
+  const getTrophyImage = (trophyId: string) => {
+    const imageMap: Record<string, string> = {
+      "coach-choice": coachAwardImage,
+      "most-improved": mostImprovedImage,
+      "mvp-season": seasonMvpImage,
+    };
+    return imageMap[trophyId];
+  };
+
   // Filter badges and trophies first
   const trophies = AWARDS.filter(award => award.kind === "Trophy");
   const badges = AWARDS.filter(award => award.kind === "Badge");
@@ -137,16 +147,6 @@ export default function TrophiesBadges() {
 
     
     return "0/1";
-  };
-
-  // Get trophy image for specific trophies
-  const getTrophyImage = (trophyId: string) => {
-    const imageMap: Record<string, string> = {
-      "coach-choice": coachAwardImage,
-      "most-improved": mostImprovedImage,
-      "mvp-season": seasonMvpImage,
-    };
-    return imageMap[trophyId];
   };
 
   // Get icon for award type

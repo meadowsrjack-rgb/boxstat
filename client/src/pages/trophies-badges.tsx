@@ -360,7 +360,7 @@ export default function TrophiesBadges() {
       {/* Badges Section */}
       <div className="space-y-8">
         <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          🎖️ Achievement Badges
+          🎖️ Badges
         </h2>
         <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto">
           Unlock these badges by reaching milestones and demonstrating consistent excellence

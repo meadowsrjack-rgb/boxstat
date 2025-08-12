@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AWARDS } from "../lib/awards.registry";
-import "./trophies-badges.css";
 
 export default function TrophiesBadges() {
   const [filter, setFilter] = useState("all");
@@ -244,26 +243,30 @@ export default function TrophiesBadges() {
   });
 
   return (
-    <div className="container">
-      <div className="header" />
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="mb-8" />
 
       {/* Trophies Section */}
-      <div className="trophies-section">
-        <h2 className="section-title">🏆 Trophies</h2>
-        <p className="section-subtitle">
+      <div className="mb-12">
+        <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          🏆 Trophies
+        </h2>
+        <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto">
           The most prestigious awards recognizing exceptional season-long achievements
         </p>
 
-        <div className="trophies-grid">
-          <div className="trophy-subsection">
-            <h3 className="subsection-title">🌟 UYP Legacy Trophies (Yearly)</h3>
-            <p className="subsection-description">
+        <div className="space-y-8">
+          <div className="space-y-6">
+            <h3 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200">
+              🌟 UYP Legacy Trophies (Yearly)
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               Premier organization-wide honors - only one recipient selected from all UYP teams
             </p>
 
-            <div className="trophy-cards-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div
-                className="trophy-card legacy-trophy"
+                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
                 onClick={() =>
                   openModal(
                     "❤️‍🔥",
@@ -273,18 +276,22 @@ export default function TrophiesBadges() {
                 }
                 data-testid="trophy-heart-hustle"
               >
-                <div className="trophy-icon-container">
-                  <div className="trophy-icon">❤️‍🔥</div>
-                  <div className="trophy-status">Not Awarded</div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-4xl">❤️‍🔥</div>
+                  <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                    Not Awarded
+                  </div>
                 </div>
-                <div className="trophy-title">The UYP Heart and Hustle Award</div>
-                <div className="trophy-description">
+                <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
+                  The UYP Heart and Hustle Award
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
                   Organization's highest honor for effort and determination
                 </div>
               </div>
 
               <div
-                className="trophy-card legacy-trophy"
+                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
                 onClick={() =>
                   openModal(
                     "✨",
@@ -294,28 +301,36 @@ export default function TrophiesBadges() {
                 }
                 data-testid="trophy-spirit"
               >
-                <div className="trophy-icon-container">
-                  <div className="trophy-icon">✨</div>
-                  <div className="trophy-status">Not Awarded</div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-4xl">✨</div>
+                  <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                    Not Awarded
+                  </div>
                 </div>
-                <div className="trophy-title">The Spirit Award</div>
-                <div className="trophy-description">Highest character honor across entire organization</div>
+                <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
+                  The Spirit Award
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Highest character honor across entire organization
+                </div>
               </div>
             </div>
           </div>
 
           {/* Coach-Awarded Team Trophies */}
-          <div className="trophy-subsection">
-            <h3 className="subsection-title">🏆 Coach-Awarded Team Trophies</h3>
-            <p className="subsection-description">
+          <div className="space-y-6">
+            <h3 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-200">
+              🏆 Coach-Awarded Team Trophies
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
               Season-long achievements recognized by your coach
             </p>
 
-            <div className="trophy-cards-grid">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {trophies.map((trophy) => (
                 <div
                   key={trophy.id}
-                  className="trophy-card team-trophy"
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
                   onClick={() =>
                     openModal(
                       getAwardIcon(trophy),
@@ -325,12 +340,18 @@ export default function TrophiesBadges() {
                   }
                   data-testid={`trophy-${trophy.id}`}
                 >
-                  <div className="trophy-icon-container">
-                    <div className="trophy-icon">{getAwardIcon(trophy)}</div>
-                    <div className="trophy-status">Not Awarded</div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="text-4xl">{getAwardIcon(trophy)}</div>
+                    <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                      Not Awarded
+                    </div>
                   </div>
-                  <div className="trophy-title">{trophy.name}</div>
-                  <div className="trophy-description">{trophy.description}</div>
+                  <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
+                    {trophy.name}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    {trophy.description}
+                  </div>
                 </div>
               ))}
             </div>
@@ -339,65 +360,99 @@ export default function TrophiesBadges() {
       </div>
 
       {/* Badges Section */}
-      <div className="badges-section">
-        <h2 className="section-title">🎖️ Achievement Badges</h2>
-        <p className="section-subtitle">
+      <div className="space-y-8">
+        <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          🎖️ Achievement Badges
+        </h2>
+        <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto">
           Unlock these badges by reaching milestones and demonstrating consistent excellence
         </p>
 
         {/* Filter Buttons */}
-        <div className="filter-buttons">
+        <div className="flex flex-wrap gap-2 justify-center mb-8">
           <button
-            className={`filter-btn ${filter === "all" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "all"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("all")}
             data-testid="filter-all"
           >
             All Badges
           </button>
           <button
-            className={`filter-btn ${filter === "earned" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "earned"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("earned")}
             data-testid="filter-earned"
           >
             Earned
           </button>
           <button
-            className={`filter-btn ${filter === "progress" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "progress"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("progress")}
             data-testid="filter-progress"
           >
             In Progress
           </button>
           <button
-            className={`filter-btn ${filter === "hall-of-famer" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "hall-of-famer"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("hall-of-famer")}
             data-testid="filter-hall-of-famer"
           >
             Hall of Famer
           </button>
           <button
-            className={`filter-btn ${filter === "superstar" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "superstar"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("superstar")}
             data-testid="filter-superstar"
           >
             Superstar
           </button>
           <button
-            className={`filter-btn ${filter === "all-star" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "all-star"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("all-star")}
             data-testid="filter-all-star"
           >
             All-Star
           </button>
           <button
-            className={`filter-btn ${filter === "starter" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "starter"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("starter")}
             data-testid="filter-starter"
           >
             Starter
           </button>
           <button
-            className={`filter-btn ${filter === "prospect" ? "active" : ""}`}
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              filter === "prospect"
+                ? "bg-blue-500 text-white shadow-lg"
+                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
+            }`}
             onClick={() => setFilter("prospect")}
             data-testid="filter-prospect"
           >
@@ -406,16 +461,43 @@ export default function TrophiesBadges() {
         </div>
 
         {/* Achievement Cards Grid */}
-        <div className="achievements-grid">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {filteredBadges.map((badge) => {
             const isEarned = isBadgeEarned(badge);
             const progress = getBadgeProgress(badge);
-            const tierClass = badge.tier.toLowerCase().replace("of", "-of").replace(/([A-Z])/g, "-$1").toLowerCase();
+            
+            // Get tier-specific styling
+            const getTierStyles = () => {
+              switch (badge.tier) {
+                case "HallOfFamer":
+                  return isEarned 
+                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
+                    : "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-300 dark:border-yellow-600";
+                case "Superstar":
+                  return isEarned 
+                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
+                    : "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-300 dark:border-purple-600";
+                case "AllStar":
+                  return isEarned 
+                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
+                    : "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-300 dark:border-blue-600";
+                case "Starter":
+                  return isEarned 
+                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
+                    : "bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-green-300 dark:border-green-600";
+                case "Prospect":
+                  return isEarned 
+                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
+                    : "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-gray-300 dark:border-gray-600";
+                default:
+                  return "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
+              }
+            };
             
             return (
               <div
                 key={badge.id}
-                className={`achievement-card ${tierClass} ${isEarned ? "achieved" : ""}`}
+                className={`${getTierStyles()} rounded-lg border p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center`}
                 onClick={() =>
                   openModal(
                     getAwardIcon(badge),
@@ -426,20 +508,26 @@ export default function TrophiesBadges() {
                 }
                 data-testid={`badge-${badge.id}`}
               >
-                <div className="icon-container">
-                  <div className="achievement-icon">{getAwardIcon(badge)}</div>
-                  <div className={`progress-indicator ${isEarned ? "completed" : ""}`}>
+                <div className="mb-3">
+                  <div className="text-3xl mb-2">{getAwardIcon(badge)}</div>
+                  <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                    isEarned 
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  }`}>
                     {progress}
                   </div>
                 </div>
-                <div className="achievement-title">{badge.name}</div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  {badge.name}
+                </div>
               </div>
             );
           })}
         </div>
 
         {filteredBadges.length === 0 && (
-          <div className="no-results" data-testid="no-results">
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400" data-testid="no-results">
             <p>No badges found for the selected filter.</p>
           </div>
         )}
@@ -447,19 +535,32 @@ export default function TrophiesBadges() {
 
       {/* Modal */}
       {modal.open && (
-        <div className="modal" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-          <div className="modal-content">
-            <div className="modal-icon">{modal.icon}</div>
-            <div className="modal-title">{modal.title}</div>
-            <div className="modal-description">{modal.desc}</div>
-            {modal.progress && (
-              <div className="modal-progress">
-                Progress: {modal.progress}
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+          onClick={(e) => e.target === e.currentTarget && closeModal()}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 m-4 max-w-md w-full">
+            <div className="text-center">
+              <div className="text-4xl mb-4">{modal.icon}</div>
+              <div className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+                {modal.title}
               </div>
-            )}
-            <button className="close-modal" onClick={closeModal} data-testid="close-modal">
-              Close
-            </button>
+              <div className="text-gray-600 dark:text-gray-300 leading-relaxed mb-4">
+                {modal.desc}
+              </div>
+              {modal.progress && (
+                <div className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-4">
+                  Progress: {modal.progress}
+                </div>
+              )}
+              <button 
+                className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors" 
+                onClick={closeModal} 
+                data-testid="close-modal"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

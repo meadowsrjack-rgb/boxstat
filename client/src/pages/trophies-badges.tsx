@@ -285,9 +285,7 @@ export default function TrophiesBadges() {
         <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           🏆 Trophies
         </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto">
-          The most prestigious awards recognizing exceptional season-long achievements
-        </p>
+
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
 
@@ -362,9 +360,7 @@ export default function TrophiesBadges() {
         <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           🎖️ Badges
         </h2>
-        <p className="text-lg text-gray-600 dark:text-gray-300 text-center mb-8 max-w-3xl mx-auto">
-          Unlock these badges by reaching milestones and demonstrating consistent excellence
-        </p>
+
 
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">

@@ -114,17 +114,7 @@ export const AWARDS: Award[] = [
     category: "InGamePerformance",
     description: "For earning each of the eight core coach awards at least once.",
     iconName: "badge-coaches-choice",
-    progressKind: "composite",
-    composite: [
-      { stat: "mvpCount", min: 1 },
-      { stat: "clutchCount", min: 1 },
-      { stat: "comebackCount", min: 1 },
-      { stat: "hustleCount", min: 1 },
-      { stat: "teammateCount", min: 1 },
-      { stat: "sportsmanshipCount", min: 1 },
-      { stat: "studentCount", min: 1 },
-      { stat: "leadByExampleCount", min: 1 }
-    ],
+    progressKind: "manual",
     triggerSources: ["coachAward"],
     tags: ["Collection", "Elite"]
   },
@@ -136,12 +126,7 @@ export const AWARDS: Award[] = [
     category: "InGamePerformance",
     description: "For earning an MVP, Hustle, and Teammate award in the same season.",
     iconName: "badge-trifecta",
-    progressKind: "composite",
-    composite: [
-      { stat: "mvp", min: 1, seasonScoped: true },
-      { stat: "hustle", min: 1, seasonScoped: true },
-      { stat: "teammate", min: 1, seasonScoped: true }
-    ],
+    progressKind: "manual",
     triggerSources: ["coachAward"],
     tags: ["Seasonal", "Elite"]
   },
@@ -153,12 +138,7 @@ export const AWARDS: Award[] = [
     category: "InGamePerformance",
     description: "For earning a Hustle, Teammate, and Sportsmanship award in the same season.",
     iconName: "badge-character-captain",
-    progressKind: "composite",
-    composite: [
-      { stat: "hustle", min: 1, seasonScoped: true },
-      { stat: "teammate", min: 1, seasonScoped: true },
-      { stat: "sportsmanship", min: 1, seasonScoped: true }
-    ],
+    progressKind: "manual",
     triggerSources: ["coachAward"],
     tags: ["Character", "Elite"]
   },
@@ -1307,18 +1287,7 @@ export const AWARDS: Award[] = [
     triggerSources: ["coachAward"],
     tags: ["Improvement", "Season"]
   },
-  {
-    id: "leadership",
-    kind: "Trophy",
-    name: "Leadership",
-    tier: "Legacy", 
-    category: "SeasonalLegacy",
-    description: "For demonstrating exceptional leadership on and off the court.",
-    iconName: "trophy-leadership",
-    progressKind: "manual",
-    triggerSources: ["coachAward"],
-    tags: ["Leadership", "Character"]
-  },
+
   {
     id: "mvp-season",
     kind: "Trophy",
@@ -1331,16 +1300,5 @@ export const AWARDS: Award[] = [
     triggerSources: ["coachAward"],
     tags: ["MVP", "Season"]
   },
-  {
-    id: "championship",
-    kind: "Trophy",
-    name: "Championship",
-    tier: "Legacy",
-    category: "SeasonalLegacy",
-    description: "Team championship winner - the ultimate achievement.",
-    iconName: "trophy-championship", 
-    progressKind: "manual",
-    triggerSources: ["coachAward"],
-    tags: ["Championship", "Team"]
-  }
+
 ];

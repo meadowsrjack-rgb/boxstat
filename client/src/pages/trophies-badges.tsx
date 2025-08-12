@@ -68,17 +68,7 @@ export default function TrophiesBadges() {
       return statValue >= award.streakOf.target;
     }
     
-    if (award.progressKind === "composite" && award.composite) {
-      return award.composite.every(req => {
-        if (req.seasonScoped) {
-          const seasonValue = mockUserStats.season[req.stat as keyof typeof mockUserStats.season] as number;
-          return seasonValue >= (req.min || 1);
-        } else {
-          const statValue = mockUserStats[req.stat as keyof typeof mockUserStats] as number;
-          return statValue >= (req.min || 1);
-        }
-      });
-    }
+
     
     return false;
   };
@@ -97,18 +87,7 @@ export default function TrophiesBadges() {
       return `${Math.min(statValue, award.streakOf.target)}/${award.streakOf.target}`;
     }
     
-    if (award.progressKind === "composite" && award.composite) {
-      const completed = award.composite.filter(req => {
-        if (req.seasonScoped) {
-          const seasonValue = mockUserStats.season[req.stat as keyof typeof mockUserStats.season] as number;
-          return seasonValue >= (req.min || 1);
-        } else {
-          const statValue = mockUserStats[req.stat as keyof typeof mockUserStats] as number;
-          return statValue >= (req.min || 1);
-        }
-      }).length;
-      return `${completed}/${award.composite.length}`;
-    }
+
     
     return "0/1";
   };

@@ -260,9 +260,9 @@ export default function TrophiesBadges() {
               Premier organization-wide honors - only one recipient selected from all UYP teams
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               <div
-                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center"
                 onClick={() =>
                   openModal(
                     "❤️‍🔥",
@@ -272,26 +272,18 @@ export default function TrophiesBadges() {
                 }
                 data-testid="trophy-heart-hustle"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={heartHustleImage} 
-                    alt="Heart & Hustle Award" 
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                    Not Awarded
-                  </div>
-                </div>
-                <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
-                  The UYP Heart and Hustle Award
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Organization's highest honor for effort and determination
+                <img 
+                  src={heartHustleImage} 
+                  alt="Heart & Hustle Award" 
+                  className="w-24 h-24 object-contain mb-4"
+                />
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Heart & Hustle Award
                 </div>
               </div>
 
               <div
-                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
+                className="bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-200 dark:border-yellow-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center"
                 onClick={() =>
                   openModal(
                     "✨",
@@ -301,21 +293,13 @@ export default function TrophiesBadges() {
                 }
                 data-testid="trophy-spirit"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <img 
-                    src={spiritAwardImage} 
-                    alt="Spirit Award" 
-                    className="w-16 h-16 object-contain"
-                  />
-                  <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                    Not Awarded
-                  </div>
-                </div>
-                <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
-                  The Spirit Award
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  Highest character honor across entire organization
+                <img 
+                  src={spiritAwardImage} 
+                  alt="Spirit Award" 
+                  className="w-24 h-24 object-contain mb-4"
+                />
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  Spirit Award
                 </div>
               </div>
             </div>
@@ -330,14 +314,14 @@ export default function TrophiesBadges() {
               Season-long achievements recognized by your coach
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               {trophies.map((trophy) => {
                 const trophyImage = getTrophyImage(trophy.id);
                 
                 return (
                   <div
                     key={trophy.id}
-                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105"
+                    className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-700 rounded-xl border p-6 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center"
                     onClick={() =>
                       openModal(
                         trophyImage ? "🏆" : getAwardIcon(trophy),
@@ -347,25 +331,17 @@ export default function TrophiesBadges() {
                     }
                     data-testid={`trophy-${trophy.id}`}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      {trophyImage ? (
-                        <img 
-                          src={trophyImage} 
-                          alt={trophy.name} 
-                          className="w-16 h-16 object-contain"
-                        />
-                      ) : (
-                        <div className="text-4xl">{getAwardIcon(trophy)}</div>
-                      )}
-                      <div className="text-sm font-medium px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        Not Awarded
-                      </div>
-                    </div>
-                    <div className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">
+                    {trophyImage ? (
+                      <img 
+                        src={trophyImage} 
+                        alt={trophy.name} 
+                        className="w-24 h-24 object-contain mb-4"
+                      />
+                    ) : (
+                      <div className="text-6xl mb-4">{getAwardIcon(trophy)}</div>
+                    )}
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {trophy.name}
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-300">
-                      {trophy.description}
                     </div>
                   </div>
                 );

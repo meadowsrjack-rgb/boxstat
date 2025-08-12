@@ -287,71 +287,56 @@ export default function TrophiesBadges() {
         </h2>
 
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+        <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
+          {/* Heart & Hustle Award */}
+          <button
+            onClick={() => openModal("", "The UYP Heart and Hustle Award", "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.")}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            data-testid="trophy-heart-hustle"
+          >
+            <div className="text-4xl">🏆</div>
+            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">♥ & Hustle</div>
+          </button>
 
-            <div className="relative">
-              <div className="flex justify-center">
-                {allTrophies.length > 0 && (
-                  <div
-                    className="cursor-pointer transition-all duration-500 hover:scale-105 flex flex-col items-center text-center"
-                    onClick={() => {
-                      const currentTrophy = allTrophies[orgCarouselIndex];
-                      openModal("", currentTrophy.name, currentTrophy.description);
-                    }}
-                    data-testid={`trophy-${allTrophies[orgCarouselIndex]?.id}`}
-                  >
-                    {allTrophies[orgCarouselIndex]?.image ? (
-                      <img 
-                        src={allTrophies[orgCarouselIndex].image} 
-                        alt={allTrophies[orgCarouselIndex].name}
-                        className="w-48 h-48 object-contain transition-opacity duration-500"
-                      />
-                    ) : (
-                      <div className="text-8xl text-gray-400 dark:text-gray-500 transition-opacity duration-500">
-                        {getAwardIcon(trophies.find(t => t.id === allTrophies[orgCarouselIndex]?.id) || trophies[0])}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+          {/* Spirit Award */}
+          <button
+            onClick={() => openModal("", "The Spirit Award", "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.")}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            data-testid="trophy-spirit"
+          >
+            <div className="text-4xl">🏆</div>
+            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Spirit</div>
+          </button>
 
-              {/* Navigation buttons */}
-              {allTrophies.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setOrgCarouselIndex((prev) => (prev - 1 + allTrophies.length) % allTrophies.length)}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    data-testid="trophy-carousel-prev"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                  </button>
-                  
-                  <button
-                    onClick={() => setOrgCarouselIndex((prev) => (prev + 1) % allTrophies.length)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    data-testid="trophy-carousel-next"
-                  >
-                    <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                  </button>
+          {/* Season MVP */}
+          <button
+            onClick={() => openModal("", "Season MVP Trophy", "Awarded to the Most Valuable Player of the season, recognizing outstanding performance, leadership, and contribution to team success throughout the entire season.")}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            data-testid="trophy-mvp"
+          >
+            <div className="text-4xl">🏆</div>
+            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">MVP</div>
+          </button>
 
-                  {/* Dots indicator */}
-                  <div className="flex justify-center mt-4 space-x-2">
-                    {allTrophies.map((_, index: number) => (
-                      <button
-                        key={index}
-                        onClick={() => setOrgCarouselIndex(index)}
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          index === orgCarouselIndex 
-                            ? 'bg-yellow-500' 
-                            : 'bg-gray-300 dark:bg-gray-600'
-                        }`}
-                        data-testid={`trophy-dot-${index}`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+          {/* Most Improved Player */}
+          <button
+            onClick={() => openModal("", "Most Improved Player Trophy", "Recognizes the player who has shown the greatest improvement in skills, attitude, and performance throughout the season. This award celebrates growth, dedication, and the commitment to getting better every day.")}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            data-testid="trophy-mip"
+          >
+            <div className="text-4xl">🏆</div>
+            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">MIP</div>
+          </button>
+
+          {/* Coach's Choice */}
+          <button
+            onClick={() => openModal("", "Coach's Choice Trophy", "A special recognition awarded at the coach's discretion to a player who exemplifies the values and spirit of the team. This award recognizes qualities that go beyond statistics - leadership, character, and positive impact on teammates.")}
+            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors col-span-2 justify-center"
+            data-testid="trophy-coach"
+          >
+            <div className="text-4xl">🏆</div>
+            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Coach</div>
+          </button>
         </div>
       </div>
 
@@ -527,13 +512,13 @@ export default function TrophiesBadges() {
         )}
       </div>
 
-      {/* Modal */}
+      {/* Trophy Modal */}
       {modal.open && (
         <div 
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
           onClick={(e) => e.target === e.currentTarget && closeModal()}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 m-4 max-w-md w-full relative">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 m-4 max-w-2xl w-full relative">
             <button
               onClick={closeModal}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -542,10 +527,28 @@ export default function TrophiesBadges() {
               <X className="w-6 h-6" />
             </button>
             <div className="text-center">
+              {/* Display large trophy image based on the title */}
+              <div className="mb-6">
+                {modal.title.includes("Heart and Hustle") && (
+                  <img src={heartHustleImage} alt="Heart & Hustle Award" className="w-64 h-64 object-contain mx-auto" />
+                )}
+                {modal.title.includes("Spirit") && (
+                  <img src={spiritAwardImage} alt="Spirit Award" className="w-64 h-64 object-contain mx-auto" />
+                )}
+                {modal.title.includes("MVP") && (
+                  <img src={seasonMvpImage} alt="Season MVP Trophy" className="w-64 h-64 object-contain mx-auto" />
+                )}
+                {modal.title.includes("Most Improved") && (
+                  <img src={mostImprovedImage} alt="Most Improved Player Trophy" className="w-64 h-64 object-contain mx-auto" />
+                )}
+                {modal.title.includes("Coach") && (
+                  <img src={coachAwardImage} alt="Coach's Choice Trophy" className="w-64 h-64 object-contain mx-auto" />
+                )}
+              </div>
               <h3 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
                 {modal.title}
               </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">{modal.desc}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4 text-left leading-relaxed">{modal.desc}</p>
               {modal.progress && (
                 <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
                   Progress: {modal.progress}

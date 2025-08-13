@@ -989,102 +989,73 @@
                                               </Card>
 
                                               {/* Trophies & Badges (bottom of Profile tab) */}
-                                              <Card className="border-0 shadow-sm">
-                                                <CardContent className="p-4">
-                                                  <div className="flex items-center justify-between mb-3">
-                                                    <h3 className="text-lg font-semibold text-gray-900">
-                                                      Trophies &amp; Badges
-                                                    </h3>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="sm"
-                                                      className="text-sm text-gray-600 hover:text-gray-800"
-                                                      onClick={() => setLocation("/trophies-badges")}
-                                                    >
-                                                      View all <ChevronRight className="h-4 w-4 ml-1" />
-                                                    </Button>
-                                                  </div>
-
-                                                  <div className="grid grid-cols-2 gap-3">
-                                                    <div className="rounded-xl bg-white ring-1 ring-gray-100 shadow-sm p-4 flex items-center gap-3">
-                                                      <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                                                        <Trophy className="w-5 h-5 text-yellow-700" />
-                                                      </div>
-                                                      <div>
-                                                        <div className="text-xs text-gray-500">Trophies</div>
-                                                        <div className="text-xl font-bold text-gray-900">
-                                                          {awardsLoading ? "—" : awardsSummary?.trophiesCount ?? 0}
+                                              <Card 
+                                                className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                                                onClick={() => setLocation("/trophies-badges")}
+                                                data-testid="card-trophies-badges"
+                                              >
+                                                <CardContent className="p-6">
+                                                  <div className="grid grid-cols-2 gap-8">
+                                                    {/* Trophies Circle Progress */}
+                                                    <div className="flex flex-col items-center">
+                                                      <div className="relative w-24 h-24 mb-3">
+                                                        {/* Background Circle */}
+                                                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
+                                                          <path
+                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                                                            fill="none"
+                                                            stroke="#e5e7eb"
+                                                            strokeWidth="2"
+                                                          />
+                                                          {/* Progress Circle */}
+                                                          <path
+                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                                                            fill="none"
+                                                            stroke="#dc2626"
+                                                            strokeWidth="2"
+                                                            strokeDasharray={`${((awardsSummary?.trophiesCount ?? 0) / 5) * 100}, 100`}
+                                                            strokeLinecap="round"
+                                                          />
+                                                        </svg>
+                                                        {/* Count in Center */}
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                          <span className="text-2xl font-bold text-gray-900">
+                                                            {awardsLoading ? "—" : String(awardsSummary?.trophiesCount ?? 0).padStart(2, '0')}
+                                                          </span>
                                                         </div>
                                                       </div>
+                                                      <span className="text-sm font-medium text-gray-700">Trophies</span>
                                                     </div>
 
-                                                    <div className="rounded-xl bg-white ring-1 ring-gray-100 shadow-sm p-4 flex items-center gap-3">
-                                                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                                        <Award className="w-5 h-5 text-blue-700" />
-                                                      </div>
-                                                      <div>
-                                                        <div className="text-xs text-gray-500">Badges</div>
-                                                        <div className="text-xl font-bold text-gray-900">
-                                                          {awardsLoading ? "—" : awardsSummary?.badgesCount ?? 0}
+                                                    {/* Badges Circle Progress */}
+                                                    <div className="flex flex-col items-center">
+                                                      <div className="relative w-24 h-24 mb-3">
+                                                        {/* Background Circle */}
+                                                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
+                                                          <path
+                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                                                            fill="none"
+                                                            stroke="#e5e7eb"
+                                                            strokeWidth="2"
+                                                          />
+                                                          {/* Progress Circle */}
+                                                          <path
+                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                                                            fill="none"
+                                                            stroke="#dc2626"
+                                                            strokeWidth="2"
+                                                            strokeDasharray={`${((awardsSummary?.badgesCount ?? 0) / 50) * 100}, 100`}
+                                                            strokeLinecap="round"
+                                                          />
+                                                        </svg>
+                                                        {/* Count in Center */}
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                          <span className="text-2xl font-bold text-gray-900">
+                                                            {awardsLoading ? "—" : String(awardsSummary?.badgesCount ?? 0).padStart(2, '0')}
+                                                          </span>
                                                         </div>
                                                       </div>
-                                                    </div>
-                                                  </div>
-
-                                                  {/* Recent items */}
-                                                  <div className="mt-4">
-                                                    <div className="text-xs text-gray-500 mb-2">Recent awards</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                      {awardsLoading && (
-                                                        <>
-                                                          <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse" />
-                                                          <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse" />
-                                                          <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse" />
-                                                        </>
-                                                      )}
-
-                                                      {!awardsLoading &&
-                                                        (
-                                                          [
-                                                            ...(awardsSummary?.recentTrophies ?? [])
-                                                              .slice(0, 3)
-                                                              .map((a: any) => ({ ...a, _kind: "trophy" })),
-                                                            ...(awardsSummary?.recentBadges ?? [])
-                                                              .slice(0, 3)
-                                                              .map((a: any) => ({ ...a, _kind: "badge" })),
-                                                          ] as any[]
-                                                        )
-                                                          .slice(0, 6)
-                                                          .map((item: any) => (
-                                                            <div
-                                                              key={`${item._kind}-${item.id ?? item.name}`}
-                                                              className="w-9 h-9 rounded-full bg-gray-50 ring-1 ring-gray-100 flex items-center justify-center"
-                                                              title={item.name}
-                                                            >
-                                                              {item.iconUrl ? (
-                                                                // eslint-disable-next-line @next/next/no-img-element
-                                                                <img
-                                                                  src={item.iconUrl}
-                                                                  alt={item.name}
-                                                                  className="w-7 h-7 rounded-full object-cover"
-                                                                />
-                                                              ) : item._kind === "trophy" ? (
-                                                                <Trophy className="w-5 h-5 text-yellow-700" />
-                                                              ) : (
-                                                                <Award className="w-5 h-5 text-blue-700" />
-                                                              )}
-                                                            </div>
-                                                          ))}
-
-                                                      {!awardsLoading &&
-                                                        !(
-                                                          (awardsSummary?.recentTrophies?.length ?? 0) ||
-                                                          (awardsSummary?.recentBadges?.length ?? 0)
-                                                        ) && (
-                                                          <div className="text-sm text-gray-500">
-                                                            No recent awards yet.
-                                                          </div>
-                                                        )}
+                                                      <span className="text-sm font-medium text-gray-700">Badges</span>
                                                     </div>
                                                   </div>
                                                 </CardContent>

@@ -548,59 +548,16 @@
                                                 </div>
                                               </section>
 
-                                              {/* Upcoming */}
-                                              <section className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                  <h3 className="text-lg font-bold text-gray-900">Upcoming</h3>
-                                                  <Button
-                                                    variant="ghost"
-                                                    className="text-sm text-gray-600 hover:text-gray-800"
-                                                    onClick={() => setLocation("/schedule")}
-                                                  >
-                                                    Full calendar
-                                                    <ChevronRight className="h-4 w-4 ml-1" />
-                                                  </Button>
-                                                </div>
-
-                                                <div className="space-y-3">
-                                                  {upcomingEvents.length ? (
-                                                    upcomingEvents.map((event) => (
-                                                      <div
-                                                        key={event.id}
-                                                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm"
-                                                      >
-                                                        <div className="flex-1">
-                                                          <div className="flex items-center gap-2 mb-1">
-                                                            <Badge className="bg-gray-100 text-gray-800 text-xs px-2 py-1">
-                                                              {event.eventType || "Event"}
-                                                            </Badge>
-                                                          </div>
-                                                          <h4 className="font-semibold text-gray-900 text-sm">
-                                                            {event.title}
-                                                          </h4>
-                                                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                                                            <span className="flex items-center gap-1">
-                                                              <CalendarIcon className="w-3 h-3" />
-                                                              {format(
-                                                                new Date(event.startTime || (event as any).start_time),
-                                                                "MMM d"
-                                                              )}
-                                                            </span>
-                                                            <span className="flex items-center gap-1">
-                                                              🕐{" "}
-                                                              {format(
-                                                                new Date(event.startTime || (event as any).start_time),
-                                                                "h:mm a"
-                                                              )}
-                                                            </span>
-                                                          </div>
-                                                        </div>
-                                                      </div>
-                                                    ))
-                                                  ) : (
-                                                    <div className="text-sm text-gray-500">No upcoming events.</div>
-                                                  )}
-                                                </div>
+                                              {/* View Calendar Button */}
+                                              <section>
+                                                <Button 
+                                                  variant="outline" 
+                                                  className="w-full text-red-600 border-red-600 hover:bg-red-50"
+                                                  onClick={() => setLocation("/schedule")}
+                                                >
+                                                  View Calendar
+                                                  <ChevronRight className="w-4 h-4 ml-1" />
+                                                </Button>
                                               </section>
                                             </div>
                                           )}

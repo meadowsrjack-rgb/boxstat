@@ -25,6 +25,8 @@ export default function SchedulePage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
   
   // Touch/swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -90,11 +92,25 @@ export default function SchedulePage() {
   };
 
   const previousMonth = () => {
-    setCurrentDate(subMonths(currentDate, 1));
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSlideDirection('right');
+    setTimeout(() => {
+      setCurrentDate(subMonths(currentDate, 1));
+      setSlideDirection(null);
+      setTimeout(() => setIsAnimating(false), 50);
+    }, 150);
   };
 
   const nextMonth = () => {
-    setCurrentDate(addMonths(currentDate, 1));
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSlideDirection('left');
+    setTimeout(() => {
+      setCurrentDate(addMonths(currentDate, 1));
+      setSlideDirection(null);
+      setTimeout(() => setIsAnimating(false), 50);
+    }, 150);
   };
 
   const selectDate = (date: Date) => {
@@ -114,8 +130,8 @@ export default function SchedulePage() {
     if (!touchStartX.current || !touchEndX.current) return;
     
     const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
+    const isLeftSwipe = distance > 100; // Increased from 50 to 100
+    const isRightSwipe = distance < -100; // Increased from -50 to -100
 
     if (isLeftSwipe) {
       nextMonth();
@@ -123,6 +139,10 @@ export default function SchedulePage() {
     if (isRightSwipe) {
       previousMonth();
     }
+    
+    // Reset touch references
+    touchStartX.current = null;
+    touchEndX.current = null;
   };
 
   const calendarDays = renderCalendar();
@@ -167,7 +187,11 @@ export default function SchedulePage() {
           </div>
           
           {/* Days */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className={`grid grid-cols-7 gap-1 transition-all duration-300 ${
+            slideDirection === 'left' ? 'transform -translate-x-full opacity-0' :
+            slideDirection === 'right' ? 'transform translate-x-full opacity-0' :
+            'transform translate-x-0 opacity-100'
+          }`}>
             {calendarDays.map((dayObj, index) => {
               const { date, isCurrentMonth } = dayObj;
               const isToday = isDateToday(date);

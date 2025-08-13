@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 
@@ -25,6 +25,11 @@ export default function SchedulePage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  
+  // Touch/swipe handling
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   // Get events for selected date
   const eventsForSelectedDate = useMemo(() => {
@@ -96,6 +101,30 @@ export default function SchedulePage() {
     setSelectedDate(date);
   };
 
+  // Touch handlers for swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe) {
+      nextMonth();
+    }
+    if (isRightSwipe) {
+      previousMonth();
+    }
+  };
+
   const calendarDays = renderCalendar();
 
   return (
@@ -113,29 +142,21 @@ export default function SchedulePage() {
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div className="flex items-center gap-3">
-              <button 
-                className="text-gray-600 hover:text-red-600 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                onClick={previousMonth}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <div className="text-lg font-medium">
-                {format(currentDate, 'MMMM yyyy')}
-              </div>
-              <button 
-                className="text-gray-600 hover:text-red-600 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                onClick={nextMonth}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+            <div className="text-lg font-medium">
+              {format(currentDate, 'MMMM yyyy')}
             </div>
             <div className="w-10"></div> {/* Spacer to balance the layout */}
           </div>
         </div>
         
         {/* Calendar */}
-        <div className="p-5">
+        <div 
+          className="p-5"
+          ref={calendarRef}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Weekdays */}
           <div className="grid grid-cols-7 gap-1 mb-4">
             {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (

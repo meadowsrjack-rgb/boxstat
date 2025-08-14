@@ -78,6 +78,28 @@ export default function TrophiesBadges() {
   const trophies = AWARDS.filter(award => award.kind === "Trophy");
   const badges = AWARDS.filter(award => award.kind === "Badge");
   
+  // All trophies combined
+  const allTrophies = [
+    {
+      id: "heart-hustle",
+      name: "The UYP Heart and Hustle Award",
+      description: "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.",
+      image: heartHustleImage
+    },
+    {
+      id: "spirit",
+      name: "The Spirit Award", 
+      description: "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.",
+      image: spiritAwardImage
+    },
+    ...trophies.map(trophy => ({
+      id: trophy.id,
+      name: trophy.name,
+      description: trophy.description,
+      image: getTrophyImage(trophy.id)
+    }))
+  ];
+
   // Calculate tier counts
   const getTierCounts = () => {
     const counts = {
@@ -101,28 +123,6 @@ export default function TrophiesBadges() {
       setTierFilter(tier);
     }
   };
-  
-  // All trophies combined
-  const allTrophies = [
-    {
-      id: "heart-hustle",
-      name: "The UYP Heart and Hustle Award",
-      description: "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.",
-      image: heartHustleImage
-    },
-    {
-      id: "spirit",
-      name: "The Spirit Award", 
-      description: "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.",
-      image: spiritAwardImage
-    },
-    ...trophies.map(trophy => ({
-      id: trophy.id,
-      name: trophy.name,
-      description: trophy.description,
-      image: getTrophyImage(trophy.id)
-    }))
-  ];
 
   // Auto-advance carousel
   useEffect(() => {

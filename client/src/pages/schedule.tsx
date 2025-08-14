@@ -26,7 +26,7 @@ export default function SchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
   
   // Touch/swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -94,22 +94,28 @@ export default function SchedulePage() {
   const previousMonth = () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setSlideDirection('right');
+    setSlideDirection('left'); // Old month slides left
     setTimeout(() => {
       setCurrentDate(subMonths(currentDate, 1));
-      setSlideDirection(null);
-      setTimeout(() => setIsAnimating(false), 50);
+      setSlideDirection('slide-in-right'); // New month slides in from right
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+      }, 50);
     }, 150);
   };
 
   const nextMonth = () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setSlideDirection('left');
+    setSlideDirection('right'); // Old month slides right
     setTimeout(() => {
       setCurrentDate(addMonths(currentDate, 1));
-      setSlideDirection(null);
-      setTimeout(() => setIsAnimating(false), 50);
+      setSlideDirection('slide-in-left'); // New month slides in from left
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+      }, 50);
     }, 150);
   };
 
@@ -190,6 +196,8 @@ export default function SchedulePage() {
           <div className={`grid grid-cols-7 gap-1 transition-all duration-300 ${
             slideDirection === 'left' ? 'transform -translate-x-full opacity-0' :
             slideDirection === 'right' ? 'transform translate-x-full opacity-0' :
+            slideDirection === 'slide-in-left' ? 'transform translate-x-0 opacity-100 animate-slide-in-left' :
+            slideDirection === 'slide-in-right' ? 'transform translate-x-0 opacity-100 animate-slide-in-right' :
             'transform translate-x-0 opacity-100'
           }`}>
             {calendarDays.map((dayObj, index) => {

@@ -196,9 +196,9 @@ export default function SchedulePage() {
           <div className={`grid grid-cols-7 gap-1 transition-all duration-300 ${
             slideDirection === 'left' ? 'transform -translate-x-full opacity-0' :
             slideDirection === 'right' ? 'transform translate-x-full opacity-0' :
-            slideDirection === 'slide-in-left' ? 'transform translate-x-0 opacity-100 animate-slide-in-left' :
-            slideDirection === 'slide-in-right' ? 'transform translate-x-0 opacity-100 animate-slide-in-right' :
-            'transform translate-x-0 opacity-100'
+            slideDirection === 'slide-in-left' ? 'animate-slide-in-left' :
+            slideDirection === 'slide-in-right' ? 'animate-slide-in-right' :
+            'opacity-100'
           }`}>
             {calendarDays.map((dayObj, index) => {
               const { date, isCurrentMonth } = dayObj;

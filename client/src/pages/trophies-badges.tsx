@@ -340,17 +340,17 @@ export default function TrophiesBadges() {
       
       {/* Trophy/Badge Filter Header */}
       <div className="mb-12 -mx-6">
-        <div className="relative w-full">
-          {/* Base filter header image - full width edge to edge */}
+        <div className="relative w-screen max-w-full overflow-hidden">
+          {/* Base filter header image - full width but contained */}
           <img 
             src={filterHeaderImage} 
             alt="Filter Header" 
-            className="w-full h-auto object-cover"
+            className="w-full h-auto object-contain"
           />
           
           {/* Clickable areas overlaid on the image */}
-          <div className="absolute inset-0 flex justify-center items-center">
-            <div className="flex justify-between items-center w-full max-w-4xl px-8">
+          <div className="absolute inset-0 flex justify-center items-start pt-4">
+            <div className="flex justify-between items-start w-full max-w-4xl px-8">
               {/* Trophy Filter - positioned over the crystal trophy */}
               <div className="flex flex-col items-center">
                 <div 
@@ -360,8 +360,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('Trophy')}
                   data-testid="filter-trophy"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'Trophy' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'Trophy' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.Trophy}
                 </div>
@@ -376,8 +376,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('HallOfFamer')}
                   data-testid="filter-halloffamer"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'HallOfFamer' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'HallOfFamer' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.HallOfFamer}
                 </div>
@@ -392,8 +392,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('Superstar')}
                   data-testid="filter-superstar"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'Superstar' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'Superstar' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.Superstar}
                 </div>
@@ -408,8 +408,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('AllStar')}
                   data-testid="filter-allstar"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'AllStar' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'AllStar' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.AllStar}
                 </div>
@@ -424,8 +424,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('Starter')}
                   data-testid="filter-starter"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'Starter' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'Starter' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.Starter}
                 </div>
@@ -440,8 +440,8 @@ export default function TrophiesBadges() {
                   onClick={() => handleTierFilter('Prospect')}
                   data-testid="filter-prospect"
                 />
-                <div className={`mt-2 min-w-[28px] h-7 bg-black text-white text-xs font-bold rounded-full flex items-center justify-center px-2 shadow-lg ${
-                  tierFilter === 'Prospect' ? 'animate-bounce bg-gray-800' : ''
+                <div className={`mt-1 text-black text-sm font-bold ${
+                  tierFilter === 'Prospect' ? 'animate-bounce' : ''
                 }`}>
                   {tierCounts.Prospect}
                 </div>

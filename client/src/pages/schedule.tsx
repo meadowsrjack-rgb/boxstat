@@ -94,10 +94,10 @@ export default function SchedulePage() {
   const previousMonth = () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setSlideDirection('left'); // Old month slides left
+    setSlideDirection('right'); // Current month slides OUT to the right
     setTimeout(() => {
       setCurrentDate(subMonths(currentDate, 1));
-      setSlideDirection('slide-in-right'); // New month slides in from right
+      setSlideDirection('slide-in-left'); // New month slides IN from the left
       setTimeout(() => {
         setSlideDirection(null);
         setIsAnimating(false);
@@ -108,10 +108,10 @@ export default function SchedulePage() {
   const nextMonth = () => {
     if (isAnimating) return;
     setIsAnimating(true);
-    setSlideDirection('right'); // Old month slides right
+    setSlideDirection('left'); // Current month slides OUT to the left
     setTimeout(() => {
       setCurrentDate(addMonths(currentDate, 1));
-      setSlideDirection('slide-in-left'); // New month slides in from left
+      setSlideDirection('slide-in-right'); // New month slides IN from the right
       setTimeout(() => {
         setSlideDirection(null);
         setIsAnimating(false);

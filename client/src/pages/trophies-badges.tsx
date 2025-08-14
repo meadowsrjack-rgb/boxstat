@@ -12,6 +12,9 @@ import coachAwardImage from "@assets/Coach Award_1754973783767.png";
 import mostImprovedImage from "@assets/Season MIP Award_1754973783767.png";
 import seasonMvpImage from "@assets/Season MVP Award_1754973783769.png";
 
+// Import filter header image
+import filterHeaderImage from "@assets/0 (72 x 15 in)_1755203804254.png";
+
 export default function TrophiesBadges() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState("all");
@@ -337,121 +340,105 @@ export default function TrophiesBadges() {
       
       {/* Trophy/Badge Filter Header */}
       <div className="mb-12">
-        <div className="flex justify-center items-center gap-6 px-4">
-          {/* Trophy Filter */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'Trophy' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('Trophy')}
-            data-testid="filter-trophy"
-          >
-            <div className={`relative ${tierFilter === 'Trophy' ? 'animate-pulse' : ''}`}>
-              <div className="text-6xl">🏆</div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'Trophy' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.Trophy}
+        <div className="relative flex justify-center items-center px-4">
+          {/* Base filter header image */}
+          <img 
+            src={filterHeaderImage} 
+            alt="Filter Header" 
+            className="max-w-full h-auto"
+          />
+          
+          {/* Clickable areas overlaid on the image */}
+          <div className="absolute inset-0 flex justify-center items-center">
+            <div className="flex gap-8 items-center">
+              {/* Trophy Filter - positioned over the crystal trophy */}
+              <div 
+                className={`w-20 h-20 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'Trophy' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('Trophy')}
+                data-testid="filter-trophy"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'Trophy' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.Trophy}
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Hall of Famer */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'HallOfFamer' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('HallOfFamer')}
-            data-testid="filter-halloffamer"
-          >
-            <div className={`relative ${tierFilter === 'HallOfFamer' ? 'animate-pulse' : ''}`}>
-              <div className="w-16 h-16 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-b from-yellow-300 to-yellow-500 rounded-full"></div>
+              {/* Hall of Famer (Yellow Medal) */}
+              <div 
+                className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'HallOfFamer' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('HallOfFamer')}
+                data-testid="filter-halloffamer"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'HallOfFamer' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.HallOfFamer}
+                </div>
               </div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'HallOfFamer' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.HallOfFamer}
-              </div>
-            </div>
-          </div>
 
-          {/* Superstar */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'Superstar' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('Superstar')}
-            data-testid="filter-superstar"
-          >
-            <div className={`relative ${tierFilter === 'Superstar' ? 'animate-pulse' : ''}`}>
-              <div className="w-16 h-16 bg-gradient-to-b from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-b from-purple-400 to-purple-600 rounded-full"></div>
+              {/* Superstar (Purple Medal) */}
+              <div 
+                className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'Superstar' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('Superstar')}
+                data-testid="filter-superstar"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'Superstar' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.Superstar}
+                </div>
               </div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'Superstar' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.Superstar}
-              </div>
-            </div>
-          </div>
 
-          {/* AllStar */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'AllStar' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('AllStar')}
-            data-testid="filter-allstar"
-          >
-            <div className={`relative ${tierFilter === 'AllStar' ? 'animate-pulse' : ''}`}>
-              <div className="w-16 h-16 bg-gradient-to-b from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
+              {/* AllStar (Blue Medal) */}
+              <div 
+                className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'AllStar' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('AllStar')}
+                data-testid="filter-allstar"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'AllStar' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.AllStar}
+                </div>
               </div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'AllStar' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.AllStar}
-              </div>
-            </div>
-          </div>
 
-          {/* Starter */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'Starter' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('Starter')}
-            data-testid="filter-starter"
-          >
-            <div className={`relative ${tierFilter === 'Starter' ? 'animate-pulse' : ''}`}>
-              <div className="w-16 h-16 bg-gradient-to-b from-green-500 to-green-700 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
+              {/* Starter (Green Medal) */}
+              <div 
+                className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'Starter' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('Starter')}
+                data-testid="filter-starter"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'Starter' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.Starter}
+                </div>
               </div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'Starter' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.Starter}
-              </div>
-            </div>
-          </div>
 
-          {/* Prospect */}
-          <div 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              tierFilter === 'Prospect' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
-            }`}
-            onClick={() => handleTierFilter('Prospect')}
-            data-testid="filter-prospect"
-          >
-            <div className={`relative ${tierFilter === 'Prospect' ? 'animate-pulse' : ''}`}>
-              <div className="w-16 h-16 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-b from-gray-300 to-gray-500 rounded-full"></div>
-              </div>
-              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
-                tierFilter === 'Prospect' ? 'animate-bounce bg-red-600' : ''
-              }`}>
-                {tierCounts.Prospect}
+              {/* Prospect (Gray Medal) */}
+              <div 
+                className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
+                  tierFilter === 'Prospect' ? 'bg-white/20 transform scale-110 animate-pulse' : 'hover:bg-white/10 hover:scale-105'
+                }`}
+                onClick={() => handleTierFilter('Prospect')}
+                data-testid="filter-prospect"
+              >
+                <div className={`absolute -top-2 -right-2 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                  tierFilter === 'Prospect' ? 'animate-bounce bg-red-600' : ''
+                }`}>
+                  {tierCounts.Prospect}
+                </div>
               </div>
             </div>
           </div>

@@ -15,6 +15,7 @@ import seasonMvpImage from "@assets/Season MVP Award_1754973783769.png";
 export default function TrophiesBadges() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState("all");
+  const [tierFilter, setTierFilter] = useState<string | null>(null);
   const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "", progress: "" });
   
   // Carousel state
@@ -76,6 +77,30 @@ export default function TrophiesBadges() {
   // Filter badges and trophies first
   const trophies = AWARDS.filter(award => award.kind === "Trophy");
   const badges = AWARDS.filter(award => award.kind === "Badge");
+  
+  // Calculate tier counts
+  const getTierCounts = () => {
+    const counts = {
+      Trophy: allTrophies.length,
+      HallOfFamer: badges.filter(b => b.tier === "HallOfFamer").length,
+      Superstar: badges.filter(b => b.tier === "Superstar").length,
+      AllStar: badges.filter(b => b.tier === "AllStar").length,
+      Starter: badges.filter(b => b.tier === "Starter").length,
+      Prospect: badges.filter(b => b.tier === "Prospect").length
+    };
+    return counts;
+  };
+  
+  const tierCounts = getTierCounts();
+  
+  // Handle tier filter clicks
+  const handleTierFilter = (tier: string) => {
+    if (tierFilter === tier) {
+      setTierFilter(null); // Deselect if same tier clicked
+    } else {
+      setTierFilter(tier);
+    }
+  };
   
   // All trophies combined
   const allTrophies = [
@@ -278,6 +303,10 @@ export default function TrophiesBadges() {
 
   const filteredBadges = badges
     .filter(badge => {
+      // Apply tier filter first
+      if (tierFilter && badge.tier !== tierFilter) return false;
+      
+      // Then apply status filter
       if (filter === "all") return true;
       if (filter === "earned") return isBadgeEarned(badge);
       if (filter === "progress") return !isBadgeEarned(badge);
@@ -306,13 +335,135 @@ export default function TrophiesBadges() {
         </Button>
       </div>
       
-      <div className="mb-8" />
+      {/* Trophy/Badge Filter Header */}
+      <div className="mb-12">
+        <div className="flex justify-center items-center gap-6 px-4">
+          {/* Trophy Filter */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'Trophy' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('Trophy')}
+            data-testid="filter-trophy"
+          >
+            <div className={`relative ${tierFilter === 'Trophy' ? 'animate-pulse' : ''}`}>
+              <div className="text-6xl">🏆</div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'Trophy' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.Trophy}
+              </div>
+            </div>
+          </div>
+
+          {/* Hall of Famer */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'HallOfFamer' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('HallOfFamer')}
+            data-testid="filter-halloffamer"
+          >
+            <div className={`relative ${tierFilter === 'HallOfFamer' ? 'animate-pulse' : ''}`}>
+              <div className="w-16 h-16 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-b from-yellow-300 to-yellow-500 rounded-full"></div>
+              </div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'HallOfFamer' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.HallOfFamer}
+              </div>
+            </div>
+          </div>
+
+          {/* Superstar */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'Superstar' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('Superstar')}
+            data-testid="filter-superstar"
+          >
+            <div className={`relative ${tierFilter === 'Superstar' ? 'animate-pulse' : ''}`}>
+              <div className="w-16 h-16 bg-gradient-to-b from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-b from-purple-400 to-purple-600 rounded-full"></div>
+              </div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'Superstar' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.Superstar}
+              </div>
+            </div>
+          </div>
+
+          {/* AllStar */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'AllStar' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('AllStar')}
+            data-testid="filter-allstar"
+          >
+            <div className={`relative ${tierFilter === 'AllStar' ? 'animate-pulse' : ''}`}>
+              <div className="w-16 h-16 bg-gradient-to-b from-blue-500 to-blue-700 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
+              </div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'AllStar' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.AllStar}
+              </div>
+            </div>
+          </div>
+
+          {/* Starter */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'Starter' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('Starter')}
+            data-testid="filter-starter"
+          >
+            <div className={`relative ${tierFilter === 'Starter' ? 'animate-pulse' : ''}`}>
+              <div className="w-16 h-16 bg-gradient-to-b from-green-500 to-green-700 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
+              </div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'Starter' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.Starter}
+              </div>
+            </div>
+          </div>
+
+          {/* Prospect */}
+          <div 
+            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+              tierFilter === 'Prospect' ? 'transform scale-110 drop-shadow-lg' : 'hover:scale-105'
+            }`}
+            onClick={() => handleTierFilter('Prospect')}
+            data-testid="filter-prospect"
+          >
+            <div className={`relative ${tierFilter === 'Prospect' ? 'animate-pulse' : ''}`}>
+              <div className="w-16 h-16 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-b from-gray-300 to-gray-500 rounded-full"></div>
+              </div>
+              <div className={`absolute -top-1 -right-1 min-w-[24px] h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1 ${
+                tierFilter === 'Prospect' ? 'animate-bounce bg-red-600' : ''
+              }`}>
+                {tierCounts.Prospect}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Trophies Section */}
-      <div className="mb-12">
-        <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          🏆 Trophies
-        </h2>
+      {(!tierFilter || tierFilter === 'Trophy') && (
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            🏆 Trophies
+          </h2>
 
 
         <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
@@ -366,10 +517,12 @@ export default function TrophiesBadges() {
             <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Coach</div>
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Badges Section */}
-      <div className="space-y-8">
+      {(!tierFilter || tierFilter !== 'Trophy') && (
+        <div className="space-y-8">
         <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           🎖️ Badges
         </h2>
@@ -484,7 +637,8 @@ export default function TrophiesBadges() {
             <p>No badges found for the selected filter.</p>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Trophy Modal */}
       {modal.open && (

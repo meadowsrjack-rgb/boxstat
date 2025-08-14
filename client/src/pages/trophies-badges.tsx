@@ -340,7 +340,7 @@ export default function TrophiesBadges() {
       
       {/* Trophy/Badge Filter Header */}
       <div className="mb-12 -mx-6">
-        <div className="relative ml-0.5" style={{ width: '98%' }}>
+        <div className="relative ml-0.5" style={{ width: '95%' }}>
           {/* Base filter header image - slightly smaller and moved right */}
           <img 
             src={filterHeaderImage} 

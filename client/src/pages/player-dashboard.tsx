@@ -6,6 +6,7 @@
                                 import { Button } from "@/components/ui/button";
                                 import { Badge } from "@/components/ui/badge";
                                 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+                                import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
                                 import QRCode from "@/components/ui/qr-code";
                                 import {
                                   QrCode,
@@ -26,6 +27,7 @@
                                   Trophy,
                                   Award,
                                   CirclePlus,
+                                  X,
                                 } from "lucide-react";
                                 import { useEffect, useMemo, useState } from "react";
                                 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -86,6 +88,7 @@
                                 }) {
                                   const { user } = useAuth();
                                   const [showQR, setShowQR] = useState(false);
+                                  const [showFoundationProgram, setShowFoundationProgram] = useState(false);
                                   const [activeTab, setActiveTab] = useState<
                                     "activity" | "video" | "team" | "profile"
                                   >("activity");
@@ -564,14 +567,24 @@
 
                                           {/* Video */}
                                           {activeTab === "video" && (
-                                            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-                                              <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center">
-                                                <Play className="h-8 w-8 text-gray-400" />
+                                            <div className="flex flex-col items-center justify-center py-16 space-y-6">
+                                              {/* Foundation Program Logo */}
+                                              <div 
+                                                className="cursor-pointer transition-transform hover:scale-105"
+                                                onClick={() => setShowFoundationProgram(true)}
+                                                data-testid="foundation-program-logo"
+                                              >
+                                                <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+                                                  <div className="text-center text-white">
+                                                    <div className="text-3xl font-bold mb-2">UYP</div>
+                                                    <div className="text-lg font-semibold mb-1">FOUNDATION</div>
+                                                    <div className="text-sm opacity-90">PROGRAM</div>
+                                                    <div className="mt-4 text-xs opacity-75 border-t border-white/20 pt-2">
+                                                      Click to Learn More
+                                                    </div>
+                                                  </div>
+                                                </div>
                                               </div>
-                                              <h3 className="text-lg font-medium text-gray-900">No videos yet</h3>
-                                              <p className="text-gray-500 text-center">
-                                                Your completed activities will appear here.
-                                              </p>
                                             </div>
                                           )}
 
@@ -1088,6 +1101,74 @@
                                           )}
                                         </div>
                                       </main>
+
+                                      {/* Foundation Program Popup */}
+                                      <Dialog open={showFoundationProgram} onOpenChange={setShowFoundationProgram}>
+                                        <DialogContent className="max-w-md mx-auto bg-white rounded-2xl shadow-xl">
+                                          <DialogHeader className="relative">
+                                            <button
+                                              onClick={() => setShowFoundationProgram(false)}
+                                              className="absolute right-0 top-0 p-2 text-gray-400 hover:text-gray-600"
+                                              data-testid="close-foundation-popup"
+                                            >
+                                              <X className="h-5 w-5" />
+                                            </button>
+                                            <DialogTitle className="text-center text-xl font-bold text-gray-900 mb-4">
+                                              UYP Foundation Program
+                                            </DialogTitle>
+                                          </DialogHeader>
+                                          
+                                          <div className="space-y-6 p-6">
+                                            {/* Hero Section */}
+                                            <div className="text-center">
+                                              <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-xl p-6 text-white mb-4">
+                                                <h2 className="text-2xl font-bold mb-2">Build Real Basketball Skills</h2>
+                                                <p className="text-red-100">in 12 weeks</p>
+                                              </div>
+                                            </div>
+
+                                            {/* Program Details */}
+                                            <div className="space-y-4">
+                                              <p className="text-gray-700 text-sm leading-relaxed">
+                                                UYP Foundation delivers five daily skill drills, strength & conditioning, IQ and mindset videos, weekly quizzes, and reflections—five days a week.
+                                              </p>
+                                              
+                                              <div className="bg-gray-50 rounded-lg p-4">
+                                                <h3 className="font-semibold text-gray-900 mb-2">Master the fundamentals:</h3>
+                                                <ul className="text-sm text-gray-700 space-y-1">
+                                                  <li>• Daily skill development drills</li>
+                                                  <li>• Strength & conditioning workouts</li>
+                                                  <li>• Basketball IQ training</li>
+                                                  <li>• Mindset and mental game</li>
+                                                  <li>• Weekly assessments</li>
+                                                </ul>
+                                              </div>
+                                            </div>
+
+                                            {/* Payment Buttons */}
+                                            <div className="space-y-3">
+                                              <Button 
+                                                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3"
+                                                data-testid="monthly-payment-btn"
+                                              >
+                                                Start Monthly Plan - $29.99/month
+                                              </Button>
+                                              
+                                              <Button 
+                                                variant="outline" 
+                                                className="w-full border-red-600 text-red-600 hover:bg-red-50 font-semibold py-3"
+                                                data-testid="annual-payment-btn"
+                                              >
+                                                Annual Plan - $299/year (Save 17%)
+                                              </Button>
+                                            </div>
+
+                                            <p className="text-xs text-gray-500 text-center">
+                                              Cancel anytime. No long-term commitments.
+                                            </p>
+                                          </div>
+                                        </DialogContent>
+                                      </Dialog>
                                     </div>
                                   );
                                 }

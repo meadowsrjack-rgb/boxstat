@@ -574,15 +574,14 @@
                                                 onClick={() => setShowFoundationProgram(true)}
                                                 data-testid="foundation-program-logo"
                                               >
-                                                <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-                                                  <div className="text-center text-white">
-                                                    <div className="text-3xl font-bold mb-2">UYP</div>
-                                                    <div className="text-lg font-semibold mb-1">FOUNDATION</div>
-                                                    <div className="text-sm opacity-90">PROGRAM</div>
-                                                    <div className="mt-4 text-xs opacity-75 border-t border-white/20 pt-2">
-                                                      Click to Learn More
-                                                    </div>
-                                                  </div>
+                                                <img 
+                                                  src="/attached_assets/UYP Logo nback_1753121651714.png" 
+                                                  alt="UYP Foundation Program" 
+                                                  className="w-48 h-auto drop-shadow-lg hover:drop-shadow-xl transition-all"
+                                                />
+                                                <div className="text-center mt-4">
+                                                  <div className="text-lg font-bold text-gray-900">Foundation Program</div>
+                                                  <div className="text-sm text-gray-600">Tap to learn more</div>
                                                 </div>
                                               </div>
                                             </div>
@@ -1104,51 +1103,67 @@
 
                                       {/* Foundation Program Popup */}
                                       <Dialog open={showFoundationProgram} onOpenChange={setShowFoundationProgram}>
-                                        <DialogContent className="max-w-md mx-auto bg-white rounded-2xl shadow-xl">
-                                          <DialogHeader className="relative">
+                                        <DialogContent className="max-w-sm mx-auto bg-black text-white rounded-2xl shadow-2xl border-0 max-h-[90vh] overflow-y-auto">
+                                          <DialogHeader className="relative text-center pt-6 pb-4">
                                             <button
                                               onClick={() => setShowFoundationProgram(false)}
-                                              className="absolute right-0 top-0 p-2 text-gray-400 hover:text-gray-600"
+                                              className="absolute right-4 top-4 p-2 text-white/60 hover:text-white transition-colors"
                                               data-testid="close-foundation-popup"
                                             >
-                                              <X className="h-5 w-5" />
+                                              <X className="h-6 w-6" />
                                             </button>
-                                            <DialogTitle className="text-center text-xl font-bold text-gray-900 mb-4">
-                                              UYP Foundation Program
-                                            </DialogTitle>
+                                            
+                                            {/* Hero Section */}
+                                            <div className="text-center mb-6">
+                                              <h1 className="text-2xl font-bold text-white mb-2">
+                                                Build real basketball skills
+                                              </h1>
+                                              <p className="text-xl font-semibold text-red-400">in 12 weeks</p>
+                                            </div>
                                           </DialogHeader>
                                           
-                                          <div className="space-y-6 p-6">
-                                            {/* Hero Section */}
+                                          <div className="px-6 pb-6 space-y-6">
+                                            {/* Program Description */}
                                             <div className="text-center">
-                                              <div className="bg-gradient-to-br from-red-600 to-red-800 rounded-xl p-6 text-white mb-4">
-                                                <h2 className="text-2xl font-bold mb-2">Build Real Basketball Skills</h2>
-                                                <p className="text-red-100">in 12 weeks</p>
-                                              </div>
+                                              <p className="text-white/90 text-sm leading-relaxed">
+                                                UYP Foundation delivers five daily skill drills, strength & conditioning, 
+                                                IQ and mindset videos, weekly quizzes, and reflections—five days a week.
+                                              </p>
                                             </div>
 
-                                            {/* Program Details */}
-                                            <div className="space-y-4">
-                                              <p className="text-gray-700 text-sm leading-relaxed">
-                                                UYP Foundation delivers five daily skill drills, strength & conditioning, IQ and mindset videos, weekly quizzes, and reflections—five days a week.
-                                              </p>
+                                            {/* Master Section */}
+                                            <div className="text-center">
+                                              <h2 className="text-lg font-bold text-white mb-4">Master the fundamentals</h2>
                                               
-                                              <div className="bg-gray-50 rounded-lg p-4">
-                                                <h3 className="font-semibold text-gray-900 mb-2">Master the fundamentals:</h3>
-                                                <ul className="text-sm text-gray-700 space-y-1">
-                                                  <li>• Daily skill development drills</li>
-                                                  <li>• Strength & conditioning workouts</li>
-                                                  <li>• Basketball IQ training</li>
-                                                  <li>• Mindset and mental game</li>
-                                                  <li>• Weekly assessments</li>
-                                                </ul>
+                                              {/* Features Grid */}
+                                              <div className="space-y-3 text-sm text-white/80">
+                                                <div className="flex items-center justify-center space-x-2">
+                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                  <span>Daily skill development drills</span>
+                                                </div>
+                                                <div className="flex items-center justify-center space-x-2">
+                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                  <span>Strength & conditioning workouts</span>
+                                                </div>
+                                                <div className="flex items-center justify-center space-x-2">
+                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                  <span>Basketball IQ training</span>
+                                                </div>
+                                                <div className="flex items-center justify-center space-x-2">
+                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                  <span>Mindset and mental game</span>
+                                                </div>
+                                                <div className="flex items-center justify-center space-x-2">
+                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                  <span>Weekly assessments & reflections</span>
+                                                </div>
                                               </div>
                                             </div>
 
                                             {/* Payment Buttons */}
-                                            <div className="space-y-3">
+                                            <div className="space-y-3 pt-6">
                                               <Button 
-                                                className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3"
+                                                className="w-full bg-white text-black hover:bg-gray-100 font-bold py-4 text-base"
                                                 data-testid="monthly-payment-btn"
                                               >
                                                 Start Monthly Plan - $29.99/month
@@ -1156,14 +1171,14 @@
                                               
                                               <Button 
                                                 variant="outline" 
-                                                className="w-full border-red-600 text-red-600 hover:bg-red-50 font-semibold py-3"
+                                                className="w-full border-white text-white hover:bg-white hover:text-black font-bold py-4 text-base"
                                                 data-testid="annual-payment-btn"
                                               >
                                                 Annual Plan - $299/year (Save 17%)
                                               </Button>
                                             </div>
 
-                                            <p className="text-xs text-gray-500 text-center">
+                                            <p className="text-xs text-white/60 text-center pt-2">
                                               Cancel anytime. No long-term commitments.
                                             </p>
                                           </div>

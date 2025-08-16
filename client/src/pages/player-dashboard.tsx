@@ -577,7 +577,7 @@
                                                 data-testid="foundation-program-logo"
                                               >
                                                 <img 
-                                                  src="/attached_assets/0 (4)_1755303111605.png" 
+                                                  src="/foundation-logo.png" 
                                                   alt="UYP Foundation Program" 
                                                   className="w-48 h-auto drop-shadow-lg hover:drop-shadow-xl transition-all"
                                                 />
@@ -1105,7 +1105,8 @@
 
                                       {/* Foundation Program Popup */}
                                       <Dialog open={showFoundationProgram} onOpenChange={setShowFoundationProgram}>
-                                        <DialogContent className="max-w-4xl mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto p-0">
+                                        <DialogContent className="max-w-4xl mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto p-0"
+                                          onInteractOutside={(e) => e.preventDefault()}>
                                           <DialogTitle className="sr-only">UYP Foundation Program</DialogTitle>
                                           <div className="relative">
                                             <button

@@ -28,6 +28,8 @@
                                   Award,
                                   CirclePlus,
                                   X,
+                                  Check,
+                                  Sparkles,
                                 } from "lucide-react";
                                 import { useEffect, useMemo, useState } from "react";
                                 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -1103,84 +1105,149 @@
 
                                       {/* Foundation Program Popup */}
                                       <Dialog open={showFoundationProgram} onOpenChange={setShowFoundationProgram}>
-                                        <DialogContent className="max-w-sm mx-auto bg-black text-white rounded-2xl shadow-2xl border-0 max-h-[90vh] overflow-y-auto">
-                                          <DialogHeader className="relative text-center pt-6 pb-4">
+                                        <DialogContent className="max-w-4xl mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto p-0">
+                                          <DialogTitle className="sr-only">UYP Foundation Program</DialogTitle>
+                                          <div className="relative">
                                             <button
                                               onClick={() => setShowFoundationProgram(false)}
-                                              className="absolute right-4 top-4 p-2 text-white/60 hover:text-white transition-colors"
+                                              className="absolute right-6 top-6 p-2 text-gray-400 hover:text-gray-600 transition-colors z-10"
                                               data-testid="close-foundation-popup"
                                             >
                                               <X className="h-6 w-6" />
                                             </button>
-                                            
-                                            {/* Hero Section */}
-                                            <div className="text-center mb-6">
-                                              <h1 className="text-2xl font-bold text-white mb-2">
-                                                Build real basketball skills
-                                              </h1>
-                                              <p className="text-xl font-semibold text-red-400">in 12 weeks</p>
-                                            </div>
-                                          </DialogHeader>
-                                          
-                                          <div className="px-6 pb-6 space-y-6">
-                                            {/* Program Description */}
-                                            <div className="text-center">
-                                              <p className="text-white/90 text-sm leading-relaxed">
-                                                UYP Foundation delivers five daily skill drills, strength & conditioning, 
-                                                IQ and mindset videos, weekly quizzes, and reflections—five days a week.
-                                              </p>
-                                            </div>
 
-                                            {/* Master Section */}
-                                            <div className="text-center">
-                                              <h2 className="text-lg font-bold text-white mb-4">Master the fundamentals</h2>
-                                              
-                                              {/* Features Grid */}
-                                              <div className="space-y-3 text-sm text-white/80">
-                                                <div className="flex items-center justify-center space-x-2">
-                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                  <span>Daily skill development drills</span>
-                                                </div>
-                                                <div className="flex items-center justify-center space-x-2">
-                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                  <span>Strength & conditioning workouts</span>
-                                                </div>
-                                                <div className="flex items-center justify-center space-x-2">
-                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                  <span>Basketball IQ training</span>
-                                                </div>
-                                                <div className="flex items-center justify-center space-x-2">
-                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                  <span>Mindset and mental game</span>
-                                                </div>
-                                                <div className="flex items-center justify-center space-x-2">
-                                                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                                                  <span>Weekly assessments & reflections</span>
+                                            {/* Header */}
+                                            <header className="px-6 pt-10 pb-6">
+                                              <div className="text-center">
+                                                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">UYP Foundation Program</h1>
+                                                <p className="mt-2 max-w-2xl mx-auto text-sm leading-6 text-gray-700">
+                                                  Master your fundamentals in 12 weeks. Five Skill drills and Strength & Conditioning exercises each week — plus a Basketball IQ lesson. Quizzes and reflections follow each week of learning.
+                                                </p>
+                                              </div>
+                                            </header>
+
+                                            {/* Hero strip */}
+                                            <section className="px-6 pb-6">
+                                              <div className="rounded-2xl border border-gray-200 bg-white p-6">
+                                                <div className="grid gap-6 md:grid-cols-3">
+                                                  <div className="rounded-xl bg-red-50 p-4">
+                                                    <p className="text-sm font-semibold text-red-600">Weekly Flow</p>
+                                                    <p className="mt-1 text-sm text-gray-700">5 Skill & S&C videos in one focused session • 1 Basketball IQ • 1 Mindset • Quick quiz • Reflection</p>
+                                                  </div>
+                                                  <div className="rounded-xl bg-red-50 p-4">
+                                                    <p className="text-sm font-semibold text-red-600">For All Levels</p>
+                                                    <p className="mt-1 text-sm text-gray-700">Simple, game-ready drills that scale with your pace.</p>
+                                                  </div>
+                                                  <div className="rounded-xl bg-red-50 p-4">
+                                                    <p className="text-sm font-semibold text-red-600">Clear Milestones</p>
+                                                    <p className="mt-1 text-sm text-gray-700">Track progress with weekly quizzes and reflections.</p>
+                                                  </div>
                                                 </div>
                                               </div>
-                                            </div>
+                                            </section>
 
-                                            {/* Payment Buttons */}
-                                            <div className="space-y-3 pt-6">
-                                              <Button 
-                                                className="w-full bg-white text-black hover:bg-gray-100 font-bold py-4 text-base"
-                                                data-testid="monthly-payment-btn"
-                                              >
-                                                Start Monthly Plan - $29.99/month
-                                              </Button>
-                                              
-                                              <Button 
-                                                variant="outline" 
-                                                className="w-full border-white text-white hover:bg-white hover:text-black font-bold py-4 text-base"
-                                                data-testid="annual-payment-btn"
-                                              >
-                                                Annual Plan - $299/year (Save 17%)
-                                              </Button>
-                                            </div>
+                                            {/* Pricing */}
+                                            <section className="px-6 py-6">
+                                              <div className="mb-6 flex items-end justify-between">
+                                                <h2 className="text-xl font-extrabold tracking-tight">Choose your price</h2>
+                                                <p className="text-sm text-gray-500">Two options, same program.</p>
+                                              </div>
 
-                                            <p className="text-xs text-white/60 text-center pt-2">
-                                              Cancel anytime. No long-term commitments.
-                                            </p>
+                                              <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                                                {/* Monthly Card */}
+                                                <div className="group relative h-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-lg flex flex-col">
+                                                  <div className="mb-4 flex items-center gap-2">
+                                                    <Sparkles className="h-5 w-5 text-red-600" />
+                                                    <h3 className="text-lg font-bold text-gray-900">Monthly</h3>
+                                                  </div>
+
+                                                  <div className="mb-1 text-3xl font-extrabold tracking-tight text-gray-900">$29/mo</div>
+                                                  <p className="mb-4 text-sm text-gray-500">Cancel anytime</p>
+
+                                                  <ul className="mb-6 space-y-3 text-sm text-gray-700">
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>12‑week curriculum with weekly checklist</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Five Skill + S&C videos each week (one focused session)</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Basketball IQ & Mindset videos</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Weekly quiz + reflection</span>
+                                                    </li>
+                                                  </ul>
+
+                                                  <div className="mt-auto">
+                                                    <button
+                                                      className="h-12 w-full rounded-xl bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700"
+                                                      data-testid="monthly-payment-btn"
+                                                    >
+                                                      Start monthly — $29/mo
+                                                    </button>
+                                                  </div>
+                                                </div>
+
+                                                {/* Pay in Full Card */}
+                                                <div className="group relative h-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-lg flex flex-col">
+                                                  <span className="absolute -top-3 right-4 rounded-full border border-red-100 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600">
+                                                    Best value
+                                                  </span>
+
+                                                  <div className="mb-4 flex items-center gap-2">
+                                                    <Sparkles className="h-5 w-5 text-red-600" />
+                                                    <h3 className="text-lg font-bold text-gray-900">Pay in Full</h3>
+                                                  </div>
+
+                                                  <div className="mb-1 text-3xl font-extrabold tracking-tight text-gray-900">$249</div>
+                                                  <p className="mb-4 text-sm text-gray-500">One‑time payment</p>
+
+                                                  <ul className="mb-6 space-y-3 text-sm text-gray-700">
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>12‑week curriculum with weekly checklist</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Five Skill + S&C videos each week (one focused session)</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Basketball IQ & Mindset videos</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-3">
+                                                      <Check className="mt-0.5 h-4 w-4 text-red-600" />
+                                                      <span>Weekly quiz + reflection</span>
+                                                    </li>
+                                                  </ul>
+
+                                                  <div className="mt-auto">
+                                                    <button
+                                                      className="h-12 w-full rounded-xl bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700"
+                                                      data-testid="annual-payment-btn"
+                                                    >
+                                                      Pay in full — $249
+                                                    </button>
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              <p className="text-center text-xs text-gray-500">30‑day satisfaction guarantee.</p>
+                                            </section>
+
+                                            {/* Footer */}
+                                            <footer className="px-6 pb-12">
+                                              <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
+                                                <p className="text-sm">
+                                                  Questions about team pricing or scholarships? <a href="#" className="font-semibold text-red-600">Contact us</a>.
+                                                </p>
+                                              </div>
+                                            </footer>
                                           </div>
                                         </DialogContent>
                                       </Dialog>

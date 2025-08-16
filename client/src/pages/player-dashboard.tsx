@@ -30,6 +30,10 @@
                                   X,
                                   Check,
                                   Sparkles,
+                                  Lock,
+                                  Globe,
+                                  Edit,
+                                  MoreVertical,
                                 } from "lucide-react";
                                 import { useEffect, useMemo, useState } from "react";
                                 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -102,6 +106,12 @@
 
                                   // Profile editing (Profile tab)
                                   const [isEditingProfile, setIsEditingProfile] = useState(false);
+                                  const [showEditProfileDropdown, setShowEditProfileDropdown] = useState(false);
+                                  const [privacySettings, setPrivacySettings] = useState({
+                                    height: false, // false = private, true = public
+                                    weight: false,
+                                    location: false,
+                                  });
                                   const [editableProfile, setEditableProfile] = useState({
                                     firstName: "",
                                     lastName: "",
@@ -728,28 +738,79 @@
                                           {/* Profile */}
                                           {activeTab === "profile" && (
                                             <div className="space-y-6">
-                                              {/* Personal Info */}
+                                              {/* Player Profile Header with Three-Dot Menu */}
                                               <Card>
-                                                <CardContent className="p-4">
-                                                  <div className="flex items-center justify-between mb-4">
-                                                    <h3 className="text-lg font-semibold text-gray-900">
-                                                      Personal Information
-                                                    </h3>
-                                                    <Button
-                                                      variant="ghost"
-                                                      size="icon"
-                                                      onClick={() => {
-                                                        if (!isEditingProfile) primeEditable();
-                                                        setIsEditingProfile((v) => !v);
-                                                      }}
-                                                      title={isEditingProfile ? "Save" : "Edit"}
-                                                    >
-                                                      {isEditingProfile ? <Save className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
-                                                    </Button>
+                                                <CardContent className="p-6">
+                                                  <div className="flex items-center justify-between mb-6">
+                                                    <div className="flex items-center gap-4">
+                                                      <Avatar className="w-16 h-16">
+                                                        <AvatarImage src={currentUser.profileImageUrl || undefined} />
+                                                        <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+                                                      </Avatar>
+                                                      <div>
+                                                        <h2 className="text-xl font-bold text-gray-900">
+                                                          {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
+                                                        </h2>
+                                                        <p className="text-gray-600">
+                                                          {currentChild?.teamName ? `${currentChild.teamAgeGroup} ${currentChild.teamName}` : userTeam?.name || "Team Member"}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                    
+                                                    {/* Three-Dot Settings Menu */}
+                                                    <div className="relative">
+                                                      <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => setShowEditProfileDropdown(!showEditProfileDropdown)}
+                                                        className="h-10 w-10"
+                                                      >
+                                                        <MoreVertical className="h-5 w-5" />
+                                                      </Button>
+                                                      
+                                                      {showEditProfileDropdown && (
+                                                        <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-20 min-w-48">
+                                                          <div className="p-2">
+                                                            <Button
+                                                              variant="ghost"
+                                                              className="w-full justify-start text-left"
+                                                              onClick={() => {
+                                                                if (!isEditingProfile) primeEditable();
+                                                                setIsEditingProfile(true);
+                                                                setShowEditProfileDropdown(false);
+                                                              }}
+                                                            >
+                                                              <Edit className="h-4 w-4 mr-2" />
+                                                              Edit Profile
+                                                            </Button>
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                    </div>
                                                   </div>
 
-                                                  {/* Fields */}
-                                                  <div className="space-y-4">
+                                                  {/* Player Information Fields */}
+                                                  <div className="space-y-5">
+                                                    {isEditingProfile && (
+                                                      <div className="flex items-center justify-end gap-2 pb-4 border-b">
+                                                        <Button
+                                                          variant="outline"
+                                                          size="sm"
+                                                          onClick={() => setIsEditingProfile(false)}
+                                                        >
+                                                          Cancel
+                                                        </Button>
+                                                        <Button
+                                                          size="sm"
+                                                          onClick={() => {
+                                                            updateProfile.mutate(editableProfile);
+                                                          }}
+                                                          disabled={updateProfile.isPending}
+                                                        >
+                                                          {updateProfile.isPending ? "Saving..." : "Save Changes"}
+                                                        </Button>
+                                                      </div>
+                                                    )}
                                                     {/* Name */}
                                                     <div className="flex items-center justify-between py-2">
                                                       <span className="text-sm font-medium text-gray-700">Name</span>
@@ -831,19 +892,31 @@
                                                       }
                                                     />
 
-                                                    {/* Height */}
-                                                    <Row
-                                                      label="Height"
-                                                      editing={isEditingProfile}
-                                                      viewValue={editableProfile.height || "—"}
-                                                      editControl={
+                                                    {/* Height with Privacy Control */}
+                                                    <div className="flex items-center justify-between py-3">
+                                                      <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-gray-700">Height</span>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-6 w-6"
+                                                          onClick={() => setPrivacySettings(prev => ({ ...prev, height: !prev.height }))}
+                                                        >
+                                                          {privacySettings.height ? (
+                                                            <Globe className="h-4 w-4 text-green-600" />
+                                                          ) : (
+                                                            <Lock className="h-4 w-4 text-gray-500" />
+                                                          )}
+                                                        </Button>
+                                                      </div>
+                                                      {isEditingProfile ? (
                                                         <Select
                                                           value={editableProfile.height || ""}
                                                           onValueChange={(v) =>
                                                             setEditableProfile((p) => ({ ...p, height: v }))
                                                           }
                                                         >
-                                                          <SelectTrigger className="w-48 text-right">
+                                                          <SelectTrigger className="w-32 text-right">
                                                             <SelectValue placeholder="Height" />
                                                           </SelectTrigger>
                                                           <SelectContent>
@@ -854,26 +927,41 @@
                                                             ))}
                                                           </SelectContent>
                                                         </Select>
-                                                      }
-                                                    />
+                                                      ) : (
+                                                        <span className="text-sm text-gray-600">
+                                                          {privacySettings.height 
+                                                            ? (editableProfile.height || "—")
+                                                            : "Private"
+                                                          }
+                                                        </span>
+                                                      )}
+                                                    </div>
 
-                                                    {/* Weight */}
-                                                    <Row
-                                                      label="Weight"
-                                                      editing={isEditingProfile}
-                                                      viewValue={
-                                                        editableProfile.weight
-                                                          ? `${editableProfile.weight} lbs`
-                                                          : "—"
-                                                      }
-                                                      editControl={
+                                                    {/* Weight with Privacy Control */}
+                                                    <div className="flex items-center justify-between py-3">
+                                                      <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-gray-700">Weight</span>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-6 w-6"
+                                                          onClick={() => setPrivacySettings(prev => ({ ...prev, weight: !prev.weight }))}
+                                                        >
+                                                          {privacySettings.weight ? (
+                                                            <Globe className="h-4 w-4 text-green-600" />
+                                                          ) : (
+                                                            <Lock className="h-4 w-4 text-gray-500" />
+                                                          )}
+                                                        </Button>
+                                                      </div>
+                                                      {isEditingProfile ? (
                                                         <Select
                                                           value={editableProfile.weight || ""}
                                                           onValueChange={(v) =>
                                                             setEditableProfile((p) => ({ ...p, weight: v }))
                                                           }
                                                         >
-                                                          <SelectTrigger className="w-48 text-right">
+                                                          <SelectTrigger className="w-32 text-right">
                                                             <SelectValue placeholder="Weight" />
                                                           </SelectTrigger>
                                                           <SelectContent>
@@ -884,23 +972,49 @@
                                                             ))}
                                                           </SelectContent>
                                                         </Select>
-                                                      }
-                                                    />
+                                                      ) : (
+                                                        <span className="text-sm text-gray-600">
+                                                          {privacySettings.weight 
+                                                            ? (editableProfile.weight ? `${editableProfile.weight} lbs` : "—")
+                                                            : "Private"
+                                                          }
+                                                        </span>
+                                                      )}
+                                                    </div>
 
-                                                    {/* City (type-ahead) */}
-                                                    <Row
-                                                      label="Location"
-                                                      editing={isEditingProfile}
-                                                      viewValue={editableProfile.location || "—"}
-                                                      editControl={
+                                                    {/* Location with Privacy Control */}
+                                                    <div className="flex items-center justify-between py-3">
+                                                      <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-medium text-gray-700">Location</span>
+                                                        <Button
+                                                          variant="ghost"
+                                                          size="icon"
+                                                          className="h-6 w-6"
+                                                          onClick={() => setPrivacySettings(prev => ({ ...prev, location: !prev.location }))}
+                                                        >
+                                                          {privacySettings.location ? (
+                                                            <Globe className="h-4 w-4 text-green-600" />
+                                                          ) : (
+                                                            <Lock className="h-4 w-4 text-gray-500" />
+                                                          )}
+                                                        </Button>
+                                                      </div>
+                                                      {isEditingProfile ? (
                                                         <CityTypeahead
                                                           value={editableProfile.location}
                                                           onChange={(city) =>
                                                             setEditableProfile((p) => ({ ...p, location: city }))
                                                           }
                                                         />
-                                                      }
-                                                    />
+                                                      ) : (
+                                                        <span className="text-sm text-gray-600">
+                                                          {privacySettings.location 
+                                                            ? (editableProfile.location || "—")
+                                                            : "Private"
+                                                          }
+                                                        </span>
+                                                      )}
+                                                    </div>
 
                                                     {/* Position */}
                                                     <Row
@@ -959,76 +1073,127 @@
                                                 </CardContent>
                                               </Card>
 
-                                              {/* Trophies & Badges (bottom of Profile tab) */}
-                                              <Card 
-                                                className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                                                onClick={() => setLocation("/trophies-badges")}
-                                                data-testid="card-trophies-badges"
-                                              >
+                                              {/* Trophies & Badges Section */}
+                                              <Card className="border-0 shadow-sm">
                                                 <CardContent className="p-6">
-                                                  <div className="grid grid-cols-2 gap-8">
-                                                    {/* Trophies Circle Progress */}
-                                                    <div className="flex flex-col items-center">
-                                                      <div className="relative w-24 h-24 mb-3">
-                                                        {/* Background Circle */}
-                                                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
-                                                          <path
-                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                                                            fill="none"
-                                                            stroke="#e5e7eb"
-                                                            strokeWidth="2"
-                                                          />
-                                                          {/* Progress Circle */}
-                                                          <path
-                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                                                            fill="none"
-                                                            stroke="#dc2626"
-                                                            strokeWidth="2"
-                                                            strokeDasharray={`${((awardsSummary?.trophiesCount ?? 0) / 5) * 100}, 100`}
-                                                            strokeLinecap="round"
-                                                          />
-                                                        </svg>
-                                                        {/* Count in Center */}
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                          <span className="text-2xl font-bold text-gray-900">
-                                                            {awardsLoading ? "—" : String(awardsSummary?.trophiesCount ?? 0).padStart(2, '0')}
-                                                          </span>
-                                                        </div>
-                                                      </div>
-                                                      <span className="text-sm font-medium text-gray-700">Trophies</span>
+                                                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Achievements</h3>
+                                                  
+                                                  {/* Trophies Section */}
+                                                  <div className="mb-8">
+                                                    <div className="flex items-center justify-between mb-4">
+                                                      <h4 className="text-sm font-medium text-gray-700">Trophies</h4>
+                                                      <Trophy className="h-5 w-5 text-yellow-600" />
                                                     </div>
-
-                                                    {/* Badges Circle Progress */}
-                                                    <div className="flex flex-col items-center">
-                                                      <div className="relative w-24 h-24 mb-3">
-                                                        {/* Background Circle */}
-                                                        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 36 36">
-                                                          <path
-                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                                                            fill="none"
-                                                            stroke="#e5e7eb"
-                                                            strokeWidth="2"
-                                                          />
-                                                          {/* Progress Circle */}
-                                                          <path
-                                                            d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
-                                                            fill="none"
-                                                            stroke="#dc2626"
-                                                            strokeWidth="2"
-                                                            strokeDasharray={`${((awardsSummary?.badgesCount ?? 0) / 50) * 100}, 100`}
-                                                            strokeLinecap="round"
-                                                          />
-                                                        </svg>
-                                                        {/* Count in Center */}
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                          <span className="text-2xl font-bold text-gray-900">
-                                                            {awardsLoading ? "—" : String(awardsSummary?.badgesCount ?? 0).padStart(2, '0')}
-                                                          </span>
-                                                        </div>
-                                                      </div>
-                                                      <span className="text-sm font-medium text-gray-700">Badges</span>
+                                                    <div className="flex gap-2">
+                                                      {/* Trophy Indicators - Diamond Gradient */}
+                                                      {[...Array(5)].map((_, i) => (
+                                                        <div
+                                                          key={i}
+                                                          className={`w-8 h-8 rounded-full border-2 ${
+                                                            i < (awardsSummary?.trophiesCount ?? 0)
+                                                              ? 'bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 border-yellow-500'
+                                                              : 'bg-gray-100 border-gray-300'
+                                                          }`}
+                                                        />
+                                                      ))}
                                                     </div>
                                                   </div>
+
+                                                  {/* Badge Tiers */}
+                                                  <div className="space-y-4 mb-6">
+                                                    {/* Hall of Famer - Yellow */}
+                                                    <div>
+                                                      <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-gray-600">Hall of Fame</span>
+                                                        <span className="text-xs text-gray-500">0/5</span>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                          <div
+                                                            key={i}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300"
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Superstar - Purple */}
+                                                    <div>
+                                                      <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-gray-600">Superstar</span>
+                                                        <span className="text-xs text-gray-500">0/5</span>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                          <div
+                                                            key={i}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300"
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+
+                                                    {/* All-Star - Blue */}
+                                                    <div>
+                                                      <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-gray-600">All-Star</span>
+                                                        <span className="text-xs text-gray-500">0/5</span>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                          <div
+                                                            key={i}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300"
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Starter - Green */}
+                                                    <div>
+                                                      <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-gray-600">Starter</span>
+                                                        <span className="text-xs text-gray-500">0/5</span>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                          <div
+                                                            key={i}
+                                                            className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300"
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+
+                                                    {/* Rookie - Red */}
+                                                    <div>
+                                                      <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-xs font-medium text-gray-600">Rookie</span>
+                                                        <span className="text-xs text-gray-500">2/5</span>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        {[...Array(5)].map((_, i) => (
+                                                          <div
+                                                            key={i}
+                                                            className={`w-6 h-6 rounded-full ${
+                                                              i < 2
+                                                                ? 'bg-red-500 border border-red-600'
+                                                                : 'bg-gray-100 border border-gray-300'
+                                                            }`}
+                                                          />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+
+                                                  {/* View All Button */}
+                                                  <Button
+                                                    variant="outline"
+                                                    className="w-full text-red-600 border-red-600 hover:bg-red-50"
+                                                    onClick={() => setLocation("/trophies-badges")}
+                                                  >
+                                                    View All Trophies & Badges
+                                                  </Button>
                                                 </CardContent>
                                               </Card>
 
@@ -1042,8 +1207,11 @@
                                                   </div>
 
                                                   <div className="space-y-4">
-                                                    {/* Shooting */}
-                                                    <div className="space-y-2">
+                                                    {/* Shooting - Clickable */}
+                                                    <div 
+                                                      className="space-y-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                                                      onClick={() => setLocation("/skills")}
+                                                    >
                                                       <div className="flex justify-between text-sm">
                                                         <span className="font-medium text-gray-700">SHOOTING</span>
                                                         <span className="text-red-600 font-semibold">72%</span>
@@ -1056,8 +1224,11 @@
                                                       </div>
                                                     </div>
 
-                                                    {/* Dribbling */}
-                                                    <div className="space-y-2">
+                                                    {/* Dribbling - Clickable */}
+                                                    <div 
+                                                      className="space-y-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                                                      onClick={() => setLocation("/skills")}
+                                                    >
                                                       <div className="flex justify-between text-sm">
                                                         <span className="font-medium text-gray-700">DRIBBLING</span>
                                                         <span className="text-red-600 font-semibold">85%</span>
@@ -1070,8 +1241,11 @@
                                                       </div>
                                                     </div>
 
-                                                    {/* Passing */}
-                                                    <div className="space-y-2">
+                                                    {/* Passing - Clickable */}
+                                                    <div 
+                                                      className="space-y-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+                                                      onClick={() => setLocation("/skills")}
+                                                    >
                                                       <div className="flex justify-between text-sm">
                                                         <span className="font-medium text-gray-700">PASSING</span>
                                                         <span className="text-red-600 font-semibold">68%</span>
@@ -1082,18 +1256,6 @@
                                                           style={{ width: '68%' }}
                                                         />
                                                       </div>
-                                                    </div>
-
-                                                    {/* View All Button */}
-                                                    <div className="pt-2">
-                                                      <Button 
-                                                        variant="outline" 
-                                                        className="w-full text-red-600 border-red-600 hover:bg-red-50"
-                                                        onClick={() => setLocation("/skills")}
-                                                      >
-                                                        View All Skills
-                                                        <ChevronRight className="w-4 h-4 ml-1" />
-                                                      </Button>
                                                     </div>
                                                   </div>
                                                 </CardContent>

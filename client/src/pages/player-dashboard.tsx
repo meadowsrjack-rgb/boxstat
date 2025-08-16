@@ -577,7 +577,7 @@
                                                 data-testid="foundation-program-logo"
                                               >
                                                 <img 
-                                                  src="/attached_assets/UYP Logo nback_1753121651714.png" 
+                                                  src="/attached_assets/0 (4)_1755303111605.png" 
                                                   alt="UYP Foundation Program" 
                                                   className="w-48 h-auto drop-shadow-lg hover:drop-shadow-xl transition-all"
                                                 />
@@ -1132,7 +1132,7 @@
                                                 <div className="grid gap-6 md:grid-cols-3">
                                                   <div className="rounded-xl bg-red-50 p-4">
                                                     <p className="text-sm font-semibold text-red-600">Weekly Flow</p>
-                                                    <p className="mt-1 text-sm text-gray-700">5 Skill & S&C videos in one focused session • 1 Basketball IQ • 1 Mindset • Quick quiz • Reflection</p>
+                                                    <p className="mt-1 text-sm text-gray-700">5 Skill & S&C videos in one focused session • 1 Basketball IQ • Quick quiz • Reflection</p>
                                                   </div>
                                                   <div className="rounded-xl bg-red-50 p-4">
                                                     <p className="text-sm font-semibold text-red-600">For All Levels</p>
@@ -1175,7 +1175,7 @@
                                                     </li>
                                                     <li className="flex items-start gap-3">
                                                       <Check className="mt-0.5 h-4 w-4 text-red-600" />
-                                                      <span>Basketball IQ & Mindset videos</span>
+                                                      <span>Basketball IQ videos</span>
                                                     </li>
                                                     <li className="flex items-start gap-3">
                                                       <Check className="mt-0.5 h-4 w-4 text-red-600" />
@@ -1218,7 +1218,7 @@
                                                     </li>
                                                     <li className="flex items-start gap-3">
                                                       <Check className="mt-0.5 h-4 w-4 text-red-600" />
-                                                      <span>Basketball IQ & Mindset videos</span>
+                                                      <span>Basketball IQ videos</span>
                                                     </li>
                                                     <li className="flex items-start gap-3">
                                                       <Check className="mt-0.5 h-4 w-4 text-red-600" />

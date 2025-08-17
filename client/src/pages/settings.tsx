@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -45,37 +45,9 @@ const BRAND = "#d82428";
 const TEAM_OPTIONS = ["High School Elite", "High School Red", "High School Black", "Youth Girls", "14U Black", "14U Red", "14U White", "12U Black", "12U Red", "12U White", "10U Black", "10U Red"];
 const AGE_OPTIONS = ["9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
 const HEIGHT_OPTIONS = [
-  "4'4\"",
-  "4'5\"",
-  "4'6\"",
-  "4'7\"",
-  "4'8\"",
-  "4'9\"",
-  "4'10\"",
-  "4'11\"",
-  "5'0\"",
-  "5'1\"",
-  "5'2\"",
-  "5'3\"",
-  "5'4\"",
-  "5'5\"",
-  "5'6\"",
-  "5'7\"",
-  "5'8\"",
-  "5'9\"",
-  "5'10\"",
-  "5'11\"",
-  "6'0\"",
-  "6'1\"",
-  "6'2\"",
-  "6'3\"",
-  "6'4\"",
-  "6'5\"",
-  "6'6\"",
-  "6'7\"",
-  "6'8\"",
-  "6'9\"",
-  "6'10\"",
+  "4'4\"", "4'5\"", "4'6\"", "4'7\"", "4'8\"", "4'9\"", "4'10\"", "4'11\"",
+  "5'0\"", "5'1\"", "5'2\"", "5'3\"", "5'4\"", "5'5\"", "5'6\"", "5'7\"", "5'8\"", "5'9\"", "5'10\"", "5'11\"",
+  "6'0\"", "6'1\"", "6'2\"", "6'3\"", "6'4\"", "6'5\"", "6'6\"", "6'7\"", "6'8\"", "6'9\"", "6'10\"",
 ];
 const POSITION_OPTIONS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"];
 const JERSEY_OPTIONS = Array.from({ length: 99 }, (_, i) => (i + 1).toString());
@@ -96,32 +68,33 @@ type TabKey =
 ──────────────────────────────────────────────────────────────────────────────── */
 function useTab(): [TabKey, (t: TabKey) => void] {
   const [loc, setLocation] = useLocation();
-  const current = useMemo<TabKey>(() => {
+  const [currentTab, setCurrentTab] = useState<TabKey>("profile");
+  
+  // Get the current tab from URL parameters and sync with state
+  useEffect(() => {
     try {
-      const u = new URL(typeof window !== "undefined" ? window.location.href : "http://x/");
-      const t = (u.searchParams.get("tab") || "profile") as TabKey;
-      return (
-        [
-          "profile",
-          "privacy",
-          "notifications",
-          "security",
-          "connections",
-          "billing",
-          "devices",
-          "legal",
-          "danger",
-        ] as TabKey[]
-      ).includes(t)
-        ? t
-        : "profile";
+      if (typeof window === "undefined") return;
+      
+      const url = new URL(window.location.href);
+      const tabParam = url.searchParams.get("tab");
+      const validTabs: TabKey[] = ["profile", "privacy", "notifications", "security", "connections", "billing", "devices", "legal", "danger"];
+      
+      if (tabParam && validTabs.includes(tabParam as TabKey)) {
+        setCurrentTab(tabParam as TabKey);
+      } else {
+        setCurrentTab("profile");
+      }
     } catch {
-      return "profile";
+      setCurrentTab("profile");
     }
   }, [loc]);
 
-  const go = (t: TabKey) => setLocation(`/settings?tab=${t}`);
-  return [current, go];
+  const go = (t: TabKey) => {
+    setCurrentTab(t);
+    setLocation(`/settings?tab=${t}`);
+  };
+  
+  return [currentTab, go];
 }
 
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
@@ -681,7 +654,7 @@ function ConnectionsSection() {
             <div className="flex items-center gap-2">
               {googleCalendarConnected ? (
                 <>
-                  <Button variant="outline" onClick={() => (window.location.href = "/api/connections/google/manage")}> 
+                  <Button variant="outline" onClick={() => (window.location.href = "/api/connections/google/manage")}>
                     Manage <ExternalLink className="h-4 w-4 ml-1" />
                   </Button>
                   <Button variant="ghost" onClick={disconnect}>Disconnect</Button>

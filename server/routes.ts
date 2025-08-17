@@ -126,9 +126,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Get trophies count
+      // Get trophies count using raw SQL with proper parameter syntax
       const trophiesResult = await db.execute(
-        `SELECT COUNT(*) as count FROM user_trophies WHERE user_id = $1`
+        `SELECT COUNT(*) as count FROM user_trophies WHERE user_id = '${userId}'`
       );
       const trophiesCount = parseInt((trophiesResult.rows[0] as any)?.count || '0');
 

@@ -217,7 +217,7 @@ export default function PlayerDashboard({
       superstar: { earned: awardsSummary?.superstarBadgesCount ?? 0, total: 12 },
       allStar: { earned: awardsSummary?.allStarBadgesCount ?? 0, total: 20 },
       starter: { earned: awardsSummary?.starterBadgesCount ?? 0, total: 18 },
-      prospect: { earned: awardsSummary?.prospectBadgesCount ?? 0, total: 24 },
+      prospect: { earned: awardsSummary?.rookieBadgesCount ?? 0, total: 24 },
     }),
     [awardsSummary]
   );

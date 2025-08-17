@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { User as UserType } from "@/../../shared/schema";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,7 @@ function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState(user?.email || "");
+  const [email, setEmail] = useState((user as UserType)?.email || "");
 
   const mutate = useMutation({
     mutationFn: async () => {
@@ -135,7 +136,7 @@ function ChangeEmailDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     },
     onSuccess: () => {
       toast({ title: "Email updated", description: "Please verify your new email." });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as UserType)?.id] });
       onOpenChange(false);
     },
     onError: (e) => toast({ title: "Could not update email", description: String(e), variant: "destructive" }),
@@ -266,8 +267,8 @@ function ProfileSection() {
   const queryClient = useQueryClient();
 
   const [editableProfile, setEditableProfile] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
+    firstName: (user as UserType)?.firstName || "",
+    lastName: (user as UserType)?.lastName || "",
     teamName: "",
     age: "",
     height: "",
@@ -281,7 +282,7 @@ function ProfileSection() {
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await fetch(`/api/users/${user?.id}/profile`, {
+      const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -292,7 +293,7 @@ function ProfileSection() {
     },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved successfully." });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as UserType)?.id] });
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),
   });
@@ -409,7 +410,7 @@ function PrivacySection() {
 
   const mutate = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/privacy/${user?.id}`, {
+      const res = await fetch(`/api/privacy/${(user as UserType)?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -766,6 +767,24 @@ function ActionRow({ icon: Icon, title, action }: { icon: any; title: string; ac
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
+   Tab Renderer
+──────────────────────────────────────────────────────────────────────────────── */
+function renderTab(tab: TabKey) {
+  switch (tab) {
+    case "profile": return <ProfileSection />;
+    case "privacy": return <PrivacySection />;
+    case "notifications": return <NotificationsSection />;
+    case "security": return <SecuritySection />;
+    case "connections": return <ConnectionsSection />;
+    case "billing": return <BillingSection />;
+    case "devices": return <DevicesSection />;
+    case "legal": return <LegalSection />;
+    case "danger": return <DangerSection />;
+    default: return <ProfileSection />;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
    Main Settings Page
 ──────────────────────────────────────────────────────────────────────────────── */
 export default function SettingsPage() {
@@ -796,7 +815,7 @@ export default function SettingsPage() {
             </Button>
             <div>
               <div className="text-lg font-semibold text-gray-900">Settings</div>
-              <div className="text-xs text-gray-500">Signed in as {user?.firstName} {user?.lastName}</div>
+              <div className="text-xs text-gray-500">Signed in as {(user as UserType)?.firstName} {(user as UserType)?.lastName}</div>
             </div>
           </div>
         </div>
@@ -812,4 +831,28 @@ export default function SettingsPage() {
               return (
                 <button
                   key={n.key}
-                  onClick={() => go(n
+                  onClick={() => go(n.key)}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                    active
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <n.icon className="h-4 w-4" />
+                  <span className="text-sm">{n.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Main Content */}
+        <main className="md:col-span-3">
+          <div className="bg-white rounded-xl border shadow-sm">
+            {renderTab(tab)}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}

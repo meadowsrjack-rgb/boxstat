@@ -1080,8 +1080,8 @@ export default function PlayerDashboard({
 
               {/* Trophies & Badges Section */}
               <Card className="border-0 shadow-sm">
-                <CardContent className="p-3">
-                  <UypTrophyRings data={ringsData} size={100} stroke={6} />
+                <CardContent className="p-2">
+                  <UypTrophyRings data={ringsData} size={80} stroke={4} />
                 </CardContent>
               </Card>
 

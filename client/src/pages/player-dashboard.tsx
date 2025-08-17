@@ -864,7 +864,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Trophies & Badges */}
               <div className="p-2">
-                <UypTrophyRings data={ringsData} size={60} stroke={3} />
+                <UypTrophyRings data={ringsData} size={69} stroke={3} />
               </div>
 
               {/* Skills Progress */}

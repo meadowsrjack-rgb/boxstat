@@ -3,12 +3,12 @@ import React from 'react';
 
 type Meter = { earned: number; total: number };
 type UypRingsData = {
-  trophies: Meter;
+  trophies:   Meter;
   hallOfFame: Meter;
-  superstar: Meter;
-  allStar: Meter;
-  starter: Meter;
-  prospect: Meter;
+  superstar:  Meter;
+  allStar:    Meter;
+  starter:    Meter;
+  prospect:   Meter;
 };
 
 const schemes = {
@@ -50,7 +50,13 @@ function CircularRingMeter({
 
   return (
     <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-label={`${label} ${earned}/${total}`}>
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        width={size}
+        height={size}
+        role="img"
+        aria-label={`${label} ${earned}/${total}`}
+      >
         <defs>
           <linearGradient id={ringId} x1="0%" y1="0%" x2="100%" y2="100%">
             {gradientStops(scheme.ring)}
@@ -65,6 +71,18 @@ function CircularRingMeter({
           </linearGradient>
         </defs>
 
+        {/* Background track */}
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="#e5e7eb" /* light gray */
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+
+        {/* Gradient progress arc */}
         <circle
           cx={center}
           cy={center}
@@ -72,18 +90,35 @@ function CircularRingMeter({
           fill="none"
           stroke={`url(#${ringId})`}
           strokeWidth={stroke}
-          strokeLinecap="round"
           strokeDasharray={dash}
           strokeDashoffset={dashOffset}
-          style={{ transition: 'stroke-dashoffset .8s ease' }}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${center} ${center})`} // start at 12 o'clock
         />
 
-        {/* big number (no bg, not bold) */}
-        <text x={center} y={center + 6} textAnchor="middle" fontFamily="ui-sans-serif, system-ui" fontWeight={400} fontSize={40} fill="#0f172a">
+        {/* Number (no bg, not bold) */}
+        <text
+          x={center}
+          y={center + 6}
+          textAnchor="middle"
+          fontFamily="ui-sans-serif, system-ui"
+          fontWeight={400}
+          fontSize={34}
+          fill="#0f172a"
+        >
           {earned}
         </text>
-        {/* small label close under number */}
-        <text x={center} y={center + 24} textAnchor="middle" fontFamily="ui-sans-serif, system-ui" fontWeight={400} fontSize={12} fill="#334155">
+
+        {/* Label close under number */}
+        <text
+          x={center}
+          y={center + 20}
+          textAnchor="middle"
+          fontFamily="ui-sans-serif, system-ui"
+          fontWeight={400}
+          fontSize={9}
+          fill="#334155"
+        >
           {label}
         </text>
       </svg>

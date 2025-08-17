@@ -1,203 +1,300 @@
-import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  ChevronRight,
-  User,
-  Shield,
-  Lock,
-  Users,
-  Key,
-  Settings,
-  MessageCircle,
-  HelpCircle
-} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Globe, Lock, ArrowLeft } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+
+const TEAM_OPTIONS = ["High School Elite", "JV", "Varsity", "AAU", "Travel"];
+const AGE_OPTIONS = ["14", "15", "16", "17", "18"];
+const HEIGHT_OPTIONS = ["5'0\"", "5'1\"", "5'2\"", "5'3\"", "5'4\"", "5'5\"", "5'6\"", "5'7\"", "5'8\"", "5'9\"", "5'10\"", "5'11\"", "6'0\"", "6'1\"", "6'2\"", "6'3\"", "6'4\"", "6'5\"", "6'6\"", "6'7\"", "6'8\""];
+const POSITION_OPTIONS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"];
+const JERSEY_OPTIONS = Array.from({ length: 99 }, (_, i) => (i + 1).toString());
+
+interface EditableProfile {
+  firstName?: string;
+  lastName?: string;
+  teamName?: string;
+  age?: string;
+  height?: string;
+  location?: string;
+  position?: string;
+  jerseyNumber?: string;
+}
+
+interface PrivacySettings {
+  height: boolean;
+  location: boolean;
+}
+
+function CityTypeahead({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [q, setQ] = useState(value || "");
+  
+  return (
+    <div className="w-48 relative">
+      <input
+        className="w-full text-right border rounded-md px-2 py-1 text-sm"
+        placeholder="City"
+        value={q}
+        onChange={(e) => {
+          setQ(e.target.value);
+          onChange(e.target.value);
+        }}
+      />
+    </div>
+  );
+}
 
 export default function SettingsPage() {
-  const { logout } = useAuth();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+  
+  const [editableProfile, setEditableProfile] = useState<EditableProfile>({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    teamName: "",
+    age: "",
+    height: "",
+    location: "",
+    position: "",
+    jerseyNumber: "",
+  });
 
-  const handleSignOut = async () => {
-    await logout();
-    setLocation("/");
-  };
+  const [privacySettings, setPrivacySettings] = useState<PrivacySettings>({
+    height: true,
+    location: true,
+  });
 
-  const handleDeleteAccount = () => {
-    // In a real app, this would show a confirmation dialog
-    alert("Delete account functionality would be implemented here with proper confirmation dialogs.");
-  };
+  const updateProfile = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await fetch(`/api/users/${user?.id}/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to save profile");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Profile updated", description: "Changes saved successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", user?.id] });
+    },
+    onError: (e) =>
+      toast({
+        title: "Save failed",
+        description: String(e),
+        variant: "destructive",
+      }),
+  });
 
-  const navigateToSection = (section: string) => {
-    // In a real app, these would navigate to specific settings pages
-    alert(`Navigate to ${section} settings - this would be implemented as separate pages.`);
+  const handleSave = () => {
+    updateProfile.mutate({
+      ...editableProfile,
+      privacySettings,
+    });
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setLocation("/")}
-              className="mr-3 h-10 w-10"
-            >
-              <ArrowLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="text-xl font-bold text-gray-900">Settings</h1>
-          </div>
+      <div className="bg-white border-b border-gray-200 px-4 py-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation("/player-dashboard")}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-semibold text-gray-900">Settings</h1>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-md mx-auto">
-        <div className="px-4 py-6 space-y-1">
-          {/* Account Section */}
-          <button
-            onClick={() => navigateToSection("Account")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <User className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Account</span>
+      {/* Content */}
+      <div className="p-4 space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">First Name</label>
+                <Input
+                  value={editableProfile.firstName || ""}
+                  onChange={(e) => setEditableProfile((p) => ({ ...p, firstName: e.target.value }))}
+                  placeholder="First Name"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Last Name</label>
+                <Input
+                  value={editableProfile.lastName || ""}
+                  onChange={(e) => setEditableProfile((p) => ({ ...p, lastName: e.target.value }))}
+                  placeholder="Last Name"
+                />
+              </div>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Privacy Section */}
-          <button
-            onClick={() => navigateToSection("Privacy")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Shield className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Privacy</span>
+            {/* Team */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Team</label>
+              <Select
+                value={editableProfile.teamName || ""}
+                onValueChange={(v) => setEditableProfile((p) => ({ ...p, teamName: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEAM_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Subscription Section */}
-          <button
-            onClick={() => navigateToSection("Subscription")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Lock className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Subscription</span>
+            {/* Age */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Age</label>
+              <Select value={editableProfile.age || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, age: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select age" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGE_OPTIONS.map((a) => (
+                    <SelectItem key={a} value={a}>
+                      {a}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Teams Section */}
-          <button
-            onClick={() => navigateToSection("Teams")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-gray-400" />
-              <span className="text-lg text-gray-400">Teams</span>
+            {/* Height with Privacy */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Height</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPrivacySettings((prev) => ({ ...prev, height: !prev.height }))}
+                  className="h-8 px-2"
+                >
+                  {privacySettings.height ? (
+                    <>
+                      <Globe className="h-4 w-4 mr-1 text-green-600" />
+                      <span className="text-xs text-green-600">Public</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4 mr-1 text-gray-500" />
+                      <span className="text-xs text-gray-500">Private</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Select value={editableProfile.height || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, height: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select height" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HEIGHT_OPTIONS.map((h) => (
+                    <SelectItem key={h} value={h}>
+                      {h}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
-        </div>
 
-        {/* Separator */}
-        <div className="h-2 bg-gray-200 mx-4"></div>
-
-        <div className="px-4 py-6 space-y-1">
-          {/* Permissions Section */}
-          <button
-            onClick={() => navigateToSection("Permissions")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Key className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Permissions</span>
+            {/* Location with Privacy */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium text-gray-700">Location</label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPrivacySettings((prev) => ({ ...prev, location: !prev.location }))}
+                  className="h-8 px-2"
+                >
+                  {privacySettings.location ? (
+                    <>
+                      <Globe className="h-4 w-4 mr-1 text-green-600" />
+                      <span className="text-xs text-green-600">Public</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4 mr-1 text-gray-500" />
+                      <span className="text-xs text-gray-500">Private</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <CityTypeahead
+                value={editableProfile.location || ""}
+                onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))}
+              />
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Advanced Section */}
-          <button
-            onClick={() => navigateToSection("Advanced")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Settings className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Advanced</span>
+            {/* Position */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Position</label>
+              <Select value={editableProfile.position || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, position: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POSITION_OPTIONS.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Feedback Section */}
-          <button
-            onClick={() => navigateToSection("Feedback")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <MessageCircle className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Feedback</span>
+            {/* Jersey Number */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Jersey Number</label>
+              <Select value={editableProfile.jerseyNumber || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, jerseyNumber: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select number" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JERSEY_OPTIONS.map((n) => (
+                    <SelectItem key={n} value={n}>
+                      #{n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
 
-          {/* Help Section */}
-          <button
-            onClick={() => navigateToSection("Help")}
-            className="w-full flex items-center justify-between py-4 px-4 bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <HelpCircle className="h-6 w-6 text-gray-600" />
-              <span className="text-lg text-gray-900">Help</span>
+            {/* Save Button */}
+            <div className="pt-4">
+              <Button 
+                onClick={handleSave} 
+                disabled={updateProfile.isPending}
+                className="w-full"
+              >
+                {updateProfile.isPending ? "Saving..." : "Save Changes"}
+              </Button>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
-          </button>
-        </div>
-
-        {/* Separator */}
-        <div className="h-2 bg-gray-200 mx-4"></div>
-
-        {/* Action Buttons */}
-        <div className="px-4 py-6 space-y-4">
-          {/* Sign Out Button */}
-          <button
-            onClick={handleSignOut}
-            className="w-full py-4 text-center text-blue-500 font-medium bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            Sign Out
-          </button>
-
-          {/* Delete Account Button */}
-          <button
-            onClick={handleDeleteAccount}
-            className="w-full py-4 text-center text-red-500 font-medium bg-white rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            Delete Account
-          </button>
-        </div>
-
-        {/* Footer Links */}
-        <div className="px-4 pb-8">
-          <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-            <button
-              onClick={() => navigateToSection("Terms of Use")}
-              className="hover:text-gray-700 transition-colors"
-            >
-              Terms of Use
-            </button>
-            <span>•</span>
-            <button
-              onClick={() => navigateToSection("Privacy Policy")}
-              className="hover:text-gray-700 transition-colors"
-            >
-              Privacy Policy
-            </button>
-          </div>
-        </div>
-      </main>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

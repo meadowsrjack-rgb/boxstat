@@ -42,7 +42,7 @@ import {
 ──────────────────────────────────────────────────────────────────────────────── */
 const BRAND = "#d82428";
 
-const TEAM_OPTIONS = ["High School Elite", "High School Red", "High School Black", "Youth Girls", "14U Black", "14U Red", "14U White", "12U Black", "12U Red", "12U White", "10U Black", "10U Red","];
+const TEAM_OPTIONS = ["High School Elite", "High School Red", "High School Black", "Youth Girls", "14U Black", "14U Red", "14U White", "12U Black", "12U Red", "12U White", "10U Black", "10U Red"];
 const AGE_OPTIONS = ["9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
 const HEIGHT_OPTIONS = [
   "4'4\"",
@@ -333,7 +333,7 @@ function ProfileSection() {
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await fetch(`/api/users/${(user as UserType)?.id}/profile", {
+      const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

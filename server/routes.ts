@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -76,6 +76,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user trophies:", error);
       res.status(500).json({ message: "Failed to fetch trophies" });
+    }
+  });
+
+  // Awards summary endpoint - categorizes badges by tier and counts trophies
+  app.get('/api/users/:id/awards', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      
+      // Get user badges with badge details
+      const userBadgesList = await db
+        .select({
+          badgeId: userBadges.badgeId,
+          badgeName: badges.name,
+          badgeColor: badges.color,
+          earnedAt: userBadges.earnedAt
+        })
+        .from(userBadges)
+        .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+        .where(eq(userBadges.userId, userId));
+
+      // Categorize badges by tier based on color
+      const badgeCounts = {
+        rookieBadgesCount: 0,      // Red (#dc2626) 
+        starterBadgesCount: 0,     // Green (#16a34a)
+        allStarBadgesCount: 0,     // Blue (#2563eb)
+        superstarBadgesCount: 0,   // Purple (#7c3aed)
+        hofBadgesCount: 0,         // Yellow (#eab308)
+        badgesCount: userBadgesList.length
+      };
+
+      userBadgesList.forEach((badge: any) => {
+        switch (badge.badgeColor) {
+          case '#dc2626': // Red - Rookie
+            badgeCounts.rookieBadgesCount++;
+            break;
+          case '#16a34a': // Green - Starter  
+            badgeCounts.starterBadgesCount++;
+            break;
+          case '#2563eb': // Blue - All-Star
+            badgeCounts.allStarBadgesCount++;
+            break;
+          case '#7c3aed': // Purple - Superstar
+            badgeCounts.superstarBadgesCount++;
+            break;
+          case '#eab308': // Yellow - Hall of Fame
+            badgeCounts.hofBadgesCount++;
+            break;
+        }
+      });
+
+      // Get trophies count
+      const trophiesResult = await db.execute(
+        `SELECT COUNT(*) as count FROM user_trophies WHERE user_id = $1`
+      );
+      const trophiesCount = parseInt((trophiesResult.rows[0] as any)?.count || '0');
+
+      const summary = {
+        ...badgeCounts,
+        trophiesCount,
+        recentBadges: userBadgesList
+          .sort((a: any, b: any) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime())
+          .slice(0, 5)
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching user awards:", error);
+      res.status(500).json({ message: "Failed to fetch awards" });
     }
   });
 

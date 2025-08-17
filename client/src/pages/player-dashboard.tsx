@@ -482,7 +482,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Tabs */}
         <div className="px-6 mb-6">
           <div className="flex justify-between items-center">
-            <TabButton label="activity" activeTab={activeTab} onClick={setActiveTab} Icon={TrendingUp} />
+            <TabButton label="activity" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="video" activeTab={activeTab} onClick={setActiveTab} Icon={Play} />
             <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Shirt} />
             <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
@@ -864,7 +864,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Trophies & Badges */}
               <div className="p-2">
-                <UypTrophyRings data={ringsData} size={69} stroke={3} />
+                <UypTrophyRings data={ringsData} size={79} stroke={3} />
               </div>
 
               {/* Skills Progress */}

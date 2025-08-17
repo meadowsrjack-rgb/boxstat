@@ -105,7 +105,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   updateUserProfile(id: string, data: Partial<User>): Promise<User>;
-  updateUserSportsEngineInfo(userId: string, sportsEngineCustomerId: string, sportsEngineSubscriptionId: string): Promise<User>;
+
   
   // Family operations (legacy)
   getFamilyMembers(parentId: string): Promise<FamilyMember[]>;

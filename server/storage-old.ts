@@ -94,18 +94,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async updateUserSportsEngineInfo(userId: string, sportsEngineCustomerId: string, sportsEngineSubscriptionId: string): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        sportsEngineCustomerId,
-        sportsEngineSubscriptionId,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
-  }
+
 
   // Team operations
   async getTeam(id: number): Promise<Team | undefined> {

@@ -35,7 +35,6 @@ export const accounts = pgTable("accounts", {
   primaryAccountType: varchar("primary_account_type", { enum: ["parent", "player", "coach"] }).notNull(),
   accountCompleted: boolean("account_completed").default(false),
   stripeCustomerId: varchar("stripe_customer_id"),
-  sportsEngineCustomerId: varchar("sports_engine_customer_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -90,8 +89,6 @@ export const users = pgTable("users", {
   profileCompleted: boolean("profile_completed").default(false),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
-  sportsEngineCustomerId: varchar("sports_engine_customer_id"),
-  sportsEngineSubscriptionId: varchar("sports_engine_subscription_id"),
   qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

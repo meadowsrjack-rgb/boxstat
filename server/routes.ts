@@ -7,7 +7,7 @@ import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchem
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
-import sportsEngineRoutes from "./sportsengine-routes";
+
 import calendarRoutes from "./routes/calendar";
 import multer from "multer";
 import path from "path";
@@ -1088,8 +1088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // SportsEngine integration routes
-  app.use('/api/sportsengine', sportsEngineRoutes);
+
 
   // Google Calendar integration routes
   app.use('/api/calendar', calendarRoutes);

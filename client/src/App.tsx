@@ -15,7 +15,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
-import SportsEnginePayment from "@/pages/sportsengine-payment";
+
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
 import Training from "@/pages/training";
@@ -160,18 +160,16 @@ function Router() {
       {/* Parent-specific routes */}
       {(user as any)?.userType === 'parent' && (
         <>
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
           <Route path="/roster" component={RosterManagement} />
           <Route path="/schedule-requests" component={ScheduleRequests} />
           <Route path="/family" component={FamilyManagement} />
         </>
       )}
       
-      {/* Player-specific routes with payment access */}
+      {/* Player-specific routes */}
       {(user as any)?.userType === 'player' && (
         <>
           <Route path="/player/team-chat" component={PlayerTeamChat} />
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
         </>
       )}
       
@@ -180,7 +178,6 @@ function Router() {
         <>
           <Route path="/coach/team-messages/:teamId" component={CoachTeamMessages} />
           <Route path="/coach/parent-messages/:teamId" component={CoachParentMessages} />
-          <Route path="/payment/:type?" component={SportsEnginePayment} />
           <Route path="/roster" component={RosterManagement} />
           <Route path="/schedule-requests" component={ScheduleRequests} />
           <Route path="/family" component={FamilyManagement} />

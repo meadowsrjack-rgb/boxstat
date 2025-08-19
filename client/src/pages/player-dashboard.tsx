@@ -864,7 +864,13 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Trophies & Badges */}
               <div className="p-2">
-                <UypTrophyRings data={ringsData} size={79} stroke={3} />
+                <div 
+                  className="cursor-pointer" 
+                  onClick={() => setLocation("/trophies-badges")}
+                  data-testid="trophy-rings-clickable"
+                >
+                  <UypTrophyRings data={ringsData} size={91} stroke={3} />
+                </div>
               </div>
 
               {/* Skills Progress */}

@@ -181,7 +181,6 @@ const STARTER_COACH_AWARDS: AwardItem[] = [
   { slug: 'hustle-award', title: 'Hustle Award' },
   { slug: 'teammate-award', title: 'Teammate Award' },
   { slug: 'student-of-the-game', title: 'Student of the Game' },
-  { slug: 'spirit-award', title: 'Spirit Award' },
   { slug: 'recruiter', title: 'Recruiter', desc: 'Bring a new player who joins' },
 ];
 

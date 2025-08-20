@@ -227,53 +227,45 @@ export default function TrophiesBadgesPage() {
           color="#fff7ed"
         />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Crown className="h-4 w-4 text-amber-500" />
-              UYP Legacy Trophies (Yearly)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Grid>
-              {LEGACY_TROPHIES.map((t) => (
-                <Tile
-                  key={t.slug}
-                  kind="trophy"
-                  slug={t.slug}
-                  title={t.title}
-                  desc={t.desc}
-                  achieved={earnedTrophies.has(t.slug)}
-                  accent="#b45309"
-                />
-              ))}
-            </Grid>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Crown className="h-4 w-4 text-amber-500" />
+            <h3 className="text-base font-semibold">UYP Legacy Trophies (Yearly)</h3>
+          </div>
+          <Grid>
+            {LEGACY_TROPHIES.map((t) => (
+              <Tile
+                key={t.slug}
+                kind="trophy"
+                slug={t.slug}
+                title={t.title}
+                desc={t.desc}
+                achieved={earnedTrophies.has(t.slug)}
+                accent="#b45309"
+              />
+            ))}
+          </Grid>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Award className="h-4 w-4 text-red-600" />
-              Team Trophies (Seasonal)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Grid>
-              {TEAM_TROPHIES.map((t) => (
-                <Tile
-                  key={t.slug}
-                  kind="trophy"
-                  slug={t.slug}
-                  title={t.title}
-                  desc={t.desc}
-                  achieved={earnedTrophies.has(t.slug)}
-                  accent="#991b1b"
-                />
-              ))}
-            </Grid>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <Award className="h-4 w-4 text-red-600" />
+            <h3 className="text-base font-semibold">Team Trophies (Seasonal)</h3>
+          </div>
+          <Grid>
+            {TEAM_TROPHIES.map((t) => (
+              <Tile
+                key={t.slug}
+                kind="trophy"
+                slug={t.slug}
+                title={t.title}
+                desc={t.desc}
+                achieved={earnedTrophies.has(t.slug)}
+                accent="#991b1b"
+              />
+            ))}
+          </Grid>
+        </div>
       </section>
 
       <Separator />
@@ -291,7 +283,6 @@ export default function TrophiesBadgesPage() {
         <Tier
           title="Hall of Fame (Gold) — Legends Only"
           colorClass="from-yellow-100 to-yellow-50"
-          pill="Ultra-rare"
           icon={<Crown className="h-4 w-4 text-yellow-600" />}
         >
           <Grid>
@@ -313,7 +304,6 @@ export default function TrophiesBadgesPage() {
         <Tier
           title="Superstar (Purple) — Elite Consistency"
           colorClass="from-fuchsia-100 to-fuchsia-50"
-          pill="Long-term"
           icon={<Sparkles className="h-4 w-4 text-fuchsia-600" />}
         >
           <Grid>
@@ -335,7 +325,6 @@ export default function TrophiesBadgesPage() {
         <Tier
           title="All-Star (Blue) — Recognition & Milestones"
           colorClass="from-sky-100 to-sky-50"
-          pill="Milestones"
           icon={<Star className="h-4 w-4 text-sky-600" />}
         >
           <Grid>
@@ -357,7 +346,6 @@ export default function TrophiesBadgesPage() {
         <Tier
           title="Starter (Green) — Habit Builders"
           colorClass="from-emerald-100 to-emerald-50"
-          pill="Habits"
           icon={<Shield className="h-4 w-4 text-emerald-600" />}
         >
           <Grid>
@@ -399,7 +387,6 @@ export default function TrophiesBadgesPage() {
         <Tier
           title="Prospect (Grey) — First Steps"
           colorClass="from-zinc-100 to-zinc-50"
-          pill="Quick wins"
           icon={<Heart className="h-4 w-4 text-zinc-600" />}
         >
           <Grid>
@@ -436,17 +423,14 @@ function Tier({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="overflow-hidden">
-      <div className={`bg-gradient-to-r ${colorClass || 'from-gray-100 to-white'} px-5 py-4 border-b`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {icon}
-            <CardTitle className="text-base">{title}</CardTitle>
-          </div>
-          {pill && <UIBadge variant="secondary">{pill}</UIBadge>}
+    <div className="space-y-6">
+      <div className={`bg-gradient-to-r ${colorClass || 'from-gray-100 to-white'} px-5 py-4 rounded-lg`}>
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className="text-base font-semibold">{title}</h3>
         </div>
       </div>
-      <CardContent className="p-6">{children}</CardContent>
-    </Card>
+      <div>{children}</div>
+    </div>
   );
 }

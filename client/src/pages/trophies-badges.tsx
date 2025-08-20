@@ -217,9 +217,16 @@ function ItemTile({ item, achieved, onOpen }: { item: TrophyBadge; achieved: boo
   );
 }
 
+function getCoachAwardDescription(slug: string): string {
+  const coachAwards = ['game-mvp', 'hustle-award', 'teammate-award', 'student-of-the-game', 'recruiter'];
+  return coachAwards.includes(slug) ? 'Coach Award (Awarded by Coach at any time)' : '';
+}
+
 function GlassOverlay({ open, onClose, item }: { open: boolean; onClose: () => void; item: TrophyBadge | null }) {
   if (!open || !item) return null;
-  const how = item.kind === 'trophy' ? trophyHowToEarn(item.slug) : (item.desc || '');
+  const how = item.kind === 'trophy' 
+    ? trophyHowToEarn(item.slug) 
+    : (getCoachAwardDescription(item.slug) || item.desc || '');
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />

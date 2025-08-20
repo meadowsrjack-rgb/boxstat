@@ -20,7 +20,7 @@ const schemes = {
   prospect:   { ring: ['#b9bfc3', '#8f989c'] },
 } as const;
 
-function gradientStops(stops: string[]) {
+function gradientStops(stops: readonly string[]) {
   const step = 100 / (stops.length - 1);
   return stops.map((c, i) => <stop key={i} offset={`${i * step}%`} stopColor={c} />);
 }
@@ -36,7 +36,7 @@ function CircularRingMeter({
   label: string;
   earned: number;
   total: number;
-  scheme: { ring: string[] };
+  scheme: { ring: readonly string[] };
   size?: number;
   stroke?: number;
 }) {

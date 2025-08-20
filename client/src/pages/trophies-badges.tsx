@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Trophy, Star, Crown, Shield, Heart, Filter, X } from 'lucide-react';
 
@@ -253,38 +255,41 @@ import { Sparkles, Trophy, Star, Crown, Shield, Heart, Filter, X } from 'lucide-
 // Page (fetches achievements without alias imports)
 // ────────────────────────────────────────────────────────────────
  export default function TrophiesBadgesPage(){
-  // Support user id via global or query param; fallback to 'me'
-  const [ach, setAch] = useState<Achievements | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const qUser = url.searchParams.get('userId');
-    const globalUser = (window as any).UYP_USER_ID as string | undefined;
-    const userId = (qUser || globalUser || 'me').toLowerCase();
-
-    const endpoints = [
-      `/api/users/${userId}/achievements`,
-      `/api/user/${userId}/achievements`,
-      `/api/achievements`,
-    ];
-
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      for (const ep of endpoints){
-        try {
-          const res = await fetch(ep, { credentials: 'include' });
-          if (res.ok){ const j = await res.json(); if(!cancelled){ setAch(j); } break; }
-        } catch (e) { /* try next endpoint */ }
+  const { user: currentUser } = useAuth();
+  
+  // Fetch user achievements using react-query for better error handling
+  const { data: achievementsData, isLoading } = useQuery<Achievements>({
+    queryKey: ['/api/users', currentUser?.id, 'achievements'],
+    queryFn: async () => {
+      if (!currentUser?.id) {
+        return { trophies: [], badges: [] };
       }
-      if (!cancelled) setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+      
+      // Try multiple endpoints for achievements data
+      const endpoints = [
+        `/api/users/${currentUser.id}/achievements`,
+        `/api/achievements`
+      ];
+      
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, { credentials: 'include' });
+          if (res.ok) {
+            return await res.json();
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch from ${endpoint}:`, e);
+        }
+      }
+      
+      // Return empty data if all endpoints fail
+      return { trophies: [], badges: [] };
+    },
+    enabled: !!currentUser?.id,
+  });
 
-  // Fallback demo data if API is unavailable — helps preview & dev
-  const data: Achievements = ach || { trophies: [], badges: [] };
+  // Use the fetched data or fallback to empty
+  const data: Achievements = achievementsData || { trophies: [], badges: [] };
 
   const earnedTrophies = useMemo(() => new Set((data?.trophies ?? []).map((s) => s.toLowerCase())), [data]);
   const earnedBadges = useMemo(() => new Set((data?.badges ?? []).map((s) => s.toLowerCase())), [data]);

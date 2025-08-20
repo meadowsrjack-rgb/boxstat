@@ -1090,6 +1090,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
+  // Achievements endpoint for trophies-badges page
+  app.get('/api/users/:id/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      
+      // Get user's earned badges and trophies
+      const userBadgesList = await db
+        .select({ badgeId: userBadges.badgeId })
+        .from(userBadges)
+        .where(eq(userBadges.userId, userId));
+
+      const userTrophiesList = await db
+        .select({ trophyId: userTrophies.trophyId })
+        .from(userTrophies)
+        .where(eq(userTrophies.userId, userId));
+
+      // Convert to arrays of IDs/slugs
+      const earnedBadges = userBadgesList.map(b => b.badgeId);
+      const earnedTrophies = userTrophiesList.map(t => t.trophyId);
+      
+      res.json({
+        badges: earnedBadges,
+        trophies: earnedTrophies
+      });
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  // Fallback achievements endpoint
+  app.get('/api/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      // Return demo data for development
+      res.json({
+        badges: ['checked-in', 'practice-rookie'],
+        trophies: ['mvp', 'coaches-award']
+      });
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
   // Google Calendar integration routes
   app.use('/api/calendar', calendarRoutes);
 

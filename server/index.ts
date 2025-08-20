@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeScheduler } from "./scheduler";
@@ -6,6 +7,10 @@ import { initializeScheduler } from "./scheduler";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve static files from public directory (for trophies, assets, etc.)
+const publicPath = path.resolve(import.meta.dirname, "..", "public");
+app.use(express.static(publicPath));
 
 app.use((req, res, next) => {
   const start = Date.now();

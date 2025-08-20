@@ -2,18 +2,33 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
+// Type definitions
+type TrophyBadge = {
+  slug: string;
+  title: string;
+  desc?: string;
+  category?: string;
+  tier?: string;
+  kind: 'trophy' | 'badge';
+  achieved?: boolean;
+};
+
+type BadgeTier = 'all' | 'hof' | 'superstar' | 'allstar' | 'starter' | 'prospect';
+type KindFilter = 'all' | 'trophies' | 'badges';
+type EarnedFilter = 'all' | 'earned' | 'not';
+
 // =============================
 // Image helpers (locked to /trophies)
 // - If a gray variant is missing, gracefully fall back to color
 // =============================
-function imgColor(slug) {
+function imgColor(slug: string): string {
   return `/trophies/${slug}.png`;
 }
-function imgGray(slug) {
+function imgGray(slug: string): string {
   return `/trophies/${slug}-gray.png`;
 }
 
-function TrophyBadgeImg({ slug, achieved, alt }) {
+function TrophyBadgeImg({ slug, achieved, alt }: { slug: string; achieved: boolean; alt: string }) {
   const [src, setSrc] = useState(achieved ? imgColor(slug) : imgGray(slug));
   const triedFallback = useRef(false);
   return (
@@ -129,13 +144,13 @@ const PROSPECT_BADGES = [
   { slug: 'fnh-rookie', title: 'FNH Rookie', desc: '10 total FNH games', tier: 'prospect' },
 ];
 
-const BADGE_BUCKETS = { hof: HOF_BADGES, superstar: SUPERSTAR_BADGES, allstar: ALLSTAR_BADGES, starter: STARTER_BADGES.concat(STARTER_COACH_AWARDS), prospect: PROSPECT_BADGES };
-const BADGE_LIST = Object.keys(BADGE_BUCKETS).flatMap(k => BADGE_BUCKETS[k].map(b => ({ ...b, kind: 'badge' })));
+const BADGE_BUCKETS = { hof: HOF_BADGES, superstar: SUPERSTAR_BADGES, allstar: ALLSTAR_BADGES, starter: STARTER_BADGES.concat(STARTER_COACH_AWARDS), prospect: PROSPECT_BADGES } as const;
+const BADGE_LIST = Object.entries(BADGE_BUCKETS).flatMap(([k, badges]) => badges.map((b: any) => ({ ...b, kind: 'badge' as const })));
 
 // =============================
 // Overlay copy helpers
 // =============================
-function trophyHowToEarn(slug) {
+function trophyHowToEarn(slug: string): string {
   switch (slug) {
     case 'uyp-heart-and-hustle':
       return 'The yearly UYP-wide player who most consistently gave their all across practices and games.';
@@ -154,7 +169,7 @@ function trophyHowToEarn(slug) {
   }
 }
 
-function typeLine(item) {
+function typeLine(item: TrophyBadge): string {
   if (item.kind === 'trophy') {
     return item.category === 'legacy'
       ? 'Legacy Trophy: Premier yearly honor across all UYP.'
@@ -166,26 +181,26 @@ function typeLine(item) {
     allstar: 'Badge — All-Star (Blue) – Recognition & Milestones',
     starter: 'Badge — Starter (Green) – Habit Builders',
     prospect: 'Badge — Prospect (Grey) – First Steps',
-  };
-  return map[item.tier] || 'Badge';
+  } as const;
+  return map[item.tier as keyof typeof map] || 'Badge';
 }
 
 // =============================
 // UI Primitives
 // =============================
-function Glass({ className = '', children }) {
+function Glass({ className = '', children }: { className?: string; children: React.ReactNode }) {
   return (
     <div className={`rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl shadow-[0_8px_40px_rgba(0,0,0,0.25)] ${className}`}>{children}</div>
   );
 }
 
-function StatPill({ children }) {
+function StatPill({ children }: { children: React.ReactNode }) {
   return (
     <div className="px-3 py-1 rounded-full backdrop-blur border border-white/10 bg-white/5 text-xs text-white/80">{children}</div>
   );
 }
 
-function ItemTile({ item, achieved, onOpen }) {
+function ItemTile({ item, achieved, onOpen }: { item: TrophyBadge; achieved: boolean; onOpen: () => void }) {
   return (
     <button onClick={onOpen} className="group relative focus:outline-none">
       <div className="relative">
@@ -203,7 +218,7 @@ function ItemTile({ item, achieved, onOpen }) {
   );
 }
 
-function GlassOverlay({ open, onClose, item }) {
+function GlassOverlay({ open, onClose, item }: { open: boolean; onClose: () => void; item: TrophyBadge | null }) {
   if (!open || !item) return null;
   const how = item.kind === 'trophy' ? trophyHowToEarn(item.slug) : (item.desc || '');
   return (
@@ -233,12 +248,19 @@ function GlassOverlay({ open, onClose, item }) {
 // =============================
 // Filter panel (single icon → dropdown sheet)
 // =============================
-function FilterButton({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter, badgeTier, setBadgeTier }) {
+function FilterButton({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter, badgeTier, setBadgeTier }: {
+  earnedFilter: EarnedFilter;
+  setEarnedFilter: (filter: EarnedFilter) => void;
+  kindFilter: KindFilter;
+  setKindFilter: (filter: KindFilter) => void;
+  badgeTier: BadgeTier;
+  setBadgeTier: (tier: BadgeTier) => void;
+}) {
   const [open, setOpen] = useState(false);
   const paneRef = useRef(null);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
@@ -277,7 +299,7 @@ function FilterButton({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter
   );
 }
 
-function Row({ label, children }) {
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-4 py-2">
       <div className="text-xs text-white/70 whitespace-nowrap">{label}</div>
@@ -286,7 +308,7 @@ function Row({ label, children }) {
   );
 }
 
-function Chip({ active, onClick, children, disabled }) {
+function Chip({ active, onClick, children, disabled }: { active: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
@@ -300,17 +322,25 @@ function Chip({ active, onClick, children, disabled }) {
   );
 }
 
-function PanelContent({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter, badgeTier, setBadgeTier, onDone }) {
+function PanelContent({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter, badgeTier, setBadgeTier, onDone }: {
+  earnedFilter: EarnedFilter;
+  setEarnedFilter: (filter: EarnedFilter) => void;
+  kindFilter: KindFilter;
+  setKindFilter: (filter: KindFilter) => void;
+  badgeTier: BadgeTier;
+  setBadgeTier: (tier: BadgeTier) => void;
+  onDone: () => void;
+}) {
   return (
     <div className="space-y-2">
       <Row label="Progress">
         {['all','earned','not'].map(v => (
-          <Chip key={v} active={earnedFilter===v} onClick={() => setEarnedFilter(v)}>{v==='all'?'All': v==='earned'?'Earned':'Not Earned'}</Chip>
+          <Chip key={v} active={earnedFilter===v} onClick={() => setEarnedFilter(v as EarnedFilter)} disabled={false}>{v==='all'?'All': v==='earned'?'Earned':'Not Earned'}</Chip>
         ))}
       </Row>
       <Row label="Type">
         {['all','trophies','badges'].map(v => (
-          <Chip key={v} active={kindFilter===v} onClick={() => setKindFilter(v)}>{v==='all'?'All Types': v==='trophies'?'Trophies':'Badges'}</Chip>
+          <Chip key={v} active={kindFilter===v} onClick={() => setKindFilter(v as KindFilter)} disabled={false}>{v==='all'?'All Types': v==='trophies'?'Trophies':'Badges'}</Chip>
         ))}
       </Row>
       <Row label="Tier (badges)">
@@ -362,17 +392,17 @@ export default function TrophiesBadgesPage() {
   const earnedBadges = useMemo(() => new Set((achSlugs.badges || []).map(s => String(s).toLowerCase())), [achSlugs]);
 
   // Filters
-  const [earnedFilter, setEarnedFilter] = useState('earned'); // default Earned
-  const [kindFilter, setKindFilter] = useState('all'); // all | trophies | badges
-  const [badgeTier, setBadgeTier] = useState('all'); // always available
+  const [earnedFilter, setEarnedFilter] = useState<EarnedFilter>('earned'); // default Earned
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all'); // all | trophies | badges
+  const [badgeTier, setBadgeTier] = useState<BadgeTier>('all'); // always available
 
   // Build dataset with achieved flags
   const trophies = useMemo(() => TROPHY_LIST.map(t => ({ ...t, achieved: earnedTrophies.has(t.slug) })), [earnedTrophies]);
   const badges = useMemo(() => BADGE_LIST.map(b => ({ ...b, achieved: earnedBadges.has(b.slug) })), [earnedBadges]);
 
   // Filtering helpers
-  const byEarned = arr => earnedFilter === 'all' ? arr : arr.filter(i => earnedFilter === 'earned' ? i.achieved : !i.achieved);
-  const sortEarnedFirst = arr => arr.slice().sort((a,b) => (a.achieved === b.achieved ? 0 : a.achieved ? -1 : 1));
+  const byEarned = (arr: TrophyBadge[]) => earnedFilter === 'all' ? arr : arr.filter(i => earnedFilter === 'earned' ? i.achieved : !i.achieved);
+  const sortEarnedFirst = (arr: TrophyBadge[]) => arr.slice().sort((a,b) => (a.achieved === b.achieved ? 0 : a.achieved ? -1 : 1));
 
   const trophiesFiltered = useMemo(() => {
     if (kindFilter === 'badges') return [];
@@ -389,8 +419,8 @@ export default function TrophiesBadgesPage() {
   const badgeEarnedCount = badges.filter(b => b.achieved).length;
 
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const openOverlay = it => { setSelected(it); setOpen(true); };
+  const [selected, setSelected] = useState<TrophyBadge | null>(null);
+  const openOverlay = (it: TrophyBadge) => { setSelected(it); setOpen(true); };
 
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(80%_50%_at_50%_0%,rgba(185,28,28,0.25),transparent),linear-gradient(180deg,#1a0202_0%,#000000_100%)] text-white">

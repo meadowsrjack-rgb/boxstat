@@ -35,7 +35,7 @@ function TrophyBadgeImg({ slug, achieved, alt }: { slug: string; achieved: boole
     <img
       src={src}
       alt={alt}
-      className="max-h-full max-w-full object-contain select-none"
+      className="w-20 h-20 object-contain select-none"
       draggable={false}
       onError={() => {
         if (!triedFallback.current && !achieved) {
@@ -205,7 +205,7 @@ function ItemTile({ item, achieved, onOpen }: { item: TrophyBadge; achieved: boo
     <button onClick={onOpen} className="group relative focus:outline-none">
       <div className="relative">
         <div className="transition-transform duration-300 group-hover:scale-[1.04]">
-          <div className="aspect-square w-28 mx-auto flex items-center justify-center">
+          <div className="w-28 h-28 mx-auto flex items-center justify-center rounded-2xl bg-black/20">
             <TrophyBadgeImg slug={item.slug} achieved={achieved} alt={item.title} />
           </div>
         </div>
@@ -445,7 +445,7 @@ export default function TrophiesBadgesPage() {
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18 4h-2V2H8v2H6a2 2 0 0 0-2 2v2a4 4 0 0 0 4 4h.1A6 6 0 0 0 11 16.9V19H8v2h8v-2h-3v-2.1A6 6 0 0 0 15.9 12H16a4 4 0 0 0 4-4V6a2 2 0 0 0-2-2Z"/></svg>
               <span className="text-sm tracking-wide uppercase">Trophies</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-stretch">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-start">
               {trophiesFiltered.map(t => (
                 <ItemTile key={`t-${t.slug}`} item={t} achieved={t.achieved} onOpen={() => openOverlay(t)} />
               ))}
@@ -460,7 +460,7 @@ export default function TrophiesBadgesPage() {
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.1 6.3L22 9.3l-5 4.9 1.2 6.8L12 17.7 5.8 21l1.2-6.8-5-4.9 6.9-1z"/></svg>
               <span className="text-sm tracking-wide uppercase">Badges</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-stretch">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-start">
               {badgesFiltered.map(b => (
                 <ItemTile key={`b-${b.slug}`} item={b} achieved={b.achieved} onOpen={() => openOverlay(b)} />
               ))}

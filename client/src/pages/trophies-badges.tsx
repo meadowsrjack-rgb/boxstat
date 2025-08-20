@@ -38,7 +38,7 @@ type Achievements = {
 const imgPath = (kind: 'trophy' | 'badge', slug: string, achieved: boolean) => {
   // All trophies and badges are in the same folder, differentiated by -gray suffix
   const suffix = achieved ? '' : '-gray';
-  return `/@assets/{trophiesbadges}/${slug}${suffix}.png`;
+  return `/trophiesbadges/${slug}${suffix}.png`;
 };
 
 const SectionHeader = ({
@@ -205,13 +205,13 @@ export default function TrophiesBadgesPage() {
   const { user } = useAuth();
 
   const { data } = useQuery<Achievements>({
-    queryKey: ['/api/users', user?.id, 'achievements'],
+    queryKey: ['/api/users', (user as any)?.id, 'achievements'],
     queryFn: async () => {
-      const res = await fetch(`/api/users/${user?.id}/achievements`, { credentials: 'include' });
+      const res = await fetch(`/api/users/${(user as any)?.id}/achievements`, { credentials: 'include' });
       if (!res.ok) return { trophies: [], badges: [] };
       return res.json();
     },
-    enabled: !!user?.id,
+    enabled: !!(user as any)?.id,
   });
 
   const earnedTrophies = useMemo(() => new Set((data?.trophies ?? []).map((s) => s.toLowerCase())), [data]);

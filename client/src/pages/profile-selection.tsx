@@ -71,7 +71,7 @@ export default function ProfileSelection() {
         {/* Title */}
         <div className="text-center mb-12">
           <h1
-            className="text-4xl font-extrabold tracking-tight"
+            className="text-2xl font-bold tracking-tight"
             style={{ textShadow: "0 2px 30px rgba(216,36,40,0.45)" }}
             data-testid="text-page-title"
           >
@@ -99,7 +99,7 @@ export default function ProfileSelection() {
         ) : (
           <>
             {/* Grid of cards */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-8">
               {profiles.map((p, i) => {
                 const centerLast = lastIsOdd && i === profiles.length - 1;
                 return (
@@ -107,11 +107,11 @@ export default function ProfileSelection() {
                     <button
                       type="button"
                       onClick={() => handleSelectProfile(p.id)}
-                      className="group relative w-[156px] select-none focus:outline-none"
+                      className="group relative w-[120px] select-none focus:outline-none"
                       data-testid={`card-profile-${p.id}`}
                     >
                       <div
-                        className="relative w-[156px] h-[196px] rounded-xl overflow-hidden
+                        className="relative w-[120px] h-[150px] rounded-xl overflow-hidden
                                    bg-white/5 ring-1 ring-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]
                                    transition transform group-hover:translate-y-[-2px]"
                       >
@@ -126,19 +126,20 @@ export default function ProfileSelection() {
 
                         <Avatar className="w-full h-full rounded-none">
                           <AvatarImage
-                            src={p.profileImageUrl || getDefaultImage(p.profileType)}
+                            src={p.profileImageUrl}
                             alt={`${p.firstName} ${p.lastName}`}
                             className="object-cover w-full h-full"
                           />
-                          <AvatarFallback className="bg-white/10 text-white text-lg w-full h-full rounded-none grid place-items-center">
-                            {p.firstName?.[0]}
-                            {p.lastName?.[0]}
+                          <AvatarFallback className="bg-white/10 text-white w-full h-full rounded-none grid place-items-center">
+                            <div className="text-6xl">
+                              {getEmojiAvatar(p.profileType)}
+                            </div>
                           </AvatarFallback>
                         </Avatar>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                       </div>
                       <div className="mt-3 text-center">
-                        <div className="text-[18px] font-semibold leading-none tracking-wide">
+                        <div className="text-[16px] font-semibold leading-none tracking-wide">
                           {p.firstName}
                         </div>
                       </div>
@@ -173,13 +174,20 @@ function badgeStyle(type: Profile["profileType"]): React.CSSProperties {
     ? { backgroundColor: UYP_RED, color: "#fff" }
     : { backgroundColor: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)" };
 }
+
 function labelFor(type: Profile["profileType"]) {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
-function getDefaultImage(type: Profile["profileType"]) {
-  const url = (w = 600, h = 750) =>
-    `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=${w}&h=${h}&fit=crop&crop=face`;
-  if (type === "coach")
-    return "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=750&fit=crop&crop=face";
-  return url();
+
+function getEmojiAvatar(type: Profile["profileType"]) {
+  switch (type) {
+    case "player":
+      return "⚽";
+    case "coach":
+      return "👨‍🏫";
+    case "parent":
+      return "👤";
+    default:
+      return "👤";
+  }
 }

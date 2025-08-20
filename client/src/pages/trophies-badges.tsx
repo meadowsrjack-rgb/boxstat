@@ -120,7 +120,6 @@ const STARTER_BADGES = [
   { slug: 'rsvp-streak', title: 'RSVP Streak', desc: 'Submitted RSVPs on time for 5 straight events', tier: 'starter' },
   { slug: 'practice-partner', title: 'Practice Partner', desc: 'Attended every scheduled practice in a single week', tier: 'starter' },
   { slug: 'film-student', title: 'Film Student', desc: 'Completed 5 online videos (any type)', tier: 'starter' },
-  { slug: 'back-to-back-sessions', title: 'Back-to-Back Sessions', desc: 'Completed weekly online videos 2 weeks in a row', tier: 'starter' },
 ];
 
 const STARTER_COACH_AWARDS = [
@@ -204,12 +203,12 @@ function ItemTile({ item, achieved, onOpen }: { item: TrophyBadge; achieved: boo
   return (
     <button onClick={onOpen} className="group relative focus:outline-none">
       <div className="relative">
-        <div className="transition-transform duration-300 group-hover:scale-[1.04]">
-          <div className="w-28 h-28 mx-auto flex items-center justify-center rounded-2xl bg-black/20">
+        <div className="w-28 h-28 mx-auto flex items-center justify-center relative">
+          <div className="transition-transform duration-300 group-hover:scale-[1.04] relative">
             <TrophyBadgeImg slug={item.slug} achieved={achieved} alt={item.title} />
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ boxShadow: '0 0 40px 4px rgba(255,255,255,0.12)' }} />
           </div>
         </div>
-        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ boxShadow: '0 0 40px 4px rgba(255,255,255,0.12)' }} />
       </div>
       <div className="mt-3 text-center">
         <div className={`text-[13px] font-semibold min-h-[20px] ${achieved ? 'text-white' : 'text-white/50'}`}>{item.title}</div>

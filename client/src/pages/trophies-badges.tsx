@@ -174,14 +174,14 @@ const STARTER_BADGES: AwardItem[] = [
   { slug: 'rsvp-streak', title: 'RSVP Streak', desc: 'On-time RSVPs for 5 straight events' },
   { slug: 'practice-partner', title: 'Practice Partner', desc: 'Every practice in a single week' },
   { slug: 'film-student', title: 'Film Student', desc: '5 online videos' },
-  { slug: 'back-to-back-sessions', title: 'Back-to-Back Sessions', desc: 'Weekly videos 2 weeks in a row' },
 ];
 
 const STARTER_COACH_AWARDS: AwardItem[] = [
-  { slug: 'coach-game-mvp', title: 'Game MVP' },
-  { slug: 'coach-hustle', title: 'Hustle Award' },
-  { slug: 'coach-teammate', title: 'Teammate Award' },
-  { slug: 'coach-student', title: 'Student of the Game' },
+  { slug: 'game-mvp', title: 'Game MVP' },
+  { slug: 'hustle-award', title: 'Hustle Award' },
+  { slug: 'teammate-award', title: 'Teammate Award' },
+  { slug: 'student-of-the-game', title: 'Student of the Game' },
+  { slug: 'spirit-award', title: 'Spirit Award' },
   { slug: 'recruiter', title: 'Recruiter', desc: 'Bring a new player who joins' },
 ];
 

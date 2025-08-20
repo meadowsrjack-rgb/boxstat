@@ -1,684 +1,453 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { AWARDS } from "../lib/awards.registry";
-import { ChevronLeft, ChevronRight, X, ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
+'use client';
 
-// Import trophy images
-import heartHustleImage from "@assets/Heart & Hustle Award_1754973783768.png";
-import spiritAwardImage from "@assets/Spirit Award_1754973783769.png";
-import coachAwardImage from "@assets/Coach Award_1754973783767.png";
-import mostImprovedImage from "@assets/Season MIP Award_1754973783767.png";
-import seasonMvpImage from "@assets/Season MVP Award_1754973783769.png";
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge as UIBadge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Sparkles, Trophy, Star, Crown, Award, Shield, Heart } from 'lucide-react';
 
-// Import filter header image
-import filterHeaderImage from "@assets/0 (72 x 15 in) (2)_1755204630218.png";
+/**
+ * IMAGE CONVENTION
+ * Place images in /public/attached_assets with these folders:
+ *   /attached_assets/trophies
+ *   /attached_assets/trophies_grey
+ *   /attached_assets/badges
+ *   /attached_assets/badges_grey
+ * Each item below has a slug. Name the PNG files <slug>.png in each folder.
+ * Example:
+ *   /attached_assets/badges/marquee-player.png
+ *   /attached_assets/badges_grey/marquee-player.png
+ */
 
-export default function TrophiesBadges() {
-  const [, setLocation] = useLocation();
-  const [filter, setFilter] = useState("all");
-  const [tierFilter, setTierFilter] = useState<string | null>(null);
-  const [modal, setModal] = useState({ open: false, icon: "", title: "", desc: "", progress: "" });
-  
-  // Carousel state
-  const [orgCarouselIndex, setOrgCarouselIndex] = useState(0);
-  const [seasonCarouselIndex, setSeasonCarouselIndex] = useState(0);
+// ────────────────────────────────────────────────────────────────
+// Types & helpers
+// ────────────────────────────────────────────────────────────────
+type AwardItem = {
+  slug: string;
+  title: string;
+  desc?: string;
+};
 
-  // Mock user stats for demo - in real app this would come from API
-  const mockUserStats = {
-    mvpCount: 10,
-    clutchCount: 7,
-    comebackCount: 4,
-    hustleCount: 10,
-    teammateCount: 6,
-    sportsmanshipCount: 10,
-    studentCount: 8,
-    leadByExampleCount: 5,
-    practicesTotal: 150,
-    skillsTotal: 75,
-    gamesTotal: 80,
-    fnhGamesTotal: 25,
-    practiceStreak: 8,
-    rsvpStreak: 12,
-    referrals: 2,
-    holidayGamesCount: 1,
-    yearsActive: 2,
-    season: {
-      mvp: 2,
-      hustle: 3,
-      teammate: 1,
-      sportsmanship: 2,
-      clutch: 1,
-      comeback: 1,
-      student: 2,
-      leadByExample: 1
-    },
-    foundation: {
-      totalVideos: 45,
-      skillsCompleted: 25,
-      scCompleted: 8,
-      iqCompleted: 7
-    }
-  };
+type Achievements = {
+  trophies: string[];
+  badges: string[];
+};
 
-  const openModal = (icon: string, title: string, desc: string, progress: string = "") => 
-    setModal({ open: true, icon, title, desc, progress });
-  
-  const closeModal = () => setModal({ open: false, icon: "", title: "", desc: "", progress: "" });
+const imgPath = (kind: 'trophy' | 'badge', slug: string, achieved: boolean) => {
+  // All trophies and badges are in the same folder, differentiated by -gray suffix
+  const suffix = achieved ? '' : '-gray';
+  return `/@assets/{trophiesbadges}/${slug}${suffix}.png`;
+};
 
-  // Get trophy image for specific trophies
-  const getTrophyImage = (trophyId: string) => {
-    const imageMap: Record<string, string> = {
-      "coach-choice": coachAwardImage,
-      "most-improved": mostImprovedImage,
-      "mvp-season": seasonMvpImage,
-    };
-    return imageMap[trophyId];
-  };
+const SectionHeader = ({
+  icon: Icon,
+  title,
+  subtitle,
+  color,
+}: {
+  icon: any;
+  title: string;
+  subtitle?: string;
+  color?: string;
+}) => (
+  <div className="flex items-start gap-3">
+    <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: color || '#fee2e2' }}>
+      <Icon className="h-5 w-5" />
+    </div>
+    <div>
+      <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+      {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+    </div>
+  </div>
+);
 
-  // Filter badges and trophies first
-  const trophies = AWARDS.filter(award => award.kind === "Trophy");
-  const badges = AWARDS.filter(award => award.kind === "Badge");
-  
-  // All trophies combined
-  const allTrophies = [
-    {
-      id: "heart-hustle",
-      name: "The UYP Heart and Hustle Award",
-      description: "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.",
-      image: heartHustleImage
-    },
-    {
-      id: "spirit",
-      name: "The Spirit Award", 
-      description: "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.",
-      image: spiritAwardImage
-    },
-    ...trophies.map(trophy => ({
-      id: trophy.id,
-      name: trophy.name,
-      description: trophy.description,
-      image: getTrophyImage(trophy.id)
-    }))
-  ];
+const Grid = ({ children }: { children: React.ReactNode }) => (
+  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-10">{children}</div>
+);
 
-  // Calculate tier counts
-  const getTierCounts = () => {
-    const counts = {
-      Trophy: allTrophies.length,
-      HallOfFamer: badges.filter(b => b.tier === "HallOfFamer").length,
-      Superstar: badges.filter(b => b.tier === "Superstar").length,
-      AllStar: badges.filter(b => b.tier === "AllStar").length,
-      Starter: badges.filter(b => b.tier === "Starter").length,
-      Prospect: badges.filter(b => b.tier === "Prospect").length
-    };
-    return counts;
-  };
-  
-  const tierCounts = getTierCounts();
-  
-  // Handle tier filter clicks
-  const handleTierFilter = (tier: string) => {
-    if (tierFilter === tier) {
-      setTierFilter(null); // Deselect if same tier clicked
-    } else {
-      setTierFilter(tier);
-    }
-  };
-
-  // Auto-advance carousel
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setOrgCarouselIndex((prev) => (prev + 1) % allTrophies.length);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [allTrophies.length]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeModal();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  // Helper function to check if badge is earned
-  const isBadgeEarned = (award: typeof AWARDS[0]) => {
-    if (award.progressKind === "manual") return false; // Manual awards handled by coaches
-    
-    if (award.progressKind === "counter" && award.counterOf) {
-      const statValue = mockUserStats[award.counterOf.stat as keyof typeof mockUserStats] as number;
-      return statValue >= award.counterOf.target;
-    }
-    
-    if (award.progressKind === "streak" && award.streakOf) {
-      const statValue = mockUserStats[award.streakOf.stat as keyof typeof mockUserStats] as number;
-      return statValue >= award.streakOf.target;
-    }
-    
-
-    
-    return false;
-  };
-
-  // Helper function to get progress for badge
-  const getBadgeProgress = (award: typeof AWARDS[0]) => {
-    if (award.progressKind === "manual") return "Coach Awarded";
-    
-    if (award.progressKind === "counter" && award.counterOf) {
-      const statValue = mockUserStats[award.counterOf.stat as keyof typeof mockUserStats] as number;
-      return `${Math.min(statValue, award.counterOf.target)}/${award.counterOf.target}`;
-    }
-    
-    if (award.progressKind === "streak" && award.streakOf) {
-      const statValue = mockUserStats[award.streakOf.stat as keyof typeof mockUserStats] as number;
-      return `${Math.min(statValue, award.streakOf.target)}/${award.streakOf.target}`;
-    }
-    
-
-    
-    return "0/1";
-  };
-
-  // Get icon for award type
-  const getAwardIcon = (award: typeof AWARDS[0]) => {
-    const iconMap: Record<string, string> = {
-      // Hall of Famer icons
-      "superstar-10x-mvp": "⭐",
-      "prime-time-10x-clutch": "🌟",
-      "force-of-will-10x-comeback": "💪",
-      "relentless-10x-hustle": "🔋",
-      "the-linchpin-10x-teammate": "🔗",
-      "spirit-of-game-10x-sportsmanship": "🏅",
-      "coach-on-court-10x-student": "🧠",
-      "the-paragon-10x-lead-by-example": "👑",
-      "coaches-choice-collection": "🎖️",
-      "the-trifecta": "🎯",
-      "character-captain": "🛡️",
-      "practice-legend": "🏋️",
-      "skills-virtuoso": "🎪",
-      "franchise-player": "🏆",
-      "fnh-hall-of-famer": "🌙",
-      "dynasty-member": "👑",
-      "foundation-alumnus": "🎓",
-      
-      // Superstar icons
-      "marquee-player-5x-mvp": "🌟",
-      "ice-in-veins-5x-clutch": "🧊",
-      "momentum-shifter-5x-comeback": "⚡",
-      "the-workhorse-5x-hustle": "🐎",
-      "the-cornerstone-5x-teammate": "🗿",
-      "the-ambassador-5x-sportsmanship": "🤝",
-      "the-tactician-5x-student": "🎯",
-      "the-blueprint-5x-lead-by-example": "📐",
-      "the-pillar": "🏛️",
-      "ironman": "🤖",
-      "fnh-ironman": "🌙",
-      "practice-centurion": "💯",
-      "skills-specialist": "🔧",
-      "century-club": "💯",
-      "fnh-legend": "🌟",
-      "team-veteran": "🎖️",
-      "foundation-graduate": "🎓",
-      "technique-titan": "⚒️",
-      "peak-performer": "💪",
-      "basketball-savant": "🧠",
-      "perfect-attendance-online": "✅",
-      
-      // All-Star icons
-      "game-changer-3x-mvp": "🎮",
-      "the-closer-3x-clutch": "🎯",
-      "the-sparkplug-3x-comeback": "⚡",
-      "the-engine-3x-hustle": "🔧",
-      "the-glue-3x-teammate": "🧲",
-      "class-act-3x-sportsmanship": "🎭",
-      "the-protege-3x-student": "👨‍🎓",
-      "the-standard-3x-lead-by-example": "📏",
-      "the-dependable": "⏰",
-      "recruiter": "👥",
-      "practice-fiend": "🔥",
-      "skills-devotee": "🙏",
-      "seasoned-competitor": "🏀",
-      "fnh-veteran": "🌙",
-      "first-year-anniversary": "🎂",
-      "half-time-adjustments": "⚡",
-      "monthly-module-master": "📅",
-      "skills-sharp-shooter": "🎯",
-      "conditioning-core": "💪",
-      "strategic-specialist": "🎯",
-      "mid-season-mentor": "👨‍🏫",
-      
-      // Starter icons
-      "locked-in": "🔒",
-      "on-the-ball": "⚽",
-      "tournament-titan": "🏆",
-      "dedicated-grinder": "⚙️",
-      "skills-seeker": "🔍",
-      "regular-competitor": "🏀",
-      "fnh-regular": "🌙",
-      "game-mvp": "🏆",
-      "clutch-player": "⏰",
-      "comeback-kid": "↩️",
-      "sportsmanship-award": "🤝",
-      "hustle-award": "🏃",
-      "teammate-award": "👥",
-      "student-of-the-game": "📚",
-      "lead-by-example": "👨‍🏫",
-      "weekly-warm-up": "📅",
-      "film-study": "🎬",
-      "skill-builder": "🔨",
-      "foundation-force": "💪",
-      "court-visionary": "👁️",
-      "back-to-back-sessions": "🔄",
-      
-      // Prospect icons
-      "checked-in": "✅",
-      "road-warrior": "🚗",
-      "holiday-hero": "🎄",
-      "the-debut": "🆕",
-      "friday-follower": "🌙",
-      "heating-up": "🔥",
-      "game-planner": "📋",
-      "practice-planner": "📝",
-      "first-reps": "1️⃣",
-      "skill-starter": "🚀",
-      "first-ten": "🔟",
-      "fnh-fighter": "🥊",
-      "digital-first-steps": "👶",
-      "virtual-handles": "🎮",
-      "remote-strength": "💪",
-      "mindful-start": "🧘"
-    };
-    
-    return iconMap[award.id] || "🏆";
-  };
-
-  // Badges filtering
-  
-  // Define tier order for sorting
-  const tierOrder = {
-    "HallOfFamer": 1,
-    "Superstar": 2,
-    "AllStar": 3,
-    "Starter": 4,
-    "Prospect": 5
-  };
-
-  const filteredBadges = badges
-    .filter(badge => {
-      // Apply tier filter first
-      if (tierFilter && badge.tier !== tierFilter) return false;
-      
-      // Then apply status filter
-      if (filter === "all") return true;
-      if (filter === "earned") return isBadgeEarned(badge);
-      if (filter === "progress") return !isBadgeEarned(badge);
-      return true;
-    })
-    .sort((a, b) => {
-      // When showing all badges, sort by tier order (HOF to Prospect)
-      if (filter === "all") {
-        return tierOrder[a.tier as keyof typeof tierOrder] - tierOrder[b.tier as keyof typeof tierOrder];
-      }
-      return 0;
-    });
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      {/* Back Button */}
-      <div className="mb-6">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => setLocation("/player-dashboard")}
-          data-testid="button-back"
-          className="text-gray-700 hover:text-red-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-red-400 dark:hover:bg-gray-800"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-      </div>
-      
-      {/* Trophy/Badge Filter Header */}
-      <div className="mb-12 -mx-6">
-        <div className="relative ml-0.5" style={{ width: '95%' }}>
-          {/* Base filter header image - slightly smaller and moved right */}
-          <img 
-            src={filterHeaderImage} 
-            alt="Filter Header" 
-            className="w-full h-auto object-contain"
-          />
-          
-          {/* Clickable areas and indicators overlaid on the image */}
-          <div className="absolute inset-0">
-            <div className="flex justify-between items-center w-full h-full px-8">
-              {/* Trophy Filter - positioned over the crystal trophy */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-20 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'Trophy' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('Trophy')}
-                  data-testid="filter-trophy"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'Trophy' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.Trophy}
-                </div>
-              </div>
-
-              {/* Hall of Famer (Yellow Medal) */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'HallOfFamer' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('HallOfFamer')}
-                  data-testid="filter-halloffamer"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'HallOfFamer' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.HallOfFamer}
-                </div>
-              </div>
-
-              {/* Superstar (Purple Medal) */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'Superstar' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('Superstar')}
-                  data-testid="filter-superstar"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'Superstar' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.Superstar}
-                </div>
-              </div>
-
-              {/* AllStar (Blue Medal) */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'AllStar' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('AllStar')}
-                  data-testid="filter-allstar"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'AllStar' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.AllStar}
-                </div>
-              </div>
-
-              {/* Starter (Green Medal) */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'Starter' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('Starter')}
-                  data-testid="filter-starter"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'Starter' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.Starter}
-                </div>
-              </div>
-
-              {/* Prospect (Gray Medal) */}
-              <div className="flex flex-col items-center h-full justify-center">
-                <div 
-                  className={`w-16 h-16 cursor-pointer transition-all duration-300 rounded-full flex items-center justify-center ${
-                    tierFilter === 'Prospect' ? 'bg-white/40 shadow-lg shadow-white/50 transform scale-110 animate-pulse' : 'hover:bg-white/20 hover:scale-105'
-                  }`}
-                  onClick={() => handleTierFilter('Prospect')}
-                  data-testid="filter-prospect"
-                />
-                <div className={`mt-2 text-black text-base font-bold drop-shadow-md ${
-                  tierFilter === 'Prospect' ? 'animate-bounce text-gray-800' : ''
-                }`}>
-                  {tierCounts.Prospect}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Trophies Section */}
-      {(!tierFilter || tierFilter === 'Trophy') && (
-        <div className="mb-12">
-          <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            🏆 Trophies
-          </h2>
-
-
-        <div className="grid grid-cols-2 gap-4 max-w-2xl mx-auto">
-          {/* Heart & Hustle Award */}
-          <button
-            onClick={() => openModal("", "The UYP Heart and Hustle Award", "The ultimate recognition of effort and determination! This yearly award goes to the single player across all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game. This is the highest honor for work ethic in the entire organization.")}
-            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            data-testid="trophy-heart-hustle"
-          >
-            <div className="text-4xl">🏆</div>
-            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">♥ & Hustle</div>
-          </button>
-
-          {/* Spirit Award */}
-          <button
-            onClick={() => openModal("", "The Spirit Award", "The pinnacle of character recognition! Awarded to the one player across the entire UYP organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court. This award recognizes the player who embodies the true spirit of basketball.")}
-            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            data-testid="trophy-spirit"
-          >
-            <div className="text-4xl">🏆</div>
-            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Spirit</div>
-          </button>
-
-          {/* Season MVP */}
-          <button
-            onClick={() => openModal("", "Season MVP Trophy", "Awarded to the Most Valuable Player of the season, recognizing outstanding performance, leadership, and contribution to team success throughout the entire season.")}
-            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            data-testid="trophy-mvp"
-          >
-            <div className="text-4xl">🏆</div>
-            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">MVP</div>
-          </button>
-
-          {/* Most Improved Player */}
-          <button
-            onClick={() => openModal("", "Most Improved Player Trophy", "Recognizes the player who has shown the greatest improvement in skills, attitude, and performance throughout the season. This award celebrates growth, dedication, and the commitment to getting better every day.")}
-            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            data-testid="trophy-mip"
-          >
-            <div className="text-4xl">🏆</div>
-            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">MIP</div>
-          </button>
-
-          {/* Coach's Choice */}
-          <button
-            onClick={() => openModal("", "Coach's Choice Trophy", "A special recognition awarded at the coach's discretion to a player who exemplifies the values and spirit of the team. This award recognizes qualities that go beyond statistics - leadership, character, and positive impact on teammates.")}
-            className="bg-gray-100 dark:bg-gray-700 rounded-lg p-6 flex items-center gap-4 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors col-span-2 justify-center"
-            data-testid="trophy-coach"
-          >
-            <div className="text-4xl">🏆</div>
-            <div className="text-lg font-semibold text-gray-800 dark:text-gray-200">Coach</div>
-          </button>
-        </div>
-        </div>
-      )}
-
-      {/* Badges Section */}
-      {(!tierFilter || tierFilter !== 'Trophy') && (
-        <div className="space-y-8">
-        <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-          🎖️ Badges
-        </h2>
-
-
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 justify-center mb-8">
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "all"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("all")}
-            data-testid="filter-all"
-          >
-            All Badges
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "earned"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("earned")}
-            data-testid="filter-earned"
-          >
-            Earned
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-              filter === "progress"
-                ? "bg-blue-500 text-white shadow-lg"
-                : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600"
-            }`}
-            onClick={() => setFilter("progress")}
-            data-testid="filter-progress"
-          >
-            In Progress
-          </button>
-
-        </div>
-
-        {/* Achievement Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filteredBadges.map((badge) => {
-            const isEarned = isBadgeEarned(badge);
-            const progress = getBadgeProgress(badge);
-            
-            // Get tier-specific styling
-            const getTierStyles = () => {
-              switch (badge.tier) {
-                case "HallOfFamer":
-                  return isEarned 
-                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
-                    : "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 border-yellow-300 dark:border-yellow-600";
-                case "Superstar":
-                  return isEarned 
-                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
-                    : "bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-300 dark:border-purple-600";
-                case "AllStar":
-                  return isEarned 
-                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
-                    : "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-300 dark:border-blue-600";
-                case "Starter":
-                  return isEarned 
-                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
-                    : "bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 border-green-300 dark:border-green-600";
-                case "Prospect":
-                  return isEarned 
-                    ? "bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-emerald-300 dark:border-emerald-600"
-                    : "bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20 border-gray-300 dark:border-gray-600";
-                default:
-                  return "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
-              }
-            };
-            
-            return (
-              <div
-                key={badge.id}
-                className={`${getTierStyles()} rounded-lg border p-4 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 flex flex-col items-center text-center`}
-                onClick={() =>
-                  openModal(
-                    getAwardIcon(badge),
-                    badge.name,
-                    badge.description,
-                    progress
-                  )
-                }
-                data-testid={`badge-${badge.id}`}
-              >
-                <div className="mb-3">
-                  <div className="text-3xl mb-2">{getAwardIcon(badge)}</div>
-                  <div className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                    isEarned 
-                      ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                  }`}>
-                    {progress}
-                  </div>
-                </div>
-                <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                  {badge.name}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {filteredBadges.length === 0 && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400" data-testid="no-results">
-            <p>No badges found for the selected filter.</p>
-          </div>
-        )}
-        </div>
-      )}
-
-      {/* Trophy Modal */}
-      {modal.open && (
-        <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
-          onClick={(e) => e.target === e.currentTarget && closeModal()}
-        >
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 m-4 max-w-2xl w-full relative">
-            <button
-              onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              data-testid="modal-close"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <div className="text-center">
-              {/* Display large trophy image based on the title */}
-              <div className="mb-6">
-                {modal.title.includes("Heart and Hustle") && (
-                  <img src={heartHustleImage} alt="Heart & Hustle Award" className="w-64 h-64 object-contain mx-auto" />
-                )}
-                {modal.title.includes("Spirit") && (
-                  <img src={spiritAwardImage} alt="Spirit Award" className="w-64 h-64 object-contain mx-auto" />
-                )}
-                {modal.title.includes("MVP") && (
-                  <img src={seasonMvpImage} alt="Season MVP Trophy" className="w-64 h-64 object-contain mx-auto" />
-                )}
-                {modal.title.includes("Most Improved") && (
-                  <img src={mostImprovedImage} alt="Most Improved Player Trophy" className="w-64 h-64 object-contain mx-auto" />
-                )}
-                {modal.title.includes("Coach") && (
-                  <img src={coachAwardImage} alt="Coach's Choice Trophy" className="w-64 h-64 object-contain mx-auto" />
-                )}
-              </div>
-              <h3 className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
-                {modal.title}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4 text-left leading-relaxed">{modal.desc}</p>
-              {modal.progress && (
-                <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                  Progress: {modal.progress}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+const Tile = ({
+  kind,
+  slug,
+  title,
+  desc,
+  achieved,
+  accent,
+}: {
+  kind: 'trophy' | 'badge';
+  slug: string;
+  title: string;
+  desc?: string;
+  achieved: boolean;
+  accent?: string;
+}) => (
+  <div className="flex flex-col items-center text-center">
+    <div className="relative">
+      <img
+        src={imgPath(kind, slug, achieved)}
+        alt={title}
+        className="h-28 w-28 object-contain select-none"
+        draggable={false}
+      />
+      {!achieved && (
+        <div className="pointer-events-none absolute inset-0 rounded-xl" />
       )}
     </div>
+    <div className="mt-3">
+      <div className="text-sm font-semibold" style={{ color: achieved ? (accent || '#111827') : '#6b7280' }}>
+        {title}
+      </div>
+      {desc && <div className="text-xs text-gray-500 mt-1">{desc}</div>}
+    </div>
+  </div>
+);
+
+// ────────────────────────────────────────────────────────────────
+/** DATA: TROPHIES */
+// ────────────────────────────────────────────────────────────────
+const LEGACY_TROPHIES: AwardItem[] = [
+  { slug: 'uyp-heart-and-hustle', title: 'The UYP Heart and Hustle Award', desc: 'Yearly: single winner across all UYP' },
+  { slug: 'spirit-award', title: 'The Spirit Award', desc: 'Yearly: single winner across all UYP' },
+];
+
+const TEAM_TROPHIES: AwardItem[] = [
+  { slug: 'mvp', title: 'MVP (Most Valuable Player)' },
+  { slug: 'coaches-award', title: 'Coach’s Award' },
+  { slug: 'mip', title: 'MIP (Most Improved Player)' },
+  { slug: 'defensive-player', title: 'Defensive Player' },
+];
+
+// ────────────────────────────────────────────────────────────────
+/** DATA: BADGES (TIERS) */
+// ────────────────────────────────────────────────────────────────
+const HOF_BADGES: AwardItem[] = [
+  { slug: 'superstar-supreme', title: 'Superstar Supreme', desc: '10× MVPs' },
+  { slug: 'relentless', title: 'Relentless', desc: '10× Hustle' },
+  { slug: 'the-linchpin', title: 'The Linchpin', desc: '10× Teammate' },
+  { slug: 'the-paragon', title: 'The Paragon', desc: '10× Student of the Game' },
+  { slug: 'dynasty-member', title: 'Dynasty Member', desc: '5 years active' },
+  { slug: 'franchise-player', title: 'Franchise Player', desc: '100 total games' },
+  { slug: 'fnh-hall-of-famer', title: 'FNH Hall of Famer', desc: '100 total FNH games' },
+  { slug: 'training-titan', title: 'Training Titan', desc: '250 practices OR 250 skills' },
+  { slug: 'immortal-ironman', title: 'Immortal Ironman', desc: 'Every team game in a full year' },
+  { slug: 'digital-triple-crown', title: 'Digital Triple Crown', desc: '3 full online programs' },
+  { slug: 'the-completer', title: 'The Completer', desc: 'Every Superstar badge' },
+];
+
+const SUPERSTAR_BADGES: AwardItem[] = [
+  { slug: 'marquee-player', title: 'Marquee Player', desc: '5× MVPs' },
+  { slug: 'the-workhorse', title: 'The Workhorse', desc: '5× Hustle' },
+  { slug: 'the-cornerstone', title: 'The Cornerstone', desc: '5× Teammate' },
+  { slug: 'coach-on-the-court', title: 'Coach on the Court', desc: '5× Student of the Game' },
+  { slug: 'coaches-choice', title: 'Coach’s Choice', desc: 'All 4 coach awards at least once' },
+  { slug: 'ironman', title: 'Ironman', desc: 'Every game in a season' },
+  { slug: 'the-pillar', title: 'The Pillar', desc: 'Every practice in a season' },
+  { slug: 'practice-centurion', title: 'Practice Centurion', desc: '100 practices' },
+  { slug: 'skills-specialist', title: 'Skills Specialist', desc: '100 skills sessions' },
+  { slug: 'seventy-five-club', title: 'Seventy-Five Club', desc: '75 total games' },
+  { slug: 'fnh-seventy-five', title: 'FNH Seventy-Five', desc: '75 total FNH games' },
+  { slug: 'team-veteran', title: 'Team Veteran', desc: '3 years active' },
+  { slug: 'foundation-graduate', title: 'Foundation Graduate', desc: 'Online Foundation Program' },
+  { slug: 'perfect-attendance-online', title: 'Perfect Attendance (Online)', desc: '12 straight program weeks' },
+];
+
+const ALLSTAR_BADGES: AwardItem[] = [
+  { slug: 'game-changer', title: 'Game Changer', desc: '3× MVPs' },
+  { slug: 'the-engine', title: 'The Engine', desc: '3× Hustle' },
+  { slug: 'the-glue', title: 'The Glue', desc: '3× Teammate' },
+  { slug: 'the-protege', title: 'The Protégé', desc: '3× Student of the Game' },
+  { slug: 'practice-fiend', title: 'Practice Fiend', desc: '50 practices' },
+  { slug: 'skills-devotee', title: 'Skills Devotee', desc: '50 skills sessions' },
+  { slug: 'seasoned-competitor', title: 'Seasoned Competitor', desc: '50 total games' },
+  { slug: 'fnh-veteran', title: 'FNH Veteran', desc: '50 total FNH games' },
+  { slug: 'first-year-anniversary', title: 'First Year Anniversary', desc: '1 year active' },
+  { slug: 'digital-scholar', title: 'Digital Scholar', desc: '6 consecutive online weeks' },
+];
+
+const STARTER_BADGES: AwardItem[] = [
+  { slug: 'locked-in', title: 'Locked In', desc: '10 consecutive practices' },
+  { slug: 'dedicated-grinder', title: 'Dedicated Grinder', desc: '25 practices' },
+  { slug: 'skills-seeker', title: 'Skills Seeker', desc: '25 skills sessions' },
+  { slug: 'regular-competitor', title: 'Regular Competitor', desc: '25 total games' },
+  { slug: 'fnh-regular', title: 'FNH Regular', desc: '25 total FNH games' },
+  { slug: 'rsvp-streak', title: 'RSVP Streak', desc: 'On-time RSVPs for 5 straight events' },
+  { slug: 'practice-partner', title: 'Practice Partner', desc: 'Every practice in a single week' },
+  { slug: 'film-student', title: 'Film Student', desc: '5 online videos' },
+  { slug: 'back-to-back-sessions', title: 'Back-to-Back Sessions', desc: 'Weekly videos 2 weeks in a row' },
+];
+
+const STARTER_COACH_AWARDS: AwardItem[] = [
+  { slug: 'coach-game-mvp', title: 'Game MVP' },
+  { slug: 'coach-hustle', title: 'Hustle Award' },
+  { slug: 'coach-teammate', title: 'Teammate Award' },
+  { slug: 'coach-student', title: 'Student of the Game' },
+  { slug: 'recruiter', title: 'Recruiter', desc: 'Bring a new player who joins' },
+];
+
+const PROSPECT_BADGES: AwardItem[] = [
+  { slug: 'the-debut', title: 'The Debut', desc: 'First game played' },
+  { slug: 'friday-lights', title: 'Friday Lights', desc: 'First FNH game' },
+  { slug: 'practice-rookie', title: 'Practice Rookie', desc: '10 practices' },
+  { slug: 'skill-starter', title: 'Skill Starter', desc: '10 skills sessions' },
+  { slug: 'game-planner', title: 'Game Planner', desc: 'First RSVP to UYP event' },
+  { slug: 'checked-in', title: 'Checked In', desc: 'First UYP event check-in' },
+  { slug: 'road-warrior', title: 'Road Warrior', desc: 'Event at a different location' },
+  { slug: 'film-rookie', title: 'Film Rookie', desc: 'First online training video' },
+  { slug: 'first-ten', title: 'First Ten', desc: '10 total games' },
+  { slug: 'fnh-rookie', title: 'FNH Rookie', desc: '10 total FNH games' },
+];
+
+// ────────────────────────────────────────────────────────────────
+// Page
+// ────────────────────────────────────────────────────────────────
+export default function TrophiesBadgesPage() {
+  const { user } = useAuth();
+
+  const { data } = useQuery<Achievements>({
+    queryKey: ['/api/users', user?.id, 'achievements'],
+    queryFn: async () => {
+      const res = await fetch(`/api/users/${user?.id}/achievements`, { credentials: 'include' });
+      if (!res.ok) return { trophies: [], badges: [] };
+      return res.json();
+    },
+    enabled: !!user?.id,
+  });
+
+  const earnedTrophies = useMemo(() => new Set((data?.trophies ?? []).map((s) => s.toLowerCase())), [data]);
+  const earnedBadges = useMemo(() => new Set((data?.badges ?? []).map((s) => s.toLowerCase())), [data]);
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-10">
+      {/* TROPHIES */}
+      <section className="space-y-6">
+        <SectionHeader
+          icon={Trophy}
+          title="Trophies (End of Season/Year)"
+          subtitle="Awarded at the end of the year for outstanding season-long contributions."
+          color="#fff7ed"
+        />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Crown className="h-4 w-4 text-amber-500" />
+              UYP Legacy Trophies (Yearly)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Grid>
+              {LEGACY_TROPHIES.map((t) => (
+                <Tile
+                  key={t.slug}
+                  kind="trophy"
+                  slug={t.slug}
+                  title={t.title}
+                  desc={t.desc}
+                  achieved={earnedTrophies.has(t.slug)}
+                  accent="#b45309"
+                />
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Award className="h-4 w-4 text-red-600" />
+              Team Trophies (Seasonal)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Grid>
+              {TEAM_TROPHIES.map((t) => (
+                <Tile
+                  key={t.slug}
+                  kind="trophy"
+                  slug={t.slug}
+                  title={t.title}
+                  desc={t.desc}
+                  achieved={earnedTrophies.has(t.slug)}
+                  accent="#991b1b"
+                />
+              ))}
+            </Grid>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
+      {/* BADGES */}
+      <section className="space-y-8">
+        <SectionHeader
+          icon={Star}
+          title="Badges"
+          subtitle="Earn badges through consistency, achievements, and coach recognition."
+          color="#eef2ff"
+        />
+
+        {/* Hall of Fame (Gold) */}
+        <Tier
+          title="Hall of Fame (Gold) — Legends Only"
+          colorClass="from-yellow-100 to-yellow-50"
+          pill="Ultra-rare"
+          icon={<Crown className="h-4 w-4 text-yellow-600" />}
+        >
+          <Grid>
+            {HOF_BADGES.map((b) => (
+              <Tile
+                key={b.slug}
+                kind="badge"
+                slug={b.slug}
+                title={b.title}
+                desc={b.desc}
+                achieved={earnedBadges.has(b.slug)}
+                accent="#92400e"
+              />
+            ))}
+          </Grid>
+        </Tier>
+
+        {/* Superstar (Purple) */}
+        <Tier
+          title="Superstar (Purple) — Elite Consistency"
+          colorClass="from-fuchsia-100 to-fuchsia-50"
+          pill="Long-term"
+          icon={<Sparkles className="h-4 w-4 text-fuchsia-600" />}
+        >
+          <Grid>
+            {SUPERSTAR_BADGES.map((b) => (
+              <Tile
+                key={b.slug}
+                kind="badge"
+                slug={b.slug}
+                title={b.title}
+                desc={b.desc}
+                achieved={earnedBadges.has(b.slug)}
+                accent="#6b21a8"
+              />
+            ))}
+          </Grid>
+        </Tier>
+
+        {/* All-Star (Blue) */}
+        <Tier
+          title="All-Star (Blue) — Recognition & Milestones"
+          colorClass="from-sky-100 to-sky-50"
+          pill="Milestones"
+          icon={<Star className="h-4 w-4 text-sky-600" />}
+        >
+          <Grid>
+            {ALLSTAR_BADGES.map((b) => (
+              <Tile
+                key={b.slug}
+                kind="badge"
+                slug={b.slug}
+                title={b.title}
+                desc={b.desc}
+                achieved={earnedBadges.has(b.slug)}
+                accent="#0c4a6e"
+              />
+            ))}
+          </Grid>
+        </Tier>
+
+        {/* Starter (Green) */}
+        <Tier
+          title="Starter (Green) — Habit Builders"
+          colorClass="from-emerald-100 to-emerald-50"
+          pill="Habits"
+          icon={<Shield className="h-4 w-4 text-emerald-600" />}
+        >
+          <Grid>
+            {STARTER_BADGES.map((b) => (
+              <Tile
+                key={b.slug}
+                kind="badge"
+                slug={b.slug}
+                title={b.title}
+                desc={b.desc}
+                achieved={earnedBadges.has(b.slug)}
+                accent="#065f46"
+              />
+            ))}
+          </Grid>
+
+          <div className="mt-8">
+            <div className="flex items-center gap-2 mb-3">
+              <UIBadge variant="secondary" className="bg-emerald-100 text-emerald-700">Coach Awards</UIBadge>
+              <span className="text-sm text-gray-600">Awarded by coach at any time</span>
+            </div>
+            <Grid>
+              {STARTER_COACH_AWARDS.map((b) => (
+                <Tile
+                  key={b.slug}
+                  kind="badge"
+                  slug={b.slug}
+                  title={b.title}
+                  desc={b.desc}
+                  achieved={earnedBadges.has(b.slug)}
+                  accent="#065f46"
+                />
+              ))}
+            </Grid>
+          </div>
+        </Tier>
+
+        {/* Prospect (Grey) */}
+        <Tier
+          title="Prospect (Grey) — First Steps"
+          colorClass="from-zinc-100 to-zinc-50"
+          pill="Quick wins"
+          icon={<Heart className="h-4 w-4 text-zinc-600" />}
+        >
+          <Grid>
+            {PROSPECT_BADGES.map((b) => (
+              <Tile
+                key={b.slug}
+                kind="badge"
+                slug={b.slug}
+                title={b.title}
+                desc={b.desc}
+                achieved={earnedBadges.has(b.slug)}
+                accent="#1f2937"
+              />
+            ))}
+          </Grid>
+        </Tier>
+      </section>
+    </div>
+  );
+}
+
+// Tier wrapper with subtle gradient header
+function Tier({
+  title,
+  pill,
+  icon,
+  colorClass,
+  children,
+}: {
+  title: string;
+  pill?: string;
+  icon?: React.ReactNode;
+  colorClass?: string; // e.g. "from-yellow-100 to-yellow-50"
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <div className={`bg-gradient-to-r ${colorClass || 'from-gray-100 to-white'} px-5 py-4 border-b`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {icon}
+            <CardTitle className="text-base">{title}</CardTitle>
+          </div>
+          {pill && <UIBadge variant="secondary">{pill}</UIBadge>}
+        </div>
+      </div>
+      <CardContent className="p-6">{children}</CardContent>
+    </Card>
   );
 }

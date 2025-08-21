@@ -106,7 +106,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Profile editing (Profile tab)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showEditProfileDropdown, setShowEditProfileDropdown] = useState(false);
-  const [privacySettings, setPrivacySettings] = useState({ height: false, weight: false, location: false });
+  const [privacySettings, setPrivacySettings] = useState({ discoverable: true });
   const [editableProfile, setEditableProfile] = useState({
     firstName: "",
     lastName: "",
@@ -699,146 +699,90 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Profile */}
           {activeTab === "profile" && (
             <div className="space-y-6">
-              {/* Player Profile Header */}
-              <div className="p-6">
-                  <div className="mb-6">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">
-                        {currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}
-                      </h2>
-                      <p className="text-gray-600">
-                        {currentChild?.teamName ? `${currentChild.teamAgeGroup} ${currentChild.teamName}` : userTeam?.name || "High School Elite"}
-                      </p>
+              {/* Futuristic Bio Section */}
+              <div className="p-8 bg-white">
+                <div className="text-center space-y-4 mb-8">
+                  {/* Name */}
+                  <h1 className="text-5xl font-black text-red-600 tracking-tight leading-tight" style={{fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif', fontWeight: '900'}}>
+                    {(currentChild?.firstName || currentUser.firstName || "Jack")}<br />
+                    {(currentChild?.lastName || currentUser.lastName || "Meadows")}
+                  </h1>
+                  
+                  {/* Position & Jersey */}
+                  <div className="text-lg text-gray-600 font-medium">
+                    {editableProfile.position || "Guard"} #{editableProfile.jerseyNumber || "23"}
+                  </div>
+                  
+                  {/* Team */}
+                  <div className="text-xl font-bold text-gray-900">
+                    {currentChild?.teamName || userTeam?.name || "High School Elite"}
+                  </div>
+                  
+                  {/* Stats with Icons */}
+                  <div className="space-y-3 mt-6">
+                    <div className="flex items-center justify-center gap-2 text-gray-700">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L12 22M2 12L22 12M7 7L17 17M17 7L7 17"/>
+                      </svg>
+                      <span className="text-lg font-medium">{editableProfile.height || "5'9"}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-2 text-gray-700">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                      <span className="text-lg font-medium">{editableProfile.age ? new Date().getFullYear() - parseInt(editableProfile.age) : "2005"}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-2 text-gray-700">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                      </svg>
+                      <span className="text-lg font-medium">{editableProfile.location || "Irvine"}</span>
+                    </div>
+                    
+                    {/* Privacy Eye Icon */}
+                    <div className="flex justify-center mt-4">
+                      <button
+                        onClick={() => setPrivacySettings(prev => ({ ...prev, discoverable: !prev.discoverable }))}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                        title={privacySettings.discoverable ? "Profile is public" : "Profile is private"}
+                      >
+                        <svg className="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
+                          {privacySettings.discoverable ? (
+                            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                          ) : (
+                            <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                          )}
+                        </svg>
+                      </button>
                     </div>
                   </div>
+                  {/* Edit Button */}
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => setIsEditingProfile(!isEditingProfile)}
+                      className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
+                      data-testid="edit-profile-button"
+                    >
+                      {isEditingProfile ? "Done" : "Edit Profile"}
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-                  {/* Player Information Fields */}
-                  <div className="space-y-5">
-                    {isEditingProfile && (
-                      <div className="flex items-center justify-end gap-2 pb-4 border-b">
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>
-                          Cancel
-                        </Button>
-                        <SaveProfile
-                          editableProfile={editableProfile}
-                          setEditableProfile={setEditableProfile}
-                          setIsEditingProfile={setIsEditingProfile}
-                        />
-                      </div>
-                    )}
-
-
-
-                    {/* Team */}
-                    <Row
-                      label="Team"
-                      editing={isEditingProfile}
-                      viewValue={editableProfile.teamName || currentChild?.teamName || "—"}
-                      editControl={
-                        <Select
-                          value={editableProfile.teamName || ""}
-                          onValueChange={(v) => setEditableProfile((p) => ({ ...p, teamName: v }))}
-                        >
-                          <SelectTrigger className="w-48 text-right">
-                            <SelectValue placeholder="Select team" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TEAM_OPTIONS.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      }
-                    />
-
-                    {/* Age */}
-                    <Row
-                      label="Age"
-                      editing={isEditingProfile}
-                      viewValue={editableProfile.age || "—"}
-                      editControl={
-                        <Select value={editableProfile.age || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, age: v }))}>
-                          <SelectTrigger className="w-48 text-right">
-                            <SelectValue placeholder="Age" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {AGE_OPTIONS.map((a) => (
-                              <SelectItem key={a} value={a}>
-                                {a}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      }
-                    />
-
-                    {/* Height with Privacy Control */}
-                    <div className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Height</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => setPrivacySettings((prev) => ({ ...prev, height: !prev.height }))}
-                        >
-                          {privacySettings.height ? <Globe className="h-4 w-4 text-green-600" /> : <Lock className="h-4 w-4 text-gray-500" />}
-                        </Button>
-                      </div>
-                      {isEditingProfile ? (
-                        <Select value={editableProfile.height || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, height: v }))}>
-                          <SelectTrigger className="w-32 text-right">
-                            <SelectValue placeholder="Height" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {HEIGHT_OPTIONS.map((h) => (
-                              <SelectItem key={h} value={h}>
-                                {h}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className="text-sm text-gray-600">{privacySettings.height ? editableProfile.height || "—" : "Private"}</span>
-                      )}
-                    </div>
-
-
-
-                    {/* Location with Privacy Control */}
-                    <div className="flex items-center justify-between py-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Location</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => setPrivacySettings((prev) => ({ ...prev, location: !prev.location }))}
-                        >
-                          {privacySettings.location ? <Globe className="h-4 w-4 text-green-600" /> : <Lock className="h-4 w-4 text-gray-500" />}
-                        </Button>
-                      </div>
-                      {isEditingProfile ? (
-                        <CityTypeahead
-                          value={editableProfile.location}
-                          onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))}
-                        />
-                      ) : (
-                        <span className="text-sm text-gray-600">{privacySettings.location ? editableProfile.location || "—" : "Private"}</span>
-                      )}
-                    </div>
-
-                    {/* Position */}
-                    <Row
-                      label="Position"
-                      editing={isEditingProfile}
-                      viewValue={editableProfile.position || currentChild?.position || "—"}
-                      editControl={
+              {/* Settings Section */}
+              {isEditingProfile && (
+                <div className="p-6 bg-white rounded-lg shadow-sm">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Profile Information</h3>
+                  <div className="space-y-4">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
                         <Select value={editableProfile.position || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, position: v }))}>
-                          <SelectTrigger className="w-48 text-right">
-                            <SelectValue placeholder="Position" />
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select position" />
                           </SelectTrigger>
                           <SelectContent>
                             {POSITION_OPTIONS.map((p) => (
@@ -848,31 +792,83 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             ))}
                           </SelectContent>
                         </Select>
-                      }
-                    />
-
-                    {/* Jersey # */}
-                    <Row
-                      label="Jersey Number"
-                      editing={isEditingProfile}
-                      viewValue={editableProfile.jerseyNumber || (currentChild?.jerseyNumber as any)?.toString() || "—"}
-                      editControl={
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
                         <Select value={editableProfile.jerseyNumber || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, jerseyNumber: v }))}>
-                          <SelectTrigger className="w-48 text-right">
-                            <SelectValue placeholder="#" />
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select number" />
                           </SelectTrigger>
                           <SelectContent>
                             {JERSEY_OPTIONS.map((n) => (
                               <SelectItem key={n} value={n}>
-                                {n}
+                                #{n}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      }
-                    />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+                        <Select value={editableProfile.height || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, height: v }))}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select height" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {HEIGHT_OPTIONS.map((h) => (
+                              <SelectItem key={h} value={h}>
+                                {h}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <CityTypeahead
+                          value={editableProfile.location}
+                          onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Privacy Settings */}
+                    <div className="pt-4 border-t">
+                      <h4 className="text-md font-medium text-gray-900 mb-3">Privacy Settings</h4>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-medium text-gray-700">Profile Discoverable</span>
+                          <p className="text-xs text-gray-500">Allow others to find your profile</p>
+                        </div>
+                        <button
+                          onClick={() => setPrivacySettings(prev => ({ ...prev, discoverable: !prev.discoverable }))}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            privacySettings.discoverable ? 'bg-red-600' : 'bg-gray-200'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              privacySettings.discoverable ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Save Button */}
+                    <div className="flex justify-end pt-4">
+                      <SaveProfile
+                        editableProfile={editableProfile}
+                        setEditableProfile={setEditableProfile}
+                        setIsEditingProfile={setIsEditingProfile}
+                      />
+                    </div>
                   </div>
-              </div>
+                </div>
+              )}
 
               {/* Trophies & Badges */}
               <div className="p-2">

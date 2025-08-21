@@ -142,6 +142,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     tiktok: "",
   });
 
+  // Calendar state
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
+
+  // ---- Early guard
+  const currentUser = user as UserType | null;
+  
   // Update editable profile when user data changes
   useEffect(() => {
     if (currentUser) {
@@ -158,15 +167,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       }));
     }
   }, [currentUser]);
-  
-  // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
-
-  // ---- Early guard
-  const currentUser = user as UserType | null;
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

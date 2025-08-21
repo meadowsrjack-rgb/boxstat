@@ -90,7 +90,13 @@ type CheckIn = {
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
   const [showFoundationProgram, setShowFoundationProgram] = useState(false);
-  const [activeTab, setActiveTab] = useState<"activity" | "video" | "team" | "profile">("activity");
+  // Initialize activeTab from URL params or localStorage, defaulting to 'activity'
+  const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const tabFromUrl = urlParams.get('tab') as "activity" | "video" | "team" | "profile" | null;
+  const savedTab = typeof window !== "undefined" ? localStorage.getItem('playerDashboardTab') as "activity" | "video" | "team" | "profile" | null : null;
+  const [activeTab, setActiveTab] = useState<"activity" | "video" | "team" | "profile">(
+    tabFromUrl || savedTab || "activity"
+  );
   const [newMessage, setNewMessage] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const { toast } = useToast();
@@ -126,13 +132,19 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     );
   }
 
+  // Save tab to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem('playerDashboardTab', activeTab);
+    }
+  }, [activeTab]);
+
   // ---- Data
   const { data: childProfiles } = useQuery({
     queryKey: ["/api/child-profiles", currentUser.id],
     enabled: !!currentUser.id,
   });
 
-  const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const selectedChildId = childId?.toString() || urlParams.get("childId") || undefined;
 
   const currentChild = Array.isArray(childProfiles)

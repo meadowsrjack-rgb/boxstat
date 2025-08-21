@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 
 // Type definitions
 type TrophyBadge = {
@@ -428,9 +429,32 @@ export default function TrophiesBadgesPage() {
   const [selected, setSelected] = useState<TrophyBadge | null>(null);
   const openOverlay = (it: TrophyBadge) => { setSelected(it); setOpen(true); };
 
+  const [, setLocation] = useLocation();
+
+  const handleBackClick = () => {
+    // Get the last active tab from localStorage, default to 'activity'
+    const lastTab = localStorage.getItem('playerDashboardTab') || 'activity';
+    setLocation(`/dashboard?tab=${lastTab}`);
+  };
+
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(80%_50%_at_50%_0%,rgba(185,28,28,0.25),transparent),linear-gradient(180deg,#1a0202_0%,#000000_100%)] text-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* Header with back button */}
+        <div className="flex items-center gap-4 mb-6">
+          <button
+            onClick={handleBackClick}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 transition-colors text-white"
+            data-testid="button-back"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+            Back
+          </button>
+          <h1 className="text-2xl font-bold text-white">Trophies & Badges</h1>
+        </div>
+        
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">

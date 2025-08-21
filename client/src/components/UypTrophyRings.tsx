@@ -31,7 +31,7 @@ function CircularRingMeter({
   total,
   scheme,
   size = 160,
-  stroke = 8,
+  stroke = 12,
 }: {
   label: string;
   earned: number;
@@ -143,7 +143,7 @@ export default function UypTrophyRings({
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(3, ${size}px)`,
-        gap: 8,
+        gap: 4,
         justifyContent: 'center',
       }}
     >

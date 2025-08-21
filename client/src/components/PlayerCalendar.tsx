@@ -114,27 +114,6 @@ export default function PlayerCalendar({ events, className = "" }: PlayerCalenda
 
   return (
     <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden ${className}`}>
-      {/* Header */}
-      <div className="bg-white text-gray-900 px-5 py-4 text-center border-b border-gray-200">
-        <div className="flex items-center justify-between mb-2">
-          <button
-            onClick={previousMonth}
-            className="text-gray-700 hover:text-red-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            ←
-          </button>
-          <div className="text-lg font-medium">
-            {format(currentDate, 'MMMM yyyy')}
-          </div>
-          <button
-            onClick={nextMonth}
-            className="text-gray-700 hover:text-red-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            →
-          </button>
-        </div>
-      </div>
-
       {/* Today's Events Section */}
       <div className="px-5 py-4 border-b border-gray-100">
         <div className="font-semibold text-gray-800 text-lg mb-3">
@@ -164,6 +143,27 @@ export default function PlayerCalendar({ events, className = "" }: PlayerCalenda
               No events for today
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Month/Year Navigation Header */}
+      <div className="bg-white text-gray-900 px-5 py-4 text-center border-b border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={previousMonth}
+            className="text-gray-700 hover:text-red-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            ←
+          </button>
+          <div className="text-lg font-medium">
+            {format(currentDate, 'MMMM yyyy')}
+          </div>
+          <button
+            onClick={nextMonth}
+            className="text-gray-700 hover:text-red-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            →
+          </button>
         </div>
       </div>
       

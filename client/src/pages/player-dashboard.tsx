@@ -818,10 +818,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             >
                               <MapPin className="h-4 w-4" />
                             </span>
-                            <span>LOCATION</span>
+                            <span>FROM</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.location || "Irvine, CA"}
+                            {(editableProfile.location || "Irvine").replace(", CA", "").replace(",CA", "")}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

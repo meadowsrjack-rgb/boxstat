@@ -1,5 +1,3 @@
-'use client';
-
 import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1285,7 +1283,7 @@ function TeamBlock() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search for teams..."
+              placeholder="Find teams or players..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"

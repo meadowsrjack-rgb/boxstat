@@ -2,7 +2,24 @@ import { pool } from "./db";
 import { Client } from "@notionhq/client";
 
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
-const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+
+// Extract database ID from URL if needed
+function extractDatabaseId(input: string): string {
+  // If it's already a clean ID (32 characters), return as is
+  if (/^[a-f0-9]{32}$/i.test(input.replace(/-/g, ''))) {
+    return input.replace(/-/g, '');
+  }
+  
+  // Extract from Notion URL format
+  const match = input.match(/([a-f0-9]{32})/i);
+  if (match) {
+    return match[1];
+  }
+  
+  throw new Error("Invalid database ID format");
+}
+
+const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID ? extractDatabaseId(process.env.NOTION_DATABASE_ID) : undefined;
 
 export function hasNotionCreds() {
   return !!(NOTION_TOKEN && NOTION_DATABASE_ID);
@@ -48,6 +65,15 @@ export async function searchNotionTeams(query: string = "") {
   if (!hasNotionCreds()) throw new Error("NOTION env missing");
   
   try {
+    console.log("Using database ID:", NOTION_DATABASE_ID);
+    
+    // First, let's try to retrieve the database to validate the ID
+    const database = await notion.databases.retrieve({
+      database_id: NOTION_DATABASE_ID!
+    });
+    
+    console.log("Database schema:", JSON.stringify(database.properties, null, 2));
+    
     const response = await notion.databases.query({
       database_id: NOTION_DATABASE_ID!,
       filter: query ? {

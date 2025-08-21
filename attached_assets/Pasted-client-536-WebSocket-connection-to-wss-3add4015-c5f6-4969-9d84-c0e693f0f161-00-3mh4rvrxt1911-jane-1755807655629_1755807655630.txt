@@ -1,0 +1,173 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=wiEVnt2aGHNJ' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=wiEVnt2aGHNJ' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-RPCDYKBN.js?v=8bc3359b:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:522 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration
+App.tsx:51 SW registered:  ServiceWorkerRegistration
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:107 User data for profile check: Object
+App.tsx:108 Profile completed status: true
+App.tsx:109 IsAuthenticated: true
+App.tsx:110 IsLoading: false
+App.tsx:128 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:107 User data for profile check: Object
+App.tsx:108 Profile completed status: true
+App.tsx:109 IsAuthenticated: true
+App.tsx:110 IsLoading: false
+App.tsx:128 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:296 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ player-dashboard.tsx:296
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1277 Uncaught ReferenceError: Search is not defined
+    at TeamBlock (player-dashboard.tsx:1277:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=8bc3359b:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=8bc3359b:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=8bc3359b:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=8bc3359b:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=8bc3359b:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=8bc3359b:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=8bc3359b:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=8bc3359b:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=8bc3359b:19137:13)
+TeamBlock @ player-dashboard.tsx:1277
+renderWithHooks @ chunk-RPCDYKBN.js?v=8bc3359b:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=8bc3359b:14926
+beginWork @ chunk-RPCDYKBN.js?v=8bc3359b:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=8bc3359b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=8bc3359b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=8bc3359b:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=8bc3359b:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=8bc3359b:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=8bc3359b:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=8bc3359b:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=8bc3359b:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=8bc3359b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=8bc3359b:18627
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1277 Uncaught ReferenceError: Search is not defined
+    at TeamBlock (player-dashboard.tsx:1277:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=8bc3359b:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=8bc3359b:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=8bc3359b:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=8bc3359b:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=8bc3359b:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=8bc3359b:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=8bc3359b:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=8bc3359b:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=8bc3359b:19137:13)
+TeamBlock @ player-dashboard.tsx:1277
+renderWithHooks @ chunk-RPCDYKBN.js?v=8bc3359b:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=8bc3359b:14926
+beginWork @ chunk-RPCDYKBN.js?v=8bc3359b:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=8bc3359b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=8bc3359b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=8bc3359b:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=8bc3359b:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=8bc3359b:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=8bc3359b:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=8bc3359b:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=8bc3359b:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=8bc3359b:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=8bc3359b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=8bc3359b:18627
+chunk-RPCDYKBN.js?v=8bc3359b:14032 The above error occurred in the <TeamBlock> component:
+
+    at TeamBlock (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/player-dashboard.tsx:1894:20)
+    at div
+    at main
+    at div
+    at PlayerDashboard (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/player-dashboard.tsx:80:43)
+    at component
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8bc3359b:206:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=8bc3359b:262:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=XE0cKGYVck3m8hqtYQ65N:53:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=8bc3359b:2934:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=8bc3359b:14032
+update.callback @ chunk-RPCDYKBN.js?v=8bc3359b:14052
+callCallback @ chunk-RPCDYKBN.js?v=8bc3359b:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=8bc3359b:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=8bc3359b:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=8bc3359b:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=8bc3359b:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=8bc3359b:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=8bc3359b:19353
+commitRoot @ chunk-RPCDYKBN.js?v=8bc3359b:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=8bc3359b:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=8bc3359b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=8bc3359b:18627
+chunk-RPCDYKBN.js?v=8bc3359b:9129 Uncaught ReferenceError: Search is not defined
+    at TeamBlock (player-dashboard.tsx:1277:14)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=8bc3359b:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=8bc3359b:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=8bc3359b:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=8bc3359b:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=8bc3359b:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=8bc3359b:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=8bc3359b:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=8bc3359b:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=8bc3359b:18879:28)
+TeamBlock @ player-dashboard.tsx:1277
+renderWithHooks @ chunk-RPCDYKBN.js?v=8bc3359b:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=8bc3359b:14926
+beginWork @ chunk-RPCDYKBN.js?v=8bc3359b:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=8bc3359b:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=8bc3359b:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=8bc3359b:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=8bc3359b:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=8bc3359b:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=8bc3359b:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=8bc3359b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=8bc3359b:18627

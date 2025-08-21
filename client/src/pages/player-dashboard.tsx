@@ -716,24 +716,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
           {/* Profile */}
           {activeTab === "profile" && (
-            <div className="space-y-6">
+            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white -mx-6 px-6 pb-10">
               {/* Futuristic Bio Section */}
-              <div className="relative px-6">
-                {/* Futuristic container with subtle conic border glow */}
-                <div className="relative">
-                  <div
-                    className="pointer-events-none absolute -inset-0.5 rounded-3xl opacity-60 blur"
-                    style={{
-                      background: `conic-gradient(from 140deg at 50% 50%, #d8242833, #ffffff00 35%, #d8242822 60%, #ffffff00 85%, #d8242833)`,
-                    }}
-                  />
-
-                  <motion.section
-                    initial={{ y: 24, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    className="relative rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl ring-1 ring-white/50 overflow-hidden"
-                  >
+              <div className="relative px-0 pt-6">
+                <motion.section
+                  initial={{ y: 24, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="relative rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl ring-1 ring-white/50 overflow-hidden"
+                >
                     {/* Decorative grid overlay */}
                     <div
                       className="pointer-events-none absolute inset-0 opacity-[0.06]"
@@ -758,7 +749,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </h1>
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
-                        {editableProfile.position || "Guard"} {editableProfile.jerseyNumber ? `• #${editableProfile.jerseyNumber}` : ""}
+                        {editableProfile.position || "Guard"} #{editableProfile.jerseyNumber || "23"}
                       </div>
 
                       {(currentChild?.teamName || userTeam?.name || "High School Elite") && (
@@ -771,53 +762,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                     {/* Info grid */}
                     <div className="relative px-6 pb-8">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <motion.div
                           initial={{ y: 12, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: 0, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                            <span
-                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                              style={{ color: "#d82428" }}
-                            >
-                              <User className="h-4 w-4" />
-                            </span>
-                            <span>POSITION</span>
-                          </div>
-                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.position || "Guard"}
-                          </div>
-                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ y: 12, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.05, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                            <span
-                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                              style={{ color: "#d82428" }}
-                            >
-                              <Hash className="h-4 w-4" />
-                            </span>
-                            <span>JERSEY</span>
-                          </div>
-                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.jerseyNumber ? `#${editableProfile.jerseyNumber}` : "#23"}
-                          </div>
-                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ y: 12, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.10, duration: 0.35 }}
                           className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
                         >
                           <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
@@ -838,7 +787,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         <motion.div
                           initial={{ y: 12, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.15, duration: 0.35 }}
+                          transition={{ delay: 0.05, duration: 0.35 }}
                           className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
                         >
                           <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
@@ -859,8 +808,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         <motion.div
                           initial={{ y: 12, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.20, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all col-span-full"
+                          transition={{ delay: 0.10, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all col-span-2"
                         >
                           <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
                             <span
@@ -878,8 +827,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         </motion.div>
                       </div>
                     </div>
-                  </motion.section>
-                </div>
+                </motion.section>
               </div>
 
               {/* Settings Section */}

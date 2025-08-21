@@ -299,9 +299,6 @@ function ProfileSection() {
     location: "",
     position: "",
     jerseyNumber: "",
-    instagram: "",
-    twitter: "",
-    tiktok: "",
   });
 
   const updateProfile = useMutation({
@@ -421,26 +418,10 @@ function ProfileSection() {
             </div>
           </div>
 
-          {/* Location + Socials */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Location</label>
-              <CityTypeahead value={editableProfile.location} onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))} />
-            </div>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Instagram</label>
-                <Input
-                  placeholder="@handle"
-                  value={editableProfile.instagram}
-                  onChange={(e) => setEditableProfile((p) => ({ ...p, instagram: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">TikTok</label>
-                <Input placeholder="@handle" value={editableProfile.tiktok} onChange={(e) => setEditableProfile((p) => ({ ...p, tiktok: e.target.value }))} />
-              </div>
-            </div>
+          {/* Location */}
+          <div>
+            <label className="text-sm font-medium text-gray-700">Location</label>
+            <CityTypeahead value={editableProfile.location} onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))} />
           </div>
 
           <div className="pt-2">
@@ -458,12 +439,11 @@ function PrivacySection() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [state, setState] = useState({
-    publicHeight: true,
-    publicLocation: true,
+    makeProfilePublic: true,
+    showProfileToTeamOnly: false,
     allowGpsCheckin: true,
     allowCameraMic: true,
     shareAnalytics: true,
-    coachCanViewProgress: true,
   });
 
   const mutate = useMutation({
@@ -488,12 +468,11 @@ function PrivacySection() {
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
           {[
-            { k: "publicHeight", label: "Show height publicly", icon: Globe },
-            { k: "publicLocation", label: "Show city/location publicly", icon: Globe },
+            { k: "makeProfilePublic", label: "Make profile public", icon: Globe },
+            { k: "showProfileToTeamOnly", label: "Show profile to team only", icon: ShieldCheck },
             { k: "allowGpsCheckin", label: "Allow GPS-based on-site check-in", icon: MapPin },
             { k: "allowCameraMic", label: "Allow camera & microphone for uploads", icon: ShieldCheck },
             { k: "shareAnalytics", label: "Share anonymized usage analytics", icon: ShieldCheck },
-            { k: "coachCanViewProgress", label: "Allow coach to view progress", icon: ShieldCheck },
           ].map((row) => (
             <div key={row.k} className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
               <div className="flex items-center gap-3">
@@ -531,8 +510,6 @@ function NotificationsSection() {
     pushEventReminders: true,
     pushCheckinWindows: true,
     pushProgramUpdates: false,
-    emailReceipts: true,
-    emailNews: false,
     quietHours: false,
   });
 
@@ -560,15 +537,8 @@ function NotificationsSection() {
           <Group title="Push Notifications">
             <ToggleRow label="Team messages" checked={prefs.pushTeamMessages} onChange={(v) => setPrefs((p) => ({ ...p, pushTeamMessages: v }))} />
             <ToggleRow label="Event reminders" checked={prefs.pushEventReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushEventReminders: v }))} />
-            <ToggleRow label="Check-in windows" checked={prefs.pushCheckinWindows} onChange={(v) => setPrefs((p) => ({ ...p, pushCheckinWindows: v }))} />
+            <ToggleRow label="Check-in/RSVP windows" checked={prefs.pushCheckinWindows} onChange={(v) => setPrefs((p) => ({ ...p, pushCheckinWindows: v }))} />
             <ToggleRow label="Program updates" checked={prefs.pushProgramUpdates} onChange={(v) => setPrefs((p) => ({ ...p, pushProgramUpdates: v }))} />
-          </Group>
-
-          <Separator />
-
-          <Group title="Email">
-            <ToggleRow label="Receipts & billing" checked={prefs.emailReceipts} onChange={(v) => setPrefs((p) => ({ ...p, emailReceipts: v }))} />
-            <ToggleRow label="News & announcements" checked={prefs.emailNews} onChange={(v) => setPrefs((p) => ({ ...p, emailNews: v }))} />
           </Group>
 
           <Separator />

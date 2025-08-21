@@ -141,6 +141,23 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     twitter: "",
     tiktok: "",
   });
+
+  // Update editable profile when user data changes
+  useEffect(() => {
+    if (currentUser) {
+      setEditableProfile(prev => ({
+        ...prev,
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        teamName: currentUser.teamName || "",
+        age: currentUser.age || "",
+        height: currentUser.height || "",
+        location: currentUser.location || "",
+        position: currentUser.position || "",
+        jerseyNumber: currentUser.jerseyNumber || "",
+      }));
+    }
+  }, [currentUser]);
   
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());

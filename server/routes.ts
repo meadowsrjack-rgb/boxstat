@@ -74,6 +74,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch('/api/users/:id/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = req.user.claims.sub;
+      
+      // Ensure user can only update their own profile
+      if (userId !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedUser = await storage.updateUserProfile(userId, req.body);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.get('/api/users/:id/trophies', isAuthenticated, async (req: any, res) => {
     try {
       const trophies = await storage.getUserTrophies(req.params.id);

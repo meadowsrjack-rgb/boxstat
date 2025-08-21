@@ -293,13 +293,29 @@ function ProfileSection() {
   const [editableProfile, setEditableProfile] = useState({
     firstName: (user as UserType)?.firstName || "",
     lastName: (user as UserType)?.lastName || "",
-    teamName: "",
-    age: "",
-    height: "",
-    location: "",
-    position: "",
-    jerseyNumber: "",
+    teamName: (user as UserType)?.teamName || "",
+    age: (user as UserType)?.age || "",
+    height: (user as UserType)?.height || "",
+    location: (user as UserType)?.location || "",
+    position: (user as UserType)?.position || "",
+    jerseyNumber: (user as UserType)?.jerseyNumber || "",
   });
+
+  // Update editable profile when user data changes
+  useEffect(() => {
+    if (user) {
+      setEditableProfile({
+        firstName: (user as UserType)?.firstName || "",
+        lastName: (user as UserType)?.lastName || "",
+        teamName: (user as UserType)?.teamName || "",
+        age: (user as UserType)?.age || "",
+        height: (user as UserType)?.height || "",
+        location: (user as UserType)?.location || "",
+        position: (user as UserType)?.position || "",
+        jerseyNumber: (user as UserType)?.jerseyNumber || "",
+      });
+    }
+  }, [user]);
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
@@ -314,6 +330,7 @@ function ProfileSection() {
     },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved successfully." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as UserType)?.id] });
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),

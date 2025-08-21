@@ -129,7 +129,7 @@ function CircularRingMeter({
 export default function UypTrophyRings({
   data,
   size = 160,
-  stroke = 8,
+  stroke = 12,
   className,
 }: {
   data: UypRingsData;
@@ -143,7 +143,7 @@ export default function UypTrophyRings({
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(3, ${size}px)`,
-        gap: 18,
+        gap: 8,
         justifyContent: 'center',
       }}
     >

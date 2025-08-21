@@ -29,6 +29,9 @@ import {
   MoreVertical,
   MapPin,
   Search,
+  Ruler,
+  Gauge,
+  Hash,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -715,49 +718,167 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {activeTab === "profile" && (
             <div className="space-y-6">
               {/* Futuristic Bio Section */}
-              <div className="p-8 bg-white">
-                <div className="text-center space-y-4 mb-8">
-                  {/* Name */}
-                  <h1 className="text-5xl font-black text-red-600 tracking-tight leading-tight" style={{fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif', fontWeight: '900'}}>
-                    {(currentChild?.firstName || currentUser.firstName || "Jack")}<br />
-                    {(currentChild?.lastName || currentUser.lastName || "Meadows")}
-                  </h1>
-                  
-                  {/* Position & Jersey */}
-                  <div className="text-lg text-gray-600 font-medium">
-                    {editableProfile.position || "Guard"} #{editableProfile.jerseyNumber || "23"}
-                  </div>
-                  
-                  {/* Team */}
-                  <div className="text-xl font-bold text-gray-900">
-                    {currentChild?.teamName || userTeam?.name || "High School Elite"}
-                  </div>
-                  
-                  {/* Stats with Icons */}
-                  <div className="space-y-3 mt-6">
-                    <div className="flex items-center justify-center gap-2 text-gray-700">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L12 22M2 12L22 12M7 7L17 17M17 7L7 17"/>
-                      </svg>
-                      <span className="text-lg font-medium">{editableProfile.height || "5'9"}</span>
+              <div className="relative px-6">
+                {/* Futuristic container with subtle conic border glow */}
+                <div className="relative">
+                  <div
+                    className="pointer-events-none absolute -inset-0.5 rounded-3xl opacity-60 blur"
+                    style={{
+                      background: `conic-gradient(from 140deg at 50% 50%, #d8242833, #ffffff00 35%, #d8242822 60%, #ffffff00 85%, #d8242833)`,
+                    }}
+                  />
+
+                  <motion.section
+                    initial={{ y: 24, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className="relative rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl ring-1 ring-white/50 overflow-hidden"
+                  >
+                    {/* Decorative grid overlay */}
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                      style={{
+                        backgroundImage:
+                          "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
+                        backgroundSize: "16px 16px",
+                      }}
+                    />
+
+                    {/* Header */}
+                    <div className="relative px-6 pt-8 pb-5 text-center">
+                      
+                      <h1
+                        className="mt-3 text-4xl font-black tracking-tight leading-tight"
+                        style={{
+                          color: "#d82428",
+                          textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                        }}
+                      >
+                        {(currentChild?.firstName || currentUser.firstName || "Jack")} {(currentChild?.lastName || currentUser.lastName || "Meadows")}
+                      </h1>
+
+                      <div className="mt-1 text-sm font-medium text-gray-700">
+                        {editableProfile.position || "Guard"} {editableProfile.jerseyNumber ? `• #${editableProfile.jerseyNumber}` : ""}
+                      </div>
+
+                      {(currentChild?.teamName || userTeam?.name || "High School Elite") && (
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
+                          <Shirt className="h-4 w-4 text-[#d82428]" />
+                          {currentChild?.teamName || userTeam?.name || "High School Elite"}
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="flex items-center justify-center gap-2 text-gray-700">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                      </svg>
-                      <span className="text-lg font-medium">{editableProfile.age ? new Date().getFullYear() - parseInt(editableProfile.age) : "2005"}</span>
+
+                    {/* Info grid */}
+                    <div className="relative px-6 pb-8">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <motion.div
+                          initial={{ y: 12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                            <span
+                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                              style={{ color: "#d82428" }}
+                            >
+                              <User className="h-4 w-4" />
+                            </span>
+                            <span>POSITION</span>
+                          </div>
+                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                            {editableProfile.position || "Guard"}
+                          </div>
+                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ y: 12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.05, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                            <span
+                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                              style={{ color: "#d82428" }}
+                            >
+                              <Hash className="h-4 w-4" />
+                            </span>
+                            <span>JERSEY</span>
+                          </div>
+                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                            {editableProfile.jerseyNumber ? `#${editableProfile.jerseyNumber}` : "#23"}
+                          </div>
+                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ y: 12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.10, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                            <span
+                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                              style={{ color: "#d82428" }}
+                            >
+                              <Ruler className="h-4 w-4" />
+                            </span>
+                            <span>HEIGHT</span>
+                          </div>
+                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                            {editableProfile.height || "5'9\""}
+                          </div>
+                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ y: 12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.15, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                            <span
+                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                              style={{ color: "#d82428" }}
+                            >
+                              <Gauge className="h-4 w-4" />
+                            </span>
+                            <span>BIRTH YEAR</span>
+                          </div>
+                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                            {editableProfile.age ? new Date().getFullYear() - parseInt(editableProfile.age) : "2005"}
+                          </div>
+                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                        </motion.div>
+
+                        <motion.div
+                          initial={{ y: 12, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          transition={{ delay: 0.20, duration: 0.35 }}
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all col-span-full"
+                        >
+                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                            <span
+                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                              style={{ color: "#d82428" }}
+                            >
+                              <MapPin className="h-4 w-4" />
+                            </span>
+                            <span>LOCATION</span>
+                          </div>
+                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                            {editableProfile.location || "Irvine, CA"}
+                          </div>
+                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                        </motion.div>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center justify-center gap-2 text-gray-700">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                      </svg>
-                      <span className="text-lg font-medium">{editableProfile.location || "Irvine"}</span>
-                    </div>
-                    
-                    {/* Privacy Eye Icon */}
-                  </div>
+                  </motion.section>
                 </div>
               </div>
 

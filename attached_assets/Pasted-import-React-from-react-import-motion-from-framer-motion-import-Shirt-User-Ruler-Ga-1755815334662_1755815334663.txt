@@ -1,0 +1,134 @@
+import React from "react";
+import { motion } from "framer-motion";
+import { Shirt, User, Ruler, Gauge, MapPin, Hash, Sparkles } from "lucide-react";
+
+/**
+ * Futuristic Player Info Section (Preview)
+ * - Pure React + Tailwind + framer-motion
+ * - No project-specific imports; copy the inner JSX into your profile tab
+ */
+
+const red = "#d82428"; // your brand red
+
+type PlayerInfo = {
+  firstName: string;
+  lastName: string;
+  position: string;
+  jerseyNumber?: string | number;
+  teamName?: string;
+  height?: string;
+  weight?: string | number;
+  location?: string;
+  age?: string | number;
+};
+
+const sample: PlayerInfo = {
+  firstName: "Jack",
+  lastName: "Meadows",
+  position: "Guard",
+  jerseyNumber: 23,
+  teamName: "High School Elite",
+  height: "5'11\"",
+  weight: 165,
+  location: "Irvine, CA",
+  age: 17,
+};
+
+export default function PlayerProfileInfoPreview({ data = sample }: { data?: PlayerInfo }) {
+  const fullName = `${data.firstName} ${data.lastName}`;
+  const items = [
+    { icon: <User className="h-4 w-4" />, label: "Position", value: data.position || "—" },
+    { icon: <Hash className="h-4 w-4" />, label: "Jersey", value: data.jerseyNumber ? `#${data.jerseyNumber}` : "—" },
+    { icon: <Ruler className="h-4 w-4" />, label: "Height", value: data.height || "—" },
+     lb` : "—" },
+    { icon: <MapPin className="h-4 w-4" />, label: "Location", value: data.location || "—" },
+      ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-10">
+      <div className="max-w-md mx-auto px-6">
+        {/* Futuristic container with subtle conic border glow */}
+        <div className="relative">
+          <div
+            className="pointer-events-none absolute -inset-0.5 rounded-3xl opacity-60 blur"
+            style={{
+              background: `conic-gradient(from 140deg at 50% 50%, ${red}33, #ffffff00 35%, ${red}22 60%, #ffffff00 85%, ${red}33)`,
+            }}
+          />
+
+          <motion.section
+            initial={{ y: 24, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl ring-1 ring-white/50 overflow-hidden"
+          >
+            {/* Decorative grid overlay */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
+                backgroundSize: "16px 16px",
+              }}
+            />
+
+            {/* Header */}
+            <div className="relative px-6 pt-8 pb-5 text-center">
+              
+              <h1
+                className="mt-3 text-4xl font-black tracking-tight leading-tight"
+                style={{
+                  color: red,
+                  textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                }}
+              >
+                {fullName}
+              </h1>
+
+              <div className="mt-1 text-sm font-medium text-gray-700">
+                {data.position || "—"} {data.jerseyNumber ? `• #${data.jerseyNumber}` : ""}
+              </div>
+
+              {data.teamName && (
+                <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[var(--red,#d82428)] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
+                  <Shirt className="h-4 w-4 text-[color:#d82428]" />
+                  {data.teamName}
+                </div>
+              )}
+            </div>
+
+            {/* Info grid */}
+            <div className="relative px-6 pb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {items.map((it, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ y: 12, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.05 * i, duration: 0.35 }}
+                    className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                      <span
+                        className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                        style={{ color: red }}
+                      >
+                        {it.icon}
+                      </span>
+                      <span>{it.label}</span>
+                    </div>
+                    <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                      {it.value}
+                    </div>
+                    {/* tiny accent line */}
+                    <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.section>
+        </div>
+      </div>
+    </div>
+  );
+}

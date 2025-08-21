@@ -1,19 +1,45 @@
-import React from "react";
-
 function SimpleTest() {
+  const handleClick = () => {
+    alert('Button clicked successfully! The app is working.');
+  };
+
   return (
-    <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-blue-900 mb-4">UYP Basketball App</h1>
-        <p className="text-blue-700">Testing React Setup - No Hooks</p>
-        <div className="mt-4">
-          <button 
-            onClick={() => console.log('Button clicked!')}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Test Button
-          </button>
-        </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#dbeafe', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      fontFamily: 'Arial, sans-serif'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <h1 style={{ 
+          fontSize: '2.5rem', 
+          fontWeight: 'bold', 
+          color: '#1e3a8a', 
+          marginBottom: '1rem' 
+        }}>
+          UYP Basketball App
+        </h1>
+        <p style={{ color: '#1d4ed8', marginBottom: '2rem' }}>
+          App is now working properly!
+        </p>
+        <button 
+          onClick={handleClick}
+          style={{
+            backgroundColor: '#2563eb',
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '0.375rem',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '1rem'
+          }}
+          onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+          onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
+        >
+          Test Button
+        </button>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
+import PlayerCalendar from "@/components/PlayerCalendar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -34,7 +35,7 @@ import {
   Hash,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { format, isSameDay, isAfter, startOfDay } from "date-fns";
+import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -140,6 +141,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     twitter: "",
     tiktok: "",
   });
+  
+  // Calendar state
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
 
   // ---- Early guard
   const currentUser = user as UserType | null;
@@ -317,6 +324,122 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       .filter((ev) => !isSameDay(new Date(ev.startTime || (ev as any).start_time), new Date()))
       .slice(0, 3);
   }, [displayEvents]);
+
+  // Filter events relevant to the current user/player
+  const relevantEvents = useMemo(() => {
+    if (!displayEvents.length) return [];
+    
+    const userName = `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim().toLowerCase();
+    const teamName = (currentChild?.teamName || userTeam?.name || "").toLowerCase();
+    
+    return displayEvents.filter(event => {
+      const title = ((event as any).title || (event as any).summary || "").toLowerCase();
+      const description = ((event as any).description || "").toLowerCase();
+      
+      // Show if event mentions user's name, team, or is a general event
+      return title.includes(userName) || 
+             title.includes(teamName) ||
+             title.includes("practice") ||
+             title.includes("game") ||
+             title.includes("training") ||
+             title.includes("skills") ||
+             description.includes(userName) ||
+             description.includes(teamName);
+    });
+  }, [displayEvents, currentUser, currentChild, userTeam]);
+
+  // Get events for selected date
+  const eventsForSelectedDate = useMemo(() => {
+    return relevantEvents.filter(event => 
+      isSameDay(new Date(event.startTime || (event as any).start_time), selectedDate)
+    );
+  }, [relevantEvents, selectedDate]);
+
+  // Get dates that have events for calendar display
+  const eventDateStrings = useMemo(() => {
+    const eventDates = new Set<string>();
+    relevantEvents.forEach(event => {
+      eventDates.add(new Date(event.startTime || (event as any).start_time).toDateString());
+    });
+    return eventDates;
+  }, [relevantEvents]);
+
+  // Calendar helper functions
+  const renderCalendar = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    const firstDay = startOfMonth(currentDate);
+    const lastDay = endOfMonth(currentDate);
+    const daysInMonth = eachDayOfInterval({ start: firstDay, end: lastDay });
+    const startingDayOfWeek = getDay(firstDay);
+    
+    const calendarDays = [];
+    
+    // Previous month's trailing days
+    const prevMonth = new Date(year, month - 1, 0);
+    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+      const day = new Date(year, month - 1, prevMonth.getDate() - i);
+      calendarDays.push({ date: day, isCurrentMonth: false });
+    }
+    
+    // Current month's days
+    daysInMonth.forEach(day => {
+      calendarDays.push({ date: day, isCurrentMonth: true });
+    });
+    
+    // Next month's leading days (fill to complete the grid if needed)
+    const totalCells = calendarDays.length;
+    const remainingCells = totalCells < 35 ? 35 - totalCells : 42 - totalCells;
+    for (let day = 1; day <= remainingCells; day++) {
+      const nextMonthDay = new Date(year, month + 1, day);
+      calendarDays.push({ date: nextMonthDay, isCurrentMonth: false });
+    }
+    
+    return calendarDays;
+  };
+
+  const formatEventTime = (startTime: string) => {
+    try {
+      return format(new Date(startTime), 'h:mm a');
+    } catch {
+      return 'Time TBD';
+    }
+  };
+
+  const previousMonth = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSlideDirection('right');
+    setTimeout(() => {
+      setCurrentDate(subMonths(currentDate, 1));
+      setSlideDirection('slide-in-left');
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+      }, 50);
+    }, 150);
+  };
+
+  const nextMonth = () => {
+    if (isAnimating) return;
+    setIsAnimating(true);
+    setSlideDirection('left');
+    setTimeout(() => {
+      setCurrentDate(addMonths(currentDate, 1));
+      setSlideDirection('slide-in-right');
+      setTimeout(() => {
+        setSlideDirection(null);
+        setIsAnimating(false);
+      }, 50);
+    }, 150);
+  };
+
+  const selectDate = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const calendarDays = renderCalendar();
 
   // ===== Check-in logic
   const MS = {
@@ -523,6 +646,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="px-6">
           {/* Activity */}
           {activeTab === "activity" && (
+            <PlayerCalendar events={relevantEvents} className="-mx-6" />
+          )}
+
+          {/* Activity Original (commented out) */}
+          {false && activeTab === "activity" && (
             <div className="space-y-8">
               {/* ===== Check-In Tasks (appears above calendar) */}
               <section className="space-y-4">

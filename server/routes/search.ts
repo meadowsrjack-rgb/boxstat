@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { isAuthenticated } from "../replitAuth";
+import { searchNotionTeams, getNotionTeamDetails } from "../notion";
 
 const router = Router();
 
@@ -50,34 +51,25 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
 });
 
 router.get("/teams", isAuthenticated, async (req: any, res) => {
-  const q = (req.query.q as string || "").trim();
-  const params: any[] = [];
-  let where = "1=1";
-  if (q) {
-    params.push(`%${q}%`);
-    where += ` AND LOWER(t.name) LIKE LOWER($${params.length})`;
+  try {
+    const q = (req.query.q as string || "").trim();
+    const teams = await searchNotionTeams(q);
+    res.json({ ok: true, teams });
+  } catch (error) {
+    console.error("Error searching teams:", error);
+    res.status(500).json({ ok: false, error: "Failed to search teams" });
   }
-  const sql = `
-    SELECT t.id, t.name,
-           (SELECT COUNT(1) FROM profiles p WHERE p.team_id = t.id AND p.profile_type='player') AS roster_count
-    FROM teams t
-    WHERE ${where}
-    ORDER BY t.name
-    LIMIT 50;
-  `;
-  const r = await pool.query(sql, params);
-  res.json({ ok: true, teams: r.rows });
 });
 
 router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
-  const teamId = parseInt(req.params.teamId, 10);
-  const team = await pool.query(`SELECT id, name FROM teams WHERE id=$1`, [teamId]);
-  if (!team.rowCount) return res.status(404).json({ ok: false });
-  const roster = await pool.query(
-    `SELECT id, first_name, last_name, profile_image_url FROM profiles WHERE team_id=$1 AND profile_type='player' ORDER BY first_name, last_name`,
-    [teamId]
-  );
-  res.json({ ok: true, team: team.rows[0], roster: roster.rows });
+  try {
+    const teamId = req.params.teamId;
+    const teamDetails = await getNotionTeamDetails(teamId);
+    res.json({ ok: true, ...teamDetails });
+  } catch (error) {
+    console.error("Error getting team details:", error);
+    res.status(500).json({ ok: false, error: "Failed to get team details" });
+  }
 });
 
 router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res) => {

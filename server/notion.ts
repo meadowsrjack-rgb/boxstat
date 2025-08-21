@@ -71,12 +71,15 @@ export async function searchNotionTeams(query: string = "") {
     
     console.log("Found database entries:", response.results.length);
     
-    // Parse player names and group into teams
+    // Log the first entry's properties to understand the database structure
+    if (response.results.length > 0) {
+      console.log("Sample entry properties:", Object.keys(response.results[0].properties));
+      console.log("First entry properties detail:", JSON.stringify(response.results[0].properties, null, 2));
+    }
+    
+    // Parse player names and extract real team data
     const players: any[] = [];
     const teams = new Map();
-    
-    // Define some real team names instead of demo teams
-    const realTeamNames = ['UYP Elite', 'UYP Rising Stars', 'UYP Champions'];
     
     response.results.forEach((page: any, index: number) => {
       const properties = page.properties;
@@ -87,20 +90,23 @@ export async function searchNotionTeams(query: string = "") {
                         properties["Full Name"]?.title?.[0]?.plain_text ||
                         "Unknown Player";
       
+      // Try to get team name from various possible property names
+      const teamName = properties["Team"]?.select?.name ||
+                      properties["Team Name"]?.title?.[0]?.plain_text ||
+                      properties["Current Team"]?.select?.name ||
+                      `${playerName.split(' ')[0]}'s Team`; // Use first name + Team as fallback
+      
       if (playerName && playerName !== "Unknown Player" && playerName.trim() !== '') {
         players.push({
           id: page.id,
           name: playerName.trim(),
-          notion_url: `https://www.notion.so/${page.id}`
+          notion_url: `https://www.notion.so/${page.id}`,
+          team: teamName
         });
-        
-        // Distribute players across teams
-        const teamIndex = index % realTeamNames.length;
-        const teamName = realTeamNames[teamIndex];
         
         if (!teams.has(teamName)) {
           teams.set(teamName, {
-            id: teamName.toLowerCase().replace(/\s+/g, '-'),
+            id: teamName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
             name: teamName,
             roster_count: 0,
             roster: []
@@ -111,7 +117,8 @@ export async function searchNotionTeams(query: string = "") {
         team.roster.push({
           name: playerName.trim(),
           position: properties["Position"]?.select?.name || 'Player',
-          jersey: properties["Jersey"]?.number?.toString() || (team.roster.length + 1).toString()
+          jersey: properties["Jersey"]?.number?.toString() || (team.roster.length + 1).toString(),
+          id: page.id
         });
         team.roster_count = team.roster.length;
       }

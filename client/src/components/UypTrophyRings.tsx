@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { motion } from 'framer-motion';
 
 type Meter = { earned: number; total: number };
 type UypRingsData = {
@@ -49,13 +50,24 @@ function CircularRingMeter({
   const ringId = `ring-${safe}`;
 
   return (
-    <div style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg
+    <motion.div 
+      style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      whileHover={{ scale: 1.05 }}
+      initial={{ opacity: 0, scale: 0.8 }}
+      whileInView={{ opacity: 1, scale: 1 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      <motion.svg
         viewBox={`0 0 ${size} ${size}`}
         width={size}
         height={size}
         role="img"
         aria-label={`${label} ${earned}/${total}`}
+        initial={{ rotate: -10 }}
+        whileInView={{ rotate: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
       >
         <defs>
           <linearGradient id={ringId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -82,8 +94,8 @@ function CircularRingMeter({
           strokeLinecap="round"
         />
 
-        {/* Gradient progress arc */}
-        <circle
+        {/* Gradient progress arc with animation */}
+        <motion.circle
           cx={center}
           cy={center}
           r={radius}
@@ -91,9 +103,12 @@ function CircularRingMeter({
           stroke={`url(#${ringId})`}
           strokeWidth={stroke}
           strokeDasharray={dash}
-          strokeDashoffset={dashOffset}
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`} // start at 12 o'clock
+          initial={{ strokeDashoffset: dash }}
+          whileInView={{ strokeDashoffset: dashOffset }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
         />
 
         {/* Number (no bg, not bold) */}
@@ -121,8 +136,8 @@ function CircularRingMeter({
         >
           {label}
         </text>
-      </svg>
-    </div>
+      </motion.svg>
+    </motion.div>
   );
 }
 

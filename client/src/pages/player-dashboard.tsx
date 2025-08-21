@@ -884,9 +884,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
 
               {/* Skills Progress */}
-              {/* Skills section wrapper */}
-              <div className="px-4">
-                <div className="max-w-[520px] mx-auto space-y-4">
+              {/* Skills section wrapper - aligned with trophy grid */}
+              <div className="px-2">
+                <div className="max-w-[340px] mx-auto space-y-4">
                   <SkillBar label="SHOOTING"  value={72} onClick={() => setLocation("/skills")} />
                   <SkillBar label="DRIBBLING" value={85} onClick={() => setLocation("/skills")} />
                   <SkillBar label="PASSING"   value={68} onClick={() => setLocation("/skills")} />

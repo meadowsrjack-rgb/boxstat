@@ -65,70 +65,76 @@ export async function searchNotionTeams(query: string = "") {
   if (!hasNotionCreds()) throw new Error("NOTION env missing");
   
   try {
-    console.log("Using database ID:", NOTION_DATABASE_ID);
+    console.log("Using page ID:", NOTION_DATABASE_ID);
     
-    // First, let's try to retrieve the database to validate the ID
-    const database = await notion.databases.retrieve({
-      database_id: NOTION_DATABASE_ID!
+    // Get the page content that contains player links
+    const page = await notion.pages.retrieve({
+      page_id: NOTION_DATABASE_ID!
     });
     
-    console.log("Database schema:", JSON.stringify(database.properties, null, 2));
+    // Get all child blocks (which should contain the player links)
+    const blocks = await notion.blocks.children.list({
+      block_id: NOTION_DATABASE_ID!,
+      page_size: 100
+    });
     
-    const response = await notion.databases.query({
-      database_id: NOTION_DATABASE_ID!,
-      filter: query ? {
-        or: [
-          {
-            property: "Team Name",
-            title: {
-              contains: query
+    console.log("Found blocks:", blocks.results.length);
+    
+    // Parse player names from the blocks
+    const players: any[] = [];
+    const teams = new Map();
+    
+    blocks.results.forEach((block: any) => {
+      if (block.type === 'paragraph' && block.paragraph?.rich_text?.length > 0) {
+        const text = block.paragraph.rich_text[0];
+        if (text.type === 'text' && text.href) {
+          const playerName = text.plain_text.trim();
+          if (playerName && playerName !== '#' && playerName !== '') {
+            const playerId = text.href.split('/').pop()?.split('?')[0] || '';
+            
+            players.push({
+              id: playerId,
+              name: playerName,
+              notion_url: text.href
+            });
+            
+            // Group players into demo teams for now
+            const teamIndex = players.length % 3;
+            const teamNames = ['Blazers U12', 'Thunder U14', 'Hawks U16'];
+            const teamName = teamNames[teamIndex];
+            
+            if (!teams.has(teamName)) {
+              teams.set(teamName, {
+                id: teamName.toLowerCase().replace(/\s+/g, '-'),
+                name: teamName,
+                roster_count: 0,
+                roster: []
+              });
             }
-          },
-          {
-            property: "Name",
-            title: {
-              contains: query
-            }
+            
+            const team = teams.get(teamName);
+            team.roster.push({
+              name: playerName,
+              position: 'Player',
+              jersey: (team.roster.length + 1).toString()
+            });
+            team.roster_count = team.roster.length;
           }
-        ]
-      } : undefined,
-    });
-
-    const teams: any[] = [];
-    const teamMap = new Map();
-
-    response.results.forEach((page: any) => {
-      const properties = page.properties;
-      
-      // Extract team information
-      const teamName = properties["Team Name"]?.title?.[0]?.plain_text || 
-                      properties["Team"]?.select?.name || 
-                      "Unknown Team";
-      
-      const playerName = properties["Name"]?.title?.[0]?.plain_text || 
-                        properties["Player Name"]?.title?.[0]?.plain_text || 
-                        "Unknown Player";
-      
-      if (!teamMap.has(teamName)) {
-        teamMap.set(teamName, {
-          id: teamName.replace(/\s+/g, '-').toLowerCase(),
-          name: teamName,
-          roster_count: 0,
-          roster: []
-        });
+        }
       }
-      
-      const team = teamMap.get(teamName);
-      team.roster_count++;
-      team.roster.push({
-        id: page.id,
-        first_name: playerName.split(' ')[0] || '',
-        last_name: playerName.split(' ').slice(1).join(' ') || '',
-        profile_image_url: properties["Profile Image"]?.files?.[0]?.file?.url || null
-      });
     });
+    
+    const teamArray = Array.from(teams.values()).filter(team => 
+      !query || team.name.toLowerCase().includes(query.toLowerCase()) ||
+      team.roster.some((player: any) => player.name.toLowerCase().includes(query.toLowerCase()))
+    );
 
-    return Array.from(teamMap.values());
+    return {
+      teams: teamArray,
+      players: players.filter(player => 
+        !query || player.name.toLowerCase().includes(query.toLowerCase())
+      )
+    };
   } catch (error) {
     console.error("Error searching Notion teams:", error);
     throw new Error("Failed to search teams in Notion");

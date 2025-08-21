@@ -61,64 +61,64 @@ export async function searchNotionTeams(query: string = "") {
   if (!hasNotionCreds()) throw new Error("NOTION env missing");
   
   try {
-    console.log("Using page ID:", NOTION_PAGE_ID);
+    console.log("Using database ID:", NOTION_PAGE_ID);
     
-    // Get the page content that contains player links
-    const page = await notion.pages.retrieve({
-      page_id: NOTION_PAGE_ID!
-    });
-    
-    // Get all child blocks (which should contain the player links)
-    const blocks = await notion.blocks.children.list({
-      block_id: NOTION_PAGE_ID!,
+    // Query the database for all players
+    const response = await notion.databases.query({
+      database_id: NOTION_PAGE_ID!,
       page_size: 100
     });
     
-    console.log("Found blocks:", blocks.results.length);
+    console.log("Found database entries:", response.results.length);
     
-    // Parse player names from the blocks
+    // Parse player names and group into teams
     const players: any[] = [];
     const teams = new Map();
     
-    blocks.results.forEach((block: any) => {
-      if (block.type === 'paragraph' && block.paragraph?.rich_text?.length > 0) {
-        const text = block.paragraph.rich_text[0];
-        if (text.type === 'text' && text.href) {
-          const playerName = text.plain_text.trim();
-          if (playerName && playerName !== '#' && playerName !== '') {
-            const playerId = text.href.split('/').pop()?.split('?')[0] || '';
-            
-            players.push({
-              id: playerId,
-              name: playerName,
-              notion_url: text.href
-            });
-            
-            // Group players into demo teams for now
-            const teamIndex = players.length % 3;
-            const teamNames = ['Blazers U12', 'Thunder U14', 'Hawks U16'];
-            const teamName = teamNames[teamIndex];
-            
-            if (!teams.has(teamName)) {
-              teams.set(teamName, {
-                id: teamName.toLowerCase().replace(/\s+/g, '-'),
-                name: teamName,
-                roster_count: 0,
-                roster: []
-              });
-            }
-            
-            const team = teams.get(teamName);
-            team.roster.push({
-              name: playerName,
-              position: 'Player',
-              jersey: (team.roster.length + 1).toString()
-            });
-            team.roster_count = team.roster.length;
-          }
+    // Define some real team names instead of demo teams
+    const realTeamNames = ['UYP Elite', 'UYP Rising Stars', 'UYP Champions'];
+    
+    response.results.forEach((page: any, index: number) => {
+      const properties = page.properties;
+      
+      // Try to get player name from various possible property names
+      const playerName = properties["Name"]?.title?.[0]?.plain_text ||
+                        properties["Player Name"]?.title?.[0]?.plain_text ||
+                        properties["Full Name"]?.title?.[0]?.plain_text ||
+                        "Unknown Player";
+      
+      if (playerName && playerName !== "Unknown Player" && playerName.trim() !== '') {
+        players.push({
+          id: page.id,
+          name: playerName.trim(),
+          notion_url: `https://www.notion.so/${page.id}`
+        });
+        
+        // Distribute players across teams
+        const teamIndex = index % realTeamNames.length;
+        const teamName = realTeamNames[teamIndex];
+        
+        if (!teams.has(teamName)) {
+          teams.set(teamName, {
+            id: teamName.toLowerCase().replace(/\s+/g, '-'),
+            name: teamName,
+            roster_count: 0,
+            roster: []
+          });
         }
+        
+        const team = teams.get(teamName);
+        team.roster.push({
+          name: playerName.trim(),
+          position: properties["Position"]?.select?.name || 'Player',
+          jersey: properties["Jersey"]?.number?.toString() || (team.roster.length + 1).toString()
+        });
+        team.roster_count = team.roster.length;
       }
     });
+    
+    console.log("Processed players:", players.length);
+    console.log("Created teams:", Array.from(teams.keys()));
     
     const teamArray = Array.from(teams.values()).filter(team => 
       !query || team.name.toLowerCase().includes(query.toLowerCase()) ||

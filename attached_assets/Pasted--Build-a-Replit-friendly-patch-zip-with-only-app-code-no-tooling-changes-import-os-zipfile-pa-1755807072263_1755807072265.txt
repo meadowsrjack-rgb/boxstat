@@ -1,0 +1,855 @@
+# Build a Replit-friendly patch zip with only app code (no tooling changes).
+import os, zipfile, pathlib, textwrap, json, shutil
+
+root = "/mnt/data/UYP-Replit-Agent-Patch"
+if os.path.exists(root):
+    shutil.rmtree(root)
+os.makedirs(root, exist_ok=True)
+
+def write(rel, content):
+    p = pathlib.Path(root)/rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(content)
+
+# ---------- SERVER FILES ----------
+
+boot_ts = """
+import { pool } from "./db";
+
+/** Creates helper tables if they don't exist. Safe to call on every boot. */
+export async function ensureAuxTables() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_privacy (
+        profile_id varchar PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+        settings jsonb NOT NULL DEFAULT '{}'::jsonb,
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS team_join_requests (
+        id SERIAL PRIMARY KEY,
+        profile_id varchar NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        team_id integer NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+        message text,
+        status varchar NOT NULL DEFAULT 'pending',
+        created_at timestamp DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_claims (
+        profile_id varchar PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+        claim_code varchar UNIQUE NOT NULL,
+        dob date,
+        created_at timestamp DEFAULT now(),
+        updated_at timestamp DEFAULT now()
+      );
+    `);
+  } finally {
+    client.release();
+  }
+}
+"""
+write("server/boot.ts", boot_ts)
+
+notion_ts = """
+import { Client } from "@notionhq/client";
+import { pool } from "./db";
+
+const NOTION_TOKEN = process.env.NOTION_TOKEN;
+const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
+
+export function hasNotionCreds() {
+  return !!(NOTION_TOKEN && NOTION_DATABASE_ID);
+}
+
+type NotionPlayer = {
+  id: string;
+  name: string;
+  teamNames: string[];
+  dob?: string | null;
+  claimCode?: string | null;
+  imageUrl?: string | null;
+};
+
+function plain(rich: any[] | undefined) {
+  return (rich || []).map((r: any) => r.plain_text).join("") || "";
+}
+
+async function getOrCreateTeamId(client: any, name: string): Promise<number> {
+  const sel = await client.query(`SELECT id FROM teams WHERE name=$1 LIMIT 1`, [name]);
+  if (sel.rowCount) return sel.rows[0].id;
+  const ins = await client.query(`INSERT INTO teams (name) VALUES ($1) RETURNING id`, [name]);
+  return ins.rows[0].id;
+}
+
+export async function syncNotionRoster() {
+  if (!hasNotionCreds()) throw new Error("NOTION env missing");
+  const notion = new Client({ auth: NOTION_TOKEN });
+
+  let cursor: string | undefined;
+  const rows: any[] = [];
+  do {
+    const resp: any = await notion.databases.query({
+      database_id: NOTION_DATABASE_ID!,
+      start_cursor: cursor,
+      page_size: 100,
+    });
+    rows.push(...resp.results);
+    cursor = resp.has_more ? resp.next_cursor : undefined;
+  } while (cursor);
+
+  const players: NotionPlayer[] = rows.map((page: any) => {
+    const props = page.properties || {};
+    const name = plain(props?.Name?.title);
+    const teamNames = props?.Team?.type === "select"
+      ? [props.Team.select?.name].filter(Boolean)
+      : (props?.Team?.multi_select || []).map((s: any) => s.name).filter(Boolean);
+    const dob = props?.DOB?.date?.start || null;
+    const claimCode = props?.["Claim Code"]?.rich_text ? plain(props["Claim Code"].rich_text) : null;
+    let imageUrl: string | null = null;
+    if (page.cover?.external?.url) imageUrl = page.cover.external.url;
+    if (page.cover?.file?.url) imageUrl = page.cover.file.url;
+    return { id: page.id, name, teamNames, dob, claimCode, imageUrl };
+  });
+
+  const db = await pool.connect();
+  try {
+    await db.query("BEGIN");
+
+    const teamCache = new Map<string, number>();
+    for (const p of players) {
+      for (const t of p.teamNames) {
+        if (!t) continue;
+        if (!teamCache.has(t)) {
+          const id = await getOrCreateTeamId(db, t);
+          teamCache.set(t, id);
+        }
+      }
+    }
+
+    for (const p of players) {
+      if (!p.name) continue;
+      const [first, ...rest] = p.name.split(" ");
+      const last = rest.join(" ") || null;
+      const teamId = p.teamNames[0] ? teamCache.get(p.teamNames[0]) ?? null : null;
+      const profileId = `notion_${p.id}`;
+
+      await db.query(
+        `INSERT INTO profiles (id, account_id, profile_type, first_name, last_name, date_of_birth, team_id, profile_image_url)
+         VALUES ($1, $2, 'player', $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET
+           first_name = EXCLUDED.first_name,
+           last_name = EXCLUDED.last_name,
+           date_of_birth = EXCLUDED.date_of_birth,
+           team_id = EXCLUDED.team_id,
+           profile_image_url = EXCLUDED.profile_image_url`,
+        [profileId, 'notion-sync', first || null, last, p.dob, teamId, p.imageUrl || null]
+      );
+
+      if (p.claimCode) {
+        await db.query(
+          `INSERT INTO profile_claims (profile_id, claim_code, dob, created_at, updated_at)
+           VALUES ($1, $2, $3, now(), now())
+           ON CONFLICT (profile_id) DO UPDATE SET claim_code=EXCLUDED.claim_code, dob=EXCLUDED.dob, updated_at=now()`,
+          [profileId, p.claimCode, p.dob]
+        );
+      }
+    }
+
+    await db.query("COMMIT");
+    return { playersCount: players.length, teamsCount: teamCache.size };
+  } catch (e) {
+    await db.query("ROLLBACK");
+    throw e;
+  } finally {
+    db.release();
+  }
+}
+"""
+write("server/notion.ts", notion_ts)
+
+notion_routes_ts = """
+import { Router } from "express";
+import { syncNotionRoster, hasNotionCreds } from "../notion";
+import { isAuthenticated } from "../replitAuth";
+
+const router = Router();
+
+router.post("/sync", isAuthenticated, async (_req, res) => {
+  try {
+    if (!hasNotionCreds()) return res.status(400).json({ ok: false, error: "NOTION env not set" });
+    const r = await syncNotionRoster();
+    res.json({ ok: true, ...r });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || "sync failed" });
+  }
+});
+
+export default router;
+"""
+write("server/routes/notion.ts", notion_routes_ts)
+
+privacy_routes_ts = """
+import { Router } from "express";
+import { pool } from "../db";
+import { isAuthenticated } from "../replitAuth";
+
+const router = Router();
+
+router.get("/", isAuthenticated, async (req: any, res) => {
+  const accountId = req.user?.claims?.sub as string | undefined;
+  if (!accountId) return res.status(401).json({ ok: false });
+  const prof = await pool.query(`SELECT id FROM profiles WHERE account_id=$1 LIMIT 1`, [accountId]);
+  if (!prof.rowCount) return res.json({ ok: true, settings: {}, searchable: true });
+  const pid = prof.rows[0].id;
+  const r = await pool.query(`SELECT settings FROM profile_privacy WHERE profile_id=$1`, [pid]);
+  res.json({ ok: true, settings: r.rows[0]?.settings || {}, searchable: (r.rows[0]?.settings?.searchable ?? true) });
+});
+
+router.post("/", isAuthenticated, async (req: any, res) => {
+  const accountId = req.user?.claims?.sub as string | undefined;
+  if (!accountId) return res.status(401).json({ ok: false });
+  const prof = await pool.query(`SELECT id FROM profiles WHERE account_id=$1 LIMIT 1`, [accountId]);
+  if (!prof.rowCount) return res.status(400).json({ ok: false, error: "No profile" });
+  const pid = prof.rows[0].id;
+  const { settings = {} } = req.body || {};
+  await pool.query(
+    `INSERT INTO profile_privacy (profile_id, settings, updated_at)
+     VALUES ($1, $2, now())
+     ON CONFLICT (profile_id) DO UPDATE SET settings=EXCLUDED.settings, updated_at=now()`,
+    [pid, settings]
+  );
+  res.json({ ok: true });
+});
+
+export default router;
+"""
+write("server/routes/privacy.ts", privacy_routes_ts)
+
+search_routes_ts = """
+import { Router } from "express";
+import { pool } from "../db";
+import { isAuthenticated } from "../replitAuth";
+
+const router = Router();
+
+router.get("/players", isAuthenticated, async (req: any, res) => {
+  const q = (req.query.q as string || "").trim();
+  const accountId = req.user?.claims?.sub as string | undefined;
+  const viewerTeams = await getViewerTeamIds(accountId);
+
+  const params: any[] = [];
+  let where = "p.profile_type='player'";
+  if (q) {
+    params.push(`%${q}%`);
+    where += ` AND (LOWER(p.first_name||' '||p.last_name) LIKE LOWER($${params.length}))`;
+  }
+  const sql = `
+    SELECT p.id, p.first_name, p.last_name, p.team_id, p.profile_image_url,
+           COALESCE(pp.settings, '{}'::jsonb) AS settings
+    FROM profiles p
+    LEFT JOIN profile_privacy pp ON pp.profile_id = p.id
+    WHERE ${where}
+    ORDER BY p.first_name NULLS LAST, p.last_name NULLS LAST
+    LIMIT 50;
+  `;
+  const r = await pool.query(sql, params);
+  const rows = r.rows.map(row => {
+    const s = row.settings || {};
+    const vis = (field: string) => (s[field] ?? "public");
+    const canSeeTeamOnly = viewerTeams?.length > 0;
+    const mask = (field: string, value: any) => {
+      const level = vis(field);
+      if (level === "public") return value;
+      if (level === "team") return canSeeTeamOnly ? value : null;
+      return null; // private
+    };
+    return {
+      id: row.id,
+      first_name: mask("first_name", row.first_name) ?? "🔒",
+      last_name: mask("last_name", row.last_name) ?? "",
+      profile_image_url: mask("profile_image_url", row.profile_image_url),
+      team_id: row.team_id,
+      badges_public: vis("badges") !== "private",
+      trophies_public: vis("trophies") !== "private",
+      skills_public: vis("skills") !== "private",
+    };
+  });
+  res.json({ ok: true, players: rows });
+});
+
+router.get("/teams", isAuthenticated, async (req: any, res) => {
+  const q = (req.query.q as string || "").trim();
+  const params: any[] = [];
+  let where = "1=1";
+  if (q) {
+    params.push(`%${q}%`);
+    where += ` AND LOWER(t.name) LIKE LOWER($${params.length})`;
+  }
+  const sql = `
+    SELECT t.id, t.name,
+           (SELECT COUNT(1) FROM profiles p WHERE p.team_id = t.id AND p.profile_type='player') AS roster_count
+    FROM teams t
+    WHERE ${where}
+    ORDER BY t.name
+    LIMIT 50;
+  `;
+  const r = await pool.query(sql, params);
+  res.json({ ok: true, teams: r.rows });
+});
+
+router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
+  const teamId = parseInt(req.params.teamId, 10);
+  const team = await pool.query(`SELECT id, name FROM teams WHERE id=$1`, [teamId]);
+  if (!team.rowCount) return res.status(404).json({ ok: false });
+  const roster = await pool.query(
+    `SELECT id, first_name, last_name, profile_image_url FROM profiles WHERE team_id=$1 AND profile_type='player' ORDER BY first_name, last_name`,
+    [teamId]
+  );
+  res.json({ ok: true, team: team.rows[0], roster: roster.rows });
+});
+
+router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res) => {
+  const accountId = req.user?.claims?.sub as string;
+  const teamId = parseInt(req.params.teamId, 10);
+  const message = (req.body?.message as string | undefined) || null;
+
+  if (!accountId || !teamId) return res.status(400).json({ ok: false, error: "Missing account/team" });
+  const prof = await pool.query(`SELECT id FROM profiles WHERE account_id=$1 LIMIT 1`, [accountId]);
+  if (!prof.rowCount) return res.status(400).json({ ok: false, error: "Create your player profile first" });
+  const profileId = prof.rows[0].id;
+
+  await pool.query(
+    `INSERT INTO team_join_requests (profile_id, team_id, message, status, created_at)
+     VALUES ($1,$2,$3,'pending',now())`,
+    [profileId, teamId, message]
+  );
+
+  res.json({ ok: true });
+});
+
+async function getViewerTeamIds(accountId?: string): Promise<number[]> {
+  if (!accountId) return [];
+  const r = await pool.query(`SELECT DISTINCT team_id FROM profiles WHERE account_id=$1 AND team_id IS NOT NULL`, [accountId]);
+  return r.rows.map((x: any) => x.team_id);
+}
+
+export default router;
+"""
+write("server/routes/search.ts", search_routes_ts)
+
+claims_routes_ts = """
+import { Router } from "express";
+import { pool } from "../db";
+import { isAuthenticated } from "../replitAuth";
+
+const router = Router();
+
+router.post('/claim', isAuthenticated, async (req: any, res) => {
+  try {
+    const accountId = req.user?.claims?.sub as string;
+    const { claimCode, dob } = req.body || {};
+    if (!accountId || !claimCode) return res.status(400).json({ ok: false, error: 'Missing account/claimCode' });
+
+    const code = String(claimCode).trim();
+    const claimRes = await pool.query(
+      `SELECT pc.profile_id, pc.dob FROM profile_claims pc WHERE pc.claim_code=$1`,
+      [code]
+    );
+    if (!claimRes.rowCount) return res.status(404).json({ ok: false, error: 'Invalid claim code' });
+
+    const { profile_id, dob: expectedDob } = claimRes.rows[0];
+    if (expectedDob && dob && String(dob) !== String(expectedDob).slice(0,10)) {
+      return res.status(400).json({ ok: false, error: 'DOB does not match' });
+    }
+
+    await pool.query(`UPDATE profiles SET account_id=$1 WHERE id=$2`, [accountId, profile_id]);
+    res.json({ ok: true, profileId: profile_id });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, error: e?.message || 'Unknown error' });
+  }
+});
+
+export default router;
+"""
+write("server/routes/claims.ts", claims_routes_ts)
+
+admin_routes_ts = """
+import { Router } from "express";
+import { pool } from "../db";
+import { isAuthenticated } from "../replitAuth";
+
+async function isAdmin(userId: string) {
+  try {
+    const r = await pool.query(`SELECT user_type FROM users WHERE id=$1`, [userId]);
+    return r.rowCount ? r.rows[0].user_type === 'admin' : false;
+  } catch {
+    return false;
+  }
+}
+
+const router = Router();
+
+router.get('/join-requests', isAuthenticated, async (req: any, res) => {
+  const userId = req.user?.claims?.sub as string;
+  if (!await isAdmin(userId)) return res.status(403).json({ ok: false, error: 'Forbidden' });
+
+  const status = (req.query.status as string) || 'pending';
+  const r = await pool.query(
+    `SELECT jr.id, jr.status, jr.created_at,
+            p.id as profile_id, p.first_name, p.last_name, p.profile_image_url,
+            t.id as team_id, t.name as team_name
+     FROM team_join_requests jr
+     JOIN profiles p ON p.id = jr.profile_id
+     JOIN teams t ON t.id = jr.team_id
+     WHERE jr.status = $1
+     ORDER BY jr.created_at ASC
+     LIMIT 200`,
+    [status]
+  );
+  res.json({ ok: true, requests: r.rows });
+});
+
+router.post('/join-requests/:id/approve', isAuthenticated, async (req: any, res) => {
+  const userId = req.user?.claims?.sub as string;
+  if (!await isAdmin(userId)) return res.status(403).json({ ok: false, error: 'Forbidden' });
+
+  const id = parseInt(req.params.id, 10);
+  const r = await pool.query(`SELECT profile_id, team_id FROM team_join_requests WHERE id=$1`, [id]);
+  if (!r.rowCount) return res.status(404).json({ ok: false, error: 'Not found' });
+  const { profile_id, team_id } = r.rows[0];
+
+  await pool.query(`UPDATE profiles SET team_id=$1 WHERE id=$2`, [team_id, profile_id]);
+  await pool.query(`UPDATE team_join_requests SET status='approved' WHERE id=$1`, [id]);
+
+  res.json({ ok: true });
+});
+
+router.post('/join-requests/:id/reject', isAuthenticated, async (req: any, res) => {
+  const userId = req.user?.claims?.sub as string;
+  if (!await isAdmin(userId)) return res.status(403).json({ ok: false, error: 'Forbidden' });
+
+  const id = parseInt(req.params.id, 10);
+  const r = await pool.query(`UPDATE team_join_requests SET status='rejected' WHERE id=$1 RETURNING id`, [id]);
+  if (!r.rowCount) return res.status(404).json({ ok: false, error: 'Not found' });
+  res.json({ ok: true });
+});
+
+export default router;
+"""
+write("server/routes/admin.ts", admin_routes_ts)
+
+calendar_stub_ts = """
+import { Router } from "express";
+const router = Router();
+
+router.get("/health", (_req, res) => res.json({ ok: true, calendar: "stub" }));
+
+export default router;
+"""
+write("server/routes/calendar.ts", calendar_stub_ts)
+
+routes_additions_ts = """
+import type { Express } from "express";
+import searchRoutes from "./routes/search";
+import privacyRoutes from "./routes/privacy";
+import notionRoutes from "./routes/notion";
+import claimsRoutes from "./routes/claims";
+import adminRoutes from "./routes/admin";
+import calendarRoutes from "./routes/calendar";
+
+/** Call this from server/index.ts after app is created */
+export function mountUYP(app: Express) {
+  app.use('/api/search', searchRoutes);
+  app.use('/api/privacy', privacyRoutes);
+  app.use('/api/integrations/notion', notionRoutes);
+  app.use('/api/claims', claimsRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/calendar', calendarRoutes); // harmless stub
+}
+"""
+write("server/routes-additions.ts", routes_additions_ts)
+
+# ---------- CLIENT FILES ----------
+
+teams_tsx = """
+'use client';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+
+type Player = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  profile_image_url?: string | null;
+  team_id?: number | null;
+  badges_public?: boolean;
+  trophies_public?: boolean;
+  skills_public?: boolean;
+};
+
+export default function Teams() {
+  const [mode, setMode] = useState<'players'|'teams'>('players');
+  const [q, setQ] = useState('');
+  const [openTeamId, setOpenTeamId] = useState<number | null>(null);
+
+  const searchPlayers = useQuery({
+    queryKey: ['search','players',q],
+    enabled: mode==='players',
+    queryFn: async () => (await fetch('/api/search/players?q='+encodeURIComponent(q))).json()
+  });
+
+  const searchTeams = useQuery({
+    queryKey: ['search','teams',q],
+    enabled: mode==='teams',
+    queryFn: async () => (await fetch('/api/search/teams?q='+encodeURIComponent(q))).json()
+  });
+
+  const teamSnapshot = useQuery({
+    queryKey: ['team-snapshot', openTeamId],
+    enabled: openTeamId !== null,
+    queryFn: async () => (await fetch('/api/search/teams/'+openTeamId)).json()
+  });
+
+  const requestJoin = useMutation({
+    mutationFn: async (teamId: number) => (await fetch('/api/search/teams/'+teamId+'/request-join', { method:'POST' })).json()
+  });
+
+  return (
+    <div className="p-4 space-y-3 max-w-4xl mx-auto">
+      <div className="flex gap-2">
+        <Input value={q} onChange={(e)=>setQ(e.target.value)} placeholder={'Search '+(mode==='players'?'players':'teams')} />
+        <Button variant={mode==='players'?'default':'outline'} onClick={()=>setMode('players')}>Players</Button>
+        <Button variant={mode==='teams'?'default':'outline'} onClick={()=>setMode('teams')}>Teams</Button>
+      </div>
+
+      {mode==='players' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {searchPlayers.data?.players?.map((p: Player) => (
+            <Card key={p.id}>
+              <CardContent className="p-3 flex items-center gap-3">
+                <Avatar className="w-12 h-12">
+                  {p.profile_image_url ? <AvatarImage src={p.profile_image_url}/> : <AvatarFallback>{(p.first_name||'?')[0]}{(p.last_name||'?')[0]}</AvatarFallback>}
+                </Avatar>
+                <div className="flex-1">
+                  <div className="font-medium">{p.first_name} {p.last_name}</div>
+                  <div className="text-xs opacity-70">
+                    {p.badges_public?'🏅':''} {p.trophies_public?'🏆':''} {p.skills_public?'📊':''}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {mode==='teams' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {searchTeams.data?.teams?.map((t: any) => (
+            <Card key={t.id}>
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="font-semibold">{t.name}</div>
+                  <div className="text-xs opacity-70">{t.roster_count} players</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={()=>setOpenTeamId(t.id)}>Open</Button>
+                  <Button onClick={()=>requestJoin.mutate(t.id)} disabled={requestJoin.isPending}>Request to join</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={openTeamId!==null} onOpenChange={(v)=>!v && setOpenTeamId(null)}>
+        <DialogContent>
+          <DialogTitle>Team Snapshot</DialogTitle>
+          {teamSnapshot.data?.ok && (
+            <div className="space-y-2">
+              <div className="font-semibold">{teamSnapshot.data.team.name}</div>
+              <div className="mt-2 font-medium">Roster</div>
+              <div className="grid grid-cols-1 gap-2 max-h-80 overflow-auto pr-1">
+                {teamSnapshot.data.roster.map((p: any) => (
+                  <div key={p.id} className="flex items-center gap-2">
+                    <Avatar className="w-8 h-8">
+                      {p.profile_image_url ? <AvatarImage src={p.profile_image_url}/> : <AvatarFallback>{(p.first_name||'?')[0]}{(p.last_name||'?')[0]}</AvatarFallback>}
+                    </Avatar>
+                    <div className="text-sm">{p.first_name} {p.last_name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+"""
+write("client/src/pages/teams.tsx", teams_tsx)
+
+privacy_tsx = """
+'use client';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const FIELDS = ['first_name','last_name','profile_image_url','badges','trophies','skills'] as const;
+type Field = typeof FIELDS[number];
+
+export default function Privacy() {
+  const [settings, setSettings] = useState<Record<string,string>>({});
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch('/api/privacy');
+      const data = await res.json();
+      if (data.ok) setSettings(data.settings || {});
+      setLoaded(true);
+    })();
+  }, []);
+
+  const save = async () => {
+    await fetch('/api/privacy', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ settings })
+    });
+    alert('Saved');
+  };
+
+  const setField = (f: Field, v: string) => setSettings(s => ({ ...s, [f]: v }));
+
+  if (!loaded) return null;
+
+  return (
+    <div className="p-4 max-w-2xl mx-auto space-y-3">
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <h1 className="text-xl font-bold">Privacy settings</h1>
+          {FIELDS.map(f => (
+            <div key={f} className="grid grid-cols-2 gap-2 items-center">
+              <Label className="capitalize">{f.replaceAll('_',' ')}</Label>
+              <Select value={settings[f] || 'public'} onValueChange={(v)=>setField(f,v)}>
+                <SelectTrigger><SelectValue placeholder="public"/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="team">Team-only</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+          <Button onClick={save}>Save</Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+"""
+write("client/src/pages/privacy.tsx", privacy_tsx)
+
+admin_requests_tsx = """
+'use client';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
+export default function AdminJoinRequests() {
+  const qc = useQueryClient();
+  const [status, setStatus] = useState<'pending'|'approved'|'rejected'>('pending');
+
+  const { data } = useQuery({
+    queryKey: ['admin','join-requests', status],
+    queryFn: async () => (await fetch('/api/admin/join-requests?status='+status)).json()
+  });
+
+  const approve = useMutation({
+    mutationFn: async (id: number) => (await fetch('/api/admin/join-requests/'+id+'/approve', { method:'POST' })).json(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin','join-requests'] })
+  });
+  const reject = useMutation({
+    mutationFn: async (id: number) => (await fetch('/api/admin/join-requests/'+id+'/reject', { method:'POST' })).json(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin','join-requests'] })
+  });
+
+  return (
+    <div className="p-4 space-y-4 max-w-3xl mx-auto">
+      <div className="flex gap-2">
+        {(['pending','approved','rejected'] as const).map(s => (
+          <Button key={s} variant={status===s?'default':'outline'} onClick={()=>setStatus(s)}>{s}</Button>
+        ))}
+      </div>
+      <div className="grid gap-3">
+        {data?.requests?.map((r: any) => (
+          <Card key={r.id}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <Avatar className="w-10 h-10">
+                {r.profile_image_url ? <AvatarImage src={r.profile_image_url}/> : <AvatarFallback>{(r.first_name||'?')[0]}{(r.last_name||'?')[0]}</AvatarFallback>}
+              </Avatar>
+              <div className="flex-1">
+                <div className="font-medium">{r.first_name} {r.last_name}</div>
+                <div className="text-sm opacity-70">Requested team: {r.team_name}</div>
+              </div>
+              {status==='pending' && (
+                <div className="flex gap-2">
+                  <Button onClick={()=>approve.mutate(r.id)} disabled={approve.isPending}>Approve</Button>
+                  <Button variant="outline" onClick={()=>reject.mutate(r.id)} disabled={reject.isPending}>Reject</Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+        {!data?.requests?.length && <div className="opacity-70">No {status} requests.</div>}
+      </div>
+    </div>
+  );
+}
+"""
+write("client/src/pages/admin-requests.tsx", admin_requests_tsx)
+
+claim_tsx = """
+'use client';
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+
+export default function ClaimProfile() {
+  const [code, setCode] = useState('');
+  const [dob, setDob] = useState(''); // YYYY-MM-DD
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const submit = async () => {
+    setMsg(null);
+    const res = await fetch('/api/claims/claim', {
+      method:'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ claimCode: code, dob: dob || undefined })
+    });
+    const data = await res.json();
+    if (data.ok) setMsg('Linked! Your profile is now attached to your account.');
+    else setMsg(data.error || 'Failed');
+  };
+
+  return (
+    <div className="p-4 max-w-md mx-auto">
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <h1 className="text-xl font-bold">Claim player profile</h1>
+          <div>
+            <Label>Claim code</Label>
+            <Input value={code} onChange={e=>setCode(e.target.value)} placeholder="e.g. 7GQ4K9" />
+          </div>
+          <div>
+            <Label>Date of birth (optional, YYYY-MM-DD)</Label>
+            <Input value={dob} onChange={e=>setDob(e.target.value)} placeholder="YYYY-MM-DD" />
+          </div>
+          <Button onClick={submit}>Claim profile</Button>
+          {msg && <div className="text-sm mt-2">{msg}</div>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+"""
+write("client/src/pages/claim.tsx", claim_tsx)
+
+# ---------- README / INSTRUCTIONS ----------
+readme = """
+# UYP Replit Agent Patch (safe drop-in)
+
+This patch adds: Teams search + snapshots, Privacy page, Notion roster sync, Join Requests, Admin approvals, and Claim-code linking — **without touching build configs or package versions**.
+
+## What the agent must do (tiny edits only)
+
+1) **Server boot:** call `ensureAuxTables()` and mount routes.
+   - Edit `server/index.ts`:
+     ```ts
+     import { ensureAuxTables } from "./boot";
+     import { mountUYP } from "./routes-additions";
+
+     // after creating `app`
+     ensureAuxTables().catch(console.error);
+     mountUYP(app);
+     ```
+
+2) **Server router file stays intact.** We provide our own `routes-additions.ts` & route modules.
+
+3) **Client routes:** add pages to the app router (match existing router style).
+   - If using **React Router**:
+     ```tsx
+     import Teams from "@/pages/teams";
+     import Privacy from "@/pages/privacy";
+     import AdminJoinRequests from "@/pages/admin-requests";
+     import ClaimProfile from "@/pages/claim";
+
+     <Route path="/teams" component={Teams} />
+     <Route path="/privacy" component={Privacy} />
+     <Route path="/admin/requests" component={AdminJoinRequests} />
+     <Route path="/claim" component={ClaimProfile} />
+     ```
+   - If using **wouter**:
+     ```tsx
+     import Teams from "@/pages/teams";
+     import Privacy from "@/pages/privacy";
+     import AdminJoinRequests from "@/pages/admin-requests";
+     import ClaimProfile from "@/pages/claim";
+
+     <Route path="/teams"><Teams/></Route>
+     <Route path="/privacy"><Privacy/></Route>
+     <Route path="/admin/requests"><AdminJoinRequests/></Route>
+     <Route path="/claim"><ClaimProfile/></Route>
+     ```
+
+4) **Dependencies:** Only `@notionhq/client` is required (you already have NOTION envs). No other deps or tool changes.
+
+5) **Calendar:** We included a harmless stub at `/api/calendar/health` to avoid missing-import errors. Replace with your real calendar router anytime.
+
+## Endpoints added
+- `GET /api/search/players?q=`
+- `GET /api/search/teams?q=`
+- `GET /api/search/teams/:teamId`
+- `POST /api/search/teams/:teamId/request-join`
+- `GET /api/privacy` / `POST /api/privacy`
+- `POST /api/integrations/notion/sync`
+- `POST /api/claims/claim`
+- `GET /api/admin/join-requests?status=pending|approved|rejected`
+- `POST /api/admin/join-requests/:id/approve`
+- `POST /api/admin/join-requests/:id/reject`
+- `GET /api/calendar/health` (stub)
+
+## Notes
+- No build or HMR config touched. No new providers. Uses your existing QueryClientProvider.
+- Privacy settings stored per profile in `profile_privacy.settings` JSON.
+- Claim code flow uses `profile_claims` table; Notion sync fills it from “Claim Code” and “DOB” columns.
+
+"""
+write("README-REPLIT-AGENT.txt", readme)
+
+# ---------- ZIP ----------
+zip_path = "/mnt/data/UYP-Replit-Agent-Patch.zip"
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+    for rootdir, dirs, files in os.walk(root):
+        for f in files:
+            p = pathlib.Path(rootdir)/f
+            rel = str(p.relative_to(root))
+            z.write(str(p), rel)
+
+zip_path

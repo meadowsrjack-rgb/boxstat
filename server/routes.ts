@@ -12,6 +12,7 @@ import calendarRoutes from "./routes/calendar";
 import searchRoutes from "./routes/search";
 import notionRoutes from "./routes/notion";
 import privacyRoutes from "./routes/privacy";
+import claimsRoutes from "./routes/claims";
 
 import multer from "multer";
 import path from "path";
@@ -1732,6 +1733,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to generate daily tasks" });
     }
   });
+
+  // Mount new route modules
+  app.use('/api/calendar', calendarRoutes);
+  app.use('/api/search', searchRoutes);
+  app.use('/api/notion', notionRoutes);
+  app.use('/api/privacy', privacyRoutes);
+  app.use('/api/claims', claimsRoutes);
 
   return httpServer;
 }

@@ -107,6 +107,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showEditProfileDropdown, setShowEditProfileDropdown] = useState(false);
   const [privacySettings, setPrivacySettings] = useState({ discoverable: true });
+
+  // Load privacy settings from backend
+  useEffect(() => {
+    const loadPrivacySettings = async () => {
+      try {
+        const response = await fetch('/api/privacy');
+        if (response.ok) {
+          const data = await response.json();
+          setPrivacySettings({ discoverable: data.searchable });
+        }
+      } catch (error) {
+        console.error('Failed to load privacy settings:', error);
+      }
+    };
+    loadPrivacySettings();
+  }, []);
   const [editableProfile, setEditableProfile] = useState({
     firstName: "",
     lastName: "",
@@ -744,7 +760,19 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     {/* Privacy Eye Icon */}
                     <div className="flex justify-center mt-4">
                       <button
-                        onClick={() => setPrivacySettings(prev => ({ ...prev, discoverable: !prev.discoverable }))}
+                        onClick={async () => {
+                          const newValue = !privacySettings.discoverable;
+                          setPrivacySettings(prev => ({ ...prev, discoverable: newValue }));
+                          try {
+                            await fetch('/api/privacy', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ settings: { searchable: newValue } })
+                            });
+                          } catch (error) {
+                            console.error('Failed to update privacy settings:', error);
+                          }
+                        }}
                         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                         title={privacySettings.discoverable ? "Profile is public" : "Profile is private"}
                       >
@@ -844,7 +872,19 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           <p className="text-xs text-gray-500">Allow others to find your profile</p>
                         </div>
                         <button
-                          onClick={() => setPrivacySettings(prev => ({ ...prev, discoverable: !prev.discoverable }))}
+                          onClick={async () => {
+                            const newValue = !privacySettings.discoverable;
+                            setPrivacySettings(prev => ({ ...prev, discoverable: newValue }));
+                            try {
+                              await fetch('/api/privacy', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ settings: { searchable: newValue } })
+                              });
+                            } catch (error) {
+                              console.error('Failed to update privacy settings:', error);
+                            }
+                          }}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                             privacySettings.discoverable ? 'bg-red-600' : 'bg-gray-200'
                           }`}

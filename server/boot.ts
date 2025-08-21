@@ -1,10 +1,9 @@
-
 import { pool } from "./db";
 
+/** Creates helper tables if they don't exist. Safe to call on every boot. */
 export async function ensureAuxTables() {
   const client = await pool.connect();
   try {
-    // profile_privacy: per-profile privacy settings as JSON
     await client.query(`
       CREATE TABLE IF NOT EXISTS profile_privacy (
         profile_id varchar PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
@@ -13,16 +12,24 @@ export async function ensureAuxTables() {
       );
     `);
 
-    // team_join_requests: track join requests from profiles to teams
     await client.query(`
       CREATE TABLE IF NOT EXISTS team_join_requests (
         id SERIAL PRIMARY KEY,
         profile_id varchar NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
         team_id integer NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
         message text,
-        status varchar NOT NULL DEFAULT 'pending', -- 'pending' | 'approved' | 'rejected' | 'cancelled'
+        status varchar NOT NULL DEFAULT 'pending',
+        created_at timestamp DEFAULT now()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_claims (
+        profile_id varchar PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+        claim_code varchar UNIQUE NOT NULL,
+        dob date,
         created_at timestamp DEFAULT now(),
-        UNIQUE (profile_id, team_id, status)
+        updated_at timestamp DEFAULT now()
       );
     `);
   } finally {

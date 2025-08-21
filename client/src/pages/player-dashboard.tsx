@@ -723,7 +723,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   initial={{ y: 24, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="relative rounded-3xl bg-white/70 backdrop-blur-xl shadow-xl ring-1 ring-white/50 overflow-hidden"
+                  className="relative rounded-3xl bg-white/70 backdrop-blur-xl overflow-hidden"
                 >
                     {/* Decorative grid overlay */}
                     <div
@@ -762,7 +762,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                     {/* Info grid */}
                     <div className="relative px-6 pb-8">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <motion.div
                           initial={{ y: 12, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
@@ -797,7 +797,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             >
                               <Gauge className="h-4 w-4" />
                             </span>
-                            <span>BIRTH YEAR</span>
+                            <span>YEAR</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
                             {editableProfile.age ? new Date().getFullYear() - parseInt(editableProfile.age) : "2005"}
@@ -809,7 +809,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           initial={{ y: 12, opacity: 0 }}
                           animate={{ y: 0, opacity: 1 }}
                           transition={{ delay: 0.10, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all col-span-2"
+                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
                         >
                           <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
                             <span

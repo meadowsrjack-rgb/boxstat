@@ -73,8 +73,11 @@ export async function searchNotionTeams(query: string = "") {
     
     // Log the first entry's properties to understand the database structure
     if (response.results.length > 0) {
-      console.log("Sample entry properties:", Object.keys(response.results[0].properties));
-      console.log("First entry properties detail:", JSON.stringify(response.results[0].properties, null, 2));
+      const firstEntry = response.results[0] as any;
+      if (firstEntry.properties) {
+        console.log("Sample entry properties:", Object.keys(firstEntry.properties));
+        console.log("First entry properties detail:", JSON.stringify(firstEntry.properties, null, 2));
+      }
     }
     
     // Parse player names and extract real team data

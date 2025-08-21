@@ -1,36 +1,32 @@
 import { pool } from "./db";
 import { Client } from "@notionhq/client";
 
-const NOTION_TOKEN = process.env.NOTION_TOKEN;
+const NOTION_INTEGRATION_SECRET = process.env.NOTION_INTEGRATION_SECRET;
+const NOTION_PAGE_URL = process.env.NOTION_PAGE_URL;
 
-// Extract database ID from URL if needed
-function extractDatabaseId(input: string): string {
-  // If it's already a clean ID (32 characters), return as is
-  if (/^[a-f0-9]{32}$/i.test(input.replace(/-/g, ''))) {
-    return input.replace(/-/g, '');
-  }
-  
+// Extract page ID from URL
+function extractPageId(url: string): string {
   // Extract from Notion URL format
-  const match = input.match(/([a-f0-9]{32})/i);
+  const match = url.match(/([a-f0-9]{32})/i);
   if (match) {
     return match[1];
   }
   
-  throw new Error("Invalid database ID format");
+  throw new Error("Invalid Notion page URL format");
 }
 
-const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID ? extractDatabaseId(process.env.NOTION_DATABASE_ID) : undefined;
+const NOTION_PAGE_ID = NOTION_PAGE_URL ? extractPageId(NOTION_PAGE_URL) : undefined;
 
 export function hasNotionCreds() {
-  return !!(NOTION_TOKEN && NOTION_DATABASE_ID);
+  return !!(NOTION_INTEGRATION_SECRET && NOTION_PAGE_ID);
 }
 
 // Initialize Notion client
 export const notion = new Client({
-    auth: NOTION_TOKEN!,
+    auth: NOTION_INTEGRATION_SECRET!,
 });
 
-export { NOTION_DATABASE_ID };
+export { NOTION_PAGE_ID };
 
 type NotionPlayer = {
   id: string;
@@ -65,16 +61,16 @@ export async function searchNotionTeams(query: string = "") {
   if (!hasNotionCreds()) throw new Error("NOTION env missing");
   
   try {
-    console.log("Using page ID:", NOTION_DATABASE_ID);
+    console.log("Using page ID:", NOTION_PAGE_ID);
     
     // Get the page content that contains player links
     const page = await notion.pages.retrieve({
-      page_id: NOTION_DATABASE_ID!
+      page_id: NOTION_PAGE_ID!
     });
     
     // Get all child blocks (which should contain the player links)
     const blocks = await notion.blocks.children.list({
-      block_id: NOTION_DATABASE_ID!,
+      block_id: NOTION_PAGE_ID!,
       page_size: 100
     });
     
@@ -141,38 +137,22 @@ export async function searchNotionTeams(query: string = "") {
   }
 }
 
-// Get team details from Notion
+// Get team details from the grouped players in memory
 export async function getNotionTeamDetails(teamId: string) {
   if (!hasNotionCreds()) throw new Error("NOTION env missing");
   
   try {
-    const response = await notion.databases.query({
-      database_id: NOTION_DATABASE_ID!,
-      filter: {
-        property: "Team Name",
-        title: {
-          contains: teamId.replace('-', ' ')
-        }
-      }
-    });
-
-    const roster = response.results.map((page: any) => {
-      const properties = page.properties;
-      const playerName = properties["Name"]?.title?.[0]?.plain_text || 
-                        properties["Player Name"]?.title?.[0]?.plain_text || 
-                        "Unknown Player";
-      
-      return {
-        id: page.id,
-        first_name: playerName.split(' ')[0] || '',
-        last_name: playerName.split(' ').slice(1).join(' ') || '',
-        profile_image_url: properties["Profile Image"]?.files?.[0]?.file?.url || null
-      };
-    });
+    // Search all teams and find the matching one
+    const result = await searchNotionTeams();
+    const team = result.teams.find((t: any) => t.id === teamId);
+    
+    if (!team) {
+      throw new Error("Team not found");
+    }
 
     return {
-      roster,
-      roster_count: roster.length
+      roster: team.roster,
+      roster_count: team.roster_count
     };
   } catch (error) {
     console.error("Error getting Notion team details:", error);

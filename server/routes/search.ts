@@ -55,52 +55,16 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
     const q = (req.query.q as string || "").trim();
     
     try {
-      const teams = await searchNotionTeams(q);
-      res.json({ ok: true, teams });
+      const result = await searchNotionTeams(q);
+      res.json({ ok: true, teams: result.teams });
     } catch (notionError: any) {
-      console.log("Notion search failed, using demo teams:", notionError.message);
+      console.error("Notion search failed:", notionError.message);
       
-      // Demo teams data for when Notion isn't properly connected
-      const demoTeams = [
-        {
-          id: "blazers-u12",
-          name: "Blazers U12",
-          roster_count: 8,
-          roster: [
-            { name: "Alex Johnson", position: "Guard", jersey: "5" },
-            { name: "Maya Chen", position: "Forward", jersey: "12" },
-            { name: "Tyler Williams", position: "Center", jersey: "23" }
-          ]
-        },
-        {
-          id: "thunder-u14",
-          name: "Thunder U14", 
-          roster_count: 10,
-          roster: [
-            { name: "Jordan Smith", position: "Point Guard", jersey: "1" },
-            { name: "Emma Davis", position: "Shooting Guard", jersey: "8" },
-            { name: "Carlos Rodriguez", position: "Forward", jersey: "15" }
-          ]
-        },
-        {
-          id: "hawks-u16",
-          name: "Hawks U16",
-          roster_count: 12,
-          roster: [
-            { name: "Zoe Thompson", position: "Center", jersey: "34" },
-            { name: "Michael Brown", position: "Guard", jersey: "7" },
-            { name: "Ava Martinez", position: "Forward", jersey: "21" }
-          ]
-        }
-      ].filter(team => 
-        !q || team.name.toLowerCase().includes(q.toLowerCase()) ||
-        team.roster.some(player => player.name.toLowerCase().includes(q.toLowerCase()))
-      );
-
+      // No fallback - only return real Notion data
       res.json({ 
-        ok: true, 
-        teams: demoTeams,
-        note: "Demo data - share Notion database with integration for live data"
+        ok: false, 
+        error: "Unable to load team data. Please ensure Notion integration is properly configured.",
+        teams: []
       });
     }
   } catch (error) {

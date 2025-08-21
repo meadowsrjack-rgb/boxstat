@@ -57,21 +57,6 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Add a basic test route before Vite middleware
-  app.get('/debug', (req, res) => {
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Debug Test</title></head>
-      <body>
-        <h1>Direct Server Test</h1>
-        <p>Server is working properly at ${new Date().toISOString()}</p>
-        <script>console.log('Direct test loaded');</script>
-      </body>
-      </html>
-    `);
-  });
-
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -86,23 +71,6 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  
-  server.on('error', (err: any) => {
-    if (err.code === 'EADDRINUSE') {
-      console.error(`Port ${port} is already in use. Retrying in 2 seconds...`);
-      setTimeout(() => {
-        server.close();
-        server.listen({
-          port,
-          host: "0.0.0.0",
-          reusePort: true,
-        });
-      }, 2000);
-    } else {
-      console.error('Server error:', err);
-    }
-  });
-  
   server.listen({
     port,
     host: "0.0.0.0",

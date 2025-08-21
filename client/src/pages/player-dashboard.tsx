@@ -1160,18 +1160,45 @@ function PriceCard({ title, priceLine, cta, badge }: { title: string; priceLine:
 function TeamBlock() {
   const { user } = useAuth();
   const currentUser = user as UserType;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [joinMessage, setJoinMessage] = useState("");
+  const { toast } = useToast();
+  
   const { data: userTeam } = useQuery<Team>({
     queryKey: ["/api/users", currentUser.id, "team"],
     enabled: !!currentUser.id,
   });
+  
+  const { data: searchResults } = useQuery({
+    queryKey: ["/api/search/teams", searchQuery],
+    queryFn: async () => {
+      const response = await fetch(`/api/search/teams?q=${encodeURIComponent(searchQuery)}`);
+      if (!response.ok) throw new Error('Failed to search teams');
+      return response.json();
+    },
+    enabled: searchQuery.length > 0,
+  });
+  
+  const { data: teamDetails } = useQuery({
+    queryKey: ["/api/search/teams", selectedTeam?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/search/teams/${selectedTeam.id}`);
+      if (!response.ok) throw new Error('Failed to fetch team details');
+      return response.json();
+    },
+    enabled: !!selectedTeam?.id,
+  });
+  
   const { data: teamMessages = [] } = useQuery<any[]>({
     queryKey: ["/api/teams", userTeam?.id, "messages"],
     enabled: !!userTeam?.id,
     refetchInterval: 30000,
   });
+  
   const [newMessage, setNewMessage] = useState("");
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
       const response = await fetch(`/api/teams/${userTeam?.id}/messages`, {
@@ -1192,9 +1219,27 @@ function TeamBlock() {
       toast({ title: "Message sent", description: "Your message has been sent to the team." });
     },
   });
+  
+  const joinTeamMutation = useMutation({
+    mutationFn: async ({ teamId, message }: { teamId: number; message: string }) => {
+      const response = await fetch(`/api/search/teams/${teamId}/request-join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      if (!response.ok) throw new Error('Failed to request team join');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Join request sent", description: "Your request to join the team has been sent to the coach." });
+      setSelectedTeam(null);
+      setJoinMessage("");
+    },
+  });
 
   return (
     <div className="space-y-6">
+      {/* Current Team Section */}
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">My Team</h2>
         {userTeam ? (
@@ -1220,77 +1265,205 @@ function TeamBlock() {
             </CardContent>
           </Card>
         ) : (
-          <div className="text-sm text-gray-500">No team assigned yet.</div>
+          <div className="text-sm text-gray-500 mb-4">No team assigned yet. Search for teams below!</div>
         )}
       </div>
 
-      {/* Team Messages */}
+      {/* Team Search Section */}
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Team Messages</h3>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <div className="space-y-4 max-h-64 overflow-y-auto">
-              {teamMessages.length > 0 ? (
-                teamMessages.map((message: any) => (
-                  <div key={message.id} className="flex space-x-3 py-3 border-b border-gray-100 last:border-b-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={message.sender?.profileImageUrl || "/placeholder-player.jpg"} />
-                      <AvatarFallback
-                        className={message.sender?.userType === "admin" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600"}
-                      >
-                        {message.sender?.firstName?.[0]}
-                        {message.sender?.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-gray-900">
-                          {message.sender?.firstName} {message.sender?.lastName}
-                        </p>
-                        {message.sender?.userType === "admin" && (
-                          <Badge variant="secondary" className="text-xs bg-red-100 text-red-600">
-                            Coach
-                          </Badge>
-                        )}
-                        <p className="text-xs text-gray-500">
-                          {message.createdAt ? format(new Date(message.createdAt), "MMM d, h:mm a") : "Now"}
-                        </p>
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Find Teams</h3>
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search for teams..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {searchResults?.teams && searchResults.teams.length > 0 && (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-0">
+                <div className="max-h-64 overflow-y-auto">
+                  {searchResults.teams.map((team: any) => (
+                    <div 
+                      key={team.id} 
+                      className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedTeam(team)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{team.name}</h4>
+                          <p className="text-sm text-gray-500">{team.roster_count} players</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
-                      <p className="text-sm text-gray-700 mt-1">{message.message}</p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
+                  ))}
                 </div>
-              )}
+              </CardContent>
+            </Card>
+          )}
+          
+          {searchQuery && (!searchResults?.teams || searchResults.teams.length === 0) && (
+            <div className="text-center py-8 text-gray-500">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p>No teams found matching "{searchQuery}"</p>
             </div>
-
-            {/* Message Input */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex space-x-2">
-                <Input
-                  placeholder="Type a message..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  size="icon"
-                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                  onClick={() => {
-                    if (newMessage.trim()) sendMessageMutation.mutate(newMessage.trim());
-                  }}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
+
+      {/* Team Details Modal */}
+      {selectedTeam && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{selectedTeam.name}</h3>
+                <p className="text-sm text-gray-500">{selectedTeam.roster_count} players</p>
+              </div>
+              <button 
+                onClick={() => setSelectedTeam(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            {teamDetails?.roster && (
+              <div className="mb-4">
+                <h4 className="font-medium text-gray-900 mb-2">Current Roster</h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {teamDetails.roster.map((player: any) => (
+                    <div key={player.id} className="flex items-center space-x-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={player.profile_image_url} />
+                        <AvatarFallback className="text-xs">
+                          {player.first_name?.[0]}{player.last_name?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{player.first_name} {player.last_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {!userTeam && (
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Message to coach (optional)
+                  </label>
+                  <textarea
+                    value={joinMessage}
+                    onChange={(e) => setJoinMessage(e.target.value)}
+                    placeholder="Tell the coach why you'd like to join..."
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm resize-none"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedTeam(null)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => joinTeamMutation.mutate({ teamId: selectedTeam.id, message: joinMessage })}
+                    disabled={joinTeamMutation.isPending}
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                  >
+                    Request to Join
+                  </Button>
+                </div>
+              </>
+            )}
+            
+            {userTeam && (
+              <p className="text-sm text-gray-500 text-center">
+                You're already on a team. Contact your coach to switch teams.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Team Messages */}
+      {userTeam && (
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Team Messages</h3>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-4">
+              <div className="space-y-4 max-h-64 overflow-y-auto">
+                {teamMessages.length > 0 ? (
+                  teamMessages.map((message: any) => (
+                    <div key={message.id} className="flex space-x-3 py-3 border-b border-gray-100 last:border-b-0">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={message.sender?.profileImageUrl || "/placeholder-player.jpg"} />
+                        <AvatarFallback
+                          className={message.sender?.userType === "admin" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600"}
+                        >
+                          {message.sender?.firstName?.[0]}
+                          {message.sender?.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm font-medium text-gray-900">
+                            {message.sender?.firstName} {message.sender?.lastName}
+                          </p>
+                          {message.sender?.userType === "admin" && (
+                            <Badge variant="secondary" className="text-xs bg-red-100 text-red-600">
+                              Coach
+                            </Badge>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            {message.createdAt ? format(new Date(message.createdAt), "MMM d, h:mm a") : "Now"}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-700 mt-1">{message.message}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Message Input */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Type a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button
+                    size="icon"
+                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                    onClick={() => {
+                      if (newMessage.trim()) sendMessageMutation.mutate(newMessage.trim());
+                    }}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

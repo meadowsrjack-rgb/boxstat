@@ -1,12 +1,16 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import { registerRoutes } from "./routes";
+import { ensureAuxTables } from "./boot";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeScheduler } from "./scheduler";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Ensure auxiliary DB tables exist
+ensureAuxTables().catch(err => console.error('ensureAuxTables failed', err));
 
 // Serve static files from public directory (for trophies, assets, etc.)
 const publicPath = path.resolve(import.meta.dirname, "..", "public");

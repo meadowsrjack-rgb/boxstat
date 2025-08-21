@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 
 // Pages
+import Teams from "@/pages/teams";
+import PrivacySettingsPage from "@/pages/privacy";
 import Landing from "@/pages/landing";
 import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
@@ -79,6 +81,8 @@ function Router() {
     console.log("User not authenticated, showing landing page");
     return (
       <Switch>
+      <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/teams" component={Teams} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
@@ -112,6 +116,8 @@ function Router() {
     console.log('Redirecting to profile selection - profile not completed');
     return (
       <Switch>
+      <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/teams" component={Teams} />
         <Route path="/profile-selection" component={ProfileSelection} />
         <Route path="/create-profile" component={CreateProfile} />
         <Route component={ProfileSelection} />
@@ -125,6 +131,8 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
         switch ((user as any)?.userType) {
           case "admin":

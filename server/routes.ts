@@ -9,6 +9,10 @@ import { db } from "./db";
 import { z } from "zod";
 
 import calendarRoutes from "./routes/calendar";
+import searchRoutes from "./routes/search";
+import notionRoutes from "./routes/notion";
+import privacyRoutes from "./routes/privacy";
+
 import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
@@ -1136,6 +1140,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Google Calendar integration routes
   app.use('/api/calendar', calendarRoutes);
+  app.use('/api/search', searchRoutes);
+  app.use('/api/integrations/notion', notionRoutes);
+  app.use('/api/privacy', privacyRoutes);
 
   // Profile Management Routes (new unified system)
   app.get('/api/profiles/:accountId', isAuthenticated, async (req: any, res) => {

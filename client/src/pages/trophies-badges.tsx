@@ -64,8 +64,8 @@ const TEAM_TROPHIES = [
 ];
 
 const TROPHY_LIST = [
-  ...LEGACY_TROPHIES.map(t => ({ ...t, kind: 'trophy' })),
-  ...TEAM_TROPHIES.map(t => ({ ...t, kind: 'trophy' })),
+  ...LEGACY_TROPHIES.map(t => ({ ...t, kind: 'trophy' as const })),
+  ...TEAM_TROPHIES.map(t => ({ ...t, kind: 'trophy' as const })),
 ];
 
 const HOF_BADGES = [
@@ -354,7 +354,7 @@ function PanelContent({ earnedFilter, setEarnedFilter, kindFilter, setKindFilter
         {[
           {v:'all', l:'All'}, {v:'hof', l:'HOF'}, {v:'superstar', l:'Superstar'}, {v:'allstar', l:'All-Star'}, {v:'starter', l:'Starter'}, {v:'prospect', l:'Prospect'}
         ].map(o => (
-          <Chip key={o.v} active={badgeTier===o.v} onClick={() => setBadgeTier(o.v)} disabled={kindFilter==='trophies'}>{o.l}</Chip>
+          <Chip key={o.v} active={badgeTier===o.v} onClick={() => setBadgeTier(o.v as BadgeTier)} disabled={kindFilter==='trophies'}>{o.l}</Chip>
         ))}
       </Row>
       <div className="pt-2 text-right">
@@ -375,7 +375,7 @@ export default function TrophiesBadgesPage() {
   useEffect(() => {
     const url = new URL(window.location.href);
     const qUser = url.searchParams.get('userId');
-    const globalUser = window.UYP_USER_ID;
+    const globalUser = (window as any).UYP_USER_ID;
     const userId = (qUser || globalUser || 'me').toLowerCase();
     const endpoint = `/api/user/${userId}/achievements`;
 
@@ -432,9 +432,8 @@ export default function TrophiesBadgesPage() {
   const [, setLocation] = useLocation();
 
   const handleBackClick = () => {
-    // Get the last active tab from localStorage, default to 'activity'
-    const lastTab = localStorage.getItem('playerDashboardTab') || 'activity';
-    setLocation(`/dashboard?tab=${lastTab}`);
+    // Always go to profile tab as requested
+    setLocation(`/dashboard?tab=profile`);
   };
 
   return (
@@ -444,13 +443,12 @@ export default function TrophiesBadgesPage() {
         <div className="flex items-center gap-4 mb-6">
           <button
             onClick={handleBackClick}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/20 bg-white/10 hover:bg-white/20 transition-colors text-white"
+            className="p-2 hover:bg-white/10 transition-colors text-white rounded-lg"
             data-testid="button-back"
           >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
               <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
             </svg>
-            Back
           </button>
           <h1 className="text-2xl font-bold text-white">Trophies & Badges</h1>
         </div>
@@ -477,7 +475,7 @@ export default function TrophiesBadgesPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-start">
               {trophiesFiltered.map(t => (
-                <ItemTile key={`t-${t.slug}`} item={t} achieved={t.achieved} onOpen={() => openOverlay(t)} />
+                <ItemTile key={`t-${t.slug}`} item={t} achieved={t.achieved || false} onOpen={() => openOverlay(t)} />
               ))}
             </div>
           </section>
@@ -492,7 +490,7 @@ export default function TrophiesBadgesPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 items-start">
               {badgesFiltered.map(b => (
-                <ItemTile key={`b-${b.slug}`} item={b} achieved={b.achieved} onOpen={() => openOverlay(b)} />
+                <ItemTile key={`b-${b.slug}`} item={b} achieved={b.achieved || false} onOpen={() => openOverlay(b)} />
               ))}
             </div>
           </section>
@@ -523,7 +521,7 @@ function runTests(){
 
   console.info('%cAll UI tests passed', 'color:#22c55e');
 }
-if (typeof window !== 'undefined' && !window.__UYP_TESTS_RAN) {
+if (typeof window !== 'undefined' && !(window as any).__UYP_TESTS_RAN) {
   try { runTests(); } catch (e) { console.warn('Tests threw:', e); }
-  window.__UYP_TESTS_RAN = true;
+  (window as any).__UYP_TESTS_RAN = true;
 }

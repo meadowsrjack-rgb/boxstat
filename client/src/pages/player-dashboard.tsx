@@ -881,7 +881,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   onClick={() => setLocation("/trophies-badges")}
                   data-testid="trophy-rings-clickable"
                 >
-                  <UypTrophyRings data={ringsData} size={109} stroke={3} />
+                  <UypTrophyRings data={ringsData} size={109} stroke={8} />
                 </div>
               </div>
 

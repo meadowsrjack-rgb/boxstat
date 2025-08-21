@@ -31,7 +31,7 @@ function CircularRingMeter({
   total,
   scheme,
   size = 160,
-  stroke = 12,
+  stroke = 16,
 }: {
   label: string;
   earned: number;
@@ -129,7 +129,7 @@ function CircularRingMeter({
 export default function UypTrophyRings({
   data,
   size = 160,
-  stroke = 12,
+  stroke = 16,
   className,
 }: {
   data: UypRingsData;
@@ -145,6 +145,7 @@ export default function UypTrophyRings({
         gridTemplateColumns: `repeat(3, ${size}px)`,
         gap: 4,
         justifyContent: 'center',
+        padding: '4px',
       }}
     >
       <CircularRingMeter label="Trophies"     earned={data.trophies.earned}   total={data.trophies.total}     scheme={schemes.trophies}   size={size} stroke={stroke} />

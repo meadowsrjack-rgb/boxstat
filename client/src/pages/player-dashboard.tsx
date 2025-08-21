@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 import type { User as UserType, Team, Event } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -497,12 +498,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
-            <div className="relative">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={currentUser.profileImageUrl || currentChild?.profileImageUrl} alt="Player Avatar" />
-                <AvatarFallback className="text-lg font-bold bg-gray-200">{initials}</AvatarFallback>
-              </Avatar>
-            </div>
+            <ProfileAvatarRing
+              src={currentUser.profileImageUrl || currentChild?.profileImageUrl}
+              initials={initials}
+              size={88}
+            />
           </div>
         </div>
 
@@ -884,11 +884,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
 
               {/* Skills Progress */}
-              <div className="p-4">
-                <div className="space-y-4">
-                  <SkillBar label="SHOOTING" value={72} onClick={() => setLocation("/skills")} />
+              {/* Skills section wrapper */}
+              <div className="px-4">
+                <div className="max-w-[520px] mx-auto space-y-4">
+                  <SkillBar label="SHOOTING"  value={72} onClick={() => setLocation("/skills")} />
                   <SkillBar label="DRIBBLING" value={85} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="PASSING" value={68} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="PASSING"   value={68} onClick={() => setLocation("/skills")} />
                 </div>
               </div>
             </div>
@@ -1064,17 +1065,72 @@ function CityTypeahead({ value, onChange }: { value: string; onChange: (v: strin
   );
 }
 
-function SkillBar({ label, value, onClick }: { label: string; value: number; onClick?: () => void }) {
+function ProfileAvatarRing({
+  src,
+  initials,
+  size = 80, // inner avatar size (px)
+}: {
+  src?: string;
+  initials: string;
+  size?: number;
+}) {
   return (
-    <div className="space-y-2 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors" onClick={onClick}>
+    <motion.div
+      className="inline-block rounded-full p-[3px] bg-[conic-gradient(at_50%_50%,#fecaca,#fde8e8,#fecaca)] shadow-sm"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+      whileHover={{ scale: 1.03 }}
+      style={{
+        // outer diameter = inner + padding; p-[3px] adds ~6px total
+        width: size + 6,
+        height: size + 6,
+      }}
+    >
+      <div className="rounded-full overflow-hidden bg-white ring-4 ring-white shadow-md"
+           style={{ width: size, height: size }}>
+        <Avatar className="w-full h-full">
+          <AvatarImage src={src} alt="Player Avatar" />
+          <AvatarFallback className="text-lg font-bold bg-gray-200">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+    </motion.div>
+  );
+}
+
+function SkillBar({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  onClick?: () => void;
+}) {
+  return (
+    <motion.div
+      onClick={onClick}
+      className="space-y-2 cursor-pointer p-2 rounded-lg"
+      whileHover={{ scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+    >
       <div className="flex justify-between text-sm">
         <span className="font-medium text-gray-700">{label}</span>
         <span className="text-red-600 font-semibold">{value}%</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div className="bg-red-600 h-2 rounded-full transition-all duration-300" style={{ width: `${value}%` }} />
+
+      {/* Wider track to visually line up with trophy rings */}
+      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+        <motion.div
+          className="bg-red-600 h-2.5 rounded-full"
+          initial={{ width: 0 }}
+          whileInView={{ width: `${value}%` }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
       </div>
-    </div>
+    </motion.div>
   );
 }
 

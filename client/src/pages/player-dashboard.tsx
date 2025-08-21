@@ -1171,20 +1171,28 @@ function TeamBlock() {
     enabled: !!currentUser.id,
   });
   
-  const { data: searchResults } = useQuery({
+  const { data: searchResults, error: searchError } = useQuery({
     queryKey: ["/api/search/teams", searchQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/search/teams?q=${encodeURIComponent(searchQuery)}`);
+      console.log("Searching for teams with query:", searchQuery);
+      const response = await fetch(`/api/search/teams?q=${encodeURIComponent(searchQuery)}`, {
+        credentials: 'include'
+      });
+      console.log("Search response status:", response.status);
       if (!response.ok) throw new Error('Failed to search teams');
-      return response.json();
+      const data = await response.json();
+      console.log("Search results:", data);
+      return data;
     },
-    enabled: searchQuery.length > 0,
+    enabled: searchQuery.length >= 0, // Show all teams when no query
   });
   
   const { data: teamDetails } = useQuery({
     queryKey: ["/api/search/teams", selectedTeam?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/search/teams/${selectedTeam.id}`);
+      const response = await fetch(`/api/search/teams/${selectedTeam.id}`, {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to fetch team details');
       return response.json();
     },
@@ -1308,12 +1316,18 @@ function TeamBlock() {
             </Card>
           )}
           
-          {searchQuery && (!searchResults?.teams || searchResults.teams.length === 0) && (
-            <div className="text-center py-8 text-gray-500">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p>No teams found matching "{searchQuery}"</p>
+          {searchError && (
+            <div className="text-center py-8 text-red-500">
+              <p>Error searching teams: {searchError.message}</p>
             </div>
           )}
+          
+          {!searchResults?.teams || (searchResults.teams.length === 0 && !searchError) ? (
+            <div className="text-center py-8 text-gray-500">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p>{searchQuery ? `No teams found matching "${searchQuery}"` : "No teams found"}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 

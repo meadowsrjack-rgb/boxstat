@@ -171,7 +171,10 @@ export const attendances = pgTable("attendances", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   eventId: integer("event_id").references(() => events.id).notNull(),
   checkedInAt: timestamp("checked_in_at").defaultNow(),
-  qrCodeData: varchar("qr_code_data").notNull(),
+  qrCodeData: varchar("qr_code_data"),
+  type: varchar("type", { enum: ["advance", "onsite"] }).default("advance"),
+  latitude: real("latitude"),
+  longitude: real("longitude"),
 });
 
 export const badges = pgTable("badges", {
@@ -586,6 +589,10 @@ export type AnnouncementAcknowledgment = typeof announcementAcknowledgments.$inf
 export type TeamMessage = typeof teamMessages.$inferSelect;
 export type PlayerTask = typeof playerTasks.$inferSelect;
 export type PlayerPoints = typeof playerPoints.$inferSelect;
+
+// CheckIn is an alias for Attendance for checkin functionality
+export type CheckIn = typeof attendances.$inferSelect;
+export type InsertCheckIn = z.infer<typeof insertAttendanceSchema>;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

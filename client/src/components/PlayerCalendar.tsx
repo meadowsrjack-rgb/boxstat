@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { CheckIn } from "@shared/schema";
 
 type UypEvent = {
   id: string;
@@ -12,13 +16,187 @@ type UypEvent = {
 interface PlayerCalendarProps {
   events: UypEvent[];
   className?: string;
+  currentUser: { id: string; email: string; firstName?: string; lastName?: string };
 }
 
-export default function PlayerCalendar({ events, className = "" }: PlayerCalendarProps) {
+export default function PlayerCalendar({ events, className = "", currentUser }: PlayerCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
+  const [limit, setLimit] = useState<{ open: boolean; title: string; body: string }>({ open: false, title: "", body: "" });
+  
+  const { toast } = useToast();
+
+  // Constants for time windows
+  const MS = { HOUR: 60 * 60 * 1000, MIN: 60 * 1000 };
+  const RSVP_OPEN_HOURS = 48;
+  const RSVP_CLOSE_HOURS = 8;
+  const ONSITE_OPEN_HOURS = 3;
+
+  // Helper functions for time windows
+  const isRsvpWindow = (start: Date, now = new Date()) => {
+    const t = start.getTime(), n = now.getTime();
+    return n >= t - RSVP_OPEN_HOURS * MS.HOUR && n <= t - RSVP_CLOSE_HOURS * MS.HOUR;
+  };
+  
+  const isOnsiteWindow = (start: Date, now = new Date()) => {
+    const t = start.getTime(), n = now.getTime();
+    return n >= t - ONSITE_OPEN_HOURS * MS.HOUR && n <= t;
+  };
+
+  // Checkins query
+  const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
+    queryKey: ["/api/checkins", currentUser.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/checkins?userId=${currentUser.id}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!currentUser.id,
+    staleTime: 30_000,
+  });
+
+  // Checkin mutation
+  const createCheckInMutation = useMutation({
+    mutationFn: async (payload: { eventId: string | number; type: "advance" | "onsite"; lat?: number; lng?: number }) => {
+      const res = await apiRequest("POST", `/api/checkins`, { ...payload, userId: currentUser.id });
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
+      toast({ title: "Checked in", description: "We recorded your check-in." });
+    },
+    onError: (e: any) =>
+      toast({
+        title: "Check-in failed",
+        description: e instanceof Error ? e.message : "Please try again.",
+        variant: "destructive",
+      }),
+  });
+
+  // Organize checkins by event
+  const checkinByEvent = useMemo(() => {
+    const map = new Map<string | number, { advance?: CheckIn; onsite?: CheckIn }>();
+    for (const c of checkins) {
+      const entry = map.get(c.eventId) || {};
+      if (c.type === "advance") entry.advance = c;
+      if (c.type === "onsite") entry.onsite = c;
+      map.set(c.eventId, entry);
+    }
+    return map;
+  }, [checkins]);
+
+  // Icon components from the attached file
+  const IconMailX = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      <path d="m17 17 4 4" />
+      <path d="m21 17-4 4" />
+    </svg>
+  );
+  
+  const IconMailCheck = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      <path d="m16 19 2 2 4-4" />
+    </svg>
+  );
+  
+  const IconCircleX = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6" />
+      <path d="m9 9 6 6" />
+    </svg>
+  );
+  
+  const IconCircleCheck = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+
+  // Helper components
+  const IconChip = ({
+    colorClass,
+    disabled,
+    onClick,
+    title,
+    children,
+  }: {
+    colorClass: string;
+    disabled?: boolean;
+    onClick?: () => void;
+    title?: string;
+    children: React.ReactNode;
+  }) => (
+    <button
+      type="button"
+      title={title}
+      onClick={disabled ? undefined : onClick}
+      className={[
+        "relative grid place-items-center h-11 w-11 rounded-xl",
+        "bg-white ring-1 ring-black/5 shadow-sm transition-all",
+        "hover:shadow-md hover:-translate-y-0.5 active:scale-95",
+        disabled ? "opacity-45 cursor-not-allowed" : "cursor-pointer",
+        "after:absolute after:inset-0 after:rounded-xl after:opacity-0 after:transition-opacity",
+        "after:bg-[radial-gradient(ellipse_at_center,rgba(216,36,40,0.08),transparent_60%)]",
+        "hover:after:opacity-100",
+      ].join(" ")}
+      aria-disabled={disabled}
+      data-testid={`icon-chip-${title?.toLowerCase().replace(/\s+/g, '-')}`}
+    >
+      <span className={["pointer-events-none", colorClass].join(" ")}>{children}</span>
+    </button>
+  );
+
+  const Badge = ({ children }: { children: React.ReactNode }) => (
+    <span className="inline-flex items-center rounded-md bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-semibold">
+      {children}
+    </span>
+  );
+
+  const Modal = ({ open, title, body, onClose }: { open: boolean; title: string; body: string; onClose: () => void }) => {
+    if (!open) return null;
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-[1px] z-50 grid place-items-center p-4">
+        <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-5">
+          <div className="text-base font-bold">{title}</div>
+          <div className="text-sm text-gray-600 mt-1">{body}</div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm hover:bg-gray-800"
+              data-testid="modal-close-button"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const formatEventHeader = (d: Date) => {
+    try {
+      const date = d.toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      const time = d.toLocaleString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+      return `${date} • ${time}`;
+    } catch {
+      return d.toISOString();
+    }
+  };
 
   // Get events for selected date
   const eventsForSelectedDate = useMemo(() => {
@@ -114,32 +292,117 @@ export default function PlayerCalendar({ events, className = "" }: PlayerCalenda
 
   return (
     <div className={`bg-white rounded-3xl shadow-2xl overflow-hidden ${className}`}>
-      {/* Today's Events Section */}
+      {/* Today Section */}
       <div className="px-5 py-4 border-b border-gray-100">
-        <div className="font-semibold text-gray-800 text-lg mb-3">
-          Today's Events
-        </div>
-        <div>
+        <h3 className="text-lg font-bold text-gray-900 mb-3" data-testid="today-header">Today</h3>
+        
+        <div className="space-y-3">
           {events.filter(event => 
             isSameDay(new Date(event.startTime), new Date())
           ).length > 0 ? (
             events
               .filter(event => isSameDay(new Date(event.startTime), new Date()))
-              .map(event => (
-                <div 
-                  key={event.id} 
-                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
-                >
-                  <div className="text-xs text-gray-600 font-medium">
-                    {formatEventTime(event.startTime)}
+              .map(event => {
+                const start = new Date(event.startTime);
+                const check = checkinByEvent.get(event.id) || {};
+                const advanceDone = !!check.advance;
+                const onsiteDone = !!check.onsite;
+
+                const canRsvp = isRsvpWindow(start);
+                const canOnsite = isOnsiteWindow(start);
+
+                const handleRsvp = () => {
+                  if (!canRsvp) {
+                    setLimit({
+                      open: true,
+                      title: "RSVP not available",
+                      body: "You can RSVP from 48 hours before tip-off until 8 hours before start.",
+                    });
+                    return;
+                  }
+                  if (!advanceDone) {
+                    createCheckInMutation.mutate({ eventId: event.id, type: "advance" });
+                  }
+                };
+
+                const handleOnsite = () => {
+                  if (!canOnsite) {
+                    setLimit({
+                      open: true,
+                      title: "On-site check-in locked",
+                      body: "Opens 3 hours before start and closes at tip-off. Must be at the venue (GPS).",
+                    });
+                    return;
+                  }
+                  if (!onsiteDone) {
+                    // Get GPS location for onsite checkin
+                    if (!("geolocation" in navigator)) {
+                      toast({
+                        title: "GPS not supported",
+                        description: "Your device does not support location services.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                      (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        createCheckInMutation.mutate({ 
+                          eventId: event.id, 
+                          type: "onsite", 
+                          lat: latitude, 
+                          lng: longitude 
+                        });
+                      },
+                      (err) => {
+                        toast({
+                          title: "Location denied",
+                          description: "Enable location permissions to complete on-site check-in.",
+                          variant: "destructive",
+                        });
+                        console.error(err);
+                      },
+                      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                    );
+                  }
+                };
+
+                return (
+                  <div key={event.id} className="p-3 bg-white rounded-lg shadow-sm" data-testid={`event-card-${event.id}`}>
+                    {/* One-line header on mobile */}
+                    <div className="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap overflow-hidden">
+                      <Badge>{event.eventType || "Event"}</Badge>
+                      <span className="shrink-0">{formatEventHeader(start)}</span>
+                      <span className="mx-1 text-gray-300">•</span>
+                      <span className="truncate">{event.title}</span>
+                    </div>
+
+                    {/* Icon-only actions */}
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+                      <IconChip
+                        title={advanceDone ? "RSVP'd" : "RSVP"}
+                        colorClass={advanceDone ? "text-green-600" : "text-red-600"}
+                        disabled={advanceDone}
+                        onClick={handleRsvp}
+                      >
+                        {advanceDone ? <IconMailCheck className="w-6 h-6" /> : <IconMailX className="w-6 h-6" />}
+                      </IconChip>
+
+                      <IconChip
+                        title={onsiteDone ? "Checked in" : "On-site check-in"}
+                        colorClass={onsiteDone ? "text-green-600" : "text-red-600"}
+                        disabled={onsiteDone}
+                        onClick={handleOnsite}
+                      >
+                        {onsiteDone ? <IconCircleCheck className="w-6 h-6" /> : <IconCircleX className="w-6 h-6" />}
+                      </IconChip>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-800 font-semibold mt-1">
-                    {event.title || "Event"}
-                  </div>
-                </div>
-              ))
+                );
+              })
           ) : (
-            <div className="text-center text-gray-400 py-3">
+            <div className="text-center text-gray-400 py-3" data-testid="no-events-today">
               No events for today
             </div>
           )}
@@ -240,6 +503,14 @@ export default function PlayerCalendar({ events, className = "" }: PlayerCalenda
           )}
         </div>
       </div>
+
+      {/* Overlay Modal */}
+      <Modal 
+        open={limit.open} 
+        title={limit.title} 
+        body={limit.body} 
+        onClose={() => setLimit({ open: false, title: "", body: "" })} 
+      />
     </div>
   );
 }

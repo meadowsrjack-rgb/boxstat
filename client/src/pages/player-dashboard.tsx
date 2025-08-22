@@ -663,7 +663,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="px-6">
           {/* Activity */}
           {activeTab === "activity" && (
-            <PlayerCalendar events={relevantEvents} className="-mx-6" />
+            <PlayerCalendar events={relevantEvents} className="-mx-6" currentUser={currentUser} />
           )}
 
           {/* Activity Original (commented out) */}

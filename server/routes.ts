@@ -1752,6 +1752,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Checkins API endpoints
+  app.get('/api/checkins', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.query.userId || req.user.claims.sub;
+      const checkins = await storage.getUserAttendances(userId);
+      res.json(checkins);
+    } catch (error) {
+      console.error("Error fetching checkins:", error);
+      res.status(500).json({ message: "Failed to fetch checkins" });
+    }
+  });
+
+  app.post('/api/checkins', isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, type, lat, lng } = req.body;
+      const userId = req.body.userId || req.user.claims.sub;
+      
+      const checkinData = {
+        userId,
+        eventId: parseInt(eventId),
+        type: type || "advance",
+        latitude: lat,
+        longitude: lng,
+        qrCodeData: `UYP-CHECKIN-${userId}-${eventId}-${Date.now()}`,
+      };
+      
+      const checkin = await storage.createAttendance(checkinData);
+      res.json(checkin);
+    } catch (error) {
+      console.error("Error creating checkin:", error);
+      res.status(500).json({ message: "Failed to create checkin" });
+    }
+  });
+
   // Mount new route modules
   app.use('/api/calendar', calendarRoutes);
   app.use('/api/search', searchRoutes);

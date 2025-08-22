@@ -319,12 +319,19 @@ function ProfileSection() {
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
-      // Map location to address for database compatibility
-      const dbPayload = {
-        ...payload,
-        address: payload.location,
+      // Map frontend fields to database column names
+      const dbPayload: any = {
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        address: payload.location, // location -> address
+        position: payload.position,
+        jerseyNumber: payload.jerseyNumber ? parseInt(payload.jerseyNumber) : null, // Convert to integer
       };
-      delete dbPayload.location;
+      
+      // Skip fields that don't exist in database schema
+      // teamName -> teamId (would need team lookup)
+      // age -> dateOfBirth (would need calculation)  
+      // height -> not in schema
       
       const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
         method: "PATCH",
@@ -335,8 +342,21 @@ function ProfileSection() {
       if (!res.ok) throw new Error("Failed to save profile");
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
       toast({ title: "Profile updated", description: "Changes saved successfully." });
+      // Update the form state with the returned data to keep input values
+      if (updatedUser) {
+        setEditableProfile({
+          firstName: updatedUser.firstName || "",
+          lastName: updatedUser.lastName || "",
+          teamName: updatedUser.teamName || "",
+          age: updatedUser.age || "",
+          height: updatedUser.height || "",
+          location: updatedUser.address || "",
+          position: updatedUser.position || "",
+          jerseyNumber: updatedUser.jerseyNumber || "",
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as UserType)?.id] });
     },

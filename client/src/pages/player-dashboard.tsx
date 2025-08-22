@@ -161,7 +161,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         teamName: currentUser.teamName || "",
         age: currentUser.age || "",
         height: currentUser.height || "",
-        location: currentUser.location || "",
+        location: currentUser.address || "",
         position: currentUser.position || "",
         jerseyNumber: currentUser.jerseyNumber || "",
       }));

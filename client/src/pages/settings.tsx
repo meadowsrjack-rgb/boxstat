@@ -296,7 +296,7 @@ function ProfileSection() {
     teamName: (user as UserType)?.teamName || "",
     age: (user as UserType)?.age || "",
     height: (user as UserType)?.height || "",
-    location: (user as UserType)?.location || "",
+    location: (user as UserType)?.address || "",
     position: (user as UserType)?.position || "",
     jerseyNumber: (user as UserType)?.jerseyNumber || "",
   });
@@ -310,7 +310,7 @@ function ProfileSection() {
         teamName: (user as UserType)?.teamName || "",
         age: (user as UserType)?.age || "",
         height: (user as UserType)?.height || "",
-        location: (user as UserType)?.location || "",
+        location: (user as UserType)?.address || "",
         position: (user as UserType)?.position || "",
         jerseyNumber: (user as UserType)?.jerseyNumber || "",
       });
@@ -319,11 +319,18 @@ function ProfileSection() {
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
+      // Map location to address for database compatibility
+      const dbPayload = {
+        ...payload,
+        address: payload.location,
+      };
+      delete dbPayload.location;
+      
       const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(dbPayload),
       });
       if (!res.ok) throw new Error("Failed to save profile");
       return res.json();

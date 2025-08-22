@@ -298,7 +298,7 @@ function ProfileSection() {
     height: (user as UserType)?.height || "",
     location: (user as UserType)?.address || "",
     position: (user as UserType)?.position || "",
-    jerseyNumber: (user as UserType)?.jerseyNumber || "",
+    jerseyNumber: (user as UserType)?.jerseyNumber?.toString() || "",
   });
 
   // Update editable profile when user data changes
@@ -312,7 +312,7 @@ function ProfileSection() {
         height: (user as UserType)?.height || "",
         location: (user as UserType)?.address || "",
         position: (user as UserType)?.position || "",
-        jerseyNumber: (user as UserType)?.jerseyNumber || "",
+        jerseyNumber: (user as UserType)?.jerseyNumber?.toString() || "",
       });
     }
   }, [user]);
@@ -324,14 +324,12 @@ function ProfileSection() {
         firstName: payload.firstName,
         lastName: payload.lastName,
         address: payload.location, // location -> address
+        teamName: payload.teamName,
+        age: payload.age,
+        height: payload.height,
         position: payload.position,
         jerseyNumber: payload.jerseyNumber ? parseInt(payload.jerseyNumber) : null, // Convert to integer
       };
-      
-      // Skip fields that don't exist in database schema
-      // teamName -> teamId (would need team lookup)
-      // age -> dateOfBirth (would need calculation)  
-      // height -> not in schema
       
       const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
         method: "PATCH",
@@ -354,7 +352,7 @@ function ProfileSection() {
           height: updatedUser.height || "",
           location: updatedUser.address || "",
           position: updatedUser.position || "",
-          jerseyNumber: updatedUser.jerseyNumber || "",
+          jerseyNumber: updatedUser.jerseyNumber?.toString() || "",
         });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

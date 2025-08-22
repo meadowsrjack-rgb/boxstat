@@ -163,7 +163,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         height: currentUser.height || "",
         location: currentUser.address || "",
         position: currentUser.position || "",
-        jerseyNumber: currentUser.jerseyNumber || "",
+        jerseyNumber: currentUser.jerseyNumber?.toString() || "",
       }));
     }
   }, [currentUser]);
@@ -942,10 +942,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             >
                               <Gauge className="h-4 w-4" />
                             </span>
-                            <span>YEAR</span>
+                            <span>AGE</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.age ? new Date().getFullYear() - parseInt(editableProfile.age) : "2005"}
+                            {editableProfile.age || "16"}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

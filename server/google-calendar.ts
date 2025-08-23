@@ -152,22 +152,37 @@ function determineEventType(summary: string, description: string): string {
 function extractTeamId(summary: string, description: string): number | null {
   const text = `${summary} ${description}`.toLowerCase();
   
-  // Look for age group patterns
+  // Look for specific age group + color patterns (new format)
+  if (text.includes('9u black') || text.includes('9u-black') || text.includes('9ublack')) {
+    return 6; // 9U Black
+  }
+  
+  // Look for age group patterns (legacy format)
   if (text.includes('u10') || text.includes('under 10') || text.includes('10u')) {
-    return 1; // U10 Warriors
+    return 1; // U10 Thunder
   } else if (text.includes('u12') || text.includes('under 12') || text.includes('12u')) {
     return 2; // U12 Lightning  
   } else if (text.includes('u14') || text.includes('under 14') || text.includes('14u')) {
-    return 3; // U14 Thunder
+    return 3; // U14 Storm
+  } else if (text.includes('u16') || text.includes('under 16') || text.includes('16u')) {
+    return 4; // U16 Hurricanes
+  } else if (text.includes('u18') || text.includes('under 18') || text.includes('18u')) {
+    return 5; // U18 Tornadoes
   }
   
-  // Look for specific team names
-  if (text.includes('warriors')) {
+  // Look for specific team names (legacy format)
+  if (text.includes('thunder')) {
     return 1;
   } else if (text.includes('lightning')) {
     return 2;
-  } else if (text.includes('thunder')) {
+  } else if (text.includes('storm')) {
     return 3;
+  } else if (text.includes('hurricanes')) {
+    return 4;
+  } else if (text.includes('tornadoes')) {
+    return 5;
+  } else if (text.includes('black') && (text.includes('9u') || text.includes('9 u'))) {
+    return 6; // 9U Black (alternative pattern)
   }
   
   return null; // League-wide event

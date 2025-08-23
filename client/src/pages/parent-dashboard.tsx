@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -12,12 +13,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Search,
   Calendar as CalendarIcon,
   Users,
   Megaphone,
   Trash2,
+  ChevronDown,
+  Lock,
+  UserCheck,
 } from "lucide-react";
 
 // ==============================
@@ -48,6 +53,16 @@ type Announcement = {
   content: string;
   createdAt: string;
   audience: "All" | "Parents" | "Coaches" | "Players" | "Team";
+};
+
+type Profile = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  profileType: "player" | "parent" | "coach";
+  teamName?: string;
+  jerseyNumber?: number;
+  hasPasscode?: boolean;
 };
 
 // API adapter functions to work with existing endpoints
@@ -153,9 +168,189 @@ function EmptyState({ icon: Icon, title, hint }: { icon: any; title: string; hin
 }
 
 // ==============================
+// Profile Switcher Component
+// ==============================
+function ProfileSwitcher() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const [, setLocation] = useLocation();
+  const [showProfiles, setShowProfiles] = useState(false);
+  const [passcodeDialogOpen, setPasscodeDialogOpen] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [passcode, setPasscode] = useState("");
+
+  const { data: profiles = [] } = useQuery<Profile[]>({
+    queryKey: [`/api/profiles/${user?.id}`],
+    enabled: !!user && !!user.id,
+  });
+
+  const verifyPasscodeMutation = useMutation({
+    mutationFn: async ({ profileId, passcode }: { profileId: string; passcode: string }) => {
+      if (!user?.id) throw new Error("User not authenticated");
+      return await jsonFetch(`/api/users/${user.id}/verify-passcode`, {
+        method: "POST",
+        body: JSON.stringify({ passcode }),
+      });
+    },
+    onSuccess: (data: any, variables) => {
+      if (data.verified) {
+        selectProfileMutation.mutate(variables.profileId);
+        setPasscodeDialogOpen(false);
+        setPasscode("");
+        setSelectedProfileId(null);
+      }
+    },
+  });
+
+  const selectProfileMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      return await jsonFetch(`/api/profiles/${profileId}/select`, { method: "POST" });
+    },
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      const profileType = data?.profileType as Profile["profileType"];
+      if (profileType === "player") setLocation("/player-dashboard");
+      else if (profileType === "coach") setLocation("/coach-dashboard");
+      else setLocation("/parent-dashboard");
+      setShowProfiles(false);
+    },
+  });
+
+  const handleSelectProfile = async (profileId: string) => {
+    const profile = profiles.find(p => p.id === profileId);
+    if (!profile) return;
+
+    setSelectedProfileId(profileId);
+    
+    if (profile.hasPasscode) {
+      setPasscodeDialogOpen(true);
+    } else {
+      selectProfileMutation.mutate(profileId);
+    }
+  };
+
+  const handlePasscodeSubmit = () => {
+    if (selectedProfileId && passcode.length === 4) {
+      verifyPasscodeMutation.mutate({ profileId: selectedProfileId, passcode });
+    }
+  };
+
+  const currentProfile = profiles.find(p => p.profileType === "parent");
+
+  return (
+    <>
+      <div className="relative">
+        <Button
+          variant="ghost"
+          className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/50"
+          onClick={() => setShowProfiles(!showProfiles)}
+        >
+          <div className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            <span className="text-sm">{currentProfile ? `${currentProfile.firstName} ${currentProfile.lastName}` : "Parent"}</span>
+            <ChevronDown className="h-4 w-4" />
+          </div>
+        </Button>
+
+        {showProfiles && (
+          <div className="absolute right-0 top-12 w-80 rounded-xl bg-slate-900 border border-white/10 shadow-xl z-50">
+            <div className="p-3 border-b border-white/10">
+              <h4 className="font-semibold text-sm text-white">Switch Profile</h4>
+              <p className="text-xs text-slate-400">Select a profile to access</p>
+            </div>
+            <div className="p-2 space-y-1">
+              {profiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  onClick={() => handleSelectProfile(profile.id)}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-sky-500 flex items-center justify-center text-white font-semibold">
+                    {profile.profileType === "player" ? "🏀" : profile.profileType === "coach" ? "👨‍🏫" : "👤"}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">
+                      {profile.firstName} {profile.lastName}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={
+                          profile.profileType === "player" 
+                            ? "bg-red-600/20 text-red-100 border-red-600/20" 
+                            : "bg-slate-600/20 text-slate-100 border-slate-600/20"
+                        }
+                      >
+                        {profile.profileType.charAt(0).toUpperCase() + profile.profileType.slice(1)}
+                      </Badge>
+                      {profile.hasPasscode && <Lock className="h-3 w-3 text-slate-400" />}
+                    </div>
+                    {profile.teamName && (
+                      <p className="text-xs text-slate-400">{profile.teamName}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={passcodeDialogOpen} onOpenChange={setPasscodeDialogOpen}>
+        <DialogContent className="border-white/10 bg-slate-900 text-slate-100">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <Lock className="h-5 w-5" />
+              Enter Passcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-slate-300 text-sm">
+              This profile is protected with a 4-digit passcode.
+            </p>
+            <Input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Enter 4-digit passcode"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              maxLength={4}
+              className="bg-slate-800/60 border-white/10 text-white placeholder:text-slate-500 text-center text-2xl tracking-widest"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setPasscodeDialogOpen(false);
+                setPasscode("");
+                setSelectedProfileId(null);
+              }}
+              className="text-slate-300 hover:text-white hover:bg-slate-800/50"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePasscodeSubmit}
+              disabled={passcode.length !== 4 || verifyPasscodeMutation.isPending}
+              className="bg-sky-600 hover:bg-sky-500"
+            >
+              {verifyPasscodeMutation.isPending ? "Verifying..." : "Continue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// ==============================
 // Parent Dashboard
 // ==============================
 export default function ParentDashboard() {
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
   const [notify, setNotify] = useState(true);
@@ -163,16 +358,19 @@ export default function ParentDashboard() {
   const followedPlayersQ = useQuery<Player[]>({
     queryKey: ["parent","follows"],
     queryFn: () => jsonFetch(API.parents.followedPlayers),
+    enabled: !!user && !!user.id,
   });
 
   const eventsQ = useQuery<UypEvent[]>({
     queryKey: ["parent","events"],
     queryFn: () => jsonFetch(API.parents.events),
+    enabled: !!user && !!user.id,
   });
 
   const announcementsQ = useQuery<Announcement[]>({
     queryKey: ["parent","announcements"],
     queryFn: () => jsonFetch(API.parents.announcements),
+    enabled: !!user && !!user.id,
   });
 
   const searchQ = useQuery<Player[]>({
@@ -201,7 +399,21 @@ export default function ParentDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl p-4 md:p-8">
-      <GradientHeader title="Parent Dashboard" subtitle="Follow your players and never miss an event." />
+      {/* Header with Profile Switcher */}
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-sky-600 to-teal-500 p-[1px] shadow-lg">
+        <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-900/60 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-white">Parent Dashboard</h1>
+              <p className="mt-1 text-sm text-slate-300">Follow your players and never miss an event.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <ProfileSwitcher />
+              <CalendarIcon className="h-7 w-7 text-slate-200" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Top Stats */}
       <div className="mb-6 flex flex-wrap gap-2">

@@ -61,6 +61,7 @@ export const profiles = pgTable("profiles", {
   parentalConsent: boolean("parental_consent").default(false),
   profileCompleted: boolean("profile_completed").default(false),
   qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
+  passcode: varchar("passcode", { length: 4 }), // 4-digit PIN for profile switching
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -93,6 +94,7 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
+  passcode: varchar("passcode", { length: 4 }), // 4-digit PIN for profile switching
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -35,6 +35,8 @@ import {
   ShieldCheck,
   MapPin,
   ExternalLink,
+  Users,
+  Lock,
 } from "lucide-react";
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -276,6 +278,148 @@ function TwoFADialog({ open, onOpenChange }: { open: boolean; onOpenChange: (b: 
             Close
           </Button>
           <Button onClick={() => mutate.mutate(enabled)}>{enabled ? "Enable" : "Disable"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PasscodeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (b: boolean) => void }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [passcode, setPasscode] = useState("");
+  const [confirmPasscode, setConfirmPasscode] = useState("");
+  const [hasPasscode, setHasPasscode] = useState(false);
+
+  // Check if user already has a passcode
+  useEffect(() => {
+    if (user && (user as UserType)?.passcode) {
+      setHasPasscode(true);
+    }
+  }, [user]);
+
+  const handleInputChange = (value: string, setter: (val: string) => void) => {
+    // Only allow digits and limit to 4 characters
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    setter(digits);
+  };
+
+  const mutate = useMutation({
+    mutationFn: async () => {
+      if (passcode.length !== 4) {
+        throw new Error("Passcode must be 4 digits");
+      }
+      if (passcode !== confirmPasscode) {
+        throw new Error("Passcodes do not match");
+      }
+      
+      const res = await fetch(`/api/users/${(user as UserType)?.id}/passcode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ passcode }),
+      });
+      if (!res.ok) throw new Error("Failed to set passcode");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Passcode set", description: "Your 4-digit passcode has been saved." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setPasscode("");
+      setConfirmPasscode("");
+      setHasPasscode(true);
+      onOpenChange(false);
+    },
+    onError: (e) => toast({ title: "Could not set passcode", description: String(e), variant: "destructive" }),
+  });
+
+  const removePasscode = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/users/${(user as UserType)?.id}/passcode`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to remove passcode");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Passcode removed", description: "Your passcode has been removed." });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setHasPasscode(false);
+      onOpenChange(false);
+    },
+    onError: (e) => toast({ title: "Could not remove passcode", description: String(e), variant: "destructive" }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Profile Passcode</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            {hasPasscode 
+              ? "You have a passcode set for profile switching. You can update it or remove it."
+              : "Set a 4-digit passcode to secure profile switching. You'll need to enter this code when switching between profiles."
+            }
+          </p>
+          
+          {!hasPasscode && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Passcode</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Enter 4 digits"
+                  value={passcode}
+                  onChange={(e) => handleInputChange(e.target.value, setPasscode)}
+                  maxLength={4}
+                  data-testid="input-passcode"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirm Passcode</label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  placeholder="Enter 4 digits again"
+                  value={confirmPasscode}
+                  onChange={(e) => handleInputChange(e.target.value, setConfirmPasscode)}
+                  maxLength={4}
+                  data-testid="input-confirm-passcode"
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          {hasPasscode ? (
+            <Button 
+              variant="destructive" 
+              onClick={() => removePasscode.mutate()}
+              disabled={removePasscode.isPending}
+              data-testid="button-remove-passcode"
+            >
+              {removePasscode.isPending ? "Removing..." : "Remove Passcode"}
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => mutate.mutate()} 
+              disabled={mutate.isPending || passcode.length !== 4 || confirmPasscode.length !== 4}
+              data-testid="button-set-passcode"
+            >
+              {mutate.isPending ? "Setting..." : "Set Passcode"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -604,6 +748,12 @@ function SecuritySection() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [twofaOpen, setTwofaOpen] = useState(false);
+  const [passcodeOpen, setPasscodeOpen] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const handleSwitchProfile = () => {
+    setLocation('/profile-selection');
+  };
 
   return (
     <div className="space-y-6">
@@ -611,6 +761,8 @@ function SecuritySection() {
 
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
+          <ActionRow icon={Users} title="Switch Profile" action={<Button variant="outline" onClick={handleSwitchProfile}>Switch</Button>} />
+          <ActionRow icon={Lock} title="Profile Passcode" action={<Button variant="outline" onClick={() => setPasscodeOpen(true)}>Set</Button>} />
           <ActionRow icon={Mail} title="Change email" action={<Button variant="outline" onClick={() => setEmailOpen(true)}>Update</Button>} />
           <ActionRow icon={Key} title="Change password" action={<Button variant="outline" onClick={() => setPwOpen(true)}>Update</Button>} />
           <ActionRow icon={Fingerprint} title="Two-factor authentication (2FA)" action={<Button variant="outline" onClick={() => setTwofaOpen(true)}>Manage</Button>} />
@@ -621,6 +773,7 @@ function SecuritySection() {
       <ChangeEmailDialog open={emailOpen} onOpenChange={setEmailOpen} />
       <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
       <TwoFADialog open={twofaOpen} onOpenChange={setTwofaOpen} />
+      <PasscodeDialog open={passcodeOpen} onOpenChange={setPasscodeOpen} />
     </div>
   );
 }

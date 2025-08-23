@@ -92,6 +92,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Passcode management routes
+  app.post('/api/users/:id/passcode', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = req.user.claims.sub;
+      const { passcode } = req.body;
+      
+      // Ensure user can only set their own passcode
+      if (userId !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Validate passcode format
+      if (!passcode || passcode.length !== 4 || !/^\d{4}$/.test(passcode)) {
+        return res.status(400).json({ message: "Passcode must be exactly 4 digits" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, { passcode });
+      res.json({ message: "Passcode set successfully" });
+    } catch (error) {
+      console.error("Error setting passcode:", error);
+      res.status(500).json({ message: "Failed to set passcode" });
+    }
+  });
+
+  app.delete('/api/users/:id/passcode', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = req.user.claims.sub;
+      
+      // Ensure user can only remove their own passcode
+      if (userId !== currentUserId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, { passcode: null });
+      res.json({ message: "Passcode removed successfully" });
+    } catch (error) {
+      console.error("Error removing passcode:", error);
+      res.status(500).json({ message: "Failed to remove passcode" });
+    }
+  });
+
+  app.post('/api/users/:id/verify-passcode', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id;
+      const currentUserId = req.user.claims.sub;
+      const { passcode } = req.body;
+      
+      // Allow checking any user's passcode for profile switching
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // If user has no passcode set, verification passes
+      if (!user.passcode) {
+        return res.json({ verified: true });
+      }
+      
+      // Verify passcode matches
+      const verified = user.passcode === passcode;
+      res.json({ verified });
+    } catch (error) {
+      console.error("Error verifying passcode:", error);
+      res.status(500).json({ message: "Failed to verify passcode" });
+    }
+  });
+
   app.get('/api/users/:id/trophies', isAuthenticated, async (req: any, res) => {
     try {
       const trophies = await storage.getUserTrophies(req.params.id);

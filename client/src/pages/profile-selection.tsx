@@ -3,8 +3,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, User as UserIcon } from "lucide-react";
-import { useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, User as UserIcon, Lock } from "lucide-react";
+import { useMemo, useState } from "react";
 
 type Profile = {
   id: string;
@@ -20,10 +24,47 @@ export default function ProfileSelection() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [passcodeDialogOpen, setPasscodeDialogOpen] = useState(false);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [passcode, setPasscode] = useState("");
 
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
     queryKey: [`/api/profiles/${user?.id}`],
     enabled: !!user?.id,
+  });
+
+  const verifyPasscodeMutation = useMutation({
+    mutationFn: async ({ profileId, passcode }: { profileId: string; passcode: string }) => {
+      return await apiRequest(`/api/users/${profileId}/verify-passcode`, {
+        method: "POST",
+        body: JSON.stringify({ passcode }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: (data: any, variables) => {
+      if (data.verified) {
+        // Passcode verified, proceed with profile selection
+        selectProfileMutation.mutate(variables.profileId);
+        setPasscodeDialogOpen(false);
+        setPasscode("");
+        setSelectedProfileId(null);
+      } else {
+        toast({
+          title: "Incorrect Passcode",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error: any) => {
+      console.error("Passcode verification failed:", error);
+      toast({
+        title: "Verification Failed",
+        description: "Could not verify passcode. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const selectProfileMutation = useMutation({
@@ -48,7 +89,44 @@ export default function ProfileSelection() {
   });
 
   const handleCreateProfile = () => setLocation("/create-profile");
-  const handleSelectProfile = (id: string) => selectProfileMutation.mutate(id);
+  
+  const handleSelectProfile = async (id: string) => {
+    // First, try to verify passcode (this will succeed if no passcode is set)
+    setSelectedProfileId(id);
+    
+    try {
+      const verificationResult = await apiRequest(`/api/users/${id}/verify-passcode`, {
+        method: "POST",
+        body: JSON.stringify({ passcode: "" }),
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      if (verificationResult.verified) {
+        // No passcode required, proceed directly
+        selectProfileMutation.mutate(id);
+      } else {
+        // Passcode required, show dialog
+        setPasscodeDialogOpen(true);
+      }
+    } catch (error) {
+      console.error("Error checking passcode requirement:", error);
+      // Fallback: assume passcode is required
+      setPasscodeDialogOpen(true);
+    }
+  };
+
+  const handlePasscodeSubmit = () => {
+    if (selectedProfileId && passcode.length === 4) {
+      verifyPasscodeMutation.mutate({ profileId: selectedProfileId, passcode });
+    }
+  };
+
+  const handleInputChange = (value: string) => {
+    // Only allow digits and limit to 4 characters
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    setPasscode(digits);
+  };
+
   const lastIsOdd = useMemo(() => profiles.length % 2 === 1, [profiles.length]);
 
   if (isLoading) {
@@ -165,6 +243,60 @@ export default function ProfileSelection() {
           </>
         )}
       </main>
+
+      {/* Passcode Dialog */}
+      <Dialog open={passcodeDialogOpen} onOpenChange={setPasscodeDialogOpen}>
+        <DialogContent className="bg-black/95 border border-white/20 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <Lock className="h-5 w-5" />
+              Enter Passcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-white/70 text-sm">
+              This profile is protected with a 4-digit passcode.
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="Enter 4-digit passcode"
+                value={passcode}
+                onChange={(e) => handleInputChange(e.target.value)}
+                maxLength={4}
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 text-center text-2xl tracking-widest"
+                style={{ letterSpacing: '0.5em' }}
+                data-testid="input-profile-passcode"
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setPasscodeDialogOpen(false);
+                setPasscode("");
+                setSelectedProfileId(null);
+              }}
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePasscodeSubmit}
+              disabled={passcode.length !== 4 || verifyPasscodeMutation.isPending}
+              style={{ backgroundColor: UYP_RED }}
+              className="hover:opacity-90"
+              data-testid="button-verify-passcode"
+            >
+              {verifyPasscodeMutation.isPending ? "Verifying..." : "Continue"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -28,16 +28,11 @@ export class AwardsService {
         .where(eq(attendances.userId, userId))
         .groupBy(events.eventType);
 
-      // Get existing badges/trophies  
+      // Get existing badges (skip trophies for now to avoid table issues)
       const earnedBadges = await db
         .select({ badgeId: userBadges.badgeId })
         .from(userBadges)
         .where(eq(userBadges.userId, userId));
-        
-      const earnedTrophies = await db
-        .select({ trophyId: userTrophies.trophyId })
-        .from(userTrophies)
-        .where(eq(userTrophies.userId, userId));
 
       // Get RSVP count (advance type check-ins)
       const rsvpCount = await db
@@ -102,11 +97,8 @@ export class AwardsService {
         // Additional stats
         rsvpCount: totalRsvps,
         
-        // Already earned awards
-        awardsEarned: [
-          ...earnedBadges.map(b => `badge-${b.badgeId}`),
-          ...earnedTrophies.map(t => `trophy-${t.trophyId}`)
-        ]
+        // Already earned awards (badges only for now)
+        awardsEarned: earnedBadges.map(b => String(b.badgeId))
       };
 
       return userStats;
@@ -161,10 +153,10 @@ export class AwardsService {
       }
 
       if (award.kind === "Badge") {
-        // For badges, we need to find or create the badge in the badges table
-        // For now, we'll use a simple ID mapping
+        // Extract numeric ID from award ID or use a hash
         const badgeNumericId = this.getBadgeNumericId(awardId);
         
+        // Insert into userBadges table
         await db.insert(userBadges).values({
           userId,
           badgeId: badgeNumericId,

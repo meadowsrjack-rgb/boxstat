@@ -88,13 +88,13 @@ export const AUTO_AWARDS: Award[] = [
     tags: ["RSVP", "First"]
   },
   {
-    id: "practice-planner",
+    id: "game-planner",
     kind: "Badge", 
-    name: "Practice Planner",
+    name: "Game Planner",
     tier: "Prospect",
     category: "Attendance",
-    description: "For RSVPing to a Practice, Skill, or FNH event.",
-    iconName: "badge-practice-planner",
+    description: "For RSVPing to 5 events (Practice, Skills, or Games).",
+    iconName: "badge-game-planner",
     progressKind: "counter",
     counterOf: { stat: "rsvpCount", target: 5 },
     triggerSources: ["rsvp"],

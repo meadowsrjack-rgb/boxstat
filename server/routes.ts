@@ -7,6 +7,7 @@ import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchem
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
+import { awardsService } from "./awards.service";
 
 import calendarRoutes from "./routes/calendar";
 import searchRoutes from "./routes/search";
@@ -750,6 +751,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eventId,
         qrCodeData,
       });
+      
+      // Trigger attendance awards for event check-in
+      await awardsService.processAwardTriggers(userId, "attendance");
       
       res.json(attendance);
     } catch (error) {
@@ -1848,6 +1852,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const checkin = await storage.createAttendance(checkinData);
+      
+      // Trigger awards for check-in actions
+      if (type === "advance") {
+        // RSVP trigger
+        await awardsService.processAwardTriggers(userId, "rsvp");
+      } else if (type === "onsite") {
+        // Attendance trigger for on-site check-in
+        await awardsService.processAwardTriggers(userId, "attendance");
+      }
+      
       res.json(checkin);
     } catch (error) {
       console.error("Error creating checkin:", error);
@@ -1865,6 +1879,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing checkin:", error);
       res.status(500).json({ message: "Failed to remove checkin" });
+    }
+  });
+
+  // Training completion endpoint
+  app.post('/api/training/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { moduleId, moduleType, programTag } = req.body;
+      
+      // Log training completion (you could store this in a separate table)
+      console.log(`User ${userId} completed training module:`, { moduleId, moduleType, programTag });
+      
+      // Trigger training awards
+      await awardsService.processAwardTriggers(userId, "onlineTraining");
+      
+      res.json({ success: true, message: "Training module completed" });
+    } catch (error) {
+      console.error("Error completing training:", error);
+      res.status(500).json({ message: "Failed to complete training" });
+    }
+  });
+
+  // Coach awards endpoint for manual badge awarding
+  app.post('/api/coach/award-badge', isAuthenticated, async (req: any, res) => {
+    try {
+      const coachId = req.user.claims.sub;
+      const { playerId, awardId, reason } = req.body;
+      
+      // Verify coach permissions here if needed
+      await awardsService.awardBadgeManually(playerId, awardId, coachId);
+      
+      res.json({ success: true, message: "Badge awarded successfully" });
+    } catch (error) {
+      console.error("Error awarding badge:", error);
+      res.status(500).json({ message: "Failed to award badge" });
     }
   });
 

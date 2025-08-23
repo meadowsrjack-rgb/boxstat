@@ -1231,18 +1231,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(badges, eq(userBadges.badgeId, badges.id))
         .where(eq(userBadges.userId, userId));
 
-      // Map badge names to expected slugs
+      // Map badge names to expected slugs (now using exact matches)
       const badgeNameToSlug: { [key: string]: string } = {
-        'Champion': 'champion',
-        'Speedster': 'speedster',
-        'Team Captain': 'team-captain',
-        'Sharpshooter': 'sharpshooter',
-        'Defender': 'defender',
-        'Clutch Player': 'clutch-player',
-        'Rookie Star': 'rookie-star',
-        'Assist King': 'assist-king',
-        'Hustle Award': 'hustle-award',
-        'Perfect Attendance': 'perfect-attendance'
+        'checked-in': 'checked-in',
+        'practice-rookie': 'practice-rookie',
+        'skill-starter': 'skill-starter',
+        'game-planner': 'game-planner',
+        'dedicated-grinder': 'dedicated-grinder',
+        'skills-seeker': 'skills-seeker',
+        'regular-competitor': 'regular-competitor',
+        'game-changer': 'game-changer',
+        'the-engine': 'the-engine',
+        'marquee-player': 'marquee-player'
       };
 
       const earnedBadges = userBadgesList.map(b => 
@@ -1283,24 +1283,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(userTrophies)
         .where(eq(userTrophies.userId, userId));
 
-      // Map badge names to expected slugs
+      // Map badge names to expected slugs (now using exact matches)
       const badgeNameToSlug: { [key: string]: string } = {
-        'Champion': 'champion',
-        'Speedster': 'speedster',
-        'Team Captain': 'team-captain',
-        'Sharpshooter': 'sharpshooter',
-        'Defender': 'defender',
-        'Clutch Player': 'clutch-player',
-        'Rookie Star': 'rookie-star',
-        'Assist King': 'assist-king',
-        'Hustle Award': 'hustle-award',
-        'Perfect Attendance': 'perfect-attendance'
+        'checked-in': 'checked-in',
+        'practice-rookie': 'practice-rookie',
+        'skill-starter': 'skill-starter',
+        'game-planner': 'game-planner',
+        'dedicated-grinder': 'dedicated-grinder',
+        'skills-seeker': 'skills-seeker',
+        'regular-competitor': 'regular-competitor',
+        'game-changer': 'game-changer',
+        'the-engine': 'the-engine',
+        'marquee-player': 'marquee-player'
       };
 
       // Map trophy names to slugs
       const trophyNameToSlug: { [key: string]: string } = {
-        'Season MVP': 'mvp',
-        'Championship Winner': 'champions'
+        'mvp': 'mvp',
+        'coaches-award': 'coaches-award'
       };
 
       const earnedBadges = userBadgesList.map(b => 

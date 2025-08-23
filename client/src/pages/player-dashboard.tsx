@@ -101,6 +101,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [activeTab, setActiveTab] = useState<"activity" | "video" | "team" | "profile">(
     tabFromUrl || savedTab || "activity"
   );
+  
+  const [newMessage, setNewMessage] = useState("");
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [location, setLocation] = useLocation();
 
   // Sync activeTab with URL changes (for back button navigation)
   useEffect(() => {
@@ -109,7 +115,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     if (tabFromUrl && tabFromUrl !== activeTab) {
       setActiveTab(tabFromUrl);
     }
-  }, [location]);
+  }, [location, activeTab]);
 
   // Update URL and localStorage when activeTab changes
   const handleTabChange = (newTab: "activity" | "video" | "team" | "profile") => {
@@ -121,11 +127,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       window.history.replaceState({}, '', newUrl.toString());
     }
   };
-  const [newMessage, setNewMessage] = useState("");
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [location, setLocation] = useLocation();
 
   // Profile editing (Profile tab)
   const [isEditingProfile, setIsEditingProfile] = useState(false);

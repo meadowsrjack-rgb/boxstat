@@ -755,6 +755,21 @@ function SecuritySection() {
     setLocation('/profile-selection');
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { 
+        method: 'GET', 
+        credentials: 'include' 
+      });
+      // Redirect to sign in page after logout
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect even if there's an error
+      window.location.href = '/';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader icon={Shield} title="Account & Security" subtitle="Manage login and security." />
@@ -766,6 +781,7 @@ function SecuritySection() {
           <ActionRow icon={Mail} title="Change email" action={<Button variant="outline" onClick={() => setEmailOpen(true)}>Update</Button>} />
           <ActionRow icon={Key} title="Change password" action={<Button variant="outline" onClick={() => setPwOpen(true)}>Update</Button>} />
           <ActionRow icon={Fingerprint} title="Two-factor authentication (2FA)" action={<Button variant="outline" onClick={() => setTwofaOpen(true)}>Manage</Button>} />
+          <ActionRow icon={LogOut} title="Log Out" action={<Button variant="destructive" onClick={handleLogout}>Log Out</Button>} />
           <ActionRow icon={LogOut} title="Sign out of all devices" action={<Button variant="destructive">Sign out all</Button>} />
         </CardContent>
       </Card>

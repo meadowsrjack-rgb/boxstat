@@ -488,7 +488,7 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                   aspect-square flex items-center justify-center rounded-xl text-sm font-medium cursor-pointer transition-all duration-300 hover:scale-110 hover:bg-gray-100 relative
                   ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-800'}
                   ${isToday ? 'bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold' : ''}
-                  ${isSelected && !isToday ? 'bg-red-600 text-white' : ''}
+                  ${isSelected && !isToday ? 'bg-gray-500 text-white' : ''}
                 `}
                 onClick={() => selectDate(date)}
               >

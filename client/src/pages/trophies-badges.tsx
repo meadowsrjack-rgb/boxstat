@@ -403,7 +403,11 @@ export default function TrophiesBadgesPage() {
 
   // Earned sets
   const earnedTrophies = useMemo(() => new Set((achSlugs.trophies || []).map(s => String(s).toLowerCase())), [achSlugs]);
-  const earnedBadges = useMemo(() => new Set((achSlugs.badges || []).map(s => String(s).toLowerCase())), [achSlugs]);
+  const earnedBadges = useMemo(() => {
+    const badges = (achSlugs.badges || []).map(s => String(s).toLowerCase());
+    console.log('🏅 Earned badges from API:', badges);
+    return new Set(badges);
+  }, [achSlugs]);
 
   // Filters
   const [earnedFilter, setEarnedFilter] = useState<EarnedFilter>('all'); // default All
@@ -412,7 +416,17 @@ export default function TrophiesBadgesPage() {
 
   // Build dataset with achieved flags
   const trophies = useMemo(() => TROPHY_LIST.map(t => ({ ...t, achieved: earnedTrophies.has(t.slug) })), [earnedTrophies]);
-  const badges = useMemo(() => BADGE_LIST.map(b => ({ ...b, achieved: earnedBadges.has(b.slug) })), [earnedBadges]);
+  const badges = useMemo(() => {
+    const badgeList = BADGE_LIST.map(b => ({ ...b, achieved: earnedBadges.has(b.slug) }));
+    const gameChangerBadge = badgeList.find(b => b.slug === 'game-changer');
+    console.log('🔍 Game Changer badge check:', {
+      slug: 'game-changer',
+      hasInSet: earnedBadges.has('game-changer'),
+      badge: gameChangerBadge,
+      earnedBadges: Array.from(earnedBadges)
+    });
+    return badgeList;
+  }, [earnedBadges]);
 
   // Filtering helpers
   const byEarned = (arr: TrophyBadge[]) => earnedFilter === 'all' ? arr : arr.filter(i => earnedFilter === 'earned' ? i.achieved : !i.achieved);

@@ -63,9 +63,13 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
       const res = await apiRequest("POST", `/api/checkins`, { ...payload, userId: currentUser.id });
       return res;
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
-      toast({ title: "Checked in", description: "We recorded your check-in." });
+      if (variables.type === "advance") {
+        toast({ title: "RSVP Confirmed", description: "Thank you for your RSVP. Be sure to Check-in on arrival." });
+      } else {
+        toast({ title: "Checked in", description: "We recorded your check-in." });
+      }
     },
     onError: (e: any) =>
       toast({
@@ -382,20 +386,20 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:gap-3">
                       <IconChip
                         title={advanceDone ? "RSVP'd" : "RSVP"}
-                        colorClass={advanceDone ? "text-green-600" : "text-red-600"}
+                        colorClass={advanceDone ? "text-green-600" : "text-gray-500"}
                         disabled={advanceDone}
                         onClick={handleRsvp}
                       >
-                        {advanceDone ? <IconMailCheck className="w-6 h-6" /> : <IconMailX className="w-6 h-6" />}
+                        <IconMailCheck className="w-6 h-6" />
                       </IconChip>
 
                       <IconChip
                         title={onsiteDone ? "Checked in" : "On-site check-in"}
-                        colorClass={onsiteDone ? "text-green-600" : "text-red-600"}
+                        colorClass={onsiteDone ? "text-green-600" : "text-gray-500"}
                         disabled={onsiteDone}
                         onClick={handleOnsite}
                       >
-                        {onsiteDone ? <IconCircleCheck className="w-6 h-6" /> : <IconCircleX className="w-6 h-6" />}
+                        <IconCircleCheck className="w-6 h-6" />
                       </IconChip>
                     </div>
                   </div>
@@ -563,20 +567,20 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:gap-3">
                     <IconChip
                       title={advanceDone ? "RSVP'd" : "RSVP"}
-                      colorClass={advanceDone ? "text-green-600" : "text-red-600"}
+                      colorClass={advanceDone ? "text-green-600" : "text-gray-500"}
                       disabled={advanceDone}
                       onClick={handleRsvp}
                     >
-                      {advanceDone ? <IconMailCheck className="w-6 h-6" /> : <IconMailX className="w-6 h-6" />}
+                      <IconMailCheck className="w-6 h-6" />
                     </IconChip>
 
                     <IconChip
                       title={onsiteDone ? "Checked in" : "On-site check-in"}
-                      colorClass={onsiteDone ? "text-green-600" : "text-red-600"}
+                      colorClass={onsiteDone ? "text-green-600" : "text-gray-500"}
                       disabled={onsiteDone}
                       onClick={handleOnsite}
                     >
-                      {onsiteDone ? <IconCircleCheck className="w-6 h-6" /> : <IconCircleX className="w-6 h-6" />}
+                      <IconCircleCheck className="w-6 h-6" />
                     </IconChip>
                   </div>
                 </div>

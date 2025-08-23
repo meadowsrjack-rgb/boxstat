@@ -239,79 +239,89 @@ function ProfileSwitcher() {
 
   return (
     <>
-      <div className="relative">
-        <Button
-          variant="ghost"
-          className="flex items-center gap-2 text-slate-300 hover:text-white hover:bg-slate-800/50"
+      <div className="relative z-50">
+        <button
           onClick={() => setShowProfiles(!showProfiles)}
+          className="flex items-center gap-2 px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer"
+          type="button"
         >
-          <div className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            <span className="text-sm">{currentProfile ? `${currentProfile.firstName} ${currentProfile.lastName}` : "Parent"}</span>
-            <ChevronDown className="h-4 w-4" />
-          </div>
-        </Button>
+          <UserCheck className="h-4 w-4" />
+          <span className="text-sm font-medium">
+            {currentProfile ? `${currentProfile.firstName} ${currentProfile.lastName}` : "Parent"}
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${showProfiles ? 'rotate-180' : ''}`} />
+        </button>
 
         {showProfiles && (
-          <div className="absolute right-0 top-12 w-80 rounded-xl bg-slate-900 border border-white/10 shadow-xl z-50">
-            <div className="p-3 border-b border-white/10">
-              <h4 className="font-semibold text-sm text-white">Switch Profile</h4>
-              <p className="text-xs text-slate-400">Select a profile to access</p>
-            </div>
-            <div className="p-2 space-y-1">
-              {profiles.map((profile) => (
-                <button
-                  key={profile.id}
-                  onClick={() => handleSelectProfile(profile.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-sky-500 flex items-center justify-center text-white font-semibold">
-                    {profile.profileType === "player" ? "🏀" : profile.profileType === "coach" ? "👨‍🏫" : "👤"}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white">
-                      {profile.firstName} {profile.lastName}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className={
-                          profile.profileType === "player" 
-                            ? "bg-red-600/20 text-red-100 border-red-600/20" 
-                            : "bg-slate-600/20 text-slate-100 border-slate-600/20"
-                        }
-                      >
-                        {profile.profileType.charAt(0).toUpperCase() + profile.profileType.slice(1)}
-                      </Badge>
-                      {profile.hasPasscode && <Lock className="h-3 w-3 text-slate-400" />}
+          <>
+            {/* Overlay to close dropdown when clicking outside */}
+            <div 
+              className="fixed inset-0 z-40"
+              onClick={() => setShowProfiles(false)}
+            />
+            
+            <div className="absolute right-0 top-full mt-2 w-80 rounded-xl bg-slate-900 border border-white/10 shadow-2xl z-50">
+              <div className="p-3 border-b border-white/10">
+                <h4 className="font-semibold text-sm text-white">Switch Profile</h4>
+                <p className="text-xs text-slate-400">Select a profile to access</p>
+              </div>
+              <div className="p-2 space-y-1 max-h-96 overflow-y-auto">
+                {profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => handleSelectProfile(profile.id)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors cursor-pointer"
+                    type="button"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-sky-500 flex items-center justify-center text-white font-semibold text-lg">
+                      {profile.profileType === "player" ? "🏀" : profile.profileType === "coach" ? "👨‍🏫" : "👤"}
                     </div>
-                    {profile.teamName && (
-                      <p className="text-xs text-slate-400">{profile.teamName}</p>
-                    )}
-                  </div>
-                </button>
-              ))}
-              
-              {/* Profile Selection Page Link */}
-              <div className="border-t border-white/10 mt-2 pt-2">
-                <button
-                  onClick={() => {
-                    setLocation("/profile-selection");
-                    setShowProfiles(false);
-                  }}
-                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-500 flex items-center justify-center text-white font-semibold">
-                    ⚙️
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-white">Profile Selection</p>
-                    <p className="text-xs text-slate-400">Manage all profiles</p>
-                  </div>
-                </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {profile.firstName} {profile.lastName}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant="secondary"
+                          className={
+                            profile.profileType === "player" 
+                              ? "bg-red-600/20 text-red-100 border-red-600/20 text-xs" 
+                              : "bg-slate-600/20 text-slate-100 border-slate-600/20 text-xs"
+                          }
+                        >
+                          {profile.profileType.charAt(0).toUpperCase() + profile.profileType.slice(1)}
+                        </Badge>
+                        {profile.hasPasscode && <Lock className="h-3 w-3 text-slate-400 flex-shrink-0" />}
+                      </div>
+                      {profile.teamName && (
+                        <p className="text-xs text-slate-400 truncate mt-1">{profile.teamName}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+                
+                {/* Profile Selection Page Link */}
+                <div className="border-t border-white/10 mt-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setLocation("/profile-selection");
+                      setShowProfiles(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors cursor-pointer"
+                    type="button"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-500 flex items-center justify-center text-white font-semibold text-lg">
+                      ⚙️
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-white">Profile Selection</p>
+                      <p className="text-xs text-slate-400">Manage all profiles</p>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
 

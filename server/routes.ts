@@ -1245,13 +1245,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'marquee-player': 'marquee-player'
       };
 
+      // Get user's earned trophies
+      const userTrophiesList = await db
+        .select({
+          trophyName: userTrophies.trophyName,
+          trophyDescription: userTrophies.trophyDescription
+        })
+        .from(userTrophies)
+        .where(eq(userTrophies.userId, userId));
+
+      // Map trophy names to slugs
+      const trophyNameToSlug: { [key: string]: string } = {
+        'mvp': 'mvp',
+        'coaches-award': 'coaches-award'
+      };
+
       const earnedBadges = userBadgesList.map(b => 
         badgeNameToSlug[b.badgeName] || b.badgeName.toLowerCase().replace(/\s+/g, '-')
+      );
+
+      const earnedTrophies = userTrophiesList.map(t => 
+        trophyNameToSlug[t.trophyName] || t.trophyName.toLowerCase().replace(/\s+/g, '-')
       );
       
       res.json({
         badges: earnedBadges,
-        trophies: [] // Empty trophies array for now
+        trophies: earnedTrophies
       });
     } catch (error) {
       console.error("Error fetching user achievements:", error);

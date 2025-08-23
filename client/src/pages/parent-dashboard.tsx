@@ -291,6 +291,25 @@ function ProfileSwitcher() {
                   </div>
                 </button>
               ))}
+              
+              {/* Profile Selection Page Link */}
+              <div className="border-t border-white/10 mt-2 pt-2">
+                <button
+                  onClick={() => {
+                    setLocation("/profile-selection");
+                    setShowProfiles(false);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800/50 text-left transition-colors"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-600 to-slate-500 flex items-center justify-center text-white font-semibold">
+                    ⚙️
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">Profile Selection</p>
+                    <p className="text-xs text-slate-400">Manage all profiles</p>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
         )}

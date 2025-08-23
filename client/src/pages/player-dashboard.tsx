@@ -101,6 +101,26 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [activeTab, setActiveTab] = useState<"activity" | "video" | "team" | "profile">(
     tabFromUrl || savedTab || "activity"
   );
+
+  // Sync activeTab with URL changes (for back button navigation)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab') as "activity" | "video" | "team" | "profile" | null;
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [location]);
+
+  // Update URL and localStorage when activeTab changes
+  const handleTabChange = (newTab: "activity" | "video" | "team" | "profile") => {
+    setActiveTab(newTab);
+    if (typeof window !== "undefined") {
+      localStorage.setItem('playerDashboardTab', newTab);
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('tab', newTab);
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  };
   const [newMessage, setNewMessage] = useState("");
   const [ws, setWs] = useState<WebSocket | null>(null);
   const { toast } = useToast();
@@ -652,10 +672,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         {/* Tabs */}
         <div className="px-6 mb-6">
           <div className="flex justify-between items-center">
-            <TabButton label="activity" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
-            <TabButton label="video" activeTab={activeTab} onClick={setActiveTab} Icon={Play} />
-            <TabButton label="team" activeTab={activeTab} onClick={setActiveTab} Icon={Shirt} />
-            <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
+            <TabButton label="activity" activeTab={activeTab} onClick={handleTabChange} Icon={CalendarIcon} />
+            <TabButton label="video" activeTab={activeTab} onClick={handleTabChange} Icon={Play} />
+            <TabButton label="team" activeTab={activeTab} onClick={handleTabChange} Icon={Shirt} />
+            <TabButton label="profile" activeTab={activeTab} onClick={handleTabChange} Icon={User} />
           </div>
         </div>
 

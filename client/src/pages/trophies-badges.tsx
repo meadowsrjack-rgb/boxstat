@@ -237,7 +237,7 @@ function GlassOverlay({ open, onClose, item }: { open: boolean; onClose: () => v
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L12 13.4l-6.3 6.3-1.4-1.4L10.6 12 4.3 5.7l1.4-1.4L12 10.6l6.3-6.3z"/></svg>
           </button>
           <div className="flex flex-col items-center text-center gap-4">
-            <div className="aspect-square w-40 flex items-center justify-center">
+            <div className="aspect-square w-80 flex items-center justify-center">
               <TrophyBadgeImg slug={item.slug} achieved={!!item.achieved} alt={item.title} />
             </div>
             <div className="space-y-2 text-left">

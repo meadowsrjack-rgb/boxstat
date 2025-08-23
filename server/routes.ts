@@ -1855,6 +1855,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/checkins/:eventId/:type', isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, type } = req.params;
+      const userId = req.query.userId || req.user.claims.sub;
+      
+      const deleted = await storage.removeAttendance(userId, parseInt(eventId), type);
+      res.json({ success: true, deleted });
+    } catch (error) {
+      console.error("Error removing checkin:", error);
+      res.status(500).json({ message: "Failed to remove checkin" });
+    }
+  });
+
   // Mount new route modules
   app.use('/api/calendar', calendarRoutes);
   app.use('/api/search', searchRoutes);

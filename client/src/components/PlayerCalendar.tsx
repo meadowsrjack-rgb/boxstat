@@ -79,6 +79,24 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
       }),
   });
 
+  // Remove RSVP mutation
+  const removeRsvpMutation = useMutation({
+    mutationFn: async (payload: { eventId: string | number; type: "advance" }) => {
+      const res = await apiRequest("DELETE", `/api/checkins/${payload.eventId}/${payload.type}?userId=${currentUser.id}`);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
+      toast({ title: "RSVP Removed", description: "Your RSVP has been cancelled." });
+    },
+    onError: (e: any) =>
+      toast({
+        title: "Failed to remove RSVP",
+        description: e instanceof Error ? e.message : "Please try again.",
+        variant: "destructive",
+      }),
+  });
+
   // Organize checkins by event
   const checkinByEvent = useMemo(() => {
     const map = new Map<string | number, { advance?: CheckIn; onsite?: CheckIn }>();
@@ -316,7 +334,7 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                 const canOnsite = isOnsiteWindow(start);
 
                 const handleRsvp = () => {
-                  if (!canRsvp) {
+                  if (!canRsvp && !advanceDone) {
                     setLimit({
                       open: true,
                       title: "RSVP not available",
@@ -324,7 +342,11 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                     });
                     return;
                   }
-                  if (!advanceDone) {
+                  if (advanceDone) {
+                    // Remove RSVP
+                    removeRsvpMutation.mutate({ eventId: event.id, type: "advance" });
+                  } else {
+                    // Create RSVP
                     createCheckInMutation.mutate({ eventId: event.id, type: "advance" });
                   }
                 };
@@ -497,7 +519,7 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
               const canOnsite = isOnsiteWindow(start);
 
               const handleRsvp = () => {
-                if (!canRsvp) {
+                if (!canRsvp && !advanceDone) {
                   setLimit({
                     open: true,
                     title: "RSVP not available",
@@ -505,7 +527,11 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                   });
                   return;
                 }
-                if (!advanceDone) {
+                if (advanceDone) {
+                  // Remove RSVP
+                  removeRsvpMutation.mutate({ eventId: event.id, type: "advance" });
+                } else {
+                  // Create RSVP
                   createCheckInMutation.mutate({ eventId: event.id, type: "advance" });
                 }
               };
@@ -566,9 +592,9 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
                   {/* Icon-only actions */}
                   <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:gap-3">
                     <IconChip
-                      title={advanceDone ? "RSVP'd" : "RSVP"}
+                      title={advanceDone ? "Remove RSVP" : "RSVP"}
                       colorClass={advanceDone ? "text-green-600" : "text-gray-500"}
-                      disabled={advanceDone}
+                      disabled={false}
                       onClick={handleRsvp}
                     >
                       <IconMailCheck className="w-6 h-6" />

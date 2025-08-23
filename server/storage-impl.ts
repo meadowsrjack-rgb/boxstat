@@ -134,6 +134,7 @@ export interface IStorage {
   createAttendance(attendance: InsertAttendance): Promise<Attendance>;
   getUserAttendances(userId: string): Promise<Attendance[]>;
   getEventAttendances(eventId: number): Promise<Attendance[]>;
+  removeAttendance(userId: string, eventId: number, type: string): Promise<boolean>;
 
   // Announcement operations
   getAnnouncements(teamId?: number): Promise<Announcement[]>;
@@ -693,6 +694,19 @@ export class DatabaseStorage implements IStorage {
 
   async getEventAttendances(eventId: number): Promise<Attendance[]> {
     return await db.select().from(attendances).where(eq(attendances.eventId, eventId));
+  }
+
+  async removeAttendance(userId: string, eventId: number, type: string): Promise<boolean> {
+    const result = await db
+      .delete(attendances)
+      .where(
+        and(
+          eq(attendances.userId, userId),
+          eq(attendances.eventId, eventId),
+          eq(attendances.type, type as "advance" | "onsite")
+        )
+      );
+    return (result.rowCount || 0) > 0;
   }
 
   // Badge operations

@@ -1,388 +1,324 @@
-import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { 
-  Bell, 
-  Calendar as CalendarIcon, 
-  CreditCard, 
-  Users, 
-  CheckCircle, 
-  BookOpen,
-  UserCheck,
-  Megaphone
+import { Switch } from "@/components/ui/switch";
+import {
+  Search,
+  Calendar as CalendarIcon,
+  Users,
+  Megaphone,
+  Trash2,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
 
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+// ==============================
+// Types & API
+// ==============================
+type UypEvent = {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime?: string;
+  location?: string;
+  eventType?: "Practice" | "Skills" | "Game" | "Other";
+  teamTags?: string[];
+};
 
-export default function ParentDashboard({ demoProfile }: { demoProfile?: any }) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const notificationsRef = useRef<HTMLDivElement>(null);
+type Player = {
+  id: string;
+  name: string;
+  number?: number;
+  team?: string;
+  position?: string;
+  avatarUrl?: string;
+};
 
-  // Check if we're in demo mode
-  const isDemoMode = sessionStorage.getItem('isDemoMode') === 'true' || !!demoProfile;
-  const profileData = demoProfile || (isDemoMode ? JSON.parse(sessionStorage.getItem('demoProfile') || '{}') : null);
-  
-  // Use demo user data if in demo mode - create a user-like object for parent
-  const currentUser = isDemoMode ? {
-    id: profileData?.id || 'demo-parent-001',
-    firstName: profileData?.firstName || 'Sarah',
-    lastName: profileData?.lastName || 'Johnson',
-    email: profileData?.email || 'sarah.johnson@email.com',
-    userType: 'parent',
-    profileImageUrl: null
-  } : user;
+type Announcement = {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  audience: "All" | "Parents" | "Coaches" | "Players" | "Team";
+};
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setShowNotifications(false);
-      }
-    }
+// API adapter functions to work with existing endpoints
+const API = {
+  parents: {
+    followedPlayers: "/api/parent/follows",
+    follow: (playerId: string) => `/api/parent/follows/${playerId}`,
+    unfollow: (playerId: string) => `/api/parent/follows/${playerId}`,
+    events: "/api/users/me/events",
+    announcements: "/api/announcements",
+  },
+  players: {
+    search: (q: string) => `/api/players/search?q=${encodeURIComponent(q)}`,
+  },
+};
 
-    if (showNotifications) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showNotifications]);
-
-  // Demo data for child profiles
-  const demoChildProfiles = [
-    {
-      id: 1,
-      firstName: "Emma",
-      lastName: "Johnson",
-      teamName: "U12 Thunder",
-      jerseyNumber: 15,
-      position: "Point Guard",
-      grade: "6th Grade"
-    },
-    {
-      id: 2,
-      firstName: "Jake", 
-      lastName: "Johnson",
-      teamName: "U10 Lightning",
-      jerseyNumber: 8,
-      position: "Forward",
-      grade: "4th Grade"
-    }
-  ];
-
-  // Get child profiles (use demo data if in demo mode)
-  const { data: childProfiles = [] } = useQuery({
-    queryKey: ["/api/child-profiles", user?.id],
-    enabled: !!user?.id && !isDemoMode,
+async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    ...init,
   });
-  
-  const displayChildProfiles = isDemoMode ? demoChildProfiles : (childProfiles as any[]);
-
-  const { data: userEvents = [] } = useQuery({
-    queryKey: ["/api/users", user?.id, "events"],
-    enabled: !!user?.id && !isDemoMode,
-  });
-
-  const { data: userPayments = [] } = useQuery({
-    queryKey: ["/api/users", user?.id, "payments"],
-    enabled: !!user?.id && !isDemoMode,
-  });
-
-  const { data: announcements = [] } = useQuery({
-    queryKey: ["/api/announcements"],
-    enabled: !!user?.id && !isDemoMode,
-  });
-
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
+  if (!res.ok) {
+    const msg = await res.text().catch(() => res.statusText);
+    throw new Error(`${res.status} ${res.statusText}: ${msg}`);
   }
+  return res.json();
+}
+
+function formatDateRange(startISO: string, endISO?: string) {
+  const start = new Date(startISO);
+  const end = endISO ? new Date(endISO) : null;
+  const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
+  if (!end) return start.toLocaleString(undefined, opts);
+  const sameDay = start.toDateString() === end.toDateString();
+  if (sameDay) {
+    const d = start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const s = start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const e = end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return `${d} • ${s}–${e}`;
+  }
+  const sFull = start.toLocaleString(undefined, opts);
+  const eFull = end.toLocaleString(undefined, opts);
+  return `${sFull} → ${eFull}`;
+}
+
+// ==============================
+// Shared UI Components
+// ==============================
+const cardVariants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
+
+function GradientHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-sky-600 to-teal-500 p-[1px] shadow-lg">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/80 to-slate-900/60 p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+            {subtitle ? <p className="mt-1 text-sm text-slate-300">{subtitle}</p> : null}
+          </div>
+          <CalendarIcon className="h-7 w-7 text-slate-200" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatPill({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
+  return (
+    <div className="flex items-center gap-2 rounded-full bg-slate-800/60 px-4 py-2 text-slate-200 ring-1 ring-white/10">
+      <Icon className="h-4 w-4" />
+      <span className="text-xs/5 uppercase tracking-wide text-slate-300">{label}</span>
+      <span className="text-sm font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
+function EventChip({ evt }: { evt: UypEvent }) {
+  return (
+    <div className="flex items-center justify-between rounded-xl bg-slate-800/60 p-3 ring-1 ring-white/10">
+      <div>
+        <p className="text-sm font-medium text-white">{evt.title}</p>
+        <p className="text-xs text-slate-400">{formatDateRange(evt.startTime, evt.endTime)}{evt.location ? ` • ${evt.location}` : ""}</p>
+      </div>
+      <Badge variant="secondary" className="bg-sky-600/20 text-sky-100">
+        {evt.eventType || "Event"}
+      </Badge>
+    </div>
+  );
+}
+
+function EmptyState({ icon: Icon, title, hint }: { icon: any; title: string; hint?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 p-10 text-center text-slate-400">
+      <Icon className="h-8 w-8 text-slate-500" />
+      <p className="font-medium text-slate-200">{title}</p>
+      {hint ? <p className="text-sm text-slate-400">{hint}</p> : null}
+    </div>
+  );
+}
+
+// ==============================
+// Parent Dashboard
+// ==============================
+export default function ParentDashboard() {
+  const qc = useQueryClient();
+  const [query, setQuery] = useState("");
+  const [notify, setNotify] = useState(true);
+
+  const followedPlayersQ = useQuery<Player[]>({
+    queryKey: ["parent","follows"],
+    queryFn: () => jsonFetch(API.parents.followedPlayers),
+  });
+
+  const eventsQ = useQuery<UypEvent[]>({
+    queryKey: ["parent","events"],
+    queryFn: () => jsonFetch(API.parents.events),
+  });
+
+  const announcementsQ = useQuery<Announcement[]>({
+    queryKey: ["parent","announcements"],
+    queryFn: () => jsonFetch(API.parents.announcements),
+  });
+
+  const searchQ = useQuery<Player[]>({
+    queryKey: ["parent","search", query],
+    queryFn: () => jsonFetch(API.players.search(query)),
+    enabled: query.trim().length > 1,
+  });
+
+  const followMut = useMutation({
+    mutationFn: async (playerId: string) => jsonFetch(API.parents.follow(playerId), { method: "POST" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["parent","follows"] });
+      qc.invalidateQueries({ queryKey: ["parent","events"] });
+    },
+  });
+
+  const unfollowMut = useMutation({
+    mutationFn: async (playerId: string) => jsonFetch(API.parents.unfollow(playerId), { method: "DELETE" }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["parent","follows"] });
+      qc.invalidateQueries({ queryKey: ["parent","events"] });
+    },
+  });
+
+  const upcoming = useMemo(() => (eventsQ.data || []).slice().sort((a,b)=>+new Date(a.startTime)-+new Date(b.startTime)).slice(0,6), [eventsQ.data]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <img 
-                src={logoPath} 
-                alt="UYP Basketball Academy" 
-                className="h-12 w-12 mr-3 object-contain"
-              />
-              <h1 className="text-xl font-bold text-gray-900">UYP Basketball</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* Demo Mode Indicator */}
-            {isDemoMode && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 text-orange-800 rounded-md text-sm">
-                <span>🎭</span>
-                <span>Demo: {currentUser?.firstName || 'Parent'}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setLocation('/demo-profiles')}
-                  className="ml-2 h-6 text-xs border-orange-300 hover:bg-orange-200"
-                >
-                  Switch Profile
-                </Button>
+    <div className="mx-auto max-w-7xl p-4 md:p-8">
+      <GradientHeader title="Parent Dashboard" subtitle="Follow your players and never miss an event." />
+
+      {/* Top Stats */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <StatPill label="Following" value={followedPlayersQ.data?.length ?? 0} icon={Users} />
+        <StatPill label="Upcoming" value={upcoming.length} icon={CalendarIcon} />
+        <StatPill label="Announcements" value={announcementsQ.data?.length ?? 0} icon={Megaphone} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left column: Followed Players & Search */}
+        <motion.div variants={cardVariants} initial="hidden" animate="show" className="lg:col-span-1">
+          <Card className="border-white/10 bg-slate-900/60 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Users className="h-5 w-5" /> Followed Players
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2 rounded-xl bg-slate-800/60 p-2 ring-1 ring-white/10">
+                <Search className="ml-2 h-4 w-4 text-slate-400" />
+                <Input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search players to follow…" className="border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-0" />
               </div>
-            )}
-            
-            <div className="relative" ref={notificationsRef}>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="relative"
-                  onClick={() => setShowNotifications(!showNotifications)}
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    3
-                  </span>
-                </Button>
-                {showNotifications && (
-                  <div className="absolute right-0 top-12 w-80 bg-white rounded-md shadow-lg border z-50">
-                    <div className="p-3 border-b">
-                      <h4 className="font-semibold text-sm">Recent Notifications</h4>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Megaphone className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">New Announcement</p>
-                          <p className="text-xs text-gray-600">Practice schedule updated for next week</p>
-                          <p className="text-xs text-gray-400 mt-1">2 hours ago</p>
+              
+              {query.trim().length > 1 ? (
+                <div className="space-y-2">
+                  {searchQ.isLoading ? <p className="text-sm text-slate-400">Searching…</p> : null}
+                  {(searchQ.data || []).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-slate-800/60 p-3 ring-1 ring-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-sky-600 to-teal-500" />
+                        <div>
+                          <p className="text-sm font-medium text-white">{p.name}{typeof p.number === 'number' ? ` #${p.number}` : ''}</p>
+                          <p className="text-xs text-slate-400">{p.team || "Unassigned"}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">Player Check-in</p>
-                          <p className="text-xs text-gray-600">Alex checked in for practice</p>
-                          <p className="text-xs text-gray-400 mt-1">1 day ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-3 border-b hover:bg-gray-50 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <CreditCard className="h-4 w-4 text-purple-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">Payment Processed</p>
-                          <p className="text-xs text-gray-600">Monthly fee payment confirmed</p>
-                          <p className="text-xs text-gray-400 mt-1">3 days ago</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-2 border-t">
-                      <Button variant="ghost" size="sm" className="w-full text-xs">
-                        View All Notifications
+                      <Button size="sm" variant="secondary" className="bg-sky-600/20 text-sky-100 hover:bg-sky-600/30" onClick={() => followMut.mutate(p.id)}>
+                        Follow
                       </Button>
                     </div>
-                  </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="space-y-2">
+                {(followedPlayersQ.data || []).length === 0 ? (
+                  <EmptyState icon={Users} title="No followed players yet" hint="Search by name and tap Follow." />
+                ) : (
+                  (followedPlayersQ.data || []).map((p)=> (
+                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-slate-800/60 p-3 ring-1 ring-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-600 to-sky-500" />
+                        <div>
+                          <p className="text-sm font-medium text-white">{p.name}{typeof p.number === 'number' ? ` #${p.number}` : ''}</p>
+                          <p className="text-xs text-slate-400">{p.team || "Unassigned"}</p>
+                        </div>
+                      </div>
+                      <Button size="icon" variant="ghost" className="text-slate-300 hover:text-white" onClick={() => unfollowMut.mutate(p.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))
                 )}
               </div>
-              <div className="flex items-center space-x-2">
-                <img 
-                  src={(user as any)?.profileImageUrl || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40"} 
-                  alt="Profile" 
-                  className="w-8 h-8 rounded-full object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                  onClick={() => setLocation('/profile')}
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  {(user as any)?.firstName} {(user as any)?.lastName}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
-        
-        {/* Main Action Tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {/* Calendar */}
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/schedule')}
-          >
-            <CardContent className="p-4 text-center">
-              <CalendarIcon className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Calendar</h3>
-              <p className="text-xs text-gray-600">Schedule & events</p>
+              <div className="flex items-center justify-between rounded-xl bg-slate-800/60 p-3 ring-1 ring-white/10">
+                <div>
+                  <p className="text-sm font-medium text-white">Notifications</p>
+                  <p className="text-xs text-slate-400">Get alerts for followed players' events</p>
+                </div>
+                <Switch checked={notify} onCheckedChange={setNotify} />
+              </div>
             </CardContent>
           </Card>
+        </motion.div>
 
-          {/* Payments */}
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/sportsengine-payment')}
-          >
-            <CardContent className="p-4 text-center">
-              <CreditCard className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Payments</h3>
-              <p className="text-xs text-gray-600">Fees & billing</p>
+        {/* Middle: Upcoming Events */}
+        <motion.div variants={cardVariants} initial="hidden" animate="show" className="lg:col-span-1">
+          <Card className="border-white/10 bg-slate-900/60 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <CalendarIcon className="h-5 w-5" /> Upcoming Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {upcoming.length === 0 ? (
+                <EmptyState icon={CalendarIcon} title="No upcoming events" hint="Events for followed players will appear here." />
+              ) : (
+                upcoming.map((evt) => <EventChip key={evt.id} evt={evt} />)
+              )}
             </CardContent>
           </Card>
+        </motion.div>
 
-          {/* Children */}
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/manage-children')}
-          >
-            <CardContent className="p-4 text-center">
-              <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Children</h3>
-              <p className="text-xs text-gray-600">Manage players</p>
-            </CardContent>
-          </Card>
-
-          {/* Online Programs */}
-          <Card 
-            className="cursor-pointer hover:shadow-lg transition-all bg-white border border-gray-100"
-            onClick={() => setLocation('/training')}
-          >
-            <CardContent className="p-4 text-center">
-              <BookOpen className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <h3 className="font-semibold text-gray-900 text-sm">Online Programs</h3>
-              <p className="text-xs text-gray-600">Training content</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Account Status */}
-        <Card className="bg-white border border-gray-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-green-500" />
-              Account Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-900 text-sm">Registration</h4>
-                <p className="text-xs text-green-600">Active & Current</p>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <CreditCard className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-900 text-sm">Payments</h4>
-                <p className="text-xs text-blue-600">Up to Date</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <Users className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-                <h4 className="font-semibold text-gray-900 text-sm">Players</h4>
-                <p className="text-xs text-purple-600">{Array.isArray(displayChildProfiles) ? displayChildProfiles.length : 0} Registered</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Events */}
-        <Card className="bg-white border border-gray-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-blue-500" />
-              Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {Array.isArray(userEvents) && userEvents.length > 0 ? (
-              <div className="space-y-3">
-                {userEvents.slice(0, 3).map((event: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className="bg-blue-100 text-blue-800 text-xs px-2 py-1">
-                          {event.eventType || 'Event'}
-                        </Badge>
-                      </div>
-                      <h4 className="font-semibold text-gray-900 text-sm">{event.title}</h4>
-                      <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                        <span className="flex items-center gap-1">
-                          <CalendarIcon className="w-3 h-3" />
-                          {format(new Date(event.startTime || event.start_time), 'MMM d')}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 flex items-center justify-center">🕐</span>
-                          {format(new Date(event.startTime || event.start_time), 'h:mm a')}
-                        </span>
-                      </div>
-                    </div>
+        {/* Right: Announcements */}
+        <motion.div variants={cardVariants} initial="hidden" animate="show" className="lg:col-span-1">
+          <Card className="border-white/10 bg-slate-900/60 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Megaphone className="h-5 w-5" /> Announcements
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(announcementsQ.data || []).length === 0 ? (
+                <EmptyState icon={Megaphone} title="No announcements" />
+              ) : (
+                announcementsQ.data!.map((a) => (
+                  <div key={a.id} className="rounded-xl bg-slate-800/60 p-3 ring-1 ring-white/10">
+                    <p className="text-sm font-semibold text-white">{a.title}</p>
+                    <p className="mt-1 text-xs text-slate-400">{new Date(a.createdAt).toLocaleString()}</p>
+                    <p className="mt-2 text-sm text-slate-300">{a.content}</p>
                   </div>
-                ))}
-                <Button 
-                  variant="ghost" 
-                  className="w-full text-blue-600 hover:text-blue-700 mt-3"
-                  onClick={() => setLocation('/schedule')}
-                >
-                  View Full Calendar →
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <CalendarIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No upcoming events</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Announcements */}
-        <Card className="bg-white border border-gray-100">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-purple-500" />
-              Announcements
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {announcements && announcements.length > 0 ? (
-              <div className="space-y-3">
-                {announcements.slice(0, 3).map((announcement: any, index: number) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900 text-sm">{announcement.title}</h4>
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(announcement.createdAt), "MMM d")}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{announcement.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Megaphone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">No announcements</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
     </div>
   );
 }

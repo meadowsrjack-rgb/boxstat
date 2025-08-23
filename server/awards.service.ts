@@ -153,14 +153,13 @@ export class AwardsService {
       }
 
       if (award.kind === "Badge") {
-        // Extract numeric ID from award ID or use a hash
-        const badgeNumericId = this.getBadgeNumericId(awardId);
+        // Get the actual badge ID from the database
+        const badgeNumericId = await this.getBadgeNumericId(awardId);
         
         // Insert into userBadges table
         await db.insert(userBadges).values({
           userId,
           badgeId: badgeNumericId,
-          earnedAt: new Date(),
         }).onConflictDoNothing(); // Prevent duplicates
         
       } else if (award.kind === "Trophy") {
@@ -181,17 +180,32 @@ export class AwardsService {
   }
 
   /**
-   * Map award string IDs to numeric IDs (temporary solution)
+   * Map award string IDs to numeric IDs from the database
    */
-  private getBadgeNumericId(awardId: string): number {
-    // Hash the string ID to a consistent numeric ID
-    let hash = 0;
-    for (let i = 0; i < awardId.length; i++) {
-      const char = awardId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+  private async getBadgeNumericId(awardId: string): Promise<number> {
+    // Map award IDs to actual badge names in the database
+    const badgeMap: { [key: string]: string } = {
+      'first-rsvp': 'First RSVP',
+      'game-planner': 'Game Planner',
+      'first-reps': 'First Practice', // Map to existing badge
+      'skill-starter': 'Skill Builder', // Map to existing badge
+      'first-ten': 'Game Day Hero', // Map to existing badge
+    };
+    
+    const badgeName = badgeMap[awardId];
+    if (!badgeName) {
+      console.warn(`No badge mapping for award: ${awardId}`);
+      return 1; // Default to first badge
     }
-    return Math.abs(hash) % 10000; // Keep within reasonable range
+    
+    // Look up the badge ID from the database
+    const badge = await db
+      .select({ id: badges.id })
+      .from(badges)
+      .where(eq(badges.name, badgeName))
+      .limit(1);
+      
+    return badge[0]?.id || 1;
   }
 
   private getTrophyNumericId(awardId: string): number {

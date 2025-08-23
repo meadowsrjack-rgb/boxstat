@@ -782,6 +782,113 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   )}
                 </div>
 
+                {/* Completeable Tasks */}
+                <div className="space-y-2">
+                  {/* RSVP for next event */}
+                  {(() => {
+                    const upcomingEvents = displayEvents.filter(event => {
+                      const eventDate = new Date(event.startTime || (event as any).start_time);
+                      return isAfter(eventDate, new Date()) && !isDateToday(eventDate);
+                    }).sort((a, b) => {
+                      const dateA = new Date(a.startTime || (a as any).start_time);
+                      const dateB = new Date(b.startTime || (b as any).start_time);
+                      return dateA.getTime() - dateB.getTime();
+                    });
+                    
+                    const nextEvent = upcomingEvents[0];
+                    if (!nextEvent) return null;
+                    
+                    const eventCheckins = checkinByEvent.get(nextEvent.id) || {};
+                    const hasRsvp = !!eventCheckins.advance;
+                    
+                    return (
+                      <div key={`rsvp-${nextEvent.id}`} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[10px]">
+                            RSVP
+                          </Badge>
+                          <span className="text-sm text-gray-800">
+                            RSVP for {(nextEvent as any).title || (nextEvent as any).summary || 'next event'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {hasRsvp ? (
+                            <div className="flex items-center gap-1 text-green-600">
+                              <Check className="w-4 h-4" />
+                              <span className="text-xs">Done</span>
+                            </div>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => doAdvanceCheckIn(nextEvent.id)}
+                              className="h-8"
+                            >
+                              RSVP
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Check-in for today's events */}
+                  {(() => {
+                    const todayEventsNeedingCheckin = todayEvents.filter(event => {
+                      const eventCheckins = checkinByEvent.get(event.id) || {};
+                      return !eventCheckins.onsite;
+                    });
+                    
+                    if (todayEventsNeedingCheckin.length === 0) return null;
+                    
+                    const event = todayEventsNeedingCheckin[0];
+                    const eventDate = new Date(event.startTime || (event as any).start_time);
+                    const now = new Date();
+                    const canOnsite = now >= new Date(eventDate.getTime() - 60 * 60 * 1000); // 1 hour before
+                    
+                    return (
+                      <div key={`checkin-${event.id}`} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[10px]">
+                            Check-in
+                          </Badge>
+                          <span className="text-sm text-gray-800">
+                            Check-in for {(event as any).title || (event as any).summary || 'today\'s event'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            disabled={!canOnsite}
+                            onClick={() => doOnsiteCheckIn(event)}
+                            className={`h-8 ${canOnsite ? "" : "opacity-50 cursor-not-allowed"}`}
+                          >
+                            Check-in
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Foundation Program Module */}
+                  <div className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-[10px]">
+                        Module
+                      </Badge>
+                      <span className="text-sm text-gray-800">Complete this week's online learning module (Foundation Program)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => setShowFoundationProgram(true)}
+                        className="h-8"
+                      >
+                        Start Module
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Server-driven Tasks (below our check-ins, unchanged) */}
                 <div className="space-y-2">
                   {tasks.length ? (
@@ -815,9 +922,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           )}
                         </div>
                       ))
-                  ) : (
-                    <div className="text-sm text-gray-500">No tasks pending.</div>
-                  )}
+                  ) : null}
                 </div>
               </section>
 

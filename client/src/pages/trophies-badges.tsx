@@ -399,7 +399,7 @@ export default function TrophiesBadgesPage() {
   const earnedBadges = useMemo(() => new Set((achSlugs.badges || []).map(s => String(s).toLowerCase())), [achSlugs]);
 
   // Filters
-  const [earnedFilter, setEarnedFilter] = useState<EarnedFilter>('earned'); // default Earned
+  const [earnedFilter, setEarnedFilter] = useState<EarnedFilter>('all'); // default All
   const [kindFilter, setKindFilter] = useState<KindFilter>('all'); // all | trophies | badges
   const [badgeTier, setBadgeTier] = useState<BadgeTier>('all'); // always available
 

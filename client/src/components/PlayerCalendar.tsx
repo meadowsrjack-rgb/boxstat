@@ -30,8 +30,8 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
 
   // Constants for time windows
   const MS = { HOUR: 60 * 60 * 1000, MIN: 60 * 1000 };
-  const RSVP_OPEN_HOURS = 48;
-  const RSVP_CLOSE_HOURS = 8;
+  const RSVP_OPEN_HOURS = 72; // 3 days before tip-off
+  const RSVP_CLOSE_HOURS = 24; // 1 day before tip-off
   const ONSITE_OPEN_HOURS = 3;
 
   // Helper functions for time windows

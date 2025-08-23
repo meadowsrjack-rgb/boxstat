@@ -1265,7 +1265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const earnedTrophies = userTrophiesList.map(t => 
-        trophyNameToSlug[t.trophyName] || t.trophyName.toLowerCase().replace(/\s+/g, '-')
+        trophyNameToSlug[t.trophyName!] || t.trophyName!.toLowerCase().replace(/\s+/g, '-')
       );
       
       res.json({
@@ -1327,7 +1327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const earnedTrophies = userTrophiesList.map(t => 
-        trophyNameToSlug[t.trophyName] || t.trophyName.toLowerCase().replace(/\s+/g, '-')
+        trophyNameToSlug[t.trophyName!] || t.trophyName!.toLowerCase().replace(/\s+/g, '-')
       );
       
       res.json({

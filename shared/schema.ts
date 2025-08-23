@@ -206,7 +206,8 @@ export const trophies = pgTable("trophies", {
 export const userTrophies = pgTable("user_trophies", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  trophyId: integer("trophy_id").references(() => trophies.id).notNull(),
+  trophyName: varchar("trophy_name").notNull(),
+  trophyDescription: text("trophy_description"),
   earnedAt: timestamp("earned_at").defaultNow(),
 });
 
@@ -488,7 +489,6 @@ export const trophiesRelations = relations(trophies, ({ many }) => ({
 
 export const userTrophiesRelations = relations(userTrophies, ({ one }) => ({
   user: one(users, { fields: [userTrophies.userId], references: [users.id] }),
-  trophy: one(trophies, { fields: [userTrophies.trophyId], references: [trophies.id] }),
 }));
 
 export const announcementsRelations = relations(announcements, ({ one }) => ({

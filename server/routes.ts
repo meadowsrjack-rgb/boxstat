@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies } from "@shared/schema";
 import { eq, count } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";

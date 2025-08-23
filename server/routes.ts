@@ -189,6 +189,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(badges, eq(userBadges.badgeId, badges.id))
         .where(eq(userBadges.userId, userId));
 
+      // Get user's trophies count
+      const userTrophiesCount = await db
+        .select({ count: count() })
+        .from(userTrophies)
+        .where(eq(userTrophies.userId, userId));
+
       // Categorize badges by tier based on color
       const badgeCounts = {
         rookieBadgesCount: 0,      // Red (#dc2626) 
@@ -1265,6 +1271,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .innerJoin(badges, eq(userBadges.badgeId, badges.id))
         .where(eq(userBadges.userId, userId));
 
+      // Get user's earned trophies
+      const userTrophiesList = await db
+        .select({ 
+          trophyName: userTrophies.trophyName,
+          trophyDescription: userTrophies.trophyDescription
+        })
+        .from(userTrophies)
+        .where(eq(userTrophies.userId, userId));
+
       // Map badge names to expected slugs
       const badgeNameToSlug: { [key: string]: string } = {
         'First Practice': 'checked-in',
@@ -1276,13 +1291,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Skill Builder': 'skill-starter'
       };
 
+      // Map trophy names to slugs
+      const trophyNameToSlug: { [key: string]: string } = {
+        'Season Starter': 'mvp',
+        'Team Spirit': 'coaches-award'
+      };
+
       const earnedBadges = userBadgesList.map(b => 
         badgeNameToSlug[b.badgeName] || b.badgeName.toLowerCase().replace(/\s+/g, '-')
+      );
+
+      const earnedTrophies = userTrophiesList.map(t => 
+        trophyNameToSlug[t.trophyName] || t.trophyName.toLowerCase().replace(/\s+/g, '-')
       );
       
       res.json({
         badges: earnedBadges,
-        trophies: [] // Empty trophies array for now
+        trophies: earnedTrophies
       });
     } catch (error) {
       console.error("Error fetching user achievements:", error);

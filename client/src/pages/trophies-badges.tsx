@@ -29,14 +29,21 @@ function imgGray(slug: string): string {
   return `/trophies/${slug}-gray.png`;
 }
 
-function TrophyBadgeImg({ slug, achieved, alt }: { slug: string; achieved: boolean; alt: string }) {
+function TrophyBadgeImg({ slug, achieved, alt, size = "w-20 h-20" }: { slug: string; achieved: boolean; alt: string; size?: string }) {
   const [src, setSrc] = useState(achieved ? imgColor(slug) : imgGray(slug));
   const triedFallback = useRef(false);
+  
+  // Update src when achieved prop changes
+  useEffect(() => {
+    setSrc(achieved ? imgColor(slug) : imgGray(slug));
+    triedFallback.current = false;
+  }, [achieved, slug]);
+  
   return (
     <img
       src={src}
       alt={alt}
-      className="w-20 h-20 object-contain select-none"
+      className={`${size} object-contain select-none`}
       draggable={false}
       onError={() => {
         if (!triedFallback.current && !achieved) {
@@ -238,7 +245,7 @@ function GlassOverlay({ open, onClose, item }: { open: boolean; onClose: () => v
           </button>
           <div className="flex flex-col items-center text-center gap-4">
             <div className="aspect-square w-80 flex items-center justify-center">
-              <TrophyBadgeImg slug={item.slug} achieved={!!item.achieved} alt={item.title} />
+              <TrophyBadgeImg slug={item.slug} achieved={!!item.achieved} alt={item.title} size="w-full h-full" />
             </div>
             <div className="space-y-2 text-left">
               <h3 className="text-lg font-semibold leading-tight text-center">{item.title}</h3>

@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
@@ -1233,13 +1233,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Map badge names to expected slugs
       const badgeNameToSlug: { [key: string]: string } = {
-        'First Practice': 'checked-in',
-        'Team Player': 'practice-rookie', 
-        'Rising Star': 'rising-star',
-        'Game Day Hero': 'game-day-hero',
-        'First RSVP': 'first-rsvp',
-        'Game Planner': 'game-planner',
-        'Skill Builder': 'skill-starter'
+        'Champion': 'champion',
+        'Speedster': 'speedster',
+        'Team Captain': 'team-captain',
+        'Sharpshooter': 'sharpshooter',
+        'Defender': 'defender',
+        'Clutch Player': 'clutch-player',
+        'Rookie Star': 'rookie-star',
+        'Assist King': 'assist-king',
+        'Hustle Award': 'hustle-award',
+        'Perfect Attendance': 'perfect-attendance'
       };
 
       const earnedBadges = userBadgesList.map(b => 
@@ -1282,19 +1285,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Map badge names to expected slugs
       const badgeNameToSlug: { [key: string]: string } = {
-        'First Practice': 'checked-in',
-        'Team Player': 'practice-rookie', 
-        'Rising Star': 'rising-star',
-        'Game Day Hero': 'game-day-hero',
-        'First RSVP': 'first-rsvp',
-        'Game Planner': 'game-planner',
-        'Skill Builder': 'skill-starter'
+        'Champion': 'champion',
+        'Speedster': 'speedster',
+        'Team Captain': 'team-captain',
+        'Sharpshooter': 'sharpshooter',
+        'Defender': 'defender',
+        'Clutch Player': 'clutch-player',
+        'Rookie Star': 'rookie-star',
+        'Assist King': 'assist-king',
+        'Hustle Award': 'hustle-award',
+        'Perfect Attendance': 'perfect-attendance'
       };
 
       // Map trophy names to slugs
       const trophyNameToSlug: { [key: string]: string } = {
-        'Season Starter': 'mvp',
-        'Team Spirit': 'coaches-award'
+        'Season MVP': 'mvp',
+        'Championship Winner': 'champions'
       };
 
       const earnedBadges = userBadgesList.map(b => 

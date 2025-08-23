@@ -1191,24 +1191,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.params.id;
       
-      // Get user's earned badges and trophies
+      // Get user's earned badges
       const userBadgesList = await db
         .select({ badgeId: userBadges.badgeId })
         .from(userBadges)
         .where(eq(userBadges.userId, userId));
 
-      const userTrophiesList = await db
-        .select({ trophyId: userTrophies.trophyId })
-        .from(userTrophies)
-        .where(eq(userTrophies.userId, userId));
-
-      // Convert to arrays of IDs/slugs
+      // Skip trophies for now to avoid table issues
       const earnedBadges = userBadgesList.map(b => b.badgeId);
-      const earnedTrophies = userTrophiesList.map(t => t.trophyId);
       
       res.json({
         badges: earnedBadges,
-        trophies: earnedTrophies
+        trophies: [] // Empty trophies array for now
+      });
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  // User me achievements endpoint (maps to user ID)
+  app.get('/api/user/me/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get user's earned badges
+      const userBadgesList = await db
+        .select({ badgeId: userBadges.badgeId })
+        .from(userBadges)
+        .where(eq(userBadges.userId, userId));
+
+      const earnedBadges = userBadgesList.map(b => b.badgeId);
+      
+      res.json({
+        badges: earnedBadges,
+        trophies: [] // Empty trophies array for now
       });
     } catch (error) {
       console.error("Error fetching user achievements:", error);

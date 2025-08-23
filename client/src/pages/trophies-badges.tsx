@@ -433,7 +433,7 @@ export default function TrophiesBadgesPage() {
 
   const handleBackClick = () => {
     // Always go to profile tab as requested
-    setLocation(`/dashboard?tab=profile`);
+    setLocation(`/player-dashboard?tab=profile`);
   };
 
   return (

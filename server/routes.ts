@@ -1215,13 +1215,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // Get user's earned badges
+      // Get user's earned badges with names for slug mapping
       const userBadgesList = await db
-        .select({ badgeId: userBadges.badgeId })
+        .select({ 
+          badgeId: userBadges.badgeId,
+          badgeName: badges.name 
+        })
         .from(userBadges)
+        .innerJoin(badges, eq(userBadges.badgeId, badges.id))
         .where(eq(userBadges.userId, userId));
 
-      const earnedBadges = userBadgesList.map(b => b.badgeId);
+      // Map badge names to expected slugs
+      const badgeNameToSlug: { [key: string]: string } = {
+        'First Practice': 'checked-in',
+        'Team Player': 'practice-rookie', 
+        'Rising Star': 'rising-star',
+        'Game Day Hero': 'game-day-hero',
+        'First RSVP': 'first-rsvp',
+        'Game Planner': 'game-planner',
+        'Skill Builder': 'skill-starter'
+      };
+
+      const earnedBadges = userBadgesList.map(b => 
+        badgeNameToSlug[b.badgeName] || b.badgeName.toLowerCase().replace(/\s+/g, '-')
+      );
+      
+      res.json({
+        badges: earnedBadges,
+        trophies: [] // Empty trophies array for now
+      });
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
+    }
+  });
+
+  // Add the missing endpoint that the frontend expects
+  app.get('/api/user/:id/achievements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.params.id === 'me' ? req.user.claims.sub : req.params.id;
+      
+      // Get user's earned badges with names for slug mapping
+      const userBadgesList = await db
+        .select({ 
+          badgeId: userBadges.badgeId,
+          badgeName: badges.name 
+        })
+        .from(userBadges)
+        .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+        .where(eq(userBadges.userId, userId));
+
+      // Map badge names to expected slugs
+      const badgeNameToSlug: { [key: string]: string } = {
+        'First Practice': 'checked-in',
+        'Team Player': 'practice-rookie', 
+        'Rising Star': 'rising-star',
+        'Game Day Hero': 'game-day-hero',
+        'First RSVP': 'first-rsvp',
+        'Game Planner': 'game-planner',
+        'Skill Builder': 'skill-starter'
+      };
+
+      const earnedBadges = userBadgesList.map(b => 
+        badgeNameToSlug[b.badgeName] || b.badgeName.toLowerCase().replace(/\s+/g, '-')
+      );
       
       res.json({
         badges: earnedBadges,

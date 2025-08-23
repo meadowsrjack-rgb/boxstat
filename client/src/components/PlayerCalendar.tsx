@@ -481,21 +481,107 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
         <div className="font-semibold text-gray-800 text-lg my-5">
           {isSameDay(selectedDate, new Date()) ? "Today's Events" : `Events for ${format(selectedDate, 'MMM d')}`}
         </div>
-        <div>
+        <div className="space-y-3">
           {eventsForSelectedDate.length > 0 ? (
-            eventsForSelectedDate.map(event => (
-              <div 
-                key={event.id} 
-                className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
-              >
-                <div className="text-xs text-gray-600 font-medium">
-                  {formatEventTime(event.startTime)}
+            eventsForSelectedDate.map(event => {
+              const start = new Date(event.startTime);
+              const check = checkinByEvent.get(event.id) || {};
+              const advanceDone = !!check.advance;
+              const onsiteDone = !!check.onsite;
+
+              const canRsvp = isRsvpWindow(start);
+              const canOnsite = isOnsiteWindow(start);
+
+              const handleRsvp = () => {
+                if (!canRsvp) {
+                  setLimit({
+                    open: true,
+                    title: "RSVP not available",
+                    body: "You can RSVP from 48 hours before tip-off until 8 hours before start.",
+                  });
+                  return;
+                }
+                if (!advanceDone) {
+                  createCheckInMutation.mutate({ eventId: event.id, type: "advance" });
+                }
+              };
+
+              const handleOnsite = () => {
+                if (!canOnsite) {
+                  setLimit({
+                    open: true,
+                    title: "On-site check-in locked",
+                    body: "Opens 3 hours before start and closes at tip-off. Must be at the venue (GPS).",
+                  });
+                  return;
+                }
+                if (!onsiteDone) {
+                  // Get GPS location for onsite checkin
+                  if (!("geolocation" in navigator)) {
+                    toast({
+                      title: "GPS not supported",
+                      description: "Your device does not support location services.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      const { latitude, longitude } = pos.coords;
+                      createCheckInMutation.mutate({ 
+                        eventId: event.id, 
+                        type: "onsite", 
+                        lat: latitude, 
+                        lng: longitude 
+                      });
+                    },
+                    (err) => {
+                      toast({
+                        title: "Location denied",
+                        description: "Enable location permissions to complete on-site check-in.",
+                        variant: "destructive",
+                      });
+                      console.error(err);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                  );
+                }
+              };
+
+              return (
+                <div key={event.id} className="p-3 bg-white rounded-lg shadow-sm" data-testid={`event-card-${event.id}`}>
+                  {/* One-line header on mobile */}
+                  <div className="flex items-center gap-2 text-xs text-gray-500 whitespace-nowrap overflow-hidden">
+                    <Badge>{event.eventType || "Event"}</Badge>
+                    <span className="shrink-0">{formatEventHeader(start)}</span>
+                    <span className="mx-1 text-gray-300">•</span>
+                    <span className="truncate">{event.title}</span>
+                  </div>
+
+                  {/* Icon-only actions */}
+                  <div className="mt-3 grid grid-cols-2 gap-3 sm:flex sm:gap-3">
+                    <IconChip
+                      title={advanceDone ? "RSVP'd" : "RSVP"}
+                      colorClass={advanceDone ? "text-green-600" : "text-red-600"}
+                      disabled={advanceDone}
+                      onClick={handleRsvp}
+                    >
+                      {advanceDone ? <IconMailCheck className="w-6 h-6" /> : <IconMailX className="w-6 h-6" />}
+                    </IconChip>
+
+                    <IconChip
+                      title={onsiteDone ? "Checked in" : "On-site check-in"}
+                      colorClass={onsiteDone ? "text-green-600" : "text-red-600"}
+                      disabled={onsiteDone}
+                      onClick={handleOnsite}
+                    >
+                      {onsiteDone ? <IconCircleCheck className="w-6 h-6" /> : <IconCircleX className="w-6 h-6" />}
+                    </IconChip>
+                  </div>
                 </div>
-                <div className="text-sm text-gray-800 font-semibold mt-1">
-                  {event.title || "Event"}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center text-gray-400 py-5">
               No events for this day

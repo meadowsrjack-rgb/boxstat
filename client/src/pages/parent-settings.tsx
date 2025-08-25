@@ -211,9 +211,9 @@ function ProfileSection() {
   const queryClient = useQueryClient();
 
   const [profile, setProfile] = useState({
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    email: user?.email || "",
+    firstName: (user as any)?.firstName || "",
+    lastName: (user as any)?.lastName || "",
+    email: (user as any)?.email || "",
     phone: "",
     location: "",
     emergencyContact: "",
@@ -222,7 +222,7 @@ function ProfileSection() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      const response = await fetch(`/api/users/${user?.id}`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -627,8 +627,9 @@ export class DatabaseStorage implements IStorage {
     if (!user) return [];
 
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Get team events and user-specific events
+    // Get team events and user-specific events (include events from today onwards)
     const userEvents = await db
       .select()
       .from(events)
@@ -638,7 +639,7 @@ export class DatabaseStorage implements IStorage {
             eq(events.teamId, user.teamId || 0),
             eq(events.playerId, userId)
           ),
-          gte(events.startTime, now)
+          gte(events.startTime, startOfToday)
         )
       )
       .orderBy(asc(events.startTime));

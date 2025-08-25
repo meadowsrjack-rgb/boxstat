@@ -157,6 +157,8 @@ export interface IStorage {
 
   // Announcement operations
   getAnnouncements(teamId?: number): Promise<Announcement[]>;
+  getAllAnnouncements(): Promise<Announcement[]>;
+  getTeamAnnouncements(teamId: number): Promise<Announcement[]>;
   createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
   
   // Badge operations
@@ -167,12 +169,7 @@ export interface IStorage {
   // Trophy operations
   getAllTrophies(): Promise<Trophy[]>;
   getUserTrophies(userId: string): Promise<UserTrophy[]>;
-  awardTrophy(userId: string, trophyId: number): Promise<UserTrophy>;
-  
-  // Announcement operations
-  getAllAnnouncements(): Promise<Announcement[]>;
-  getTeamAnnouncements(teamId: number): Promise<Announcement[]>;
-  createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement>;
+  awardTrophy(userId: string, trophyName: string, trophyDescription?: string): Promise<UserTrophy>;
   
   // Message operations
   getTeamMessages(teamId: number): Promise<Message[]>;
@@ -222,8 +219,8 @@ export class DatabaseStorage implements IStorage {
     return account;
   }
 
-  async upsertAccount(account: InsertAccount): Promise<Account> {
-    const [result] = await db.insert(accounts).values(account).onConflictDoUpdate({
+  async upsertAccount(account: InsertAccount & { id: string }): Promise<Account> {
+    const [result] = await db.insert(accounts).values([account]).onConflictDoUpdate({
       target: accounts.id,
       set: {
         email: account.email,
@@ -256,9 +253,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(profiles.createdAt));
   }
 
-  async createProfile(profile: InsertProfile): Promise<Profile> {
+  async createProfile(profile: InsertProfile & { id: string }): Promise<Profile> {
     console.log("DatabaseStorage.createProfile called with:", profile);
-    const [result] = await db.insert(profiles).values(profile).returning();
+    const [result] = await db.insert(profiles).values([profile]).returning();
     console.log("DatabaseStorage.createProfile result:", result);
     return result;
   }
@@ -301,10 +298,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: InsertUser): Promise<User> {
+  async upsertUser(userData: InsertUser & { id: string }): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values([userData])
       .onConflictDoUpdate({
         target: users.id,
         set: {
@@ -394,16 +391,19 @@ export class DatabaseStorage implements IStorage {
 
   async getChildProfiles(parentId: string): Promise<any[]> {
     const members = await this.getFamilyMembers(parentId);
-    return members.map(member => ({
-      id: member.playerId,
-      firstName: member.player?.firstName,
-      lastName: member.player?.lastName,
-      relationship: member.relationship,
-      teamId: member.player?.teamId,
-      jerseyNumber: member.player?.jerseyNumber,
-      position: member.player?.position,
-      qrCodeData: `UYP-${member.playerId}-${Date.now()}`
-    }));
+    return members.map(member => {
+      const player = (member as any).player;
+      return {
+        id: member.playerId,
+        firstName: player?.firstName,
+        lastName: player?.lastName,
+        relationship: member.relationship,
+        teamId: player?.teamId,
+        jerseyNumber: player?.jerseyNumber,
+        position: player?.position,
+        qrCodeData: `UYP-${member.playerId}-${Date.now()}`
+      };
+    });
   }
 
   // Team operations
@@ -424,34 +424,25 @@ export class DatabaseStorage implements IStorage {
           id: 1,
           name: 'U10 Warriors',
           ageGroup: 'Under 10',
+          color: '#1E40AF',
           coachId: 'test-admin-001',
-          season: '2025 Spring',
-          maxPlayers: 12,
-          isActive: true,
-          createdAt: new Date(),
-          description: 'Competitive team for ages 8-10'
+          createdAt: new Date()
         },
         {
           id: 2,
           name: 'U12 Lightning',
           ageGroup: 'Under 12',
+          color: '#7C3AED',
           coachId: 'test-admin-001',
-          season: '2025 Spring',
-          maxPlayers: 12,
-          isActive: true,
-          createdAt: new Date(),
-          description: 'Advanced team for ages 10-12'
+          createdAt: new Date()
         },
         {
           id: 3,
           name: 'U14 Thunder',
           ageGroup: 'Under 14',
+          color: '#059669',
           coachId: 'test-admin-001',
-          season: '2025 Spring',
-          maxPlayers: 12,
-          isActive: true,
-          createdAt: new Date(),
-          description: 'Elite team for ages 12-14'
+          createdAt: new Date()
         }
       ];
     }
@@ -478,28 +469,62 @@ export class DatabaseStorage implements IStorage {
           email: 'alice@example.com',
           firstName: 'Alice',
           lastName: 'Johnson',
-          userType: 'player',
+          userType: 'player' as const,
           teamId: 1,
           jerseyNumber: 7,
           position: 'Guard',
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-
+          stripeCustomerId: null,
+          dateOfBirth: null,
+          phoneNumber: null,
+          emergencyContact: null,
+          emergencyPhone: null,
+          address: null,
+          medicalInfo: null,
+          allergies: null,
+          teamName: null,
+          age: null,
+          height: null,
+          city: null,
+          schoolGrade: null,
+          parentalConsent: false,
+          profileCompleted: false,
+          stripeSubscriptionId: null,
+          qrCodeData: null,
+          passcode: null
         },
         {
           id: 'player2',
           email: 'bob@example.com',
           firstName: 'Bob',
           lastName: 'Smith',
-          userType: 'player',
+          userType: 'player' as const,
           teamId: 1,
           jerseyNumber: 12,
           position: 'Forward',
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-
+          stripeCustomerId: null,
+          dateOfBirth: null,
+          phoneNumber: null,
+          emergencyContact: null,
+          emergencyPhone: null,
+          address: null,
+          medicalInfo: null,
+          allergies: null,
+          teamName: null,
+          age: null,
+          height: null,
+          city: null,
+          schoolGrade: null,
+          parentalConsent: false,
+          profileCompleted: false,
+          stripeSubscriptionId: null,
+          qrCodeData: null,
+          passcode: null
         }
       ];
     }
@@ -510,13 +535,31 @@ export class DatabaseStorage implements IStorage {
           email: 'charlie@example.com',
           firstName: 'Charlie',
           lastName: 'Brown',
-          userType: 'player',
+          userType: 'player' as const,
           teamId: 2,
           jerseyNumber: 23,
           position: 'Center',
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
+          stripeCustomerId: null,
+          dateOfBirth: null,
+          phoneNumber: null,
+          emergencyContact: null,
+          emergencyPhone: null,
+          address: null,
+          medicalInfo: null,
+          allergies: null,
+          teamName: null,
+          age: null,
+          height: null,
+          city: null,
+          schoolGrade: null,
+          parentalConsent: false,
+          profileCompleted: false,
+          stripeSubscriptionId: null,
+          qrCodeData: null,
+          passcode: null
 
         }
       ];
@@ -562,12 +605,18 @@ export class DatabaseStorage implements IStorage {
           id: 1,
           title: 'Practice Session',
           description: 'Weekly team practice focusing on fundamentals',
-          eventType: 'practice',
+          eventType: 'practice' as const,
           startTime: new Date('2025-07-24T17:00:00'),
           endTime: new Date('2025-07-24T18:30:00'),
           location: 'UYP Main Court',
           teamId: 1,
           playerId: null,
+          opponentTeam: null,
+          isRecurring: false,
+          recurringType: null,
+          recurringEndDate: null,
+          googleEventId: null,
+          lastSyncedAt: null,
           isActive: true,
           createdAt: new Date()
         },
@@ -575,12 +624,18 @@ export class DatabaseStorage implements IStorage {
           id: 2,
           title: 'Scrimmage Game',
           description: 'Practice game against U10 Eagles',
-          eventType: 'game',
+          eventType: 'game' as const,
           startTime: new Date('2025-07-26T10:00:00'),
           endTime: new Date('2025-07-26T11:30:00'),
           location: 'UYP Court 2',
           teamId: 1,
           playerId: null,
+          opponentTeam: 'U10 Eagles',
+          isRecurring: false,
+          recurringType: null,
+          recurringEndDate: null,
+          googleEventId: null,
+          lastSyncedAt: null,
           isActive: true,
           createdAt: new Date()
         }
@@ -592,12 +647,18 @@ export class DatabaseStorage implements IStorage {
           id: 3,
           title: 'Team Practice',
           description: 'Advanced skills training',
-          eventType: 'practice',
+          eventType: 'practice' as const,
           startTime: new Date('2025-07-25T18:00:00'),
           endTime: new Date('2025-07-25T19:30:00'),
           location: 'UYP Main Court',
           teamId: 2,
           playerId: null,
+          opponentTeam: null,
+          isRecurring: false,
+          recurringType: null,
+          recurringEndDate: null,
+          googleEventId: null,
+          lastSyncedAt: null,
           isActive: true,
           createdAt: new Date()
         }
@@ -609,12 +670,18 @@ export class DatabaseStorage implements IStorage {
           id: 4,
           title: 'Championship Practice',
           description: 'Intensive training for upcoming tournament',
-          eventType: 'practice',
+          eventType: 'practice' as const,
           startTime: new Date('2025-07-27T16:00:00'),
           endTime: new Date('2025-07-27T18:00:00'),
           location: 'UYP Main Court',
           teamId: 3,
           playerId: null,
+          opponentTeam: null,
+          isRecurring: false,
+          recurringType: null,
+          recurringEndDate: null,
+          googleEventId: null,
+          lastSyncedAt: null,
           isActive: true,
           createdAt: new Date()
         }
@@ -747,8 +814,8 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(userTrophies).where(eq(userTrophies.userId, userId));
   }
 
-  async awardTrophy(userId: string, trophyId: number): Promise<UserTrophy> {
-    const [userTrophy] = await db.insert(userTrophies).values({ userId, trophyId }).returning();
+  async awardTrophy(userId: string, trophyName: string, trophyDescription?: string): Promise<UserTrophy> {
+    const [userTrophy] = await db.insert(userTrophies).values([{ userId, trophyName, trophyDescription }]).returning();
     return userTrophy;
   }
 
@@ -1028,20 +1095,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(teamMessages.id, newMessage.id));
     
     return {
-      ...messageWithSender,
-      sender: messageWithSender.sender || { id: '', firstName: 'Unknown', lastName: 'User', profileImageUrl: null, userType: 'player' }
-    };
+      id: messageWithSender.id,
+      teamId: messageWithSender.teamId,
+      senderId: messageWithSender.senderId,
+      message: messageWithSender.message,
+      messageType: messageWithSender.messageType,
+      createdAt: messageWithSender.createdAt,
+      updatedAt: messageWithSender.updatedAt
+    } as TeamMessage;
   }
 
   // Player task operations
   async getPlayerTasks(playerId: string, date?: string): Promise<PlayerTask[]> {
-    let query = db.select().from(playerTasks).where(eq(playerTasks.playerId, playerId));
+    const conditions = [eq(playerTasks.playerId, playerId)];
     
     if (date) {
-      query = query.where(eq(playerTasks.dueDate, date));
+      conditions.push(eq(playerTasks.dueDate, date));
     }
     
-    return await query.orderBy(desc(playerTasks.createdAt));
+    return await db
+      .select()
+      .from(playerTasks)
+      .where(and(...conditions))
+      .orderBy(desc(playerTasks.createdAt));
   }
 
   async createPlayerTask(task: z.infer<typeof insertPlayerTaskSchema>): Promise<PlayerTask> {

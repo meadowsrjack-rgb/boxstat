@@ -34,6 +34,7 @@ import {
   Lock,
   Target,
   Trophy,
+  Copy,
 } from "lucide-react";
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -198,18 +199,17 @@ function ProfileSection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Fetch current team data to display (read-only)
+  const { data: teamData } = useQuery({
+    queryKey: [`/api/users/${(user as any)?.id}/team`],
+    enabled: !!(user as any)?.id
+  });
+
   const [profile, setProfile] = useState({
     firstName: (user as any)?.firstName || "",
     lastName: (user as any)?.lastName || "",
-    age: "",
-    height: "",
-    weight: "",
-    position: "",
-    jerseyNumber: "",
-    team: "",
-    bio: "",
-    favoritePlayer: "",
-    goals: "",
+    position: (user as any)?.position || "",
+    jerseyNumber: (user as any)?.jerseyNumber || "",
   });
 
   const mutation = useMutation({
@@ -225,6 +225,7 @@ function ProfileSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
       toast({ title: "Profile updated successfully" });
     },
     onError: () => {
@@ -261,43 +262,15 @@ function ProfileSection() {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-              <Select value={profile.age} onValueChange={(value) => setProfile(p => ({ ...p, age: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select age" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGE_OPTIONS.map((age) => (
-                    <SelectItem key={age} value={age}>{age} years old</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-              <Select value={profile.height} onValueChange={(value) => setProfile(p => ({ ...p, height: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select height" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HEIGHT_OPTIONS.map((height) => (
-                    <SelectItem key={height} value={height}>{height}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
               <Input
-                type="number"
-                value={profile.weight}
-                onChange={(e) => setProfile(p => ({ ...p, weight: e.target.value }))}
-                placeholder="Weight"
+                value={teamData?.name || "No team assigned"}
+                disabled
+                className="bg-gray-100 text-gray-500 cursor-not-allowed"
+                placeholder="Team will be assigned when you join"
               />
+              <p className="text-xs text-gray-500 mt-1">Team is set when you request to join a team</p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
               <Select value={profile.position} onValueChange={(value) => setProfile(p => ({ ...p, position: value }))}>
@@ -324,39 +297,6 @@ function ProfileSection() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
-              <Select value={profile.team} onValueChange={(value) => setProfile(p => ({ ...p, team: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {TEAM_OPTIONS.map((team) => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <Separator />
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-            <Input
-              value={profile.bio}
-              onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))}
-              placeholder="Tell us about yourself as a player"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Favorite Player</label>
-            <Input
-              value={profile.favoritePlayer}
-              onChange={(e) => setProfile(p => ({ ...p, favoritePlayer: e.target.value }))}
-              placeholder="Who's your favorite basketball player?"
-            />
           </div>
 
           <div className="pt-4">
@@ -544,6 +484,8 @@ function NotificationsSection() {
 
 // Security section for players
 function SecuritySection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [emailOpen, setEmailOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [, setLocation] = useLocation();
@@ -587,6 +529,50 @@ function SecuritySection() {
           <ActionRow icon={LogOut} title="Log Out" action={<Button variant="destructive" onClick={handleLogout}>Log Out</Button>} />
         </CardContent>
       </Card>
+
+      {/* Family Connection Section */}
+      <div className="space-y-6">
+        <SectionHeader icon={Users} title="Family Connection" subtitle="Share your invite code with your parent" />
+        
+        <Card className="bg-transparent border-0 shadow-none">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Users className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-gray-900 mb-1">Your Invite Code</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Share this code with your parent so they can add you to their dashboard
+                </p>
+                <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
+                  <div className="text-center">
+                    <div className="text-xl font-mono font-bold text-red-800 tracking-wider break-all">
+                      {(user as any)?.qrCodeData || `UYP-${(user as any)?.id}-${Date.now()}`}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        const code = (user as any)?.qrCodeData || `UYP-${(user as any)?.id}-${Date.now()}`;
+                        navigator.clipboard.writeText(code);
+                        toast({ title: "Copied!", description: "Invite code copied to clipboard" });
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy Code
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Parents can use this code in their "Add Player" section
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

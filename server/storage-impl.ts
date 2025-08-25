@@ -629,15 +629,16 @@ export class DatabaseStorage implements IStorage {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Get team events and user-specific events (include events from today onwards)
+    // Get team events, user-specific events, and league-wide events (include events from today onwards)
     const userEvents = await db
       .select()
       .from(events)
       .where(
         and(
           or(
-            eq(events.teamId, user.teamId || 0),
-            eq(events.playerId, userId)
+            eq(events.teamId, user.teamId || 0),    // Team-specific events
+            eq(events.playerId, userId),            // User-specific events  
+            isNull(events.teamId)                   // League-wide events (like Skills sessions)
           ),
           gte(events.startTime, startOfToday)
         )

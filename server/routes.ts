@@ -2041,6 +2041,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Parent dashboard routes
+  app.get('/api/parent/players', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      
+      // Transform to match expected format
+      const players = familyMembers.map((member: any) => ({
+        id: member.playerId,
+        firstName: member.player?.firstName || '',
+        lastName: member.player?.lastName || '',
+        teamName: member.player?.teamName || null,
+        profileImageUrl: member.player?.profileImageUrl || null,
+        relationship: member.relationship
+      }));
+      
+      res.json(players);
+    } catch (error) {
+      console.error('Error fetching parent players:', error);
+      res.status(500).json({ message: 'Failed to fetch players' });
+    }
+  });
+
+  app.post('/api/parent/players', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const { inviteCode, playerEmail, playerId, dob } = req.body;
+      
+      if (inviteCode) {
+        // Handle invite code linking
+        const users = await db.select().from(users).where(eq(users.qrCodeData, inviteCode));
+        if (users.length === 0) {
+          return res.status(404).json({ message: 'Invalid invite code' });
+        }
+        
+        const player = users[0];
+        if (player.userType !== 'player') {
+          return res.status(400).json({ message: 'Invite code is not for a player account' });
+        }
+        
+        // Add as family member
+        const familyMember = await storage.addFamilyMember({
+          parentId,
+          playerId: player.id,
+          relationship: 'parent',
+          canMakePayments: true,
+          canViewReports: true,
+          emergencyContact: false
+        });
+        
+        return res.json({ success: true, message: 'Player linked successfully' });
+      }
+      
+      if (playerEmail) {
+        // Handle email + DOB linking (existing logic)
+        const players = await db.select().from(users).where(eq(users.email, playerEmail));
+        if (players.length === 0) {
+          return res.status(404).json({ message: 'Player account not found with this email' });
+        }
+        
+        const player = players[0];
+        if (player.userType !== 'player') {
+          return res.status(400).json({ message: 'Account is not a player account' });
+        }
+        
+        // Verify DOB if provided
+        if (dob && player.dateOfBirth) {
+          const playerDob = new Date(player.dateOfBirth).toISOString().split('T')[0];
+          const providedDob = new Date(dob).toISOString().split('T')[0];
+          if (playerDob !== providedDob) {
+            return res.status(400).json({ message: 'Date of birth does not match' });
+          }
+        }
+        
+        const familyMember = await storage.addFamilyMember({
+          parentId,
+          playerId: player.id,
+          relationship: 'parent',
+          canMakePayments: true,
+          canViewReports: true,
+          emergencyContact: false
+        });
+        
+        return res.json({ success: true, message: 'Player linked successfully' });
+      }
+      
+      res.status(400).json({ message: 'Either invite code or player email is required' });
+    } catch (error) {
+      console.error('Error adding parent player:', error);
+      res.status(500).json({ message: 'Failed to add player' });
+    }
+  });
+
+  app.delete('/api/parent/players/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      const playerId = req.params.id;
+      
+      // Find the family member record
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      const member = familyMembers.find((m: any) => m.playerId === playerId);
+      
+      if (!member) {
+        return res.status(404).json({ message: 'Player not found in family' });
+      }
+      
+      await storage.removeFamilyMember(member.id);
+      res.json({ success: true, message: 'Player removed successfully' });
+    } catch (error) {
+      console.error('Error removing parent player:', error);
+      res.status(500).json({ message: 'Failed to remove player' });
+    }
+  });
+
+  app.get('/api/parent/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const parentId = req.user.claims.sub;
+      
+      // Get all family members' events
+      const familyMembers = await storage.getFamilyMembers(parentId);
+      const playerIds = familyMembers.map((member: any) => member.playerId);
+      
+      let allEvents: any[] = [];
+      
+      // Get events for each player
+      for (const playerId of playerIds) {
+        try {
+          const playerEvents = await storage.getUserEvents(playerId);
+          allEvents = allEvents.concat(playerEvents);
+        } catch (error) {
+          console.error(`Error fetching events for player ${playerId}:`, error);
+        }
+      }
+      
+      // Also get league-wide events (events with no team assignment)
+      try {
+        const leagueEvents = await storage.getLeagueEvents();
+        allEvents = allEvents.concat(leagueEvents);
+      } catch (error) {
+        console.error('Error fetching league events:', error);
+      }
+      
+      // Remove duplicates and sort by date
+      const uniqueEvents = allEvents.filter((event, index, self) => 
+        index === self.findIndex(e => e.id === event.id)
+      ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      
+      res.json(uniqueEvents);
+    } catch (error) {
+      console.error('Error fetching parent events:', error);
+      res.status(500).json({ message: 'Failed to fetch events' });
+    }
+  });
+
   // Mount new route modules
   app.use('/api/calendar', calendarRoutes);
   app.use('/api/search', searchRoutes);

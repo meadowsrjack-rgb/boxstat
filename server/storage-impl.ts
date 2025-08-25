@@ -1071,6 +1071,16 @@ export class DatabaseStorage implements IStorage {
     
     return result[0]?.total || 0;
   }
+
+  async getLeagueEvents(): Promise<Event[]> {
+    const now = new Date();
+    return await db.select().from(events)
+      .where(and(
+        gte(events.startTime, now),
+        isNull(events.teamId)
+      ))
+      .orderBy(asc(events.startTime));
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -201,11 +201,12 @@ function ProfileSection() {
     lastName: (user as any)?.lastName || "",
     position: (user as any)?.position || "",
     jerseyNumber: (user as any)?.jerseyNumber || "",
+    city: (user as any)?.city || "",
   });
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      const response = await fetch(`/api/users/${(user as any)?.id}`, {
+      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -251,7 +252,7 @@ function ProfileSection() {
 
           <Separator />
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
               <Input
@@ -261,6 +262,14 @@ function ProfileSection() {
                 placeholder="Team will be assigned when you join"
               />
               <p className="text-xs text-gray-500 mt-1">Team is set when you request to join a team</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">City (From)</label>
+              <Input
+                value={profile.city}
+                onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                placeholder="Enter your city"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>

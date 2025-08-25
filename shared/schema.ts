@@ -88,6 +88,7 @@ export const users = pgTable("users", {
   height: varchar("height"),
   jerseyNumber: integer("jersey_number"),
   position: varchar("position"),
+  city: varchar("city"),
   schoolGrade: varchar("school_grade"),
   parentalConsent: boolean("parental_consent").default(false),
   profileCompleted: boolean("profile_completed").default(false),

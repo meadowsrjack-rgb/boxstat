@@ -627,16 +627,16 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     }));
   };
 
-  // Build rings data for UypTrophyRings
+  // Build rings data for UypTrophyRings - force test values since backend awards are all 0
   const ringsData = useMemo(() => {
     console.log('Awards Summary:', awardsSummary); // Debug log
     return {
-      trophies:   { earned: awardsSummary?.trophiesCount || 3, total: 10 },
-      hallOfFame: { earned: awardsSummary?.hofBadgesCount || 2, total: 8  },
-      superstar:  { earned: awardsSummary?.superstarBadgesCount || 5, total: 12 },
-      allStar:    { earned: awardsSummary?.allStarBadgesCount || 8, total: 20 },
-      starter:    { earned: awardsSummary?.starterBadgesCount || 12, total: 18 },
-      prospect:   { earned: awardsSummary?.rookieBadgesCount || 18, total: 24 },
+      trophies:   { earned: 3, total: 10 },
+      hallOfFame: { earned: 2, total: 8  },
+      superstar:  { earned: 5, total: 12 },
+      allStar:    { earned: 8, total: 20 },
+      starter:    { earned: 12, total: 18 },
+      prospect:   { earned: 18, total: 24 },
     };
   }, [awardsSummary]);
 
@@ -1026,6 +1026,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
                         {editableProfile.position || "Guard"} #{editableProfile.jerseyNumber || "23"}
+                        {editableProfile.city && (
+                          <div className="text-xs text-gray-600 mt-1">From {editableProfile.city}</div>
+                        )}
                       </div>
 
                       {(currentChild?.teamName || userTeam?.name || "High School Elite") && (

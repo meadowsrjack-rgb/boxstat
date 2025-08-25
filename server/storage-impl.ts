@@ -33,7 +33,6 @@ import {
   type InsertProfileRelationship,
   // Legacy types
   type User,
-  type UpsertUser,
   type Team,
   type Event,
   type Attendance,
@@ -53,6 +52,26 @@ import {
   type AnnouncementAcknowledgment,
   type PlayerTask,
   type PlayerPoints,
+  // Legacy insert types
+  type InsertUser,
+  type InsertTeam,
+  type InsertEvent,
+  type InsertAttendance,
+  type InsertBadge,
+  type InsertTrophy,
+  type InsertUserTrophy,
+  type InsertAnnouncement,
+  type InsertMessageReaction,
+  type InsertMessage,
+  type InsertTeamMessage,
+  type InsertPayment,
+  type InsertDrill,
+  type InsertPlayerStats,
+  type InsertFamilyMember,
+  type InsertTaskCompletion,
+  type InsertAnnouncementAcknowledgment,
+  type InsertPlayerTask,
+  type InsertPlayerPoints,
   // New insert schemas
   insertAccountSchema,
   insertProfileSchema,
@@ -102,7 +121,7 @@ export interface IStorage {
   
   // User operations (legacy - required for Replit Auth compatibility)
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   updateUserProfile(id: string, data: Partial<User>): Promise<User>;
 
@@ -211,7 +230,6 @@ export class DatabaseStorage implements IStorage {
         primaryAccountType: account.primaryAccountType,
         accountCompleted: account.accountCompleted,
         stripeCustomerId: account.stripeCustomerId,
-        sportsEngineCustomerId: account.sportsEngineCustomerId,
         updatedAt: new Date(),
       }
     }).returning();
@@ -283,7 +301,7 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async upsertUser(userData: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
       .values(userData)
@@ -320,8 +338,6 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ 
-        sportsEngineCustomerId, 
-        sportsEngineSubscriptionId,
         updatedAt: new Date()
       })
       .where(eq(users.id, userId))
@@ -469,8 +485,7 @@ export class DatabaseStorage implements IStorage {
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          sportsEngineCustomerId: null,
-          sportsEngineSubscriptionId: null
+
         },
         {
           id: 'player2',
@@ -484,8 +499,7 @@ export class DatabaseStorage implements IStorage {
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          sportsEngineCustomerId: null,
-          sportsEngineSubscriptionId: null
+
         }
       ];
     }
@@ -503,8 +517,7 @@ export class DatabaseStorage implements IStorage {
           profileImageUrl: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          sportsEngineCustomerId: null,
-          sportsEngineSubscriptionId: null
+
         }
       ];
     }

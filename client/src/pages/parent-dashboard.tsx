@@ -213,7 +213,7 @@ export default function ParentDashboard() {
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
-            <ProfileAvatarRing src={currentUser.profileImageUrl} initials={initials} size={88} />
+            <ProfileAvatarRing src={currentUser.profileImageUrl || undefined} initials={initials} size={88} />
           </div>
           <div className="text-sm text-gray-600">
             Welcome back, <span className="font-semibold text-gray-900">{currentUser.firstName}</span>
@@ -234,7 +234,7 @@ export default function ParentDashboard() {
           {activeTab === "calendar" && (
             <div className="-mx-6">
               {/* Reuse PlayerCalendar for unified view across all linked players */}
-              <PlayerCalendar events={parentEvents as any} currentUser={currentUser} />
+              <PlayerCalendar events={parentEvents as any} currentUser={{...currentUser, email: currentUser.email || ''}} />
 
               {/* Summaries */}
               <div className="px-6 py-6 space-y-4">

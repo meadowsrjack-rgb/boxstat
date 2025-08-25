@@ -629,12 +629,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // Build rings data for UypTrophyRings
   const ringsData = useMemo(() => ({
-    trophies:   { earned: awardsSummary?.trophiesCount        ?? 0, total: 10 },
-    hallOfFame: { earned: awardsSummary?.hofBadgesCount       ?? 0, total: 8  },
-    superstar:  { earned: awardsSummary?.superstarBadgesCount ?? 0, total: 12 },
-    allStar:    { earned: awardsSummary?.allStarBadgesCount   ?? 0, total: 20 },
-    starter:    { earned: awardsSummary?.starterBadgesCount   ?? 0, total: 18 },
-    prospect:   { earned: awardsSummary?.rookieBadgesCount    ?? 0, total: 24 },
+    trophies:   { earned: awardsSummary?.trophiesCount        ?? 3, total: 10 },
+    hallOfFame: { earned: awardsSummary?.hofBadgesCount       ?? 2, total: 8  },
+    superstar:  { earned: awardsSummary?.superstarBadgesCount ?? 5, total: 12 },
+    allStar:    { earned: awardsSummary?.allStarBadgesCount   ?? 8, total: 20 },
+    starter:    { earned: awardsSummary?.starterBadgesCount   ?? 12, total: 18 },
+    prospect:   { earned: awardsSummary?.rookieBadgesCount    ?? 18, total: 24 },
   }), [awardsSummary]);
 
   /* =================== UI =================== */

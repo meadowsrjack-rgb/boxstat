@@ -1,0 +1,641 @@
+'use client';
+
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { User as UserType } from "@/../../shared/schema";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+
+import {
+  ArrowLeft,
+  User,
+  Shield,
+  Bell,
+  Link as LinkIcon,
+  Smartphone,
+  FileText,
+  AlertTriangle,
+  LogOut,
+  Mail,
+  Key,
+  Fingerprint,
+  Globe,
+  Users,
+  Lock,
+  Target,
+  Trophy,
+} from "lucide-react";
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Constants / Options
+──────────────────────────────────────────────────────────────────────────────── */
+const BRAND = "#d82428";
+
+const TEAM_OPTIONS = ["High School Elite", "High School Red", "High School Black", "Youth Girls", "14U Black", "14U Red", "14U White", "12U Black", "12U Red", "12U White", "10U Black", "10U Red"];
+const AGE_OPTIONS = ["9", "10", "11", "12", "13", "14", "15", "16", "17", "18"];
+const HEIGHT_OPTIONS = [
+  "4'4\"", "4'5\"", "4'6\"", "4'7\"", "4'8\"", "4'9\"", "4'10\"", "4'11\"",
+  "5'0\"", "5'1\"", "5'2\"", "5'3\"", "5'4\"", "5'5\"", "5'6\"", "5'7\"", "5'8\"", "5'9\"", "5'10\"", "5'11\"",
+  "6'0\"", "6'1\"", "6'2\"", "6'3\"", "6'4\"", "6'5\"", "6'6\"", "6'7\"", "6'8\"", "6'9\"", "6'10\"",
+];
+const POSITION_OPTIONS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"];
+const JERSEY_OPTIONS = Array.from({ length: 99 }, (_, i) => (i + 1).toString());
+
+type TabKey =
+  | "profile"
+  | "goals"
+  | "privacy"
+  | "notifications"
+  | "security"
+  | "devices"
+  | "legal";
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Utilities
+──────────────────────────────────────────────────────────────────────────────── */
+function useTab(): [TabKey, (t: TabKey) => void] {
+  const [loc, setLocation] = useLocation();
+  const [currentTab, setCurrentTab] = useState<TabKey>("profile");
+  
+  // Get the current tab from URL parameters and sync with state
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return;
+      
+      const url = new URL(window.location.href);
+      const tabParam = url.searchParams.get("tab");
+      const validTabs: TabKey[] = ["profile", "goals", "privacy", "notifications", "security", "devices", "legal"];
+      
+      if (tabParam && validTabs.includes(tabParam as TabKey)) {
+        setCurrentTab(tabParam as TabKey);
+      } else {
+        setCurrentTab("profile");
+      }
+    } catch {
+      setCurrentTab("profile");
+    }
+  }, [loc]);
+
+  const go = (t: TabKey) => {
+    setCurrentTab(t);
+    setLocation(`/player-settings?tab=${t}`);
+  };
+  
+  return [currentTab, go];
+}
+
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: "#fee2e2" }}>
+        <Icon className="h-5 w-5" style={{ color: BRAND }} />
+      </div>
+      <div>
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Player Settings Page
+──────────────────────────────────────────────────────────────────────────────── */
+export default function PlayerSettingsPage() {
+  const { user } = useAuth();
+  const [tab, setTab] = useTab();
+  const [location, setLocation] = useLocation();
+
+  const sections = [
+    { key: "profile", icon: User, label: "Player Profile", description: "Basketball info and personal details" },
+    { key: "goals", icon: Target, label: "Goals & Progress", description: "Set goals and track your improvement" },
+    { key: "privacy", icon: Globe, label: "Privacy", description: "Control your visibility and data sharing" },
+    { key: "notifications", icon: Bell, label: "Notifications", description: "Manage alerts and communications" },
+    { key: "security", icon: Shield, label: "Account & Security", description: "Password and device management" },
+    { key: "devices", icon: Smartphone, label: "Devices", description: "Trusted devices and app permissions" },
+    { key: "legal", icon: FileText, label: "Legal", description: "Terms, privacy policy, and agreements" },
+  ] as const;
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/player-dashboard")}
+              className="text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Player Settings</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">Manage your profile and preferences</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex">
+          {/* Sidebar */}
+          <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-screen">
+            <div className="p-6">
+              <nav className="space-y-2">
+                {sections.map((section) => (
+                  <button
+                    key={section.key}
+                    onClick={() => setTab(section.key as TabKey)}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
+                      tab === section.key
+                        ? "bg-red-50 text-red-700 border border-red-200"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <section.icon className="h-5 w-5 mt-0.5 shrink-0" />
+                      <div>
+                        <div className="font-medium">{section.label}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{section.description}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 p-6">
+            {tab === "profile" && <ProfileSection />}
+            {tab === "goals" && <GoalsSection />}
+            {tab === "privacy" && <PrivacySection />}
+            {tab === "notifications" && <NotificationsSection />}
+            {tab === "security" && <SecuritySection />}
+            {tab === "devices" && <DevicesSection />}
+            {tab === "legal" && <LegalSection />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Player Profile Section
+function ProfileSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const [profile, setProfile] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    age: "",
+    height: "",
+    weight: "",
+    position: "",
+    jerseyNumber: "",
+    team: "",
+    bio: "",
+    favoritePlayer: "",
+    goals: "",
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: typeof profile) => {
+      const response = await fetch(`/api/users/${user?.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update profile");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Profile updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update profile", variant: "destructive" });
+    },
+  });
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={User} title="Player Profile" subtitle="Update your basketball information and personal details" />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+              <Input
+                value={profile.firstName}
+                onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
+                placeholder="Enter first name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+              <Input
+                value={profile.lastName}
+                onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
+                placeholder="Enter last name"
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+              <Select value={profile.age} onValueChange={(value) => setProfile(p => ({ ...p, age: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select age" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGE_OPTIONS.map((age) => (
+                    <SelectItem key={age} value={age}>{age} years old</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+              <Select value={profile.height} onValueChange={(value) => setProfile(p => ({ ...p, height: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select height" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HEIGHT_OPTIONS.map((height) => (
+                    <SelectItem key={height} value={height}>{height}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Weight (lbs)</label>
+              <Input
+                type="number"
+                value={profile.weight}
+                onChange={(e) => setProfile(p => ({ ...p, weight: e.target.value }))}
+                placeholder="Weight"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+              <Select value={profile.position} onValueChange={(value) => setProfile(p => ({ ...p, position: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POSITION_OPTIONS.map((position) => (
+                    <SelectItem key={position} value={position}>{position}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
+              <Select value={profile.jerseyNumber} onValueChange={(value) => setProfile(p => ({ ...p, jerseyNumber: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select number" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JERSEY_OPTIONS.map((number) => (
+                    <SelectItem key={number} value={number}>#{number}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+              <Select value={profile.team} onValueChange={(value) => setProfile(p => ({ ...p, team: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {TEAM_OPTIONS.map((team) => (
+                    <SelectItem key={team} value={team}>{team}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <Input
+              value={profile.bio}
+              onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))}
+              placeholder="Tell us about yourself as a player"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Favorite Player</label>
+            <Input
+              value={profile.favoritePlayer}
+              onChange={(e) => setProfile(p => ({ ...p, favoritePlayer: e.target.value }))}
+              placeholder="Who's your favorite basketball player?"
+            />
+          </div>
+
+          <div className="pt-4">
+            <Button onClick={() => mutation.mutate(profile)} disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving..." : "Save Profile"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Goals and Progress Section
+function GoalsSection() {
+  const [goals, setGoals] = useState({
+    seasonGoal: "",
+    skillGoal: "",
+    fitnessGoal: "",
+    academicGoal: "",
+  });
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={Target} title="Goals & Progress" subtitle="Set goals and track your improvement" />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Season Goal</label>
+            <Input
+              value={goals.seasonGoal}
+              onChange={(e) => setGoals(g => ({ ...g, seasonGoal: e.target.value }))}
+              placeholder="What do you want to achieve this season?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Skill Development Goal</label>
+            <Input
+              value={goals.skillGoal}
+              onChange={(e) => setGoals(g => ({ ...g, skillGoal: e.target.value }))}
+              placeholder="What skills do you want to improve?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fitness Goal</label>
+            <Input
+              value={goals.fitnessGoal}
+              onChange={(e) => setGoals(g => ({ ...g, fitnessGoal: e.target.value }))}
+              placeholder="What are your fitness targets?"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Goal</label>
+            <Input
+              value={goals.academicGoal}
+              onChange={(e) => setGoals(g => ({ ...g, academicGoal: e.target.value }))}
+              placeholder="What are your academic goals?"
+            />
+          </div>
+
+          <div className="pt-4">
+            <Button>Save Goals</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Privacy section for players
+function PrivacySection() {
+  const { toast } = useToast();
+  const [searchable, setSearchable] = useState(true);
+
+  const mutation = useMutation({
+    mutationFn: async (settings: { searchable: boolean }) => {
+      const response = await fetch("/api/privacy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ settings }),
+      });
+      if (!response.ok) throw new Error("Failed to update privacy settings");
+      return response.json();
+    },
+    onSuccess: () => toast({ title: "Privacy settings updated" }),
+    onError: () => toast({ title: "Failed to update privacy settings", variant: "destructive" }),
+  });
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={Globe} title="Privacy Settings" subtitle="Control your visibility and data sharing" />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-md font-medium">Player Profile Visibility</h3>
+              <p className="text-sm text-gray-500">Allow other players and coaches to find your profile</p>
+            </div>
+            <Switch
+              checked={searchable}
+              onCheckedChange={(checked) => {
+                setSearchable(checked);
+                mutation.mutate({ searchable: checked });
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Simplified notification section for players
+function NotificationsSection() {
+  const { toast } = useToast();
+  const [prefs, setPrefs] = useState({
+    pushTeamMessages: true,
+    pushEventReminders: true,
+    pushCheckinWindows: true,
+    pushTrainingReminders: true,
+    pushGoalUpdates: true,
+    quietHours: true,
+  });
+
+  const mutate = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(prefs),
+      });
+      if (!response.ok) throw new Error("Failed to save preferences");
+      return response.json();
+    },
+    onSuccess: () => toast({ title: "Notification settings saved" }),
+    onError: () => toast({ title: "Failed to save notification settings", variant: "destructive" }),
+  });
+
+  const ToggleRow = ({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) => (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-sm text-gray-700">{label}</span>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={Bell} title="Notifications" subtitle="Choose how you want to be notified." />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <h3 className="text-md font-medium mb-3">Push Notifications</h3>
+            <ToggleRow label="Team messages" checked={prefs.pushTeamMessages} onChange={(v) => setPrefs((p) => ({ ...p, pushTeamMessages: v }))} />
+            <ToggleRow label="Event reminders" checked={prefs.pushEventReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushEventReminders: v }))} />
+            <ToggleRow label="Check-in windows" checked={prefs.pushCheckinWindows} onChange={(v) => setPrefs((p) => ({ ...p, pushCheckinWindows: v }))} />
+            <ToggleRow label="Training reminders" checked={prefs.pushTrainingReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushTrainingReminders: v }))} />
+            <ToggleRow label="Goal & progress updates" checked={prefs.pushGoalUpdates} onChange={(v) => setPrefs((p) => ({ ...p, pushGoalUpdates: v }))} />
+          </div>
+
+          <Separator />
+
+          <div>
+            <h3 className="text-md font-medium mb-3">Preferences</h3>
+            <ToggleRow label="Quiet hours (10pm–7am)" checked={prefs.quietHours} onChange={(v) => setPrefs((p) => ({ ...p, quietHours: v }))} />
+          </div>
+
+          <div className="pt-2">
+            <Button onClick={() => mutate.mutate()} disabled={mutate.isPending}>
+              {mutate.isPending ? "Saving..." : "Save Notification Settings"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Security section for players
+function SecuritySection() {
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const handleSwitchProfile = () => {
+    setLocation('/profile-selection');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', { 
+        method: 'GET', 
+        credentials: 'include' 
+      });
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/';
+    }
+  };
+
+  const ActionRow = ({ icon: Icon, title, action }: { icon: any; title: string; action: React.ReactNode }) => (
+    <div className="flex items-center justify-between py-3">
+      <div className="flex items-center gap-3">
+        <Icon className="h-5 w-5 text-gray-500" />
+        <span className="text-sm text-gray-700">{title}</span>
+      </div>
+      {action}
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={Shield} title="Account & Security" subtitle="Manage login and security." />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <ActionRow icon={Users} title="Switch Profile" action={<Button variant="outline" onClick={handleSwitchProfile}>Switch</Button>} />
+          <ActionRow icon={Mail} title="Change email" action={<Button variant="outline" onClick={() => setEmailOpen(true)}>Update</Button>} />
+          <ActionRow icon={Key} title="Change password" action={<Button variant="outline" onClick={() => setPwOpen(true)}>Update</Button>} />
+          <ActionRow icon={LogOut} title="Log Out" action={<Button variant="destructive" onClick={handleLogout}>Log Out</Button>} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Devices section
+function DevicesSection() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={Smartphone} title="Devices" subtitle="Trusted devices and app permissions." />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-md font-medium">Current Device</h3>
+              <p className="text-sm text-gray-500">Chrome on macOS - Last active now</p>
+            </div>
+            <Button variant="outline" size="sm">Revoke</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Legal section
+function LegalSection() {
+  return (
+    <div className="space-y-6">
+      <SectionHeader icon={FileText} title="Legal" subtitle="Terms, privacy policy, and agreements." />
+
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-3">
+            <Button variant="ghost" className="w-full justify-start">
+              <FileText className="h-4 w-4 mr-2" />
+              Terms of Service
+            </Button>
+            <Button variant="ghost" className="w-full justify-start">
+              <FileText className="h-4 w-4 mr-2" />
+              Privacy Policy
+            </Button>
+            <Button variant="ghost" className="w-full justify-start">
+              <FileText className="h-4 w-4 mr-2" />
+              Youth Sports Guidelines
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

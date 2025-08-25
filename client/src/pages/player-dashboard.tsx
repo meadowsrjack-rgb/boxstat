@@ -649,7 +649,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               variant="ghost"
               size="icon"
               className="h-12 w-12"
-              onClick={() => setLocation("/settings")}
+              onClick={() => setLocation("/player-settings")}
             >
               <MoreHorizontal className="h-12 w-12" />
             </Button>

@@ -398,6 +398,18 @@ function PlayersTab({
         </Card>
       )}
 
+      {/* Helpful tip */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-2">
+            <Sparkles className="h-5 w-5 text-red-600" />
+            <p className="text-sm text-gray-600">
+              Linking players automatically imports their calendar, skills, and trophies so your dashboard stays in sync.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Add dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="max-w-md mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 p-0">
@@ -570,17 +582,6 @@ function PaymentsTab({ billing, onOpenStripe }: { billing?: BillingSummary; onOp
         </CardContent>
       </Card>
 
-      {/* Helpful tip */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-2">
-            <Sparkles className="h-5 w-5 text-red-600" />
-            <p className="text-sm text-gray-600">
-              Linking players automatically imports their calendar, skills, and trophies so your dashboard stays in sync.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

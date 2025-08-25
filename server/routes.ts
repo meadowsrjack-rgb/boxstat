@@ -2071,9 +2071,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (inviteCode) {
         // Handle invite code linking
-        const users = await db.select().from(users).where(eq(users.qrCodeData, inviteCode));
+        // Parse invite code format: UYP-{playerId}-{timestamp}
+        const codePattern = /^UYP-(.+)-\d+$/;
+        const match = inviteCode.match(codePattern);
+        
+        if (!match) {
+          return res.status(400).json({ message: 'Invalid invite code format. Expected format: UYP-{playerId}-{timestamp}' });
+        }
+        
+        const playerId = match[1];
+        const users = await db.select().from(users).where(eq(users.id, playerId));
         if (users.length === 0) {
-          return res.status(404).json({ message: 'Invalid invite code' });
+          return res.status(404).json({ message: 'Invalid invite code - player not found' });
         }
         
         const player = users[0];

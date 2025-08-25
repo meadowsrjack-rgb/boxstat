@@ -819,35 +819,6 @@ export class DatabaseStorage implements IStorage {
     return userTrophy;
   }
 
-  // Announcement operations
-  async getAllAnnouncements(): Promise<Announcement[]> {
-    return await db
-      .select()
-      .from(announcements)
-      .where(eq(announcements.isActive, true))
-      .orderBy(desc(announcements.createdAt));
-  }
-
-  async getTeamAnnouncements(teamId: number): Promise<Announcement[]> {
-    return await db
-      .select()
-      .from(announcements)
-      .where(
-        and(
-          eq(announcements.isActive, true),
-          or(
-            eq(announcements.teamId, teamId),
-            isNull(announcements.teamId)
-          )
-        )
-      )
-      .orderBy(desc(announcements.createdAt));
-  }
-
-  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
-    const [newAnnouncement] = await db.insert(announcements).values(announcement).returning();
-    return newAnnouncement;
-  }
 
   // Message operations
   async getTeamMessages(teamId: number): Promise<Message[]> {
@@ -979,7 +950,7 @@ export class DatabaseStorage implements IStorage {
           eq(messageReactions.emoji, emoji)
         )
       );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Task completion operations

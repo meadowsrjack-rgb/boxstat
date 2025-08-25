@@ -149,44 +149,35 @@ export default function PlayerSettingsPage() {
           </div>
         </div>
 
-        <div className="flex">
-          {/* Sidebar */}
-          <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-screen">
-            <div className="p-6">
-              <nav className="space-y-2">
-                {sections.map((section) => (
-                  <button
-                    key={section.key}
-                    onClick={() => setTab(section.key as TabKey)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-all ${
-                      tab === section.key
-                        ? "bg-red-50 text-red-700 border border-red-200"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <section.icon className="h-5 w-5 mt-0.5 shrink-0" />
-                      <div>
-                        <div className="font-medium">{section.label}</div>
-                        <div className="text-xs text-gray-500 mt-0.5">{section.description}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6">
+          <nav className="flex space-x-8 overflow-x-auto">
+            {sections.map((section) => (
+              <button
+                key={section.key}
+                onClick={() => setTab(section.key as TabKey)}
+                className={`flex items-center gap-2 px-3 py-4 border-b-2 text-sm font-medium transition-all whitespace-nowrap ${
+                  tab === section.key
+                    ? "border-red-500 text-red-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <section.icon className="h-4 w-4" />
+                {section.label}
+              </button>
+            ))}
+          </nav>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 p-6">
-            {tab === "profile" && <ProfileSection />}
-            {tab === "goals" && <GoalsSection />}
-            {tab === "privacy" && <PrivacySection />}
-            {tab === "notifications" && <NotificationsSection />}
-            {tab === "security" && <SecuritySection />}
-            {tab === "devices" && <DevicesSection />}
-            {tab === "legal" && <LegalSection />}
-          </div>
+        {/* Content */}
+        <div className="p-6 max-w-4xl mx-auto">
+          {tab === "profile" && <ProfileSection />}
+          {tab === "goals" && <GoalsSection />}
+          {tab === "privacy" && <PrivacySection />}
+          {tab === "notifications" && <NotificationsSection />}
+          {tab === "security" && <SecuritySection />}
+          {tab === "devices" && <DevicesSection />}
+          {tab === "legal" && <LegalSection />}
         </div>
       </div>
     </div>

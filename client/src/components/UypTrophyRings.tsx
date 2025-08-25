@@ -106,9 +106,8 @@ function CircularRingMeter({
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`} // start at 12 o'clock
           initial={{ strokeDashoffset: dash }}
-          whileInView={{ strokeDashoffset: dashOffset }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+          animate={{ strokeDashoffset: dashOffset }}
+          transition={{ duration: 1.2, ease: "easeOut", delay: 0.3 }}
         />
 
         {/* Number (no bg, not bold) */}

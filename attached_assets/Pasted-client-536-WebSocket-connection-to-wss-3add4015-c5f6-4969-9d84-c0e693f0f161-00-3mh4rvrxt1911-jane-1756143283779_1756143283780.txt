@@ -1,0 +1,277 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=1_RD0kKbohLj' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=1_RD0kKbohLj' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=01bef0b9:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+App.tsx:53 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+player-dashboard?tab=profile:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:109 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+App.tsx:110 Profile completed status: true
+App.tsx:111 IsAuthenticated: true
+App.tsx:112 IsLoading: false
+App.tsx:130 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1233 Uncaught ReferenceError: Users is not defined
+    at PlayerDashboard (player-dashboard.tsx:1233:28)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=01bef0b9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=01bef0b9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=01bef0b9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=01bef0b9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=01bef0b9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=01bef0b9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=01bef0b9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=01bef0b9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=01bef0b9:19137:13)
+PlayerDashboard @ player-dashboard.tsx:1233
+renderWithHooks @ chunk-RPCDYKBN.js?v=01bef0b9:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=01bef0b9:14926
+beginWork @ chunk-RPCDYKBN.js?v=01bef0b9:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=01bef0b9:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=01bef0b9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=01bef0b9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=01bef0b9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=01bef0b9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=01bef0b9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=01bef0b9:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=01bef0b9:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=01bef0b9:555
+flush @ @tanstack_react-query.js?v=01bef0b9:569
+batch @ @tanstack_react-query.js?v=01bef0b9:587
+dispatch_fn @ @tanstack_react-query.js?v=01bef0b9:996
+setData @ @tanstack_react-query.js?v=01bef0b9:696
+onSuccess @ @tanstack_react-query.js?v=01bef0b9:897
+resolve @ @tanstack_react-query.js?v=01bef0b9:456
+Promise.then
+run @ @tanstack_react-query.js?v=01bef0b9:498
+start @ @tanstack_react-query.js?v=01bef0b9:536
+fetch @ @tanstack_react-query.js?v=01bef0b9:926
+executeFetch_fn @ @tanstack_react-query.js?v=01bef0b9:2211
+onSubscribe @ @tanstack_react-query.js?v=01bef0b9:1898
+subscribe @ @tanstack_react-query.js?v=01bef0b9:24
+(anonymous) @ @tanstack_react-query.js?v=01bef0b9:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=01bef0b9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=01bef0b9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=01bef0b9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=01bef0b9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=01bef0b9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=01bef0b9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=01bef0b9:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19432
+commitRoot @ chunk-RPCDYKBN.js?v=01bef0b9:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=01bef0b9:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18718
+workLoop @ chunk-RPCDYKBN.js?v=01bef0b9:197
+flushWork @ chunk-RPCDYKBN.js?v=01bef0b9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=01bef0b9:384
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:109 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+App.tsx:110 Profile completed status: true
+App.tsx:111 IsAuthenticated: true
+App.tsx:112 IsLoading: false
+App.tsx:130 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1233 Uncaught ReferenceError: Users is not defined
+    at PlayerDashboard (player-dashboard.tsx:1233:28)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=01bef0b9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=01bef0b9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=01bef0b9:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=01bef0b9:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=01bef0b9:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=01bef0b9:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=01bef0b9:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=01bef0b9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=01bef0b9:19137:13)
+PlayerDashboard @ player-dashboard.tsx:1233
+renderWithHooks @ chunk-RPCDYKBN.js?v=01bef0b9:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=01bef0b9:14926
+beginWork @ chunk-RPCDYKBN.js?v=01bef0b9:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=01bef0b9:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=01bef0b9:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=01bef0b9:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=01bef0b9:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=01bef0b9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=01bef0b9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=01bef0b9:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=01bef0b9:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=01bef0b9:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=01bef0b9:555
+flush @ @tanstack_react-query.js?v=01bef0b9:569
+batch @ @tanstack_react-query.js?v=01bef0b9:587
+dispatch_fn @ @tanstack_react-query.js?v=01bef0b9:996
+setData @ @tanstack_react-query.js?v=01bef0b9:696
+onSuccess @ @tanstack_react-query.js?v=01bef0b9:897
+resolve @ @tanstack_react-query.js?v=01bef0b9:456
+Promise.then
+run @ @tanstack_react-query.js?v=01bef0b9:498
+start @ @tanstack_react-query.js?v=01bef0b9:536
+fetch @ @tanstack_react-query.js?v=01bef0b9:926
+executeFetch_fn @ @tanstack_react-query.js?v=01bef0b9:2211
+onSubscribe @ @tanstack_react-query.js?v=01bef0b9:1898
+subscribe @ @tanstack_react-query.js?v=01bef0b9:24
+(anonymous) @ @tanstack_react-query.js?v=01bef0b9:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=01bef0b9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=01bef0b9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=01bef0b9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=01bef0b9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=01bef0b9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=01bef0b9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=01bef0b9:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19432
+commitRoot @ chunk-RPCDYKBN.js?v=01bef0b9:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=01bef0b9:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18718
+workLoop @ chunk-RPCDYKBN.js?v=01bef0b9:197
+flushWork @ chunk-RPCDYKBN.js?v=01bef0b9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=01bef0b9:384
+chunk-RPCDYKBN.js?v=01bef0b9:14032 The above error occurred in the <PlayerDashboard> component:
+
+    at PlayerDashboard (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/player-dashboard.tsx:84:43)
+    at component
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=01bef0b9:323:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=01bef0b9:379:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=U22qdX-PQlNMRBhjcIKVu:55:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=01bef0b9:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=01bef0b9:14032
+update.callback @ chunk-RPCDYKBN.js?v=01bef0b9:14052
+callCallback @ chunk-RPCDYKBN.js?v=01bef0b9:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=01bef0b9:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=01bef0b9:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=01bef0b9:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=01bef0b9:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=01bef0b9:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19353
+commitRoot @ chunk-RPCDYKBN.js?v=01bef0b9:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=01bef0b9:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=01bef0b9:555
+flush @ @tanstack_react-query.js?v=01bef0b9:569
+batch @ @tanstack_react-query.js?v=01bef0b9:587
+dispatch_fn @ @tanstack_react-query.js?v=01bef0b9:996
+setData @ @tanstack_react-query.js?v=01bef0b9:696
+onSuccess @ @tanstack_react-query.js?v=01bef0b9:897
+resolve @ @tanstack_react-query.js?v=01bef0b9:456
+Promise.then
+run @ @tanstack_react-query.js?v=01bef0b9:498
+start @ @tanstack_react-query.js?v=01bef0b9:536
+fetch @ @tanstack_react-query.js?v=01bef0b9:926
+executeFetch_fn @ @tanstack_react-query.js?v=01bef0b9:2211
+onSubscribe @ @tanstack_react-query.js?v=01bef0b9:1898
+subscribe @ @tanstack_react-query.js?v=01bef0b9:24
+(anonymous) @ @tanstack_react-query.js?v=01bef0b9:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=01bef0b9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=01bef0b9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=01bef0b9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=01bef0b9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=01bef0b9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=01bef0b9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=01bef0b9:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19432
+commitRoot @ chunk-RPCDYKBN.js?v=01bef0b9:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=01bef0b9:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18718
+workLoop @ chunk-RPCDYKBN.js?v=01bef0b9:197
+flushWork @ chunk-RPCDYKBN.js?v=01bef0b9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=01bef0b9:384
+chunk-RPCDYKBN.js?v=01bef0b9:9129 Uncaught ReferenceError: Users is not defined
+    at PlayerDashboard (player-dashboard.tsx:1233:28)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=01bef0b9:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=01bef0b9:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=01bef0b9:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=01bef0b9:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=01bef0b9:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=01bef0b9:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=01bef0b9:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=01bef0b9:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=01bef0b9:18879:28)
+PlayerDashboard @ player-dashboard.tsx:1233
+renderWithHooks @ chunk-RPCDYKBN.js?v=01bef0b9:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=01bef0b9:14926
+beginWork @ chunk-RPCDYKBN.js?v=01bef0b9:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=01bef0b9:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=01bef0b9:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=01bef0b9:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=01bef0b9:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=01bef0b9:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=01bef0b9:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=01bef0b9:555
+flush @ @tanstack_react-query.js?v=01bef0b9:569
+batch @ @tanstack_react-query.js?v=01bef0b9:587
+dispatch_fn @ @tanstack_react-query.js?v=01bef0b9:996
+setData @ @tanstack_react-query.js?v=01bef0b9:696
+onSuccess @ @tanstack_react-query.js?v=01bef0b9:897
+resolve @ @tanstack_react-query.js?v=01bef0b9:456
+Promise.then
+run @ @tanstack_react-query.js?v=01bef0b9:498
+start @ @tanstack_react-query.js?v=01bef0b9:536
+fetch @ @tanstack_react-query.js?v=01bef0b9:926
+executeFetch_fn @ @tanstack_react-query.js?v=01bef0b9:2211
+onSubscribe @ @tanstack_react-query.js?v=01bef0b9:1898
+subscribe @ @tanstack_react-query.js?v=01bef0b9:24
+(anonymous) @ @tanstack_react-query.js?v=01bef0b9:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=01bef0b9:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=01bef0b9:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=01bef0b9:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=01bef0b9:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=01bef0b9:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=01bef0b9:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=01bef0b9:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=01bef0b9:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=01bef0b9:19432
+commitRoot @ chunk-RPCDYKBN.js?v=01bef0b9:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=01bef0b9:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=01bef0b9:18718
+workLoop @ chunk-RPCDYKBN.js?v=01bef0b9:197
+flushWork @ chunk-RPCDYKBN.js?v=01bef0b9:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=01bef0b9:384

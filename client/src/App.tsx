@@ -14,6 +14,7 @@ import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import CoachDashboard from "@/pages/coach-dashboard";
 import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
@@ -141,6 +142,8 @@ function Router() {
             return <AdminDashboard />;
           case "player":
             return <PlayerDashboard />;
+          case "coach":
+            return <CoachDashboard />;
           case "parent":
           default:
             return <ParentDashboard />;
@@ -149,6 +152,7 @@ function Router() {
       <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
       <Route path="/parent-dashboard" component={() => <ParentDashboard />} />
       <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
+      <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
       <Route path="/admin" component={() => <AdminDashboard />} />
       
       {/* Routes available to all authenticated users */}

@@ -19,14 +19,14 @@ type KindFilter = 'all' | 'trophies' | 'badges';
 type EarnedFilter = 'all' | 'earned' | 'not';
 
 // =============================
-// Image helpers (locked to /trophies)
+// Image helpers (using @assets alias for attached_assets/trophies)
 // - If a gray variant is missing, gracefully fall back to color
 // =============================
 function imgColor(slug: string): string {
-  return `/trophies/${slug}.png`;
+  return new URL(`../../../attached_assets/trophies/${slug}.png`, import.meta.url).href;
 }
 function imgGray(slug: string): string {
-  return `/trophies/${slug}-gray.png`;
+  return new URL(`../../../attached_assets/trophies/${slug}-gray.png`, import.meta.url).href;
 }
 
 function TrophyBadgeImg({ slug, achieved, alt, size = "w-20 h-20" }: { slug: string; achieved: boolean; alt: string; size?: string }) {

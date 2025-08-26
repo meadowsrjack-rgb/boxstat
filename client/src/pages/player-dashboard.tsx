@@ -1100,7 +1100,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             <span>FROM</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {(editableProfile.location || "Irvine").replace(", CA", "").replace(",CA", "")}
+                            {(editableProfile.city || "Irvine").replace(", CA", "").replace(",CA", "")}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>
@@ -1167,8 +1167,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <CityTypeahead
-                          value={editableProfile.location}
-                          onChange={(city) => setEditableProfile((p) => ({ ...p, location: city }))}
+                          value={editableProfile.city}
+                          onChange={(city) => setEditableProfile((p) => ({ ...p, city: city }))}
                         />
                       </div>
                     </div>

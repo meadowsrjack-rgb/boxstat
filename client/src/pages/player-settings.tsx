@@ -200,7 +200,7 @@ function ProfileSection() {
     lastName: (user as any)?.lastName || "",
     position: (user as any)?.position || "",
     jerseyNumber: (user as any)?.jerseyNumber || "",
-    city: (user as any)?.city || "",
+    location: (user as any)?.location || "",
   });
 
   const mutation = useMutation({
@@ -265,8 +265,8 @@ function ProfileSection() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">City (From)</label>
               <Input
-                value={profile.city}
-                onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                value={profile.location}
+                onChange={(e) => setProfile(p => ({ ...p, location: e.target.value }))}
                 placeholder="Enter your city"
               />
             </div>

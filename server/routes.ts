@@ -1051,6 +1051,205 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Coach-specific routes
+  app.get('/api/coach/team', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Get the team assigned to this coach
+      const team = await storage.getCoachTeam(userId);
+      res.json(team);
+    } catch (error) {
+      console.error("Error fetching coach team:", error);
+      res.status(500).json({ message: "Failed to fetch coach team" });
+    }
+  });
+
+  app.get('/api/coach/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const events = await storage.getCoachEvents(userId);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching coach events:", error);
+      res.status(500).json({ message: "Failed to fetch coach events" });
+    }
+  });
+
+  app.get('/api/coach/players/search', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const query = req.query.q as string;
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+
+      const players = await storage.searchPlayers(query);
+      res.json(players);
+    } catch (error) {
+      console.error("Error searching players:", error);
+      res.status(500).json({ message: "Failed to search players" });
+    }
+  });
+
+  app.post('/api/coach/award', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { playerId, awardId, category } = req.body;
+      
+      if (category === 'badge') {
+        await storage.awardBadge(playerId, awardId, userId);
+      } else if (category === 'trophy') {
+        await storage.awardTrophy(playerId, awardId, userId);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error awarding badge/trophy:", error);
+      res.status(500).json({ message: "Failed to award badge/trophy" });
+    }
+  });
+
+  app.post('/api/coach/evaluate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { playerId, scores, quarter } = req.body;
+      
+      const evaluation = await storage.savePlayerEvaluation({
+        playerId,
+        coachId: userId,
+        scores,
+        quarter,
+        year: new Date().getFullYear()
+      });
+
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error saving player evaluation:", error);
+      res.status(500).json({ message: "Failed to save player evaluation" });
+    }
+  });
+
+  // Coach payroll and HR routes (placeholders)
+  app.get('/api/coach/pay/summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock payroll data for now
+      res.json({
+        status: "paid",
+        nextPayDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+        nextPayAmountCents: 150000, // $1500
+        currency: "usd"
+      });
+    } catch (error) {
+      console.error("Error fetching pay summary:", error);
+      res.status(500).json({ message: "Failed to fetch pay summary" });
+    }
+  });
+
+  app.post('/api/coach/pay/portal', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock portal URL for now
+      res.json({ url: "https://portal.payroll-provider.com/coach/" + userId });
+    } catch (error) {
+      console.error("Error generating portal URL:", error);
+      res.status(500).json({ message: "Failed to generate portal URL" });
+    }
+  });
+
+  app.get('/api/coach/hr/docs', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock HR documents for now
+      res.json([
+        { id: 1, title: "Coach Handbook", url: "/docs/coach-handbook.pdf" },
+        { id: 2, title: "Safety Guidelines", url: "/docs/safety-guidelines.pdf" },
+        { id: 3, title: "Emergency Procedures", url: "/docs/emergency-procedures.pdf" }
+      ]);
+    } catch (error) {
+      console.error("Error fetching HR docs:", error);
+      res.status(500).json({ message: "Failed to fetch HR documents" });
+    }
+  });
+
+  app.get('/api/coach/hr/announcements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Mock HR announcements for now
+      res.json([
+        { 
+          id: 1, 
+          title: "New Safety Protocol", 
+          body: "Please review the updated safety guidelines before next week's practices.",
+          createdAt: new Date().toISOString()
+        },
+        { 
+          id: 2, 
+          title: "Coach Meeting Scheduled", 
+          body: "Monthly coach meeting is scheduled for next Friday at 7:00 PM.",
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ]);
+    } catch (error) {
+      console.error("Error fetching HR announcements:", error);
+      res.status(500).json({ message: "Failed to fetch HR announcements" });
+    }
+  });
+
   // Task completion routes
   app.get('/api/tasks/:announcementId/completion/:userId', isAuthenticated, async (req: any, res) => {
     try {

@@ -31,6 +31,7 @@ import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
 import ParentSettingsPage from "@/pages/parent-settings";
 import PlayerSettingsPage from "@/pages/player-settings";
+import CoachSettingsPage from "@/pages/coach-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
 import TestRoute from "@/pages/test-route";
@@ -160,6 +161,7 @@ function Router() {
       <Route path="/settings" component={SettingsPage} />
       <Route path="/parent-settings" component={ParentSettingsPage} />
       <Route path="/player-settings" component={PlayerSettingsPage} />
+      <Route path="/coach-settings" component={CoachSettingsPage} />
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
       <Route path="/calendar-sync" component={CalendarSync} />

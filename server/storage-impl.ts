@@ -1141,6 +1141,147 @@ export class DatabaseStorage implements IStorage {
       ))
       .orderBy(asc(events.startTime));
   }
+
+  // Coach-specific methods
+  async getCoachTeam(coachId: string): Promise<any> {
+    // First get the coach's user record to find their assigned team
+    const coach = await db.select().from(users).where(eq(users.id, coachId)).limit(1);
+    if (!coach.length) return null;
+
+    const teamId = coach[0].teamId;
+    if (!teamId) return null;
+
+    // Get team details with roster
+    const team = await db.select().from(teams).where(eq(teams.id, teamId)).limit(1);
+    if (!team.length) return null;
+
+    const roster = await db.select().from(users).where(eq(users.teamId, teamId));
+
+    return {
+      id: team[0].id,
+      name: team[0].name,
+      ageGroup: team[0].ageGroup,
+      season: team[0].season,
+      roster: roster
+    };
+  }
+
+  async getCoachEvents(coachId: string): Promise<Event[]> {
+    // Get the coach's team first
+    const coach = await db.select().from(users).where(eq(users.id, coachId)).limit(1);
+    if (!coach.length || !coach[0].teamId) return [];
+
+    const teamId = coach[0].teamId;
+    const now = new Date();
+    
+    return await db
+      .select()
+      .from(events)
+      .where(and(
+        eq(events.teamId, teamId),
+        gte(events.startTime, now),
+        eq(events.isActive, true)
+      ))
+      .orderBy(asc(events.startTime));
+  }
+
+  async searchPlayers(query: string): Promise<User[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    
+    return await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          eq(users.userType, 'player'),
+          or(
+            sql`lower(${users.firstName}) LIKE ${searchTerm}`,
+            sql`lower(${users.lastName}) LIKE ${searchTerm}`,
+            sql`lower(${users.email}) LIKE ${searchTerm}`
+          )
+        )
+      )
+      .limit(10);
+  }
+
+  async awardBadge(playerId: string, badgeId: number, awardedBy: string): Promise<void> {
+    // Check if player already has this badge
+    const existing = await db
+      .select()
+      .from(userBadges)
+      .where(and(
+        eq(userBadges.userId, playerId),
+        eq(userBadges.badgeId, badgeId)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('Player already has this badge');
+    }
+
+    await db.insert(userBadges).values({
+      userId: playerId,
+      badgeId: badgeId,
+      awardedBy,
+      earnedAt: new Date()
+    });
+  }
+
+  async awardTrophy(playerId: string, trophyId: number, awardedBy: string): Promise<void> {
+    // Check if player already has this trophy
+    const existing = await db
+      .select()
+      .from(userTrophies)
+      .where(and(
+        eq(userTrophies.userId, playerId),
+        eq(userTrophies.trophyId, trophyId)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      throw new Error('Player already has this trophy');
+    }
+
+    await db.insert(userTrophies).values({
+      userId: playerId,
+      trophyId: trophyId,
+      awardedBy,
+      earnedAt: new Date()
+    });
+  }
+
+  async savePlayerEvaluation(evaluation: {
+    playerId: string;
+    coachId: string;
+    scores: Record<string, number>;
+    quarter: string;
+    year: number;
+  }): Promise<any> {
+    // For now, we'll store evaluations in a simplified way
+    // In a real app, you'd have a dedicated evaluations table
+    
+    const evaluationId = `eval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Store as a player stats record for now
+    await db.insert(playerStats).values({
+      playerId: evaluation.playerId,
+      statType: 'evaluation',
+      statValue: JSON.stringify({
+        scores: evaluation.scores,
+        quarter: evaluation.quarter,
+        year: evaluation.year,
+        evaluatedBy: evaluation.coachId
+      }),
+      gameDate: new Date(),
+      createdAt: new Date()
+    });
+
+    return {
+      id: evaluationId,
+      ...evaluation,
+      createdAt: new Date()
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();

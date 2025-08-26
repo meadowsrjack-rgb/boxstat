@@ -10,8 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
@@ -75,6 +77,38 @@ type SkillKey = typeof SKILL_KEYS[number];
 
 type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
 
+// Award Types
+type CoachAward = {
+  id: string;
+  name: string;
+  description: string;
+  tier: "starter" | "all-star" | "superstar" | "hall-of-fame";
+  imageUrl: string;
+  category: "badge" | "trophy";
+};
+
+// Predefined Coach Awards
+const COACH_AWARDS: CoachAward[] = [
+  // Starter Badges
+  { id: "teamwork", name: "Teamwork", description: "Shows excellent collaboration with teammates", tier: "starter", imageUrl: "@assets/trophies/teamwork.png", category: "badge" },
+  { id: "improvement", name: "Most Improved", description: "Significant improvement in skills", tier: "starter", imageUrl: "@assets/trophies/improvement.png", category: "badge" },
+  { id: "attendance", name: "Perfect Attendance", description: "Excellent practice attendance", tier: "starter", imageUrl: "@assets/trophies/attendance.png", category: "badge" },
+  
+  // All-Star Badges  
+  { id: "leadership", name: "Leadership", description: "Natural leader on and off court", tier: "all-star", imageUrl: "@assets/trophies/leadership.png", category: "badge" },
+  { id: "game-changer", name: "Game Changer", description: "Makes crucial plays in important moments", tier: "all-star", imageUrl: "@assets/trophies/game-changer.png", category: "badge" },
+  
+  // Superstar Badges
+  { id: "clutch-performer", name: "Clutch Performer", description: "Excels under pressure", tier: "superstar", imageUrl: "@assets/trophies/clutch-performer.png", category: "badge" },
+  
+  // End of Season Trophies
+  { id: "season-mvp", name: "Season MVP", description: "Most Valuable Player of the season", tier: "hall-of-fame", imageUrl: "@assets/trophies/season-mvp.png", category: "trophy" },
+  { id: "season-mip", name: "Season MIP", description: "Most Improved Player of the season", tier: "hall-of-fame", imageUrl: "@assets/trophies/season-mip.png", category: "trophy" },
+  { id: "coach-award", name: "Coach's Award", description: "Special recognition from coach", tier: "hall-of-fame", imageUrl: "@assets/trophies/coach-award.png", category: "trophy" },
+  { id: "spirit-award", name: "Spirit Award", description: "Best team spirit and attitude", tier: "hall-of-fame", imageUrl: "@assets/trophies/spirit-award.png", category: "trophy" },
+  { id: "heart-hustle", name: "Heart & Hustle", description: "Maximum effort and determination", tier: "hall-of-fame", imageUrl: "@assets/trophies/heart-hustle.png", category: "trophy" }
+];
+
 /* =================== Component =================== */
 export default function CoachDashboard() {
   const { user } = useAuth();
@@ -85,6 +119,20 @@ export default function CoachDashboard() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Modal states
+  const [showAwardsModal, setShowAwardsModal] = useState(false);
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedAward, setSelectedAward] = useState<CoachAward | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Player evaluation state
+  const [evaluationScores, setEvaluationScores] = useState<Record<SkillKey, number>>({
+    SHOOTING: 1,
+    DRIBBLING: 1,
+    PASSING: 1
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coachDashboardTab", activeTab);
@@ -156,6 +204,17 @@ export default function CoachDashboard() {
     refetchInterval: 60000,
   });
 
+  // Player search for evaluation and awards
+  const { data: searchResults = [] as PlayerLite[] } = useQuery({
+    queryKey: ["/api/coach/players/search", searchTerm],
+    queryFn: async () => {
+      const res = await fetch(`/api/coach/players/search?q=${encodeURIComponent(searchTerm)}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: searchTerm.length > 0,
+  });
+
   const sendTeamMessage = useMutation({
     mutationFn: async (message: string) => {
       const res = await fetch(`/api/teams/${coachTeam?.id}/messages`, {
@@ -170,6 +229,52 @@ export default function CoachDashboard() {
     onSuccess: () => {
       toast({ title: "Message sent" });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", coachTeam?.id, "messages"] });
+    },
+  });
+
+  // Award a badge/trophy to a player
+  const awardMutation = useMutation({
+    mutationFn: async ({ playerId, awardId, category }: { playerId: number; awardId: string; category: "badge" | "trophy" }) => {
+      const res = await fetch(`/api/coach/award`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ playerId, awardId, category }),
+      });
+      if (!res.ok) throw new Error("Failed to award badge/trophy");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Award given successfully!" });
+      setShowAwardsModal(false);
+      setSelectedPlayer(null);
+      setSelectedAward(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to give award", variant: "destructive" });
+    },
+  });
+
+  // Evaluate player skills
+  const evaluateMutation = useMutation({
+    mutationFn: async ({ playerId, scores }: { playerId: number; scores: Record<SkillKey, number> }) => {
+      const res = await fetch(`/api/coach/evaluate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ playerId, scores, quarter: "Q1" }), // You could make quarter dynamic
+      });
+      if (!res.ok) throw new Error("Failed to evaluate player");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Player evaluation saved!" });
+      setShowEvaluationModal(false);
+      setSelectedPlayer(null);
+      setEvaluationScores({ SHOOTING: 1, DRIBBLING: 1, PASSING: 1 });
+    },
+    onError: () => {
+      toast({ title: "Failed to save evaluation", variant: "destructive" });
     },
   });
 
@@ -200,6 +305,292 @@ export default function CoachDashboard() {
       .slice(0, 3);
   }, [coachEvents]);
 
+  // Modal for awarding badges and trophies
+  const AwardsModal = () => {
+    const filteredAwards = COACH_AWARDS.filter(award => 
+      award.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      award.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    return (
+      <Dialog open={showAwardsModal} onOpenChange={setShowAwardsModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-yellow-600" />
+              Award Badge or Trophy
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Player Selection */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Player</label>
+              <Input
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mb-2"
+              />
+              
+              {searchTerm.length > 0 && (
+                <div className="max-h-32 overflow-y-auto border rounded-md">
+                  {searchResults.map(player => (
+                    <button
+                      key={player.id}
+                      onClick={() => {
+                        setSelectedPlayer(player);
+                        setSearchTerm("");
+                      }}
+                      className="w-full text-left p-2 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={player.profileImageUrl || undefined} />
+                        <AvatarFallback>
+                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{player.firstName} {player.lastName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {selectedPlayer && (
+                <div className="mt-2 p-2 bg-blue-50 rounded-md flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
+                    <AvatarFallback>
+                      {selectedPlayer.firstName.charAt(0)}{selectedPlayer.lastName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedPlayer(null)}
+                    className="ml-auto"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Award Selection */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Award</label>
+              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                {filteredAwards.map(award => (
+                  <button
+                    key={award.id}
+                    onClick={() => setSelectedAward(award)}
+                    className={`text-left p-3 rounded-md border transition-colors ${
+                      selectedAward?.id === award.id 
+                        ? "bg-red-50 border-red-200" 
+                        : "hover:bg-gray-50 border-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        award.tier === 'starter' ? 'bg-green-100 text-green-600' :
+                        award.tier === 'all-star' ? 'bg-blue-100 text-blue-600' :
+                        award.tier === 'superstar' ? 'bg-purple-100 text-purple-600' :
+                        'bg-yellow-100 text-yellow-600'
+                      }`}>
+                        {award.category === 'trophy' ? <Trophy className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{award.name}</div>
+                        <div className="text-xs text-gray-600">{award.description}</div>
+                        <div className={`text-xs mt-1 px-2 py-1 rounded-full inline-block ${
+                          award.tier === 'starter' ? 'bg-green-100 text-green-700' :
+                          award.tier === 'all-star' ? 'bg-blue-100 text-blue-700' :
+                          award.tier === 'superstar' ? 'bg-purple-100 text-purple-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {award.tier.replace('-', ' ').toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAwardsModal(false);
+                  setSelectedPlayer(null);
+                  setSelectedAward(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedPlayer && selectedAward) {
+                    awardMutation.mutate({
+                      playerId: selectedPlayer.id,
+                      awardId: selectedAward.id,
+                      category: selectedAward.category
+                    });
+                  }
+                }}
+                disabled={!selectedPlayer || !selectedAward || awardMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {awardMutation.isPending ? "Awarding..." : "Give Award"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Modal for player skill evaluation
+  const EvaluationModal = () => {
+    return (
+      <Dialog open={showEvaluationModal} onOpenChange={setShowEvaluationModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gauge className="h-5 w-5 text-blue-600" />
+              Player Skill Evaluation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Player Selection */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Player</label>
+              <Input
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="mb-2"
+              />
+              
+              {searchTerm.length > 0 && (
+                <div className="max-h-32 overflow-y-auto border rounded-md">
+                  {searchResults.map(player => (
+                    <button
+                      key={player.id}
+                      onClick={() => {
+                        setSelectedPlayer(player);
+                        setSearchTerm("");
+                      }}
+                      className="w-full text-left p-2 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={player.profileImageUrl || undefined} />
+                        <AvatarFallback>
+                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{player.firstName} {player.lastName}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {selectedPlayer && (
+                <div className="mt-2 p-2 bg-blue-50 rounded-md flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
+                    <AvatarFallback>
+                      {selectedPlayer.firstName.charAt(0)}{selectedPlayer.lastName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium">{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setSelectedPlayer(null)}
+                    className="ml-auto"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Skill Ratings */}
+            {selectedPlayer && (
+              <div className="space-y-6">
+                <div className="text-sm text-gray-600 mb-4">
+                  Rate each skill from 1-5 (1 = Needs Work, 5 = Excellent)
+                </div>
+                
+                {SKILL_KEYS.map(skill => (
+                  <div key={skill} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium capitalize">
+                        {skill.toLowerCase()}
+                      </label>
+                      <span className="text-lg font-bold text-red-600">
+                        {evaluationScores[skill]}
+                      </span>
+                    </div>
+                    <Slider
+                      value={[evaluationScores[skill]]}
+                      onValueChange={([value]) => 
+                        setEvaluationScores(prev => ({ ...prev, [skill]: value }))
+                      }
+                      min={1}
+                      max={5}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>Needs Work</span>
+                      <span>Good</span>
+                      <span>Excellent</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEvaluationModal(false);
+                  setSelectedPlayer(null);
+                  setEvaluationScores({ SHOOTING: 1, DRIBBLING: 1, PASSING: 1 });
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedPlayer) {
+                    evaluateMutation.mutate({
+                      playerId: selectedPlayer.id,
+                      scores: evaluationScores
+                    });
+                  }
+                }}
+                disabled={!selectedPlayer || evaluateMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                {evaluateMutation.isPending ? "Saving..." : "Save Evaluation"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
@@ -213,7 +604,7 @@ export default function CoachDashboard() {
               variant="ghost"
               size="icon"
               className="h-12 w-12"
-              onClick={() => setLocation("/settings")}
+              onClick={() => setLocation("/coach-settings")}
               aria-label="Settings"
             >
               <MoreHorizontal className="h-12 w-12" />
@@ -316,6 +707,28 @@ export default function CoachDashboard() {
           )}
         </div>
       </main>
+
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-20 right-4 flex flex-col gap-3 z-50">
+        <Button
+          size="lg"
+          onClick={() => setShowEvaluationModal(true)}
+          className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
+        >
+          <Gauge className="h-6 w-6" />
+        </Button>
+        <Button
+          size="lg"
+          onClick={() => setShowAwardsModal(true)}
+          className="h-14 w-14 rounded-full bg-yellow-600 hover:bg-yellow-700 shadow-lg"
+        >
+          <Trophy className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Modals */}
+      <AwardsModal />
+      <EvaluationModal />
     </div>
   );
 }
@@ -411,7 +824,7 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
               <div className="max-h-72 overflow-y-auto">
                 {team.roster.map((p) => (
                   <div key={p.id} className="p-4 border-b border-gray-100 last:border-b-0 flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={p.profileImageUrl} />
                         <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
@@ -421,7 +834,30 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
                         <div className="text-xs text-gray-500">{p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}</div>
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => (window.location.href = `/players/${p.id}`)}>View</Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedPlayer(p);
+                          setShowEvaluationModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Gauge className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedPlayer(p);
+                          setShowAwardsModal(true);
+                        }}
+                        className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                      >
+                        <Trophy className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

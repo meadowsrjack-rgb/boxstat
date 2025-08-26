@@ -32,7 +32,7 @@ import {
   Globe,
   Users,
   Lock,
-  Target,
+
   Trophy,
   Copy,
 } from "lucide-react";
@@ -54,7 +54,6 @@ const JERSEY_OPTIONS = Array.from({ length: 99 }, (_, i) => (i + 1).toString());
 
 type TabKey =
   | "profile"
-  | "goals"
   | "privacy"
   | "notifications"
   | "security"
@@ -75,7 +74,7 @@ function useTab(): [TabKey, (t: TabKey) => void] {
       
       const url = new URL(window.location.href);
       const tabParam = url.searchParams.get("tab");
-      const validTabs: TabKey[] = ["profile", "goals", "privacy", "notifications", "security", "devices", "legal"];
+      const validTabs: TabKey[] = ["profile", "privacy", "notifications", "security", "devices", "legal"];
       
       if (tabParam && validTabs.includes(tabParam as TabKey)) {
         setCurrentTab(tabParam as TabKey);
@@ -119,7 +118,7 @@ export default function PlayerSettingsPage() {
 
   const sections = [
     { key: "profile", icon: User, label: "Player Profile", description: "Basketball info and personal details" },
-    { key: "goals", icon: Target, label: "Goals & Progress", description: "Set goals and track your improvement" },
+
     { key: "privacy", icon: Globe, label: "Privacy", description: "Control your visibility and data sharing" },
     { key: "notifications", icon: Bell, label: "Notifications", description: "Manage alerts and communications" },
     { key: "security", icon: Shield, label: "Account & Security", description: "Password and device management" },
@@ -172,7 +171,7 @@ export default function PlayerSettingsPage() {
         {/* Content */}
         <div className="p-6 max-w-4xl mx-auto">
           {tab === "profile" && <ProfileSection />}
-          {tab === "goals" && <GoalsSection />}
+
           {tab === "privacy" && <PrivacySection />}
           {tab === "notifications" && <NotificationsSection />}
           {tab === "security" && <SecuritySection />}
@@ -256,7 +255,7 @@ function ProfileSection() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
               <Input
-                value={teamData?.name || "No team assigned"}
+                value={(teamData as any)?.name || "No team assigned"}
                 disabled
                 className="bg-gray-100 text-gray-500 cursor-not-allowed"
                 placeholder="Team will be assigned when you join"
@@ -310,65 +309,7 @@ function ProfileSection() {
   );
 }
 
-// Goals and Progress Section
-function GoalsSection() {
-  const [goals, setGoals] = useState({
-    seasonGoal: "",
-    skillGoal: "",
-    fitnessGoal: "",
-    academicGoal: "",
-  });
 
-  return (
-    <div className="space-y-6">
-      <SectionHeader icon={Target} title="Goals & Progress" subtitle="Set goals and track your improvement" />
-
-      <Card className="bg-transparent border-0 shadow-none">
-        <CardContent className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Season Goal</label>
-            <Input
-              value={goals.seasonGoal}
-              onChange={(e) => setGoals(g => ({ ...g, seasonGoal: e.target.value }))}
-              placeholder="What do you want to achieve this season?"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Skill Development Goal</label>
-            <Input
-              value={goals.skillGoal}
-              onChange={(e) => setGoals(g => ({ ...g, skillGoal: e.target.value }))}
-              placeholder="What skills do you want to improve?"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Fitness Goal</label>
-            <Input
-              value={goals.fitnessGoal}
-              onChange={(e) => setGoals(g => ({ ...g, fitnessGoal: e.target.value }))}
-              placeholder="What are your fitness targets?"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Academic Goal</label>
-            <Input
-              value={goals.academicGoal}
-              onChange={(e) => setGoals(g => ({ ...g, academicGoal: e.target.value }))}
-              placeholder="What are your academic goals?"
-            />
-          </div>
-
-          <div className="pt-4">
-            <Button>Save Goals</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 // Privacy section for players
 function PrivacySection() {
@@ -423,7 +364,7 @@ function NotificationsSection() {
     pushEventReminders: true,
     pushCheckinWindows: true,
     pushTrainingReminders: true,
-    pushGoalUpdates: true,
+
     quietHours: true,
   });
 
@@ -461,7 +402,7 @@ function NotificationsSection() {
             <ToggleRow label="Event reminders" checked={prefs.pushEventReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushEventReminders: v }))} />
             <ToggleRow label="Check-in windows" checked={prefs.pushCheckinWindows} onChange={(v) => setPrefs((p) => ({ ...p, pushCheckinWindows: v }))} />
             <ToggleRow label="Training reminders" checked={prefs.pushTrainingReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushTrainingReminders: v }))} />
-            <ToggleRow label="Goal & progress updates" checked={prefs.pushGoalUpdates} onChange={(v) => setPrefs((p) => ({ ...p, pushGoalUpdates: v }))} />
+
           </div>
 
           <Separator />

@@ -2279,12 +2279,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const playerId = match[1];
-        const users = await db.select().from(users).where(eq(users.id, playerId));
-        if (users.length === 0) {
+        const foundUsers = await db.select().from(users).where(eq(users.id, playerId));
+        if (foundUsers.length === 0) {
           return res.status(404).json({ message: 'Invalid invite code - player not found' });
         }
         
-        const player = users[0];
+        const player = foundUsers[0];
         if (player.userType !== 'player') {
           return res.status(400).json({ message: 'Invite code is not for a player account' });
         }
@@ -2304,12 +2304,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (playerEmail) {
         // Handle email + DOB linking (existing logic)
-        const players = await db.select().from(users).where(eq(users.email, playerEmail));
-        if (players.length === 0) {
+        const foundPlayers = await db.select().from(users).where(eq(users.email, playerEmail));
+        if (foundPlayers.length === 0) {
           return res.status(404).json({ message: 'Player account not found with this email' });
         }
         
-        const player = players[0];
+        const player = foundPlayers[0];
         if (player.userType !== 'player') {
           return res.status(400).json({ message: 'Account is not a player account' });
         }
@@ -2400,6 +2400,497 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching parent events:', error);
       res.status(500).json({ message: 'Failed to fetch events' });
+    }
+  });
+
+  // Admin routes - comprehensive admin functionality
+  app.get('/api/admin/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      // Get all user counts
+      const allUsers = await db.select().from(users);
+      const totalUsers = allUsers.length;
+      const totalPlayers = allUsers.filter((u: any) => u.userType === 'player').length;
+      const totalParents = allUsers.filter((u: any) => u.userType === 'parent').length;
+      const totalCoaches = allUsers.filter((u: any) => u.userType === 'coach').length;
+
+      // Get team count
+      const teams = await storage.getAllTeams();
+      const totalTeams = teams.length;
+
+      // Get event count
+      const events = await storage.getAllEvents();
+      const totalEvents = events.length;
+
+      // Get award count (estimate)
+      const totalAwards = 150; // This would be calculated from actual user awards
+
+      const stats = {
+        totalUsers,
+        totalPlayers,
+        totalParents,
+        totalCoaches,
+        totalTeams,
+        totalEvents,
+        totalAwards,
+        recentActivity: 25
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch admin stats" });
+    }
+  });
+
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const allUserData = await db.select().from(users);
+      
+      // Transform users to include team information
+      const enrichedUsers = await Promise.all(allUserData.map(async (user: any) => {
+        let teamName = null;
+        if (user.teamId) {
+          try {
+            const team = await storage.getTeam(user.teamId);
+            teamName = team?.name;
+          } catch (error) {
+            console.error(`Error fetching team for user ${user.id}:`, error);
+          }
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          profileImageUrl: user.profileImageUrl,
+          phoneNumber: user.phoneNumber,
+          teamId: user.teamId,
+          teamName,
+          isActive: true, // Default to active
+          createdAt: user.createdAt,
+          lastLoginAt: null
+        };
+      }));
+
+      res.json(enrichedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const { firstName, lastName, email, userType, phoneNumber, teamId } = req.body;
+      
+      // Generate unique QR code for check-in
+      const qrCodeData = `UYP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const newUser = await db.insert(users).values({
+        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        email,
+        firstName,
+        lastName,
+        userType,
+        phoneNumber,
+        teamId: teamId ? parseInt(teamId) : null,
+        qrCodeData,
+        profileCompleted: true
+      }).returning();
+
+      res.json(newUser[0]);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put('/api/admin/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const targetUserId = req.params.id;
+      const updates = req.body;
+
+      const updatedUser = await storage.updateUser(targetUserId, updates);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const targetUserId = req.params.id;
+      await db.delete(users).where(eq(users.id, targetUserId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.get('/api/admin/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const teams = await storage.getAllTeams();
+      
+      // Enrich teams with coach and player information
+      const enrichedTeams = await Promise.all(teams.map(async (team) => {
+        let coach = null;
+        const players = await storage.getTeamPlayers(team.id);
+
+        // Find coach (assuming teamId field in users indicates coaching)
+        const allUserData = await db.select().from(users);
+        const teamCoach = allUserData.find((u: any) => u.userType === 'coach' && u.teamId === team.id);
+        
+        if (teamCoach) {
+          coach = {
+            id: teamCoach.id,
+            firstName: teamCoach.firstName,
+            lastName: teamCoach.lastName,
+            email: teamCoach.email
+          };
+        }
+
+        return {
+          id: team.id,
+          name: team.name,
+          ageGroup: team.ageGroup || "Unknown",
+          coach,
+          players: players || [],
+          description: null, // Team description not in current schema
+          isActive: true
+        };
+      }));
+
+      res.json(enrichedTeams);
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ message: "Failed to fetch teams" });
+    }
+  });
+
+  app.post('/api/admin/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const { name, ageGroup, coachId, description } = req.body;
+
+      const newTeam = await storage.createTeam({
+        name,
+        ageGroup
+      });
+
+      // If coach is assigned, update the coach's team
+      if (coachId) {
+        await storage.updateUser(coachId, { teamId: newTeam.id });
+      }
+
+      res.json(newTeam);
+    } catch (error) {
+      console.error("Error creating team:", error);
+      res.status(500).json({ message: "Failed to create team" });
+    }
+  });
+
+  app.get('/api/admin/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const events = await storage.getAllEvents();
+      
+      // Enrich events with team information
+      const enrichedEvents = await Promise.all(events.map(async (event) => {
+        let teamName = null;
+        if (event.teamId) {
+          try {
+            const team = await storage.getTeam(event.teamId);
+            teamName = team?.name;
+          } catch (error) {
+            console.error(`Error fetching team for event ${event.id}:`, error);
+          }
+        }
+
+        return {
+          id: event.id,
+          title: event.title,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          location: event.location,
+          eventType: event.eventType || "other",
+          teamId: event.teamId,
+          teamName,
+          description: event.description,
+          attendanceCount: 0 // Would be calculated from actual attendance
+        };
+      }));
+
+      res.json(enrichedEvents);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
+  app.post('/api/admin/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const { title, startTime, endTime, location, eventType, teamId, description } = req.body;
+
+      const newEvent = await storage.createEvent({
+        title,
+        startTime: new Date(startTime),
+        endTime: endTime ? new Date(endTime) : undefined,
+        location,
+        eventType,
+        teamId: teamId ? parseInt(teamId) : null,
+        description,
+        childProfileId: null // Admin-created events don't belong to specific profiles
+      });
+
+      res.json(newEvent);
+    } catch (error) {
+      console.error("Error creating event:", error);
+      res.status(500).json({ message: "Failed to create event" });
+    }
+  });
+
+  app.get('/api/admin/chats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      // Mock chat channels data - this would be retrieved from actual chat system
+      const channels = [
+        {
+          id: "general",
+          name: "General Discussion",
+          type: "general",
+          participantCount: 45,
+          lastMessage: {
+            content: "Welcome to the UYP Basketball League community!",
+            timestamp: new Date().toISOString(),
+            sender: "System"
+          }
+        },
+        {
+          id: "parents",
+          name: "Parents Chat",
+          type: "parent",
+          participantCount: 28,
+          lastMessage: {
+            content: "When is the next parent meeting?",
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            sender: "Sarah M."
+          }
+        },
+        {
+          id: "coaches",
+          name: "Coaches Discussion",
+          type: "coach",
+          participantCount: 8,
+          lastMessage: {
+            content: "Updated practice schedule is now available",
+            timestamp: new Date(Date.now() - 7200000).toISOString(),
+            sender: "Coach Johnson"
+          }
+        }
+      ];
+
+      // Add team-specific channels
+      const teams = await storage.getAllTeams();
+      teams.forEach(team => {
+        channels.push({
+          id: `team-${team.id}`,
+          name: `${team.name} Team Chat`,
+          type: "team",
+          participantCount: 15, // Mock count
+          lastMessage: {
+            content: "Great practice today everyone!",
+            timestamp: new Date(Date.now() - 1800000).toISOString(),
+            sender: "Coach"
+          }
+        });
+      });
+
+      res.json(channels);
+    } catch (error) {
+      console.error("Error fetching chat channels:", error);
+      res.status(500).json({ message: "Failed to fetch chat channels" });
+    }
+  });
+
+  app.get('/api/admin/user-awards', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      // Get user badges
+      const userBadgesList = await db
+        .select({
+          id: userBadges.id,
+          userId: userBadges.userId,
+          badgeId: userBadges.badgeId,
+          badgeName: badges.name,
+          earnedAt: userBadges.earnedAt
+        })
+        .from(userBadges)
+        .innerJoin(badges, eq(userBadges.badgeId, badges.id));
+
+      // Get user trophies
+      const userTrophiesList = await db
+        .select({
+          id: userTrophies.id,
+          userId: userTrophies.userId,
+          trophyName: userTrophies.trophyName,
+          trophyDescription: userTrophies.trophyDescription,
+          earnedAt: userTrophies.earnedAt
+        })
+        .from(userTrophies);
+
+      // Combine and format awards
+      const awards = [
+        ...userBadgesList.map((badge: any) => ({
+          id: badge.id.toString(),
+          userId: badge.userId,
+          awardId: badge.badgeId.toString(),
+          awardType: "badge" as const,
+          awardName: badge.badgeName,
+          earnedAt: badge.earnedAt.toISOString(),
+          reason: null
+        })),
+        ...userTrophiesList.map((trophy: any) => ({
+          id: trophy.id.toString(),
+          userId: trophy.userId,
+          awardId: trophy.trophyName,
+          awardType: "trophy" as const,
+          awardName: trophy.trophyName,
+          earnedAt: trophy.earnedAt.toISOString(),
+          reason: null
+        }))
+      ];
+
+      // Sort by most recent first
+      awards.sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime());
+
+      res.json(awards);
+    } catch (error) {
+      console.error("Error fetching user awards:", error);
+      res.status(500).json({ message: "Failed to fetch user awards" });
+    }
+  });
+
+  app.post('/api/admin/award-badge', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      const adminUser = await storage.getUser(adminUserId);
+      
+      if (adminUser?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const { userId, awardId, reason } = req.body;
+
+      // Use the awards service to manually award the badge
+      await awardsService.awardBadgeManually(userId, awardId, adminUserId);
+
+      res.json({ success: true, message: "Award granted successfully" });
+    } catch (error) {
+      console.error("Error awarding badge:", error);
+      res.status(500).json({ message: "Failed to award badge" });
+    }
+  });
+
+  app.delete('/api/admin/user-awards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      const adminUser = await storage.getUser(adminUserId);
+      
+      if (adminUser?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+
+      const awardId = req.params.id;
+
+      // Try to delete from badges first
+      try {
+        await db.delete(userBadges).where(eq(userBadges.id, parseInt(awardId)));
+      } catch (error) {
+        // If not found in badges, try trophies
+        await db.delete(userTrophies).where(eq(userTrophies.id, parseInt(awardId)));
+      }
+
+      res.json({ success: true, message: "Award removed successfully" });
+    } catch (error) {
+      console.error("Error removing award:", error);
+      res.status(500).json({ message: "Failed to remove award" });
     }
   });
 

@@ -1,0 +1,94 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=WOqGPeV_hJXs' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=WOqGPeV_hJXs' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-RPCDYKBN.js?v=284a11c2:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration
+App.tsx:55 SW registered:  ServiceWorkerRegistration
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:111 User data for profile check: Object
+App.tsx:112 Profile completed status: false
+App.tsx:113 IsAuthenticated: true
+App.tsx:114 IsLoading: false
+App.tsx:120 Redirecting to profile selection - profile not completed
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:111 User data for profile check: Object
+App.tsx:112 Profile completed status: false
+App.tsx:113 IsAuthenticated: true
+App.tsx:114 IsLoading: false
+App.tsx:120 Redirecting to profile selection - profile not completed
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+profile-selection.tsx:72 Selecting profile: profile-1754877971684-hw6fxkq84
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+profile-selection.tsx:74 Profile selection result: Object
+profile-selection.tsx:78 Profile selected successfully: Object
+profile-selection.tsx:81 Navigating to dashboard for profile type: parent
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:111 User data for profile check: Object
+App.tsx:112 Profile completed status: true
+App.tsx:113 IsAuthenticated: true
+App.tsx:114 IsLoading: false
+App.tsx:132 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:111 User data for profile check: Object
+App.tsx:112 Profile completed status: true
+App.tsx:113 IsAuthenticated: true
+App.tsx:114 IsLoading: false
+App.tsx:132 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true

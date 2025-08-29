@@ -1102,8 +1102,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
 
-      const players = await storage.searchPlayers(query);
-      res.json(players);
+      // Use Notion players for search
+      const notionPlayers = notionService.searchPlayers(query);
+      
+      // Convert Notion players to the expected format for the coach dashboard
+      const formattedPlayers = notionPlayers.map(player => ({
+        id: parseInt(player.id.replace(/-/g, '').substring(0, 8), 16), // Convert notion ID to number
+        firstName: player.name.split(' ')[0] || player.name,
+        lastName: player.name.split(' ').slice(1).join(' ') || '',
+        teamName: player.team || 'Unassigned',
+        profileImageUrl: null // Notion doesn't have profile images
+      }));
+
+      res.json(formattedPlayers);
     } catch (error) {
       console.error("Error searching players:", error);
       res.status(500).json({ message: "Failed to search players" });

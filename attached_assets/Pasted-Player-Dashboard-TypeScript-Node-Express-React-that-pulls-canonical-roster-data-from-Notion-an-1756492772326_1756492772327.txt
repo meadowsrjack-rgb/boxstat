@@ -1,0 +1,204 @@
+Player Dashboard (TypeScript + Node/Express + React) that pulls canonical roster data from Notion and exposes a searchable list of Teams and Players. Implement both the backend (sync + API) and a minimal frontend search UI. Follow the exact spec below.
+
+1) Notion data source (single database)
+
+Use the official Notion SDK. Read from a Notion database whose ID is in NOTION_DB_ID and API key in NOTION_API_KEY (env vars). The database has these columns (from the attached screenshot “Active Players”):
+
+Name (title) → Player full name (string)
+
+Status (select) → values include “Active”; only index Active
+
+Current Program (select) → e.g., “Youth Club”, “Skills Academy”, “Friday Night Hoops”
+
+Youth Club Team (relation OR select) → e.g., “11u Black”, “12u White”, “Youth Girls”; treat as the primary team for club play
+
+HS Team (rich text or relation) → optional
+
+Social Media (rich text/url) → optional
+
+Grade (number/select) → optional
+
+Session (multi-select) → e.g., “Rookies TTH”, “Skills MW”, “Fri Games” (optional)
+
+Assumptions:
+
+Coaches are modeled in a separate Teams/Coaches store you control (local JSON for now) that maps team_slug -> coach profile. Provide a simple in-memory seed to demonstrate join behavior. If Youth Club Team is empty, put the player on a special team unassigned.
+
+2) Data normalization (DO THIS EXACTLY)
+
+When fetching Notion rows, normalize into these objects:
+
+type Player = {
+  id: string;                // notion page id
+  name: string;              // Name
+  status: "Active" | "Inactive" | string; // Status
+  currentProgram?: string;   // Current Program
+  team?: string;             // Youth Club Team (display name)
+  teamSlug?: string;         // slugify(team)
+  hsTeam?: string;           // HS Team
+  grade?: string | number;   // Grade
+  sessionTags: string[];     // Session[]
+  social?: string;           // Social Media (first URL/text found)
+  profileUrl: string;        // /players/:id
+};
+
+type Coach = {
+  name: string;
+  email?: string;
+  phone?: string;
+  profileUrl: string;        // /coaches/:slug
+};
+
+type Team = {
+  name: string;              // Youth Club Team display (e.g., "11u Black")
+  slug: string;              // slugify(name)
+  program: "Youth Club";     // fixed for now
+  coach?: Coach;             // from local mapping
+  roster: Player[];          // all players with teamSlug == this.slug
+  profileUrl: string;        // /teams/:slug
+};
+
+
+Rules:
+
+Only include players where Status === "Active".
+
+teamSlug = slugify(Youth Club Team). If not present → "unassigned".
+
+Build a denormalized roster index: teamsBySlug: Record<string, Team> and playersById: Record<string, Player>.
+
+Sort each team’s roster by lastName, firstName (split on last space).
+
+Maintain a flat search index over both players and teams:
+
+Player searchable fields: name, team, currentProgram, sessionTags
+
+Team searchable fields: name, coach.name
+
+Use a lightweight in-memory index (Fuse.js or a simple lowercase contains check). No DB required.
+
+3) Sync & caching
+
+Provide a /api/admin/sync route that re-pulls from Notion and rebuilds the in-memory indices.
+
+Also perform an initial sync on server start.
+
+Add basic caching headers on read routes (Cache-Control: max-age=60).
+
+Log and skip rows that are missing a Name.
+
+4) API surface (must return JSON)
+
+GET /api/search?q=...
+
+Returns { players: Player[], teams: Team[] } with top 10 of each.
+
+GET /api/teams → returns an array of { name, slug, coach, rosterCount }.
+
+GET /api/teams/:slug → returns the full Team (with roster).
+
+GET /api/players/:id → returns the full Player.
+
+5) Frontend (minimal React page)
+
+A single page with a search input. On typing:
+
+Show two sections: Teams and Players.
+
+Teams: list name + coach.name + rosterCount (each item clickable → navigates to /teams/:slug).
+
+Players: list name + team (each item clickable → /players/:id).
+
+Provide simple detail views:
+
+/teams/:slug shows team header (name + coach with link to coach profile) and a clickable roster list; clicking a player goes to their profile.
+
+/players/:id shows the player card (name, team link, program, grade, sessions, social).
+
+Use fetch to call the API; no state library required.
+
+Styling can be basic Tailwind, but keep components clean and typed.
+
+6) Example team/coach seed (replace later with real source)
+
+Create coaches.ts:
+
+export const TEAM_COACHES: Record<string, { name: string; email?: string }> = {
+  "11u-black": { name: "Coach Tony", email: "tony@example.com" },
+  "12u-white": { name: "Coach Kim", email: "kim@example.com" },
+  "youth-girls": { name: "Coach Riley" },
+  "unassigned": { name: "TBD" }
+};
+
+
+Join this into Team.coach when building teamsBySlug.
+
+7) Notion SDK mapping helper
+
+Write a helper that safely reads Notion property values by type:
+
+Title → first plain text
+
+Select/Multi-select → .name
+
+Relation → display name (if available) or fallback id
+
+Rich text/URL → first plain text or first URL
+
+Number → number
+
+Guard against undefined properties. All Notion → string values should be .trim(); empty strings become undefined.
+
+8) Edge cases to handle
+
+Players with no Youth Club Team → team = "Unassigned" (slug: unassigned) and they still appear in search.
+
+Duplicate player names → use id for routing.
+
+Multiple sessions in Session multi-select → store all as sessionTags.
+
+Non-active players are excluded from all endpoints.
+
+If a team ends up with zero active players, it should still appear in /api/teams if it exists in the coach seed (rosterCount = 0).
+
+9) Deliverables
+
+server.ts (Express server + Notion sync + API)
+
+notion.ts (SDK init + property getters + fetch logic)
+
+coaches.ts (seed)
+
+types.ts (shared types)
+
+web/ React client with routes: / (search), /teams/:slug, /players/:id
+
+README with “How to run” and required env vars.
+
+Build the whole thing now with solid TypeScript types and comments.
+
+How the data should be organized & integrated (based on your Notion screenshot)
+
+Source of truth is the “Active Players” Notion table.
+
+Primary join key for rosters is the Youth Club Team column (e.g., “11u Black”, “12u White”, “Youth Girls”). We slugify these to make stable URLs (e.g., 11u-black).
+
+Player listing should only include Status = Active. That aligns with your “Active Players” view.
+
+Programs (Current Program: “Youth Club”, “Skills Academy”, “Friday Night Hoops”) are useful for search filters but do not define rosters. Rosters are defined by Youth Club Team.
+
+Sessions (e.g., “Rookies TTH”, “Skills MW”, “Fri Games”) are tags for scheduling or session membership—keep them on the player profile and searchable, but don’t group rosters by session.
+
+HS Team is informational; display on player profiles if present.
+
+Coach is not in the screenshot, so we join from a separate source (your seed now; later you can replace with a Notion Teams/Coaches database). Each team’s page shows its coach, and the coach’s name links to a coach profile (even a placeholder route is fine).
+
+Search UX:
+
+If the user types a team name, show that team and its coach; clicking opens the roster.
+
+If the user types a player name, show the player with their team; clicking opens the player profile.
+
+Keep both teams and players in the same search box.
+
+This wiring will fix the “not pulling information correctly” issue by (1) filtering strictly on Active, (2) mapping Youth Club Team → teamSlug for routing and grouping, and (3) keeping sessions/programs as searchable attributes rather than roster groupers.

@@ -26,17 +26,17 @@ export default function Chat() {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: userTeam } = useQuery({
-    queryKey: ["/api/users", user?.id, "team"],
-    enabled: !!user?.id,
+  const { data: userTeam } = useQuery<any>({
+    queryKey: ["/api/users", (user as any)?.id, "team"],
+    enabled: !!(user as any)?.id,
   });
 
-  const { data: messages } = useQuery({
+  const { data: messages = [] } = useQuery<any[]>({
     queryKey: ["/api/teams", userTeam?.id, "messages"],
     enabled: !!userTeam?.id,
   });
 
-  const { data: teamPlayers } = useQuery({
+  const { data: teamPlayers = [] } = useQuery<any[]>({
     queryKey: ["/api/teams", userTeam?.id, "players"],
     enabled: !!userTeam?.id,
   });
@@ -62,30 +62,62 @@ export default function Chat() {
   useEffect(() => {
     if (!user || !userTeam) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
+    let ws: WebSocket | null = null;
+    
+    const connectWebSocket = () => {
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        
+        ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      console.log("Connected to WebSocket");
-      ws.send(JSON.stringify({ type: "join", userId: user.id }));
-      setSocket(ws);
-    };
+        ws.onopen = () => {
+          console.log("Connected to WebSocket");
+          if (ws && (user as any)?.id) {
+            ws.send(JSON.stringify({ type: "join", userId: (user as any).id }));
+            setSocket(ws);
+          }
+        };
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "message") {
-        queryClient.invalidateQueries({ queryKey: ["/api/teams", userTeam.id, "messages"] });
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "message" && userTeam?.id) {
+              queryClient.invalidateQueries({ queryKey: ["/api/teams", userTeam.id, "messages"] });
+            }
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+          }
+        };
+
+        ws.onclose = (event) => {
+          console.log("Disconnected from WebSocket", event.code, event.reason);
+          setSocket(null);
+          
+          // Only attempt to reconnect if it wasn't a manual close
+          if (event.code !== 1000 && event.code !== 1001) {
+            console.log("Attempting to reconnect in 5 seconds...");
+            setTimeout(connectWebSocket, 5000);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setSocket(null);
+        };
+        
+      } catch (error) {
+        console.error('Failed to create WebSocket connection:', error);
+        setSocket(null);
       }
     };
-
-    ws.onclose = () => {
-      console.log("Disconnected from WebSocket");
-      setSocket(null);
-    };
+    
+    connectWebSocket();
 
     return () => {
-      ws.close();
+      if (ws) {
+        ws.close(1000, 'Component unmounting');
+      }
     };
   }, [user, userTeam, queryClient]);
 
@@ -99,7 +131,7 @@ export default function Chat() {
 
     const messageData = {
       content: message,
-      teamId: userTeam.id,
+      teamId: userTeam?.id,
       messageType: "text",
     };
 
@@ -107,7 +139,7 @@ export default function Chat() {
     if (socket) {
       socket.send(JSON.stringify({
         type: "message",
-        senderId: user?.id,
+        senderId: (user as any)?.id,
         ...messageData,
       }));
     }
@@ -120,7 +152,7 @@ export default function Chat() {
     return <div>Loading...</div>;
   }
 
-  const isPlayerInterface = user.userType === "player";
+  const isPlayerInterface = (user as any)?.userType === "player";
 
   return (
     <div className={`min-h-screen ${isPlayerInterface ? 'bg-gradient-to-br from-green-500 to-blue-600' : 'bg-gray-50'}`}>
@@ -183,7 +215,7 @@ export default function Chat() {
                         {player.userType === "player" ? "Player" : "Coach"}
                       </p>
                     </div>
-                    {player.id === user.id && (
+                    {player.id === (user as any).id && (
                       <Badge variant="secondary" className="text-xs">You</Badge>
                     )}
                   </div>
@@ -204,7 +236,7 @@ export default function Chat() {
               {/* Messages */}
               <div className="h-96 overflow-y-auto p-4 space-y-4">
                 {messages?.map((msg: any) => {
-                  const isOwnMessage = msg.senderId === user.id;
+                  const isOwnMessage = msg.senderId === (user as any).id;
                   const sender = teamPlayers?.find((p: any) => p.id === msg.senderId);
                   
                   return (

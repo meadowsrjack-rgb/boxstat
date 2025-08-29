@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { isAuthenticated } from "../replitAuth";
-import { searchNotionTeams, getNotionTeamDetails } from "../notion";
+import { notionService } from "../notion";
 
 const router = Router();
 
@@ -55,8 +55,16 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
     const q = (req.query.q as string || "").trim();
     
     try {
-      const result = await searchNotionTeams(q);
-      res.json({ ok: true, teams: result.teams });
+      const teams = notionService.searchTeams(q);
+      res.json({ ok: true, teams: teams.map(team => ({
+        id: team.slug,
+        name: team.name,
+        roster_count: team.roster.length,
+        roster: team.roster.map(p => ({
+          name: p.name,
+          id: p.id
+        }))
+      })) });
     } catch (notionError: any) {
       console.error("Notion search failed:", notionError.message);
       
@@ -76,8 +84,20 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
 router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
   try {
     const teamId = req.params.teamId;
-    const teamDetails = await getNotionTeamDetails(teamId);
-    res.json({ ok: true, ...teamDetails });
+    const team = notionService.getTeam(teamId);
+    if (!team) {
+      return res.status(404).json({ ok: false, error: "Team not found" });
+    }
+    res.json({ 
+      ok: true, 
+      roster: team.roster.map(p => ({
+        name: p.name,
+        id: p.id,
+        position: 'Player',
+        jersey: ''
+      })),
+      roster_count: team.roster.length 
+    });
   } catch (error) {
     console.error("Error getting team details:", error);
     res.status(500).json({ ok: false, error: "Failed to get team details" });

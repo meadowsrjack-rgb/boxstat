@@ -1,171 +1,238 @@
-import { pool } from "./db";
-import { Client } from "@notionhq/client";
-
-const NOTION_INTEGRATION_SECRET = process.env.NOTION_INTEGRATION_SECRET;
-const NOTION_PAGE_URL = process.env.NOTION_PAGE_URL;
-
-// Extract page ID from URL
-function extractPageId(url: string): string {
-  // Extract from Notion URL format
-  const match = url.match(/([a-f0-9]{32})/i);
-  if (match) {
-    return match[1];
-  }
-  
-  throw new Error("Invalid Notion page URL format");
-}
-
-const NOTION_PAGE_ID = NOTION_PAGE_URL ? extractPageId(NOTION_PAGE_URL) : undefined;
-
-export function hasNotionCreds() {
-  return !!(NOTION_INTEGRATION_SECRET && NOTION_PAGE_ID);
-}
+import { Client } from '@notionhq/client';
+import type { NotionPlayer, NotionTeam, NotionCoach } from '../shared/schema.js';
+import { TEAM_COACHES } from './coaches.js';
 
 // Initialize Notion client
-export const notion = new Client({
-    auth: NOTION_INTEGRATION_SECRET!,
+const notion = new Client({
+  auth: process.env.NOTION_API_KEY,
 });
 
-export { NOTION_PAGE_ID };
+const DATABASE_ID = process.env.NOTION_DB_ID!;
 
-type NotionPlayer = {
-  id: string;
-  name: string;
-  teamNames: string[];
-  dob?: string | null;
-  claimCode?: string | null;
-  imageUrl?: string | null;
-};
+// Helper function to safely extract property values
+function getNotionProperty(properties: any, propertyName: string, type: string): any {
+  const property = properties[propertyName];
+  if (!property) return undefined;
 
-function plain(rich: any[] | undefined) {
-  return (rich || []).map((r: any) => r.plain_text).join("") || "";
+  switch (type) {
+    case 'title':
+      return property.title?.[0]?.plain_text?.trim() || undefined;
+    case 'rich_text':
+      return property.rich_text?.[0]?.plain_text?.trim() || property.rich_text?.[0]?.href?.trim() || undefined;
+    case 'select':
+      return property.select?.name?.trim() || undefined;
+    case 'multi_select':
+      return property.multi_select?.map((item: any) => item.name?.trim()).filter(Boolean) || [];
+    case 'number':
+      return property.number;
+    case 'relation':
+      // For relations, we'll use the first related item's title if available
+      return property.relation?.[0]?.id || undefined;
+    default:
+      return undefined;
+  }
 }
 
-async function getOrCreateTeamId(client: any, name: string): Promise<number> {
-  const sel = await client.query(`SELECT id FROM teams WHERE name=$1 LIMIT 1`, [name]);
-  if (sel.rowCount) return sel.rows[0].id;
-  const ins = await client.query(`INSERT INTO teams (name) VALUES ($1) RETURNING id`, [name]);
-  return ins.rows[0].id;
+// Slugify function
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .trim();
 }
 
-export async function syncNotionRoster() {
-  if (!hasNotionCreds()) throw new Error("NOTION env missing");
-  
-  // This function syncs roster data from Notion to local database
-  // Implementation depends on your specific Notion database structure
-  console.log("Syncing roster from Notion...");
-}
-
-// Search teams in Notion
-export async function searchNotionTeams(query: string = "") {
-  if (!hasNotionCreds()) throw new Error("NOTION env missing");
-  
-  try {
-    console.log("Using database ID:", NOTION_PAGE_ID);
+// Sort players by last name, first name
+function sortPlayersByName(players: NotionPlayer[]): NotionPlayer[] {
+  return players.sort((a, b) => {
+    const aLastName = a.name.split(' ').pop() || '';
+    const bLastName = b.name.split(' ').pop() || '';
+    const aFirstName = a.name.split(' ').slice(0, -1).join(' ') || '';
+    const bFirstName = b.name.split(' ').slice(0, -1).join(' ') || '';
     
-    // Query the database for all players
-    const response = await notion.databases.query({
-      database_id: NOTION_PAGE_ID!,
-      page_size: 100
-    });
-    
-    console.log("Found database entries:", response.results.length);
-    
-    // Log the first entry's properties to understand the database structure
-    if (response.results.length > 0) {
-      const firstEntry = response.results[0] as any;
-      if (firstEntry.properties) {
-        console.log("Sample entry properties:", Object.keys(firstEntry.properties));
-        console.log("First entry properties detail:", JSON.stringify(firstEntry.properties, null, 2));
-      }
+    if (aLastName !== bLastName) {
+      return aLastName.localeCompare(bLastName);
     }
+    return aFirstName.localeCompare(bFirstName);
+  });
+}
+
+export class NotionPlayerService {
+  private playersById: Record<string, NotionPlayer> = {};
+  private teamsBySlug: Record<string, NotionTeam> = {};
+  private lastSync: Date | null = null;
+
+  async syncFromNotion(): Promise<{ players: NotionPlayer[]; teams: NotionTeam[] }> {
+    console.log('Starting Notion sync...');
     
-    // Parse player names and extract real team data
-    const players: any[] = [];
-    const teams = new Map();
-    
-    response.results.forEach((page: any, index: number) => {
-      const properties = page.properties;
-      
-      // Try to get player name from various possible property names
-      const playerName = properties["Name"]?.title?.[0]?.plain_text ||
-                        properties["Player Name"]?.title?.[0]?.plain_text ||
-                        properties["Full Name"]?.title?.[0]?.plain_text ||
-                        "Unknown Player";
-      
-      // Try to get team name from various possible property names
-      const teamName = properties["Team"]?.select?.name ||
-                      properties["Team Name"]?.title?.[0]?.plain_text ||
-                      properties["Current Team"]?.select?.name ||
-                      `${playerName.split(' ')[0]}'s Team`; // Use first name + Team as fallback
-      
-      if (playerName && playerName !== "Unknown Player" && playerName.trim() !== '') {
-        players.push({
-          id: page.id,
-          name: playerName.trim(),
-          notion_url: `https://www.notion.so/${page.id}`,
-          team: teamName
-        });
-        
-        if (!teams.has(teamName)) {
-          teams.set(teamName, {
-            id: teamName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
-            name: teamName,
-            roster_count: 0,
-            roster: []
-          });
+    try {
+      // Fetch all pages from the database
+      const response = await notion.databases.query({
+        database_id: DATABASE_ID,
+        filter: {
+          property: 'Status',
+          select: {
+            equals: 'Active'
+          }
         }
+      });
+
+      const players: NotionPlayer[] = [];
+      
+      for (const page of response.results) {
+        if (!('properties' in page)) continue;
         
-        const team = teams.get(teamName);
-        team.roster.push({
-          name: playerName.trim(),
-          position: properties["Position"]?.select?.name || 'Player',
-          jersey: properties["Jersey"]?.number?.toString() || (team.roster.length + 1).toString(),
-          id: page.id
-        });
-        team.roster_count = team.roster.length;
+        const properties = page.properties;
+        const name = getNotionProperty(properties, 'Name', 'title');
+        
+        if (!name) {
+          console.log('Skipping row without name');
+          continue;
+        }
+
+        const status = getNotionProperty(properties, 'Status', 'select') || 'Inactive';
+        const currentProgram = getNotionProperty(properties, 'Current Program', 'select');
+        const youthClubTeam = getNotionProperty(properties, 'Youth Club Team', 'select') || getNotionProperty(properties, 'Youth Club Team', 'relation');
+        const hsTeam = getNotionProperty(properties, 'HS Team', 'rich_text');
+        const grade = getNotionProperty(properties, 'Grade', 'number') || getNotionProperty(properties, 'Grade', 'select');
+        const sessionTags = getNotionProperty(properties, 'Session', 'multi_select');
+        const social = getNotionProperty(properties, 'Social Media', 'rich_text');
+
+        const teamName = youthClubTeam || 'Unassigned';
+        const teamSlug = slugify(teamName);
+
+        const player: NotionPlayer = {
+          id: page.id,
+          name,
+          status,
+          currentProgram,
+          team: teamName,
+          teamSlug,
+          hsTeam,
+          grade,
+          sessionTags: sessionTags || [],
+          social,
+          profileUrl: `/players/${page.id}`
+        };
+
+        players.push(player);
       }
-    });
-    
-    console.log("Processed players:", players.length);
-    console.log("Created teams:", Array.from(teams.keys()));
-    
-    const teamArray = Array.from(teams.values()).filter(team => 
-      !query || team.name.toLowerCase().includes(query.toLowerCase()) ||
-      team.roster.some((player: any) => player.name.toLowerCase().includes(query.toLowerCase()))
-    );
 
-    return {
-      teams: teamArray,
-      players: players.filter(player => 
-        !query || player.name.toLowerCase().includes(query.toLowerCase())
-      )
-    };
-  } catch (error) {
-    console.error("Error searching Notion teams:", error);
-    throw new Error("Failed to search teams in Notion");
-  }
-}
+      // Build players index
+      this.playersById = {};
+      players.forEach(player => {
+        this.playersById[player.id] = player;
+      });
 
-// Get team details from the grouped players in memory
-export async function getNotionTeamDetails(teamId: string) {
-  if (!hasNotionCreds()) throw new Error("NOTION env missing");
-  
-  try {
-    // Search all teams and find the matching one
-    const result = await searchNotionTeams();
-    const team = result.teams.find((t: any) => t.id === teamId);
-    
-    if (!team) {
-      throw new Error("Team not found");
+      // Build teams index
+      this.teamsBySlug = {};
+      const teamMap = new Map<string, NotionPlayer[]>();
+
+      // Group players by team
+      players.forEach(player => {
+        const slug = player.teamSlug!;
+        if (!teamMap.has(slug)) {
+          teamMap.set(slug, []);
+        }
+        teamMap.get(slug)!.push(player);
+      });
+
+      // Create team objects
+      teamMap.forEach((roster, slug) => {
+        const teamName = roster[0]?.team || 'Unassigned';
+        const coachData = TEAM_COACHES[slug];
+        
+        const coach: NotionCoach | undefined = coachData ? {
+          name: coachData.name,
+          email: coachData.email,
+          phone: coachData.phone,
+          profileUrl: `/coaches/${slug}`
+        } : undefined;
+
+        const team: NotionTeam = {
+          name: teamName,
+          slug,
+          program: 'Youth Club',
+          coach,
+          roster: sortPlayersByName(roster),
+          profileUrl: `/teams/${slug}`
+        };
+
+        this.teamsBySlug[slug] = team;
+      });
+
+      // Add teams with no active players but have coaches
+      Object.keys(TEAM_COACHES).forEach(slug => {
+        if (!this.teamsBySlug[slug]) {
+          const coachData = TEAM_COACHES[slug];
+          const coach: NotionCoach = {
+            name: coachData.name,
+            email: coachData.email,
+            phone: coachData.phone,
+            profileUrl: `/coaches/${slug}`
+          };
+
+          this.teamsBySlug[slug] = {
+            name: slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+            slug,
+            program: 'Youth Club',
+            coach,
+            roster: [],
+            profileUrl: `/teams/${slug}`
+          };
+        }
+      });
+
+      this.lastSync = new Date();
+      console.log(`Notion sync completed: ${players.length} players, ${Object.keys(this.teamsBySlug).length} teams`);
+      
+      return {
+        players,
+        teams: Object.values(this.teamsBySlug)
+      };
+    } catch (error) {
+      console.error('Error syncing from Notion:', error);
+      throw error;
     }
+  }
 
-    return {
-      roster: team.roster,
-      roster_count: team.roster_count
-    };
-  } catch (error) {
-    console.error("Error getting Notion team details:", error);
-    throw new Error("Failed to get team details from Notion");
+  getPlayer(id: string): NotionPlayer | undefined {
+    return this.playersById[id];
+  }
+
+  getTeam(slug: string): NotionTeam | undefined {
+    return this.teamsBySlug[slug];
+  }
+
+  getAllPlayers(): NotionPlayer[] {
+    return Object.values(this.playersById);
+  }
+
+  getAllTeams(): NotionTeam[] {
+    return Object.values(this.teamsBySlug);
+  }
+
+  searchPlayers(query: string): NotionPlayer[] {
+    const lowerQuery = query.toLowerCase();
+    return this.getAllPlayers().filter(player => 
+      player.name.toLowerCase().includes(lowerQuery) ||
+      player.team?.toLowerCase().includes(lowerQuery) ||
+      player.currentProgram?.toLowerCase().includes(lowerQuery) ||
+      player.sessionTags.some(tag => tag.toLowerCase().includes(lowerQuery))
+    ).slice(0, 10);
+  }
+
+  searchTeams(query: string): NotionTeam[] {
+    const lowerQuery = query.toLowerCase();
+    return this.getAllTeams().filter(team =>
+      team.name.toLowerCase().includes(lowerQuery) ||
+      team.coach?.name.toLowerCase().includes(lowerQuery)
+    ).slice(0, 10);
+  }
+
+  getLastSync(): Date | null {
+    return this.lastSync;
   }
 }
+
+export const notionService = new NotionPlayerService();

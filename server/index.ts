@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import { ensureAuxTables } from "./boot";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeScheduler } from "./scheduler";
+import { notionService } from "./notion";
 
 const app = express();
 app.use(express.json());
@@ -79,5 +80,12 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Initialize calendar sync scheduler after server starts
     initializeScheduler();
+    
+    // Initialize Notion sync on startup
+    if (process.env.NOTION_API_KEY && process.env.NOTION_DB_ID) {
+      notionService.syncFromNotion().catch(error => {
+        console.error('Failed to sync from Notion on startup:', error);
+      });
+    }
   });
 })();

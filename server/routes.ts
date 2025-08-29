@@ -8,6 +8,7 @@ import { eq, count } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
+import { notionService } from "./notion";
 
 import calendarRoutes from "./routes/calendar";
 import searchRoutes from "./routes/search";
@@ -2953,6 +2954,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing award:", error);
       res.status(500).json({ message: "Failed to remove award" });
+    }
+  });
+
+  // Notion-based player/team search routes
+  app.get('/api/search', async (req: any, res) => {
+    const { q } = req.query;
+    if (!q) {
+      return res.json({ players: [], teams: [] });
+    }
+    
+    try {
+      const players = notionService.searchPlayers(q);
+      const teams = notionService.searchTeams(q);
+      
+      res.setHeader('Cache-Control', 'max-age=60');
+      res.json({ players, teams });
+    } catch (error) {
+      console.error('Error searching:', error);
+      res.status(500).json({ message: 'Search failed' });
+    }
+  });
+
+  // Get all teams with basic info
+  app.get('/api/teams', async (req: any, res) => {
+    try {
+      const teams = notionService.getAllTeams().map(team => ({
+        name: team.name,
+        slug: team.slug,
+        coach: team.coach,
+        rosterCount: team.roster.length
+      }));
+      
+      res.setHeader('Cache-Control', 'max-age=60');
+      res.json(teams);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+      res.status(500).json({ message: 'Failed to fetch teams' });
+    }
+  });
+
+  // Get specific team with full roster
+  app.get('/api/teams/:slug', async (req: any, res) => {
+    try {
+      const team = notionService.getTeam(req.params.slug);
+      
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+      
+      res.setHeader('Cache-Control', 'max-age=60');
+      res.json(team);
+    } catch (error) {
+      console.error('Error fetching team:', error);
+      res.status(500).json({ message: 'Failed to fetch team' });
+    }
+  });
+
+  // Get specific player
+  app.get('/api/players/:id', async (req: any, res) => {
+    try {
+      const player = notionService.getPlayer(req.params.id);
+      
+      if (!player) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
+      
+      res.setHeader('Cache-Control', 'max-age=60');
+      res.json(player);
+    } catch (error) {
+      console.error('Error fetching player:', error);
+      res.status(500).json({ message: 'Failed to fetch player' });
+    }
+  });
+
+  // Admin route to sync from Notion
+  app.post('/api/admin/sync', isAuthenticated, async (req: any, res) => {
+    try {
+      const adminUserId = req.user.claims.sub;
+      const adminUser = await storage.getUser(adminUserId);
+      
+      if (adminUser?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied - Admin only" });
+      }
+      
+      const result = await notionService.syncFromNotion();
+      res.json({ 
+        message: 'Sync completed',
+        players: result.players.length,
+        teams: result.teams.length,
+        lastSync: notionService.getLastSync()
+      });
+    } catch (error) {
+      console.error('Error syncing from Notion:', error);
+      res.status(500).json({ message: 'Sync failed' });
     }
   });
 

@@ -656,3 +656,34 @@ export type InsertPlayerPoints = z.infer<typeof insertPlayerPointsSchema>;
 export type InsertPlayerEvaluation = z.infer<typeof insertPlayerEvaluationSchema>;
 export type InsertTrophy = z.infer<typeof insertTrophySchema>;
 export type InsertUserTrophy = z.infer<typeof insertUserTrophySchema>;
+
+// Notion-based types
+export type NotionPlayer = {
+  id: string;                // notion page id
+  name: string;              // Name
+  status: "Active" | "Inactive" | string; // Status
+  currentProgram?: string;   // Current Program
+  team?: string;             // Youth Club Team (display name)
+  teamSlug?: string;         // slugify(team)
+  hsTeam?: string;           // HS Team
+  grade?: string | number;   // Grade
+  sessionTags: string[];     // Session[]
+  social?: string;           // Social Media (first URL/text found)
+  profileUrl: string;        // /players/:id
+};
+
+export type NotionCoach = {
+  name: string;
+  email?: string;
+  phone?: string;
+  profileUrl: string;        // /coaches/:slug
+};
+
+export type NotionTeam = {
+  name: string;              // Youth Club Team display (e.g., "11u Black")
+  slug: string;              // slugify(name)
+  program: "Youth Club";     // fixed for now
+  coach?: NotionCoach;       // from local mapping
+  roster: NotionPlayer[];    // all players with teamSlug == this.slug
+  profileUrl: string;        // /teams/:slug
+};

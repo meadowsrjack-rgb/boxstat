@@ -15,6 +15,9 @@ import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import CoachDashboard from "@/pages/coach-dashboard";
+import SearchPage from "@/pages/search";
+import TeamDetailPage from "@/pages/team-detail";
+import PlayerDetailPage from "@/pages/player-detail";
 import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
@@ -155,6 +158,11 @@ function Router() {
       <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
       <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
       <Route path="/admin" component={() => <AdminDashboard />} />
+      
+      {/* Player/Team search and detail routes */}
+      <Route path="/search" component={SearchPage} />
+      <Route path="/teams/:slug" component={TeamDetailPage} />
+      <Route path="/players/:id" component={PlayerDetailPage} />
       
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />

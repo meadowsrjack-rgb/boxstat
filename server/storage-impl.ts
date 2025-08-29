@@ -24,6 +24,7 @@ import {
   announcementAcknowledgments,
   playerTasks,
   playerPoints,
+  playerEvaluations,
   // New types
   type Account,
   type Profile,
@@ -52,6 +53,7 @@ import {
   type AnnouncementAcknowledgment,
   type PlayerTask,
   type PlayerPoints,
+  type PlayerEvaluation,
   // Legacy insert types
   type InsertUser,
   type InsertTeam,
@@ -210,6 +212,10 @@ export interface IStorage {
   getPlayerPoints(playerId: string): Promise<PlayerPoints[]>;
   addPlayerPoints(points: z.infer<typeof insertPlayerPointsSchema>): Promise<PlayerPoints>;
   getPlayerTotalPoints(playerId: string): Promise<number>;
+  
+  // Player evaluation operations
+  getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined>;
+  savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1250,37 +1256,50 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async savePlayerEvaluation(evaluation: {
-    playerId: string;
-    coachId: string;
-    scores: Record<string, number>;
-    quarter: string;
-    year: number;
-  }): Promise<any> {
-    // For now, we'll store evaluations in a simplified way
-    // In a real app, you'd have a dedicated evaluations table
+  // Player evaluation operations
+  async getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined> {
+    const { playerId, quarter, year } = params;
     
-    const evaluationId = `eval-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const [evaluation] = await db
+      .select()
+      .from(playerEvaluations)
+      .where(
+        and(
+          eq(playerEvaluations.playerId, playerId.toString()),
+          eq(playerEvaluations.quarter, quarter),
+          eq(playerEvaluations.year, year)
+        )
+      )
+      .limit(1);
     
-    // Store as a player stats record for now
-    await db.insert(playerStats).values({
-      playerId: evaluation.playerId,
-      statType: 'evaluation',
-      statValue: JSON.stringify({
-        scores: evaluation.scores,
-        quarter: evaluation.quarter,
-        year: evaluation.year,
-        evaluatedBy: evaluation.coachId
-      }),
-      gameDate: new Date(),
-      createdAt: new Date()
-    });
+    return evaluation;
+  }
 
-    return {
-      id: evaluationId,
-      ...evaluation,
-      createdAt: new Date()
-    };
+  async savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation> {
+    const { playerId, coachId, scores, quarter, year } = params;
+    
+    // Use ON CONFLICT DO UPDATE to handle updates to existing evaluations
+    const [result] = await db
+      .insert(playerEvaluations)
+      .values({
+        playerId: playerId.toString(),
+        coachId,
+        scores,
+        quarter,
+        year,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [playerEvaluations.playerId, playerEvaluations.quarter, playerEvaluations.year],
+        set: {
+          scores,
+          coachId,
+          updatedAt: new Date(),
+        }
+      })
+      .returning();
+    
+    return result;
   }
 }
 

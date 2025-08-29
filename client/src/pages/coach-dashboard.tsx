@@ -10,9 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,7 +19,6 @@ import {
   MoreHorizontal,
   Calendar as CalendarIcon,
   Users,
-  Gauge,
   Trophy,
   DollarSign,
   FileText,
@@ -29,6 +27,7 @@ import {
   ChevronRight,
   MapPin,
   Copy,
+  Gauge,
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -61,8 +60,6 @@ type CoachPaySummary = {
   portalUrl?: string | null; // payroll portal
 };
 
-type BadgeDef = { id: number; name: string; description?: string };
-
 type PlayerLite = {
   id: number;
   firstName: string;
@@ -71,68 +68,69 @@ type PlayerLite = {
   profileImageUrl?: string | null;
 };
 
-/* For quarterly skill evals */
-const SKILL_KEYS = ["SHOOTING", "DRIBBLING", "PASSING"] as const;
-type SkillKey = typeof SKILL_KEYS[number];
-
 type Quarter = "Q1" | "Q2" | "Q3" | "Q4";
 
-// Award Types
-type CoachAward = {
-  id: string;
-  name: string;
-  description: string;
-  tier: "starter" | "all-star" | "superstar" | "hall-of-fame";
-  imageUrl: string;
-  category: "badge" | "trophy";
+/* =================== Skills Schema =================== */
+// Coach-friendly rubric: 1–5 per sub-skill with helper labels
+export const SKILL_CATEGORIES = [
+  { name: "SHOOTING", skills: ["LAYUP", "2PT RANGE", "3PT RANGE"] },
+  { name: "DRIBBLING", skills: ["LEFT", "RIGHT", "CONTROL", "SPEED"] },
+  { name: "PASSING", skills: ["BOUNCE", "CHEST", "OVERHEAD", "CATCHING"] },
+  { name: "DEFENSE", skills: ["TALKING", "STANCE", "CLOSEOUT"] },
+  { name: "REBOUNDING", skills: ["BOX OUT", "BALL PROTECTION", "ANTICIPATION"] },
+  { name: "ATHLETIC ABILITY", skills: ["STAMINA", "QUICKNESS", "COORDINATION"] },
+  { name: "COACHABILITY", skills: ["ATTITUDE", "FOCUS", "WORK ETHIC", "ACCEPTS CRITICISM"] },
+] as const;
+
+type SkillCategoryName = typeof SKILL_CATEGORIES[number]["name"];
+
+type EvalScores = {
+  [C in SkillCategoryName]?: { [subSkill: string]: number }; // 1–5
 };
 
-// Predefined Coach Awards
-const COACH_AWARDS: CoachAward[] = [
-  // Starter Badges
-  { id: "teamwork", name: "Teamwork", description: "Shows excellent collaboration with teammates", tier: "starter", imageUrl: "@assets/trophies/teamwork.png", category: "badge" },
-  { id: "improvement", name: "Most Improved", description: "Significant improvement in skills", tier: "starter", imageUrl: "@assets/trophies/improvement.png", category: "badge" },
-  { id: "attendance", name: "Perfect Attendance", description: "Excellent practice attendance", tier: "starter", imageUrl: "@assets/trophies/attendance.png", category: "badge" },
-  
-  // All-Star Badges  
-  { id: "leadership", name: "Leadership", description: "Natural leader on and off court", tier: "all-star", imageUrl: "@assets/trophies/leadership.png", category: "badge" },
-  { id: "game-changer", name: "Game Changer", description: "Makes crucial plays in important moments", tier: "all-star", imageUrl: "@assets/trophies/game-changer.png", category: "badge" },
-  
-  // Superstar Badges
-  { id: "clutch-performer", name: "Clutch Performer", description: "Excels under pressure", tier: "superstar", imageUrl: "@assets/trophies/clutch-performer.png", category: "badge" },
-  
-  // End of Season Trophies
-  { id: "season-mvp", name: "Season MVP", description: "Most Valuable Player of the season", tier: "hall-of-fame", imageUrl: "@assets/trophies/season-mvp.png", category: "trophy" },
-  { id: "season-mip", name: "Season MIP", description: "Most Improved Player of the season", tier: "hall-of-fame", imageUrl: "@assets/trophies/season-mip.png", category: "trophy" },
-  { id: "coach-award", name: "Coach's Award", description: "Special recognition from coach", tier: "hall-of-fame", imageUrl: "@assets/trophies/coach-award.png", category: "trophy" },
-  { id: "spirit-award", name: "Spirit Award", description: "Best team spirit and attitude", tier: "hall-of-fame", imageUrl: "@assets/trophies/spirit-award.png", category: "trophy" },
-  { id: "heart-hustle", name: "Heart & Hustle", description: "Maximum effort and determination", tier: "hall-of-fame", imageUrl: "@assets/trophies/heart-hustle.png", category: "trophy" }
+/* =================== Awards =================== */
+// Seasonal Team Trophies (Coach-awarded at season end)
+const TEAM_TROPHIES = [
+  { id: "season-mvp", name: "MVP (Most Valuable Player)", kind: "trophy" as const, description: "Biggest impact on team success" },
+  { id: "coach-award", name: "Coach's Award", kind: "trophy" as const, description: "Embodies team values & coachability" },
+  { id: "season-mip", name: "MIP (Most Improved Player)", kind: "trophy" as const, description: "Most skill & game IQ growth" },
+  { id: "defensive-player", name: "Defensive Player", kind: "trophy" as const, description: "Greatest defensive impact" },
+];
+
+// Coach Awards (assign anytime)
+const COACH_AWARDS = [
+  { id: "game-mvp", name: "Game MVP", kind: "badge" as const, description: "Top performer in a game" },
+  { id: "hustle", name: "Hustle Award", kind: "badge" as const, description: "Maximum effort plays" },
+  { id: "teammate", name: "Teammate Award", kind: "badge" as const, description: "Uplifts & supports teammates" },
+  { id: "student", name: "Student of the Game", kind: "badge" as const, description: "Preparation & basketball IQ" },
+  { id: "recruiter", name: "Recruiter", kind: "badge" as const, description: "Referred a new player who joined" },
 ];
 
 /* =================== Component =================== */
 export default function CoachDashboard() {
   const { user } = useAuth();
   const currentUser = user as UserType | null;
-  const [activeTab, setActiveTab] = useState<
-    "calendar" | "roster" | "evaluate" | "badges" | "pay" | "hr"
-  >(() => (typeof window === "undefined" ? "calendar" : ((localStorage.getItem("coachDashboardTab") as any) || "calendar")));
-  const [location, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "badges" | "pay" | "hr">(() =>
+    typeof window === "undefined" ? "calendar" : ((localStorage.getItem("coachDashboardTab") as any) || "calendar")
+  );
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Modal states
-  const [showAwardsModal, setShowAwardsModal] = useState(false);
-  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-  const [selectedAward, setSelectedAward] = useState<CoachAward | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  // Player evaluation state
-  const [evaluationScores, setEvaluationScores] = useState<Record<SkillKey, number>>({
-    SHOOTING: 1,
-    DRIBBLING: 1,
-    PASSING: 1
+  // Roster row modals
+  const [evalOpen, setEvalOpen] = useState(false);
+  const [awardsOpen, setAwardsOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
+
+  // Quarter/Year for evals
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+  const [quarter, setQuarter] = useState<Quarter>(() => {
+    const m = new Date().getMonth();
+    return (m <= 2 ? "Q1" : m <= 5 ? "Q2" : m <= 8 ? "Q3" : "Q4") as Quarter;
   });
+
+  // Scores state for the selected player
+  const [scores, setScores] = useState<EvalScores>({});
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coachDashboardTab", activeTab);
@@ -204,94 +202,55 @@ export default function CoachDashboard() {
     refetchInterval: 60000,
   });
 
-  // Player search for evaluation and awards
-  const { data: searchResults = [] as PlayerLite[] } = useQuery({
-    queryKey: ["/api/coach/players/search", searchTerm],
-    queryFn: async () => {
-      const res = await fetch(`/api/coach/players/search?q=${encodeURIComponent(searchTerm)}`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: searchTerm.length > 0,
-  });
+  /* ===== Mutations ===== */
+  const querySaveKey = ["/api/coach/evaluations", "player", selectedPlayer?.id, quarter, year];
 
-  const sendTeamMessage = useMutation({
-    mutationFn: async (message: string) => {
-      const res = await fetch(`/api/teams/${coachTeam?.id}/messages`, {
+  const saveEvaluation = useMutation({
+    mutationFn: async () => {
+      if (!selectedPlayer) throw new Error("No player selected");
+      const payload = { playerId: selectedPlayer.id, quarter, year, scores };
+      const res = await fetch(`/api/coach/evaluations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ message, messageType: "text" }),
+        body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to send message");
+      if (!res.ok) throw new Error("Failed to save evaluation");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Message sent" });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", coachTeam?.id, "messages"] });
+      toast({ title: "Evaluation saved" });
+      queryClient.invalidateQueries({ queryKey: querySaveKey });
+      setEvalOpen(false);
+      setScores({});
+      setSelectedPlayer(null);
     },
+    onError: (e: any) => toast({ title: "Save failed", description: String(e?.message || e), variant: "destructive" }),
   });
 
-  // Award a badge/trophy to a player
   const awardMutation = useMutation({
-    mutationFn: async ({ playerId, awardId, category }: { playerId: number; awardId: string; category: "badge" | "trophy" }) => {
+    mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
+      if (!selectedPlayer) throw new Error("No player selected");
       const res = await fetch(`/api/coach/award`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ playerId, awardId, category }),
+        body: JSON.stringify({ playerId: selectedPlayer.id, awardId, category: kind }),
       });
-      if (!res.ok) throw new Error("Failed to award badge/trophy");
+      if (!res.ok) throw new Error("Failed to give award");
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "Award given successfully!" });
-      setShowAwardsModal(false);
+      toast({ title: "Award given" });
+      setAwardsOpen(false);
       setSelectedPlayer(null);
-      setSelectedAward(null);
     },
-    onError: () => {
-      toast({ title: "Failed to give award", variant: "destructive" });
-    },
+    onError: () => toast({ title: "Failed to give award", variant: "destructive" }),
   });
 
-  // Evaluate player skills
-  const evaluateMutation = useMutation({
-    mutationFn: async ({ playerId, scores }: { playerId: number; scores: Record<SkillKey, number> }) => {
-      const res = await fetch(`/api/coach/evaluate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ playerId, scores, quarter: "Q1" }), // You could make quarter dynamic
-      });
-      if (!res.ok) throw new Error("Failed to evaluate player");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Player evaluation saved!" });
-      setShowEvaluationModal(false);
-      setSelectedPlayer(null);
-      setEvaluationScores({ SHOOTING: 1, DRIBBLING: 1, PASSING: 1 });
-    },
-    onError: () => {
-      toast({ title: "Failed to save evaluation", variant: "destructive" });
-    },
-  });
-
-  const openPayrollPortal = async () => {
-    try {
-      const res = await fetch("/api/coach/pay/portal", { method: "POST", credentials: "include" });
-      const j = await res.json();
-      if (j?.url) window.location.href = j.url;
-      else toast({ title: "Couldn't open portal", variant: "destructive" });
-    } catch (e) {
-      toast({ title: "Portal error", variant: "destructive" });
-    }
-  };
-
+  /* =================== UI =================== */
   const initials = `${(currentUser.firstName || "").charAt(0)}${(currentUser.lastName || "").charAt(0)}`.toUpperCase();
 
-  /* Simple summaries for calendar tab */
   const todayEvents = useMemo(() => {
     const today = new Date();
     return coachEvents.filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), today));
@@ -305,299 +264,13 @@ export default function CoachDashboard() {
       .slice(0, 3);
   }, [coachEvents]);
 
-  // Modal for awarding badges and trophies
-  const AwardsModal = () => {
-    const filteredAwards = COACH_AWARDS.filter(award => 
-      award.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      award.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    return (
-      <Dialog open={showAwardsModal} onOpenChange={setShowAwardsModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-600" />
-              Award Badge or Trophy
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Player Selection */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Player</label>
-              <Input
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-2"
-              />
-              
-              {searchTerm.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border rounded-md">
-                  {searchResults.map(player => (
-                    <button
-                      key={player.id}
-                      onClick={() => {
-                        setSelectedPlayer(player);
-                        setSearchTerm("");
-                      }}
-                      className="w-full text-left p-2 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={player.profileImageUrl || undefined} />
-                        <AvatarFallback>
-                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{player.firstName} {player.lastName}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {selectedPlayer && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-md flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
-                    <AvatarFallback>
-                      {selectedPlayer.firstName.charAt(0)}{selectedPlayer.lastName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setSelectedPlayer(null)}
-                    className="ml-auto"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Award Selection */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Award</label>
-              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-                {filteredAwards.map(award => (
-                  <button
-                    key={award.id}
-                    onClick={() => setSelectedAward(award)}
-                    className={`text-left p-3 rounded-md border transition-colors ${
-                      selectedAward?.id === award.id 
-                        ? "bg-red-50 border-red-200" 
-                        : "hover:bg-gray-50 border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        award.tier === 'starter' ? 'bg-green-100 text-green-600' :
-                        award.tier === 'all-star' ? 'bg-blue-100 text-blue-600' :
-                        award.tier === 'superstar' ? 'bg-purple-100 text-purple-600' :
-                        'bg-yellow-100 text-yellow-600'
-                      }`}>
-                        {award.category === 'trophy' ? <Trophy className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{award.name}</div>
-                        <div className="text-xs text-gray-600">{award.description}</div>
-                        <div className={`text-xs mt-1 px-2 py-1 rounded-full inline-block ${
-                          award.tier === 'starter' ? 'bg-green-100 text-green-700' :
-                          award.tier === 'all-star' ? 'bg-blue-100 text-blue-700' :
-                          award.tier === 'superstar' ? 'bg-purple-100 text-purple-700' :
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {award.tier.replace('-', ' ').toUpperCase()}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAwardsModal(false);
-                  setSelectedPlayer(null);
-                  setSelectedAward(null);
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (selectedPlayer && selectedAward) {
-                    awardMutation.mutate({
-                      playerId: selectedPlayer.id,
-                      awardId: selectedAward.id,
-                      category: selectedAward.category
-                    });
-                  }
-                }}
-                disabled={!selectedPlayer || !selectedAward || awardMutation.isPending}
-                className="flex-1 bg-red-600 hover:bg-red-700"
-              >
-                {awardMutation.isPending ? "Awarding..." : "Give Award"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
-  // Modal for player skill evaluation
-  const EvaluationModal = () => {
-    return (
-      <Dialog open={showEvaluationModal} onOpenChange={setShowEvaluationModal}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Gauge className="h-5 w-5 text-blue-600" />
-              Player Skill Evaluation
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {/* Player Selection */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Select Player</label>
-              <Input
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-2"
-              />
-              
-              {searchTerm.length > 0 && (
-                <div className="max-h-32 overflow-y-auto border rounded-md">
-                  {searchResults.map(player => (
-                    <button
-                      key={player.id}
-                      onClick={() => {
-                        setSelectedPlayer(player);
-                        setSearchTerm("");
-                      }}
-                      className="w-full text-left p-2 hover:bg-gray-50 flex items-center gap-2"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={player.profileImageUrl || undefined} />
-                        <AvatarFallback>
-                          {player.firstName.charAt(0)}{player.lastName.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{player.firstName} {player.lastName}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              
-              {selectedPlayer && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-md flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
-                    <AvatarFallback>
-                      {selectedPlayer.firstName.charAt(0)}{selectedPlayer.lastName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{selectedPlayer.firstName} {selectedPlayer.lastName}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setSelectedPlayer(null)}
-                    className="ml-auto"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Skill Ratings */}
-            {selectedPlayer && (
-              <div className="space-y-6">
-                <div className="text-sm text-gray-600 mb-4">
-                  Rate each skill from 1-5 (1 = Needs Work, 5 = Excellent)
-                </div>
-                
-                {SKILL_KEYS.map(skill => (
-                  <div key={skill} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium capitalize">
-                        {skill.toLowerCase()}
-                      </label>
-                      <span className="text-lg font-bold text-red-600">
-                        {evaluationScores[skill]}
-                      </span>
-                    </div>
-                    <Slider
-                      value={[evaluationScores[skill]]}
-                      onValueChange={([value]) => 
-                        setEvaluationScores(prev => ({ ...prev, [skill]: value }))
-                      }
-                      min={1}
-                      max={5}
-                      step={1}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Needs Work</span>
-                      <span>Good</span>
-                      <span>Excellent</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowEvaluationModal(false);
-                  setSelectedPlayer(null);
-                  setEvaluationScores({ SHOOTING: 1, DRIBBLING: 1, PASSING: 1 });
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  if (selectedPlayer) {
-                    evaluateMutation.mutate({
-                      playerId: selectedPlayer.id,
-                      scores: evaluationScores
-                    });
-                  }
-                }}
-                disabled={!selectedPlayer || evaluateMutation.isPending}
-                className="flex-1 bg-red-600 hover:bg-red-700"
-              >
-                {evaluateMutation.isPending ? "Saving..." : "Save Evaluation"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-end">
-            <Button variant="ghost" size="icon" className="h-12 w-12" aria-label="Notifications">
+            <Button variant="ghost" size="icon" className="h-12 w-12" aria-label="Notifications" data-testid="button-notifications">
               <Bell className="h-12 w-12" />
             </Button>
             <Button
@@ -606,6 +279,7 @@ export default function CoachDashboard() {
               className="h-12 w-12"
               onClick={() => setLocation("/coach-settings")}
               aria-label="Settings"
+              data-testid="button-settings"
             >
               <MoreHorizontal className="h-12 w-12" />
             </Button>
@@ -625,12 +299,11 @@ export default function CoachDashboard() {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs (removed old Evaluate tab) */}
         <div className="px-6 mb-6">
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="roster" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
-            <TabButton label="evaluate" activeTab={activeTab} onClick={setActiveTab} Icon={Gauge} />
             <TabButton label="badges" activeTab={activeTab} onClick={setActiveTab} Icon={Trophy} />
             <TabButton label="pay" activeTab={activeTab} onClick={setActiveTab} Icon={DollarSign} />
             <TabButton label="hr" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
@@ -641,7 +314,7 @@ export default function CoachDashboard() {
         <div className="px-6">
           {activeTab === "calendar" && (
             <div className="-mx-6">
-              <PlayerCalendar events={coachEvents as any} currentUser={{...currentUser, email: currentUser.email || ''}} />
+              <PlayerCalendar events={coachEvents as any} currentUser={{ ...currentUser, email: currentUser.email || "" }} />
 
               <div className="px-6 py-6 space-y-4">
                 <section className="space-y-2">
@@ -687,19 +360,51 @@ export default function CoachDashboard() {
           )}
 
           {activeTab === "roster" && (
-            <RosterTab team={coachTeam || undefined} messages={teamMessages} onSend={(m) => sendTeamMessage.mutate(m)} />
-          )}
+            <RosterTab
+              team={coachTeam || undefined}
+              messages={teamMessages}
+              onSend={async (m) => {
+                const res = await fetch(`/api/teams/${coachTeam?.id}/messages`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  credentials: "include",
+                  body: JSON.stringify({ message: m, messageType: "text" }),
+                });
+                if (!res.ok) toast({ title: "Failed to send", variant: "destructive" });
+                else toast({ title: "Message sent" });
+              }}
 
-          {activeTab === "evaluate" && coachTeam && (
-            <EvaluateTab team={coachTeam} />
+              onEvaluate={(p) => {
+                setSelectedPlayer(p);
+                // Load existing eval for player/quarter/year
+                fetch(`/api/coach/evaluations?playerId=${p.id}&quarter=${quarter}&year=${year}`, { credentials: "include" })
+                  .then((r) => (r.ok ? r.json() : null))
+                  .then((data) => setScores((data as EvalScores) || {}));
+                setEvalOpen(true);
+              }}
+
+              onReward={(p) => {
+                setSelectedPlayer(p);
+                setAwardsOpen(true);
+              }}
+            />
           )}
 
           {activeTab === "badges" && (
-            <BadgesTab teamId={coachTeam?.id} />
+            <BadgesTab />
           )}
 
           {activeTab === "pay" && (
-            <PayTab pay={paySummary || undefined} onOpenPortal={openPayrollPortal} />
+            <PayTab pay={paySummary || undefined} onOpenPortal={async () => {
+              try {
+                const res = await fetch("/api/coach/pay/portal", { method: "POST", credentials: "include" });
+                const j = await res.json();
+                if (j?.url) window.location.href = j.url;
+                else toast({ title: "Couldn't open portal", variant: "destructive" });
+              } catch (e) {
+                toast({ title: "Portal error", variant: "destructive" });
+              }
+            }} />
           )}
 
           {activeTab === "hr" && (
@@ -708,27 +413,31 @@ export default function CoachDashboard() {
         </div>
       </main>
 
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-20 right-4 flex flex-col gap-3 z-50">
-        <Button
-          size="lg"
-          onClick={() => setShowEvaluationModal(true)}
-          className="h-14 w-14 rounded-full bg-blue-600 hover:bg-blue-700 shadow-lg"
-        >
-          <Gauge className="h-6 w-6" />
-        </Button>
-        <Button
-          size="lg"
-          onClick={() => setShowAwardsModal(true)}
-          className="h-14 w-14 rounded-full bg-yellow-600 hover:bg-yellow-700 shadow-lg"
-        >
-          <Trophy className="h-6 w-6" />
-        </Button>
-      </div>
+      {/* -------- Overlays (Team Tab integrated) -------- */}
+      <EvaluationDialog
+        open={evalOpen}
+        onOpenChange={setEvalOpen}
+        player={selectedPlayer}
+        scores={scores}
+        setScores={setScores}
+        quarter={quarter}
+        setQuarter={setQuarter}
+        year={year}
+        setYear={setYear}
+        onSave={() => saveEvaluation.mutate()}
+        saving={saveEvaluation.isPending}
+      />
 
-      {/* Modals */}
-      <AwardsModal />
-      <EvaluationModal />
+      <AwardsDialog
+        open={awardsOpen}
+        onOpenChange={(v) => {
+          setAwardsOpen(v);
+          if (!v) setSelectedPlayer(null);
+        }}
+        player={selectedPlayer}
+        onGive={(awardId, kind) => awardMutation.mutate({ awardId, kind })}
+        giving={awardMutation.isPending}
+      />
     </div>
   );
 }
@@ -742,6 +451,7 @@ function TabButton({ label, activeTab, onClick, Icon }: { label: any; activeTab:
       onClick={() => onClick(label)}
       className={`flex flex-col items-center space-y-3 py-4 px-3 ${active ? "text-red-600" : "text-gray-400"}`}
       style={{ color: active ? "#d82428" : undefined }}
+      data-testid={`tab-${label}`}
     >
       <Icon className="h-6 w-6" />
       <div className={`h-1 w-12 rounded-full transition-all duration-200 ${active ? "opacity-100" : "opacity-0"}`} style={{ backgroundColor: "#d82428" }} />
@@ -768,8 +478,20 @@ function ProfileAvatarRing({ src, initials, size = 80 }: { src?: string; initial
   );
 }
 
-/* ---------- Roster & Team Messages ---------- */
-function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messages: any[]; onSend: (m: string) => void }) {
+/* ---------- Roster Tab (with Evaluate/Reward buttons inline) ---------- */
+function RosterTab({
+  team,
+  messages,
+  onSend,
+  onEvaluate,
+  onReward,
+}: {
+  team?: CoachTeam | null;
+  messages: any[];
+  onSend: (m: string) => void;
+  onEvaluate: (p: PlayerLite) => void;
+  onReward: (p: PlayerLite) => void;
+}) {
   const [msg, setMsg] = useState("");
   const { toast } = useToast();
 
@@ -792,8 +514,8 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
                 <Users className="h-8 w-8 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">{team.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{team.ageGroup}</p>
+                <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{team.name}</h3>
+                <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{team.ageGroup}</p>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <UserCheck className="h-4 w-4" /> You are the coach
                 </div>
@@ -806,6 +528,7 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
                     navigator.clipboard.writeText(team.inviteCode!);
                     toast({ title: "Invite code copied" });
                   }}
+                  data-testid="button-copy-invite"
                 >
                   <Copy className="h-3.5 w-3.5 mr-1" /> Invite
                 </Button>
@@ -823,37 +546,35 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
             <CardContent className="p-0">
               <div className="max-h-72 overflow-y-auto">
                 {team.roster.map((p) => (
-                  <div key={p.id} className="p-4 border-b border-gray-100 last:border-b-0 flex items-center justify-between">
+                  <div key={p.id} className="p-4 border-b border-gray-100 last:border-b-0 flex items-center justify-between" data-testid={`player-${p.id}`}>
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={p.profileImageUrl} />
                         <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
                       </Avatar>
                       <div className="truncate">
-                        <div className="font-medium text-gray-900 truncate">{p.firstName} {p.lastName}</div>
+                        <div className="font-medium text-gray-900 truncate" data-testid={`text-player-name-${p.id}`}>{p.firstName} {p.lastName}</div>
                         <div className="text-xs text-gray-500">{p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedPlayer(p);
-                          setShowEvaluationModal(true);
-                        }}
+                      {/* Evaluate (quarterly) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEvaluate(p as any)}
                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        data-testid={`button-evaluate-${p.id}`}
                       >
                         <Gauge className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedPlayer(p);
-                          setShowAwardsModal(true);
-                        }}
+                      {/* Reward (trophy/badge) */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onReward(p as any)}
                         className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                        data-testid={`button-reward-${p.id}`}
                       >
                         <Trophy className="h-4 w-4" />
                       </Button>
@@ -902,8 +623,8 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
 
             <div className="mt-4 pt-4 border-t border-gray-100">
               <div className="flex gap-2">
-                <Input placeholder="Type a message…" value={msg} onChange={(e) => setMsg(e.target.value)} className="flex-1" />
-                <Button size="icon" disabled={!msg.trim()} onClick={() => { onSend(msg.trim()); setMsg(""); }}>
+                <Input placeholder="Type a message…" value={msg} onChange={(e) => setMsg(e.target.value)} className="flex-1" data-testid="input-message" />
+                <Button size="icon" disabled={!msg.trim()} onClick={() => { onSend(msg.trim()); setMsg(""); }} data-testid="button-send-message">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
@@ -915,138 +636,212 @@ function RosterTab({ team, messages, onSend }: { team?: CoachTeam | null; messag
   );
 }
 
-/* ---------- Quarterly Evaluations ---------- */
-function EvaluateTab({ team }: { team: CoachTeam }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [quarter, setQuarter] = useState<Quarter>(() => {
-    const m = new Date().getMonth();
-    return (m <= 2 ? "Q1" : m <= 5 ? "Q2" : m <= 8 ? "Q3" : "Q4") as Quarter;
-  });
+/* ---------- Evaluation Dialog (Quarterly, per player) ---------- */
+function EvaluationDialog({
+  open,
+  onOpenChange,
+  player,
+  scores,
+  setScores,
+  quarter,
+  setQuarter,
+  year,
+  setYear,
+  onSave,
+  saving,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  player: PlayerLite | null;
+  scores: EvalScores;
+  setScores: (s: EvalScores) => void;
+  quarter: Quarter;
+  setQuarter: (q: Quarter) => void;
+  year: number;
+  setYear: (y: number) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  const handleChange = (cat: SkillCategoryName, sub: string, val: number) => {
+    setScores({
+      ...scores,
+      [cat]: { ...(scores[cat] || {}), [sub]: val },
+    });
+  };
 
-  type PlayerScores = Record<SkillKey, number>;
-  const [scores, setScores] = useState<Record<number, PlayerScores>>({});
-
-  /* Load existing */
-  const { isFetching } = useQuery({
-    queryKey: ["/api/coach/evaluations", team.id, quarter, year],
-    queryFn: async () => {
-      const res = await fetch(`/api/coach/evaluations?teamId=${team.id}&quarter=${quarter}&year=${year}`, { credentials: "include" });
-      if (!res.ok) return {} as Record<number, PlayerScores>;
-      const j = await res.json();
-      // j = { [playerId]: { SHOOTING: 80, ... } }
-      setScores(j || {});
-      return j;
-    },
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const payload = { teamId: team.id, quarter, year, scores };
-      const res = await fetch(`/api/coach/evaluations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Failed to save evaluations");
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Evaluations saved" });
-      queryClient.invalidateQueries({ queryKey: ["/api/coach/evaluations", team.id, quarter, year] });
-    },
-    onError: (e: any) => toast({ title: "Save failed", description: String(e?.message || e), variant: "destructive" }),
-  });
+  const catAvg = (cat: SkillCategoryName) => {
+    const entries = Object.values(scores[cat] || {});
+    if (!entries.length) return 0;
+    return Math.round((entries.reduce((a, b) => a + b, 0) / entries.length) * 20); // scale 1–5 to %
+  };
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Quarterly Skill Evaluations</h2>
-        <div className="text-sm text-gray-500">{isFetching ? "Loading…" : null}</div>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Gauge className="h-5 w-5 text-blue-600" />
+            Quarterly Evaluation{player ? `: ${player.firstName} ${player.lastName}` : ""}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="space-y-1">
-              <label className="text-gray-600">Quarter</label>
-              <select className="w-full border rounded-md px-2 py-1" value={quarter} onChange={(e) => setQuarter(e.target.value as Quarter)}>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-gray-600">Year</label>
-              <input className="w-full border rounded-md px-2 py-1" type="number" value={year} onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear())))} />
-            </div>
+        {/* Quarter / Year */}
+        <div className="grid grid-cols-2 gap-3 mb-2">
+          <div className="space-y-1 text-sm">
+            <label className="text-gray-600">Quarter</label>
+            <select 
+              className="w-full border rounded-md px-2 py-1" 
+              value={quarter} 
+              onChange={(e) => setQuarter(e.target.value as Quarter)}
+              data-testid="select-quarter"
+            >
+              <option value="Q1">Q1</option>
+              <option value="Q2">Q2</option>
+              <option value="Q3">Q3</option>
+              <option value="Q4">Q4</option>
+            </select>
           </div>
-        </CardContent>
-      </Card>
+          <div className="space-y-1 text-sm">
+            <label className="text-gray-600">Year</label>
+            <input 
+              className="w-full border rounded-md px-2 py-1" 
+              type="number" 
+              value={year} 
+              onChange={(e) => setYear(parseInt(e.target.value || String(new Date().getFullYear())))} 
+              data-testid="input-year"
+            />
+          </div>
+        </div>
 
-      {/* Roster grid with inputs */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {team.roster.map((p) => (
-              <div key={p.id} className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={p.profileImageUrl} />
-                    <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="font-medium text-gray-900">{p.firstName} {p.lastName}</div>
+        {/* Categories & sub-skills */}
+        <div className="max-h-80 overflow-y-auto pr-1 space-y-3">
+          {SKILL_CATEGORIES.map((cat) => (
+            <Card key={cat.name} className="border">
+              <CardContent className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-gray-900">{cat.name}</div>
+                  <div className="text-xs text-gray-600">Avg: <span className="font-semibold text-red-600">{catAvg(cat.name)}%</span></div>
                 </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {SKILL_KEYS.map((k) => (
-                    <div key={k} className="space-y-1">
-                      <div className="text-[11px] font-semibold text-gray-500">{k}</div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={(scores[p.id]?.[k] ?? 0) as number}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value);
-                          setScores((prev) => ({
-                            ...prev,
-                            [p.id]: { ...prev[p.id], [k]: v } as any,
-                          }));
-                        }}
+                <div className="space-y-3">
+                  {cat.skills.map((sub) => (
+                    <div key={sub} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-gray-700">{sub}</span>
+                        <span className="text-gray-500">{(scores[cat.name]?.[sub] ?? 3)}</span>
+                      </div>
+                      <Slider
+                        value={[scores[cat.name]?.[sub] ?? 3]}
+                        onValueChange={([v]) => handleChange(cat.name, sub, v)}
+                        min={1}
+                        max={5}
+                        step={1}
+                        data-testid={`slider-${cat.name}-${sub}`}
                       />
-                      <div className="text-xs text-gray-700">{scores[p.id]?.[k] ?? 0}%</div>
+                      <div className="flex justify-between text-[10px] text-gray-500">
+                        <span>Needs Work</span>
+                        <span>Good</span>
+                        <span>Excellent</span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>Top</Button>
-        <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-          {saveMutation.isPending ? "Saving…" : "Save All"}
-        </Button>
-      </div>
-    </div>
+        {/* Actions */}
+        <div className="flex gap-2 pt-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              onOpenChange(false);
+            }}
+            className="flex-1"
+            data-testid="button-cancel-evaluation"
+          >
+            Cancel
+          </Button>
+          <Button onClick={onSave} disabled={saving} className="flex-1 bg-red-600 hover:bg-red-700" data-testid="button-save-evaluation">
+            {saving ? "Saving…" : "Save Evaluation"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-/* ---------- Badges (UYP‑wide) ---------- */
-function BadgesTab({ teamId }: { teamId?: number }) {
+/* ---------- Awards Dialog (Team Trophies & Coach Awards) ---------- */
+function AwardsDialog({
+  open,
+  onOpenChange,
+  player,
+  onGive,
+  giving,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  player: PlayerLite | null;
+  onGive: (awardId: string, kind: "badge" | "trophy") => void;
+  giving: boolean;
+}) {
+  const [tab, setTab] = useState<"trophies" | "awards">("trophies");
+  const list = tab === "trophies" ? TEAM_TROPHIES : COACH_AWARDS;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-600" />
+            {tab === "trophies" ? "Team Trophies (Seasonal)" : "Coach Awards (Anytime)"}
+            {player ? <span className="ml-auto text-xs text-gray-500">{player.firstName} {player.lastName}</span> : null}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex gap-2 mb-3">
+          <Button variant={tab === "trophies" ? "default" : "outline"} onClick={() => setTab("trophies")} className={tab === "trophies" ? "bg-yellow-600 hover:bg-yellow-700" : ""} data-testid="button-tab-trophies">Trophies</Button>
+          <Button variant={tab === "awards" ? "default" : "outline"} onClick={() => setTab("awards")} className={tab === "awards" ? "bg-blue-600 hover:bg-blue-700" : ""} data-testid="button-tab-awards">Coach Awards</Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+          {list.map((a) => (
+            <button
+              key={a.id}
+              onClick={() => onGive(a.id, a.kind)}
+              disabled={giving || !player}
+              className={`text-left p-3 rounded-md border transition-colors hover:bg-gray-50 ${giving ? "opacity-70 cursor-not-allowed" : ""}`}
+              data-testid={`button-award-${a.id}`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${a.kind === "trophy" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                  <Trophy className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium">{a.name}</div>
+                  <div className="text-xs text-gray-600">{a.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 pt-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" data-testid="button-close-awards">Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Badges (UYP‑wide, unchanged) ---------- */
+function BadgesTab() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [q, setQ] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
   const [note, setNote] = useState("");
 
-  const { data: badges = [] as BadgeDef[] } = useQuery({
+  const { data: badges = [] as Array<{ id: number; name: string; description?: string }> } = useQuery({
     queryKey: ["/api/badges/list"],
     queryFn: async () => {
       const res = await fetch("/api/badges/list", { credentials: "include" });
@@ -1092,13 +887,13 @@ function BadgesTab({ teamId }: { teamId?: number }) {
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4 space-y-3">
           <div className="text-sm text-gray-600">Search any player by name or email</div>
-          <Input placeholder="Start typing…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Start typing…" value={q} onChange={(e) => setQ(e.target.value)} data-testid="input-search-player" />
 
           {q.trim().length >= 2 && (
             <div className="max-h-48 overflow-y-auto border rounded-md">
               {search.length ? (
                 search.map((p) => (
-                  <div key={p.id} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => setSelectedPlayer(p)}>
+                  <div key={p.id} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => setSelectedPlayer(p)} data-testid={`player-result-${p.id}`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={p.profileImageUrl || undefined} />
@@ -1120,7 +915,7 @@ function BadgesTab({ teamId }: { teamId?: number }) {
 
           <div className="space-y-2">
             <div className="text-sm text-gray-600">Optional note</div>
-            <Input placeholder="e.g., Leadership in practice this week" value={note} onChange={(e) => setNote(e.target.value)} />
+            <Input placeholder="e.g., Leadership in practice this week" value={note} onChange={(e) => setNote(e.target.value)} data-testid="input-badge-note" />
           </div>
         </CardContent>
       </Card>
@@ -1130,7 +925,7 @@ function BadgesTab({ teamId }: { teamId?: number }) {
         <CardContent className="p-4">
           <div className="grid grid-cols-2 gap-3">
             {badges.map((b) => (
-              <Button key={b.id} variant="outline" className="justify-start h-auto py-3" onClick={() => assignMutation.mutate(b.id)} disabled={!selectedPlayer || assignMutation.isPending}>
+              <Button key={b.id} variant="outline" className="justify-start h-auto py-3" onClick={() => assignMutation.mutate(b.id)} disabled={!selectedPlayer || assignMutation.isPending} data-testid={`button-badge-${b.id}`}>
                 <Trophy className="h-4 w-4 mr-2" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-gray-900">{b.name}</div>
@@ -1141,54 +936,7 @@ function BadgesTab({ teamId }: { teamId?: number }) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Quick: assign to roster players */}
-      {teamId ? <QuickRosterBadgeAssign teamId={teamId} onAssign={(pid, bid) => assignMutation.mutate(bid)} /> : null}
     </div>
-  );
-}
-
-function QuickRosterBadgeAssign({ teamId, onAssign }: { teamId: number; onAssign: (playerId: number, badgeId: number) => void }) {
-  const { data: roster = [] as PlayerLite[] } = useQuery({
-    queryKey: ["/api/coach/team/roster", teamId],
-    queryFn: async () => {
-      const res = await fetch(`/api/coach/team?onlyRoster=1`, { credentials: "include" });
-      if (!res.ok) return [];
-      const j = await res.json();
-      return j?.roster || [];
-    },
-  });
-  const { data: badges = [] as BadgeDef[] } = useQuery({
-    queryKey: ["/api/badges/list"],
-  });
-
-  if (!roster.length) return null;
-
-  return (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="p-4 space-y-3">
-        <h3 className="text-md font-bold text-gray-900">Quick Assign (Roster)</h3>
-        {roster.map((p) => (
-          <div key={p.id} className="flex items-center justify-between py-2 border-b last:border-b-0">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={p.profileImageUrl || undefined} />
-                <AvatarFallback className="text-[10px]">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
-              </Avatar>
-              <div className="text-sm font-medium text-gray-900">{p.firstName} {p.lastName}</div>
-            </div>
-            <div className="flex gap-2">
-              {badges.slice(0, 3).map((b) => (
-                <Button key={`${p.id}-${b.id}`} size="sm" variant="outline" onClick={() => onAssign(p.id, b.id)}>
-                  {b.name}
-                </Button>
-              ))}
-              <Button size="sm" variant="ghost" onClick={() => (window.location.href = `/players/${p.id}`)}>More</Button>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
   );
 }
 
@@ -1222,18 +970,18 @@ function PayTab({ pay, onOpenPortal }: { pay?: CoachPaySummary; onOpenPortal: ()
           <div className="flex items-start justify-between">
             <div>
               <div className="text-sm text-gray-500">Status</div>
-              <div className="mt-1">{statusBadge(pay?.status)}</div>
+              <div className="mt-1" data-testid="status-pay">{statusBadge(pay?.status)}</div>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-500">Next pay date</div>
-              <div className="font-semibold text-gray-900">{pay?.nextPayDate ? format(new Date(pay.nextPayDate), "MMM d, yyyy") : "—"}</div>
+              <div className="font-semibold text-gray-900" data-testid="text-next-pay-date">{pay?.nextPayDate ? format(new Date(pay.nextPayDate), "MMM d, yyyy") : "—"}</div>
               <div className="mt-3 text-sm text-gray-500">Amount</div>
-              <div className="font-semibold text-gray-900">{amt ?? "—"}</div>
+              <div className="font-semibold text-gray-900" data-testid="text-pay-amount">{amt ?? "—"}</div>
             </div>
           </div>
 
           <div className="mt-4">
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={onOpenPortal}>
+            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={onOpenPortal} data-testid="button-open-payroll">
               <DollarSign className="h-4 w-4 mr-2" /> Open Payroll Portal
             </Button>
           </div>
@@ -1261,7 +1009,7 @@ function HRTab({ docs, announcements }: { docs: Array<{ id: string | number; tit
           {docs?.length ? (
             <div className="space-y-2">
               {docs.map((d) => (
-                <a key={d.id} href={d.url} target="_blank" className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50">
+                <a key={d.id} href={d.url} target="_blank" className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50" data-testid={`link-doc-${d.id}`}>
                   <div className="text-sm font-medium text-gray-900">{d.title}</div>
                   <ChevronRight className="h-4 w-4 text-gray-400" />
                 </a>
@@ -1279,7 +1027,7 @@ function HRTab({ docs, announcements }: { docs: Array<{ id: string | number; tit
           {announcements?.length ? (
             <div className="space-y-3">
               {announcements.map((a) => (
-                <div key={a.id} className="p-3 rounded-lg border">
+                <div key={a.id} className="p-3 rounded-lg border" data-testid={`announcement-${a.id}`}>
                   <div className="text-sm font-semibold text-gray-900">{a.title}</div>
                   <div className="text-[11px] text-gray-500 mb-1">{a.createdAt ? format(new Date(a.createdAt), "MMM d, yyyy") : ""}</div>
                   <div className="text-sm text-gray-700 whitespace-pre-wrap">{a.body}</div>

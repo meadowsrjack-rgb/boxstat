@@ -371,6 +371,22 @@ export const playerStats = pgTable("player_stats", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Player evaluations table - quarterly skill assessments
+export const playerEvaluations = pgTable("player_evaluations", {
+  id: serial("id").primaryKey(),
+  playerId: varchar("player_id").references(() => users.id).notNull(),
+  coachId: varchar("coach_id").references(() => users.id).notNull(),
+  quarter: varchar("quarter", { enum: ["Q1", "Q2", "Q3", "Q4"] }).notNull(),
+  year: integer("year").notNull(),
+  scores: jsonb("scores").notNull(), // Stores comprehensive skill scores
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate evaluations for same player/quarter/year
+  uniqueEvaluation: unique().on(table.playerId, table.quarter, table.year)
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
@@ -382,6 +398,12 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   teamMessages: many(teamMessages),
   payments: many(payments),
   stats: many(playerStats),
+  evaluationsAsPlayer: many(playerEvaluations, {
+    relationName: "playerEvaluations",
+  }),
+  evaluationsAsCoach: many(playerEvaluations, {
+    relationName: "coachEvaluations",
+  }),
   trainingSubscriptions: many(trainingSubscriptions),
   trainingProgress: many(trainingProgress),
   playerTasks: many(playerTasks),
@@ -532,6 +554,19 @@ export const playerPointsRelations = relations(playerPoints, ({ one }) => ({
   task: one(playerTasks, { fields: [playerPoints.taskId], references: [playerTasks.id] }),
 }));
 
+export const playerEvaluationsRelations = relations(playerEvaluations, ({ one }) => ({
+  player: one(users, {
+    fields: [playerEvaluations.playerId],
+    references: [users.id],
+    relationName: "playerEvaluations",
+  }),
+  coach: one(users, {
+    fields: [playerEvaluations.coachId],
+    references: [users.id],
+    relationName: "coachEvaluations",
+  }),
+}));
+
 // Insert schemas for new tables
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true, updatedAt: true });
@@ -557,6 +592,7 @@ export const insertAnnouncementAcknowledgmentSchema = createInsertSchema(announc
 export const insertTeamMessageSchema = createInsertSchema(teamMessages).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPlayerTaskSchema = createInsertSchema(playerTasks).omit({ id: true, createdAt: true, completedAt: true });
 export const insertPlayerPointsSchema = createInsertSchema(playerPoints).omit({ id: true, earnedAt: true });
+export const insertPlayerEvaluationSchema = createInsertSchema(playerEvaluations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTrophySchema = createInsertSchema(trophies).omit({ id: true, createdAt: true });
 export const insertUserTrophySchema = createInsertSchema(userTrophies).omit({ id: true, earnedAt: true });
 
@@ -592,6 +628,7 @@ export type AnnouncementAcknowledgment = typeof announcementAcknowledgments.$inf
 export type TeamMessage = typeof teamMessages.$inferSelect;
 export type PlayerTask = typeof playerTasks.$inferSelect;
 export type PlayerPoints = typeof playerPoints.$inferSelect;
+export type PlayerEvaluation = typeof playerEvaluations.$inferSelect;
 
 // CheckIn is an alias for Attendance for checkin functionality
 export type CheckIn = typeof attendances.$inferSelect;
@@ -616,5 +653,6 @@ export type InsertAnnouncementAcknowledgment = z.infer<typeof insertAnnouncement
 export type InsertTeamMessage = z.infer<typeof insertTeamMessageSchema>;
 export type InsertPlayerTask = z.infer<typeof insertPlayerTaskSchema>;
 export type InsertPlayerPoints = z.infer<typeof insertPlayerPointsSchema>;
+export type InsertPlayerEvaluation = z.infer<typeof insertPlayerEvaluationSchema>;
 export type InsertTrophy = z.infer<typeof insertTrophySchema>;
 export type InsertUserTrophy = z.infer<typeof insertUserTrophySchema>;

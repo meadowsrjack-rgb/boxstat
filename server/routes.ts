@@ -1159,6 +1159,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced evaluation endpoints for comprehensive skills system
+  app.get('/api/coach/evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { playerId, quarter, year } = req.query;
+      
+      if (!playerId || !quarter || !year) {
+        return res.status(400).json({ message: "Missing required parameters: playerId, quarter, year" });
+      }
+
+      // Try to get existing evaluation
+      const evaluation = await storage.getPlayerEvaluation({
+        playerId: parseInt(playerId as string),
+        coachId: userId,
+        quarter: quarter as string,
+        year: parseInt(year as string)
+      });
+
+      // Return the scores or empty object if no evaluation exists
+      res.json(evaluation?.scores || {});
+    } catch (error) {
+      console.error("Error fetching player evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch player evaluation" });
+    }
+  });
+
+  app.post('/api/coach/evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { playerId, scores, quarter, year } = req.body;
+      
+      if (!playerId || !quarter || !year || !scores) {
+        return res.status(400).json({ message: "Missing required parameters: playerId, scores, quarter, year" });
+      }
+
+      const evaluation = await storage.savePlayerEvaluation({
+        playerId,
+        coachId: userId,
+        scores,
+        quarter,
+        year
+      });
+
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error saving player evaluation:", error);
+      res.status(500).json({ message: "Failed to save player evaluation" });
+    }
+  });
+
   // Coach payroll and HR routes (placeholders)
   app.get('/api/coach/pay/summary', isAuthenticated, async (req: any, res) => {
     try {

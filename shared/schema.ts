@@ -96,6 +96,7 @@ export const users = pgTable("users", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
   passcode: varchar("passcode", { length: 4 }), // 4-digit PIN for profile switching
+  youthClubTeam: varchar("youth_club_team"), // Club team from Notion data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

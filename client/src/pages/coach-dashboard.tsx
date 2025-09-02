@@ -1024,84 +1024,135 @@ function PlayerProfileModal({
         <div className="min-h-[300px]">
           {activeTab === "profile" && (
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600">First Name</label>
-                  <div className="text-gray-900">{player.firstName}</div>
+              {!(player as any).hasAppProfile ? (
+                <div className="text-center py-8">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <div className="flex items-center justify-center mb-4">
+                      <User className="h-12 w-12 text-yellow-600" />
+                    </div>
+                    <h3 className="text-lg font-medium text-yellow-800 mb-2">
+                      Player has not set up a profile yet
+                    </h3>
+                    <p className="text-sm text-yellow-700 mb-4">
+                      {player.firstName} {player.lastName} is in the Notion database but hasn't created an app account.
+                    </p>
+                    <div className="space-y-3 text-left">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Name (from Notion)</label>
+                        <div className="text-gray-900">{player.firstName} {player.lastName}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Club Team (from Notion)</label>
+                        <div className="text-gray-900">{(player as any).youthClubTeam || "No team assigned"}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Last Name</label>
-                  <div className="text-gray-900">{player.lastName}</div>
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium text-gray-600">Team</label>
-                <div className="text-gray-900">{player.teamName || "No team assigned"}</div>
-              </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">First Name</label>
+                      <div className="text-gray-900">{player.firstName}</div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Last Name</label>
+                      <div className="text-gray-900">{player.lastName}</div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Team</label>
+                    <div className="text-gray-900">{player.teamName || "No team assigned"}</div>
+                  </div>
 
-              {player.email && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Email</label>
-                  <div className="text-gray-900">{player.email}</div>
-                </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Club Team (from Notion)</label>
+                    <div className="text-gray-900">{(player as any).youthClubTeam || "No club team"}</div>
+                  </div>
+
+                  {player.email && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Email</label>
+                      <div className="text-gray-900">{player.email}</div>
+                    </div>
+                  )}
+
+                  {(player as any).grade && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Grade</label>
+                      <div className="text-gray-900">{(player as any).grade}</div>
+                    </div>
+                  )}
+
+                  {(player as any).position && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-600">Position</label>
+                      <div className="text-gray-900">{(player as any).position}</div>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t">
+                    <div className="text-center text-sm text-gray-500">
+                      Additional player details and performance history would appear here
+                    </div>
+                  </div>
+                </>
               )}
-
-              {(player as any).grade && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Grade</label>
-                  <div className="text-gray-900">{(player as any).grade}</div>
-                </div>
-              )}
-
-              {(player as any).position && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Position</label>
-                  <div className="text-gray-900">{(player as any).position}</div>
-                </div>
-              )}
-
-              <div className="pt-4 border-t">
-                <div className="text-center text-sm text-gray-500">
-                  Additional player details and performance history would appear here
-                </div>
-              </div>
             </div>
           )}
 
           {activeTab === "badges" && (
             <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-600">Optional note</label>
-                <Input 
-                  placeholder="e.g., Leadership in practice this week" 
-                  value={note} 
-                  onChange={(e) => setNote(e.target.value)} 
-                  data-testid="input-badge-note-modal" 
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
-                {badges.map((b) => (
-                  <Button 
-                    key={b.id} 
-                    variant="outline" 
-                    className="justify-start h-auto py-3" 
-                    onClick={() => {
-                      onAssignBadge(b.id);
-                      onOpenChange(false);
-                    }} 
-                    disabled={assigning} 
-                    data-testid={`button-badge-modal-${b.id}`}
-                  >
-                    <Trophy className="h-4 w-4 mr-3" />
-                    <div className="text-left">
-                      <div className="text-sm font-semibold text-gray-900">{b.name}</div>
-                      {b.description && <div className="text-xs text-gray-500">{b.description}</div>}
+              {!(player as any).hasAppProfile ? (
+                <div className="text-center py-8">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <div className="flex items-center justify-center mb-4">
+                      <Award className="h-12 w-12 text-gray-400" />
                     </div>
-                  </Button>
-                ))}
-              </div>
+                    <h3 className="text-lg font-medium text-gray-600 mb-2">
+                      Cannot award badges
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {player.firstName} {player.lastName} needs to create an app account before badges can be awarded.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-600">Optional note</label>
+                    <Input 
+                      placeholder="e.g., Leadership in practice this week" 
+                      value={note} 
+                      onChange={(e) => setNote(e.target.value)} 
+                      data-testid="input-badge-note-modal" 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
+                    {badges.map((b) => (
+                      <Button 
+                        key={b.id} 
+                        variant="outline" 
+                        className="justify-start h-auto py-3" 
+                        onClick={() => {
+                          onAssignBadge(b.id);
+                          onOpenChange(false);
+                        }} 
+                        disabled={assigning} 
+                        data-testid={`button-badge-modal-${b.id}`}
+                      >
+                        <Trophy className="h-4 w-4 mr-3" />
+                        <div className="text-left">
+                          <div className="text-sm font-semibold text-gray-900">{b.name}</div>
+                          {b.description && <div className="text-xs text-gray-500">{b.description}</div>}
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

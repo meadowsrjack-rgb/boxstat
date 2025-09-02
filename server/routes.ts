@@ -1106,13 +1106,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Use Notion players for search
         const notionPlayers = notionService.searchPlayers(query);
         
-        // Convert Notion players to the expected format for the coach dashboard
-        const formattedPlayers = notionPlayers.map(player => ({
-          id: parseInt(player.id.replace(/-/g, '').substring(0, 8), 16), // Convert notion ID to number
-          firstName: player.name.split(' ')[0] || player.name,
-          lastName: player.name.split(' ').slice(1).join(' ') || '',
-          teamName: player.team || 'Unassigned',
-          profileImageUrl: null // Notion doesn't have profile images
+        // Check if each player has an app profile and include club team data
+        const formattedPlayers = await Promise.all(notionPlayers.map(async (player) => {
+          const firstName = player.name.split(' ')[0] || player.name;
+          const lastName = player.name.split(' ').slice(1).join(' ') || '';
+          
+          // Try to find existing user by name match
+          const existingUser = await storage.getUserByName(firstName, lastName);
+          
+          return {
+            id: parseInt(player.id.replace(/-/g, '').substring(0, 8), 16), // Convert notion ID to number
+            firstName,
+            lastName,
+            teamName: player.team || 'Unassigned',
+            youthClubTeam: player.team, // Store the Notion club team data
+            profileImageUrl: null, // Notion doesn't have profile images
+            hasAppProfile: !!existingUser,
+            appUserId: existingUser?.id,
+            email: existingUser?.email || ''
+          };
         }));
 
         res.json(formattedPlayers);
@@ -1149,6 +1161,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error awarding badge/trophy:", error);
       res.status(500).json({ message: "Failed to award badge/trophy" });
+    }
+  });
+
+  // Update player profile from Notion data
+  app.post('/api/sync/player-profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.userType !== 'coach' && user?.userType !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const { playerId } = req.body;
+      
+      // Get the user to update
+      const playerUser = await storage.getUser(playerId);
+      if (!playerUser) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+
+      // Search for matching Notion player
+      const notionPlayerName = `${playerUser.firstName} ${playerUser.lastName}`;
+      const notionPlayers = notionService.searchPlayers(notionPlayerName);
+      const matchingPlayer = notionPlayers.find(p => 
+        p.name.toLowerCase() === notionPlayerName.toLowerCase()
+      );
+
+      if (matchingPlayer) {
+        // Update user profile with Notion data
+        await storage.updateUserProfile(playerId, {
+          firstName: matchingPlayer.name.split(' ')[0] || playerUser.firstName,
+          lastName: matchingPlayer.name.split(' ').slice(1).join(' ') || playerUser.lastName,
+          youthClubTeam: matchingPlayer.team
+        });
+
+        res.json({ 
+          success: true, 
+          message: "Profile updated with Notion data",
+          updatedData: {
+            name: matchingPlayer.name,
+            clubTeam: matchingPlayer.team
+          }
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: "No matching player found in Notion" 
+        });
+      }
+    } catch (error) {
+      console.error("Error syncing player profile:", error);
+      res.status(500).json({ message: "Failed to sync player profile" });
     }
   });
 

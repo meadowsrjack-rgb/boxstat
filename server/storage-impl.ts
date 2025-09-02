@@ -123,6 +123,7 @@ export interface IStorage {
   
   // User operations (legacy - required for Replit Auth compatibility)
   getUser(id: string): Promise<User | undefined>;
+  getUserByName(firstName: string, lastName: string): Promise<User | undefined>;
   upsertUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   updateUserProfile(id: string, data: Partial<User>): Promise<User>;
@@ -1208,6 +1209,21 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .limit(10);
+  }
+
+  async getUserByName(firstName: string, lastName: string): Promise<User | undefined> {
+    const results = await db
+      .select()
+      .from(users)
+      .where(
+        and(
+          sql`LOWER(${users.firstName}) = ${firstName.toLowerCase()}`,
+          sql`LOWER(${users.lastName}) = ${lastName.toLowerCase()}`
+        )
+      )
+      .limit(1);
+    
+    return results[0];
   }
 
   async awardBadge(playerId: string, badgeId: number, awardedBy: string): Promise<void> {

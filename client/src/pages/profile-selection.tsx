@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, User as UserIcon, Lock, Basketball, Crown, Users, Trophy } from "lucide-react";
+import { Plus, User as UserIcon, Lock, CircleDot, Crown, Users, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type Profile = {
@@ -39,8 +39,7 @@ export default function ProfileSelection() {
     mutationFn: async ({ profileId, passcode }: { profileId: string; passcode: string }) => {
       return await apiRequest(`/api/users/${user?.id}/verify-passcode`, {
         method: "POST",
-        body: JSON.stringify({ passcode }),
-        headers: { "Content-Type": "application/json" },
+        data: { passcode },
       });
     },
     onSuccess: (data: any, variables) => {
@@ -113,8 +112,7 @@ export default function ProfileSelection() {
     try {
       const verificationResult = await apiRequest(`/api/users/${user?.id}/verify-passcode`, {
         method: "POST",
-        body: JSON.stringify({ passcode: "" }),
-        headers: { "Content-Type": "application/json" },
+        data: { passcode: "" },
       });
 
       if (verificationResult.verified) {
@@ -149,7 +147,7 @@ export default function ProfileSelection() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 grid place-items-center text-white/70">
         <div className="text-center">
-          <Basketball className="h-16 w-16 mx-auto mb-4 animate-bounce text-blue-400" />
+          <CircleDot className="h-16 w-16 mx-auto mb-4 animate-bounce text-blue-400" />
           <p className="text-lg">Loading profiles...</p>
         </div>
       </div>
@@ -162,7 +160,7 @@ export default function ProfileSelection() {
         {/* Title */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
-            <Basketball className="h-12 w-12 text-blue-400 mr-3" />
+            <CircleDot className="h-12 w-12 text-blue-400 mr-3" />
             <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
               UYP Basketball
             </h1>

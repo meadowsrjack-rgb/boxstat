@@ -320,7 +320,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   useEffect(() => {
     if (!currentUser?.id) return;
     const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${typeof window !== "undefined" ? window.location.host : ""}/ws`;
+    const host = typeof window !== "undefined" ? window.location.hostname : "";
+    const port = typeof window !== "undefined" && window.location.port ? `:${window.location.port}` : '';
+    const wsUrl = `${protocol}//${host}${port}/ws`;
     const socket = new WebSocket(wsUrl);
 
     socket.onopen = () => {

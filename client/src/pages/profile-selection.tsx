@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, User as UserIcon, Lock } from "lucide-react";
+import { Plus, User as UserIcon, Lock, Basketball, Crown, Users, Trophy } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type Profile = {
@@ -19,6 +19,7 @@ type Profile = {
 };
 
 const UYP_RED = "#d82428";
+const UYP_BLUE = "#1e40af";
 
 export default function ProfileSelection() {
   const { user } = useAuth();
@@ -44,7 +45,6 @@ export default function ProfileSelection() {
     },
     onSuccess: (data: any, variables) => {
       if (data.verified) {
-        // Passcode verified, proceed with profile selection
         selectProfileMutation.mutate(variables.profileId);
         setPasscodeDialogOpen(false);
         setPasscode("");
@@ -77,30 +77,46 @@ export default function ProfileSelection() {
     onSuccess: (data: any) => {
       console.log("Profile selected successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      const t = (data?.profileType as Profile["profileType"]) || "parent";
-      console.log("Navigating to dashboard for profile type:", t);
-      if (t === "player") setLocation("/player-dashboard");
-      else if (t === "coach") setLocation("/coach-dashboard");
-      else setLocation("/parent-dashboard");
+      const profileType = (data?.profileType as Profile["profileType"]) || "parent";
+      console.log("Navigating to dashboard for profile type:", profileType);
+
+      // Navigate to appropriate dashboard
+      switch (profileType) {
+        case "player":
+          setLocation("/player-dashboard");
+          break;
+        case "coach":
+          setLocation("/coach-dashboard");
+          break;
+        case "admin":
+          setLocation("/admin-dashboard");
+          break;
+        default:
+          setLocation("/parent-dashboard");
+      }
     },
     onError: (error: any) => {
       console.error("Profile selection failed:", error);
+      toast({
+        title: "Profile Selection Failed",
+        description: "Could not switch to selected profile. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
   const handleCreateProfile = () => setLocation("/create-profile");
-  
+
   const handleSelectProfile = async (id: string) => {
-    // First, try to verify passcode using the current user's ID (this will succeed if no passcode is set)
     setSelectedProfileId(id);
-    
+
     try {
       const verificationResult = await apiRequest(`/api/users/${user?.id}/verify-passcode`, {
         method: "POST",
         body: JSON.stringify({ passcode: "" }),
         headers: { "Content-Type": "application/json" },
       });
-      
+
       if (verificationResult.verified) {
         // No passcode required, proceed directly
         selectProfileMutation.mutate(id);
@@ -131,114 +147,113 @@ export default function ProfileSelection() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black grid place-items-center text-white/70">
-        Loading profiles…
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 grid place-items-center text-white/70">
+        <div className="text-center">
+          <Basketball className="h-16 w-16 mx-auto mb-4 animate-bounce text-blue-400" />
+          <p className="text-lg">Loading profiles...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen text-white"
-      style={{
-        background:
-          "radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000",
-      }}
-    >
-      <main className="max-w-md mx-auto px-6 py-12">
+    <div className="min-h-screen text-white bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900">
+      <main className="max-w-4xl mx-auto px-6 py-12">
         {/* Title */}
         <div className="text-center mb-12">
-          <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ textShadow: "0 2px 30px rgba(216,36,40,0.45)" }}
-            data-testid="text-page-title"
-          >
-            Who’s ball?
-          </h1>
+          <div className="flex items-center justify-center mb-4">
+            <Basketball className="h-12 w-12 text-blue-400 mr-3" />
+            <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-400 to-red-400 bg-clip-text text-transparent">
+              UYP Basketball
+            </h1>
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight text-white/90 mb-2">
+            Choose Your Profile
+          </h2>
+          <p className="text-white/60">Select which profile you'd like to use today</p>
         </div>
 
         {profiles.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mx-auto w-32 h-32 rounded-full flex items-center justify-center mb-6 border border-white/15 bg-white/5">
-              <UserIcon className="h-16 w-16 text-white/40" />
+          <div className="text-center py-16">
+            <div className="mx-auto w-32 h-32 rounded-full flex items-center justify-center mb-6 border-2 border-blue-400/30 bg-blue-400/10">
+              <UserIcon className="h-16 w-16 text-blue-400" />
             </div>
-            <h3 className="text-xl font-semibold mb-3">No profiles yet</h3>
-            <p className="text-white/60 mb-8">Create your first profile to get started.</p>
-            <button
+            <h3 className="text-xl font-semibold mb-3 text-white">No profiles yet</h3>
+            <p className="text-white/60 mb-8">Create your first profile to get started with UYP Basketball.</p>
+            <Button
               onClick={handleCreateProfile}
-              className="w-16 h-16 rounded-full border-2 border-white/80 hover:border-white
-                         flex items-center justify-center transition transform hover:scale-105 active:scale-95"
-              style={{ boxShadow: "0 0 0 6px rgba(255,255,255,0.06)" }}
-              data-testid="button-create-first-profile"
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full"
             >
-              <Plus className="h-6 w-6 text-white" />
-            </button>
+              <Plus className="h-5 w-5 mr-2" />
+              Create Profile
+            </Button>
           </div>
         ) : (
           <>
-            {/* Grid of cards */}
-            <div className="grid grid-cols-2 gap-8">
-              {profiles.map((p, i) => {
+            {/* Grid of profile cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {profiles.map((profile, i) => {
                 const centerLast = lastIsOdd && i === profiles.length - 1;
                 return (
-                  <div key={p.id} className={`flex justify-center ${centerLast ? "col-span-2" : ""}`}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectProfile(p.id)}
-                      className="group relative w-[120px] select-none focus:outline-none"
-                      data-testid={`card-profile-${p.id}`}
+                  <div key={profile.id} className={`flex justify-center ${centerLast ? "md:col-span-2 lg:col-span-3" : ""}`}>
+                    <div
+                      onClick={() => handleSelectProfile(profile.id)}
+                      className="group relative w-full max-w-[280px] cursor-pointer select-none focus:outline-none"
+                      data-testid={`card-profile-${profile.id}`}
                     >
-                      <div
-                        className="relative w-[120px] h-[150px] rounded-xl overflow-hidden
-                                   bg-white/5 ring-1 ring-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]
-                                   transition transform group-hover:translate-y-[-2px]"
-                      >
-                        {/* compact profile-type pill (top-right) */}
-                        <div
-                          className="absolute top-2 right-2 px-2 py-0.5 rounded-md text-[11px] font-semibold shadow-sm"
-                          style={badgeStyle(p.profileType)}
-                          data-testid={`badge-profile-type-${p.id}`}
-                        >
-                          {labelFor(p.profileType)}
+                      <div className="relative w-full h-[320px] rounded-2xl overflow-hidden bg-gradient-to-br from-white/10 to-white/5 ring-1 ring-white/20 shadow-2xl transition-all duration-300 transform group-hover:scale-105 group-hover:shadow-blue-500/25">
+                        {/* Profile type badge */}
+                        <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm"
+                             style={badgeStyle(profile.profileType)}>
+                          {getProfileIcon(profile.profileType)}
+                          <span className="ml-2">{labelFor(profile.profileType)}</span>
                         </div>
 
+                        {/* Profile image */}
                         <Avatar className="w-full h-full rounded-none">
                           <AvatarImage
-                            src={p.profileImageUrl}
-                            alt={`${p.firstName} ${p.lastName}`}
+                            src={profile.profileImageUrl}
+                            alt={`${profile.firstName} ${profile.lastName}`}
                             className="object-cover w-full h-full"
                           />
-                          <AvatarFallback className="bg-white/10 text-white w-full h-full rounded-none grid place-items-center">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500/20 to-red-500/20 text-white w-full h-full rounded-none grid place-items-center">
                             <div className="text-6xl">
-                              {getEmojiAvatar(p.profileType)}
+                              {getEmojiAvatar(profile.profileType)}
                             </div>
                           </AvatarFallback>
                         </Avatar>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
-                      </div>
-                      <div className="mt-3 text-center">
-                        <div className="text-[16px] font-semibold leading-none tracking-wide">
-                          {p.firstName}
+
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+                        {/* Profile info */}
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          <h3 className="text-xl font-bold text-white mb-2">
+                            {profile.firstName} {profile.lastName}
+                          </h3>
+                          <p className="text-white/80 text-sm">
+                            {getProfileDescription(profile.profileType)}
+                          </p>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Create New */}
-            <div className="flex justify-center pt-16">
-              <button
+            {/* Create New Profile */}
+            <div className="flex justify-center">
+              <Button
                 onClick={handleCreateProfile}
-                className="w-20 h-20 rounded-full border-2 border-white/90 hover:border-white
-                           flex items-center justify-center transition transform hover:scale-105 active:scale-95"
-                style={{ boxShadow: "0 0 0 8px rgba(255,255,255,0.06)" }}
-                data-testid="button-create-profile"
-                aria-label="Create new profile"
+                size="lg"
+                variant="outline"
+                className="border-2 border-blue-400/50 text-blue-400 hover:bg-blue-400/10 hover:border-blue-400 px-8 py-3 rounded-full transition-all duration-300"
               >
-                <Plus className="h-7 w-7 text-white" />
-              </button>
+                <Plus className="h-5 w-5 mr-2" />
+                Create New Profile
+              </Button>
             </div>
           </>
         )}
@@ -246,10 +261,10 @@ export default function ProfileSelection() {
 
       {/* Passcode Dialog */}
       <Dialog open={passcodeDialogOpen} onOpenChange={setPasscodeDialogOpen}>
-        <DialogContent className="bg-black/95 border border-white/20 text-white">
+        <DialogContent className="bg-gray-900/95 border border-blue-400/30 text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-white">
-              <Lock className="h-5 w-5" />
+              <Lock className="h-5 w-5 text-blue-400" />
               Enter Passcode
             </DialogTitle>
           </DialogHeader>
@@ -266,7 +281,7 @@ export default function ProfileSelection() {
                 value={passcode}
                 onChange={(e) => handleInputChange(e.target.value)}
                 maxLength={4}
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/50 text-center text-2xl tracking-widest"
+                className="bg-white/10 border-blue-400/30 text-white placeholder:text-white/50 text-center text-2xl tracking-widest focus:border-blue-400"
                 style={{ letterSpacing: '0.5em' }}
                 data-testid="input-profile-passcode"
                 autoFocus
@@ -281,15 +296,14 @@ export default function ProfileSelection() {
                 setPasscode("");
                 setSelectedProfileId(null);
               }}
-              className="border-white/40 text-white hover:bg-white/20 bg-transparent"
+              className="border-blue-400/40 text-blue-400 hover:bg-blue-400/20 bg-transparent"
             >
               Cancel
             </Button>
             <Button 
               onClick={handlePasscodeSubmit}
               disabled={passcode.length !== 4 || verifyPasscodeMutation.isPending}
-              style={{ backgroundColor: UYP_RED }}
-              className="hover:opacity-90"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
               data-testid="button-verify-passcode"
             >
               {verifyPasscodeMutation.isPending ? "Verifying..." : "Continue"}
@@ -302,19 +316,67 @@ export default function ProfileSelection() {
 }
 
 function badgeStyle(type: Profile["profileType"]): React.CSSProperties {
-  return type === "player"
-    ? { backgroundColor: UYP_RED, color: "#fff" }
-    : { backgroundColor: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)" };
+  switch (type) {
+    case "player":
+      return { 
+        backgroundColor: UYP_RED, 
+        color: "#fff",
+        border: "1px solid rgba(255,255,255,0.2)"
+      };
+    case "coach":
+      return { 
+        backgroundColor: UYP_BLUE, 
+        color: "#fff",
+        border: "1px solid rgba(255,255,255,0.2)"
+      };
+    case "parent":
+      return { 
+        backgroundColor: "rgba(255,255,255,0.15)", 
+        color: "#fff", 
+        border: "1px solid rgba(255,255,255,0.3)" 
+      };
+    default:
+      return { 
+        backgroundColor: "rgba(255,255,255,0.1)", 
+        color: "#fff" 
+      };
+  }
+}
+
+function getProfileIcon(type: Profile["profileType"]) {
+  switch (type) {
+    case "player":
+      return "🏀";
+    case "coach":
+      return "👨‍🏫";
+    case "parent":
+      return "👤";
+    default:
+      return "👤";
+  }
 }
 
 function labelFor(type: Profile["profileType"]) {
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
+function getProfileDescription(type: Profile["profileType"]) {
+  switch (type) {
+    case "player":
+      return "Player Profile";
+    case "coach":
+      return "Coach Profile";
+    case "parent":
+      return "Parent Profile";
+    default:
+      return "Profile";
+  }
+}
+
 function getEmojiAvatar(type: Profile["profileType"]) {
   switch (type) {
     case "player":
-      return "⚽";
+      return "🏀";
     case "coach":
       return "👨‍🏫";
     case "parent":

@@ -278,28 +278,28 @@ export default function CoachDashboard() {
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-12 w-12" aria-label="Notifications" data-testid="button-notifications">
-              <Bell className="h-12 w-12" />
+            <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100" aria-label="Notifications" data-testid="button-notifications">
+              <Bell className="h-6 w-6" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-12 w-12"
+              className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               onClick={handleSwitchProfile}
               aria-label="Switch Profile"
               data-testid="button-switch-profile"
             >
-              <RefreshCw className="h-5 w-5" />
+              <RefreshCw className="h-6 w-6" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-12 w-12"
+              className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
               onClick={() => setLocation("/coach-settings")}
               aria-label="Settings"
               data-testid="button-settings"
             >
-              <MoreHorizontal className="h-12 w-12" />
+              <MoreHorizontal className="h-6 w-6" />
             </Button>
           </div>
         </div>

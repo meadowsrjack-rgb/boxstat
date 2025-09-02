@@ -689,7 +689,56 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="px-6">
           {/* Activity */}
           {activeTab === "activity" && (
-            <PlayerCalendar events={relevantEvents} className="-mx-6" currentUser={currentUser} />
+            <div className="-mx-6">
+              {/* Event Summaries - moved above calendar */}
+              <div className="px-6 py-6 space-y-4">
+                <section className="space-y-2">
+                  <h3 className="text-lg font-bold text-gray-900">Today</h3>
+                  {todayEvents.length ? (
+                    todayEvents.map((event) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span>
+                              {format(new Date((event as any).startTime || (event as any).start_time), "h:mm a")}
+                            </span>
+                            {(event as any).location && (
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{(event as any).location}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">No events today.</div>
+                  )}
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="text-lg font-bold text-gray-900">Upcoming</h3>
+                  {upcomingEvents.length ? (
+                    upcomingEvents.map((event) => (
+                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
+                          <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
+                            <span>
+                              {format(new Date((event as any).startTime || (event as any).start_time), "EEE, MMM d • h:mm a")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500">No upcoming events.</div>
+                  )}
+                </section>
+              </div>
+
+              {/* Calendar component - moved below events */}
+              <PlayerCalendar events={relevantEvents} currentUser={currentUser} />
+            </div>
           )}
 
           {/* Activity Original (commented out) */}

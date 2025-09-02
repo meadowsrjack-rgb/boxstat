@@ -29,6 +29,8 @@ import {
   Copy,
   Gauge,
   Sparkles,
+  User,
+  Award,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -893,8 +895,8 @@ function BadgesTab() {
           {q.trim().length >= 2 && (
             <div className="max-h-48 overflow-y-auto border rounded-md">
               {search.length ? (
-                search.map((p) => (
-                  <div key={p.id} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => { setSelectedPlayer(p); setProfileModalOpen(true); }} data-testid={`player-result-${p.id}`}>
+                search.map((p: any, index: number) => (
+                  <div key={`${p.id}-${index}`} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => { setSelectedPlayer(p); setProfileModalOpen(true); }} data-testid={`player-result-${p.id}`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={p.profileImageUrl || undefined} />

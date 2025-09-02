@@ -1103,11 +1103,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Use Notion players for search
+        // Search both Notion players and local database users
         const notionPlayers = notionService.searchPlayers(query);
+        const localPlayers = await storage.searchPlayers(query);
         
-        // Check if each player has an app profile and include club team data
-        const formattedPlayers = await Promise.all(notionPlayers.map(async (player) => {
+        // Format Notion players with app profile checking
+        const formattedNotionPlayers = await Promise.all(notionPlayers.map(async (player) => {
           const firstName = player.name.split(' ')[0] || player.name;
           const lastName = player.name.split(' ').slice(1).join(' ') || '';
           
@@ -1119,7 +1120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             firstName,
             lastName,
             teamName: player.team || 'Unassigned',
-            youthClubTeam: player.team, // Store the Notion club team data
+            youthClubTeam: player.team || null, // Store the Notion club team data
             profileImageUrl: null, // Notion doesn't have profile images
             hasAppProfile: !!existingUser,
             appUserId: existingUser?.id,
@@ -1127,12 +1128,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }));
 
-        res.json(formattedPlayers);
+        // Format local players (these already have app profiles)
+        const formattedLocalPlayers = localPlayers.map(user => ({
+          id: parseInt(user.id) || parseInt(user.id.replace(/-/g, '').substring(0, 8), 16),
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          teamName: user.teamName || 'Unassigned',
+          youthClubTeam: user.youthClubTeam || null,
+          profileImageUrl: user.profileImageUrl,
+          hasAppProfile: true, // Local players always have app profiles
+          appUserId: user.id,
+          email: user.email || ''
+        }));
+
+        // Combine results and remove duplicates (prefer local players over Notion matches)
+        const allPlayers = [...formattedLocalPlayers];
+        const localPlayerIds = new Set(formattedLocalPlayers.map(p => p.appUserId));
+        
+        formattedNotionPlayers.forEach(notionPlayer => {
+          if (!notionPlayer.appUserId || !localPlayerIds.has(notionPlayer.appUserId)) {
+            allPlayers.push(notionPlayer);
+          }
+        });
+
+        res.json(allPlayers.slice(0, 10)); // Limit to 10 results
       } catch (notionError) {
-        console.error("Notion search failed, falling back to local search:", notionError);
-        // Fall back to local database search
+        console.error("Notion search failed, falling back to local search only:", notionError);
+        // Fall back to local database search only
         const players = await storage.searchPlayers(query);
-        res.json(players);
+        const formattedPlayers = players.map(user => ({
+          id: parseInt(user.id) || parseInt(user.id.replace(/-/g, '').substring(0, 8), 16),
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          teamName: user.teamName || 'Unassigned',
+          youthClubTeam: user.youthClubTeam || null,
+          profileImageUrl: user.profileImageUrl,
+          hasAppProfile: true,
+          appUserId: user.id,
+          email: user.email || ''
+        }));
+        res.json(formattedPlayers);
       }
     } catch (error) {
       console.error("Error searching players:", error);

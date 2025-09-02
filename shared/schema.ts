@@ -74,7 +74,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  userType: varchar("user_type", { enum: ["parent", "player", "admin"] }).notNull(),
+  userType: varchar("user_type", { enum: ["parent", "player", "admin", "coach"] }).notNull(),
   dateOfBirth: date("date_of_birth"),
   phoneNumber: varchar("phone_number"),
   emergencyContact: varchar("emergency_contact"),

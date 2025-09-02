@@ -174,6 +174,36 @@ export default function SchedulePage() {
             <div className="w-10"></div> {/* Spacer to balance the layout */}
           </div>
         </div>
+
+        {/* Events Section - moved above calendar */}
+        <div className="px-5 pb-5 border-b border-gray-100">
+          <div className="font-semibold text-gray-800 text-lg my-5">
+            {isSameDay(selectedDate, new Date()) ? "Today's Events" : `Events for ${format(selectedDate, 'MMM d')}`}
+          </div>
+          <div>
+            {isLoading ? (
+              <div className="text-center text-gray-500 py-5">Loading events...</div>
+            ) : eventsForSelectedDate.length > 0 ? (
+              eventsForSelectedDate.map(event => (
+                <div 
+                  key={event.id} 
+                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
+                >
+                  <div className="text-xs text-gray-600 font-medium">
+                    {formatEventTime(event.startTime)}
+                  </div>
+                  <div className="text-sm text-gray-800 font-semibold mt-1">
+                    {event.title}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-400 py-5">
+                No events for this day
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* Calendar */}
         <div 
@@ -224,36 +254,6 @@ export default function SchedulePage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-        
-        {/* Events Section */}
-        <div className="px-5 pb-5 border-t border-gray-100 mt-2">
-          <div className="font-semibold text-gray-800 text-lg my-5">
-            {isSameDay(selectedDate, new Date()) ? "Today's Events" : `Events for ${format(selectedDate, 'MMM d')}`}
-          </div>
-          <div>
-            {isLoading ? (
-              <div className="text-center text-gray-500 py-5">Loading events...</div>
-            ) : eventsForSelectedDate.length > 0 ? (
-              eventsForSelectedDate.map(event => (
-                <div 
-                  key={event.id} 
-                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
-                >
-                  <div className="text-xs text-gray-600 font-medium">
-                    {formatEventTime(event.startTime)}
-                  </div>
-                  <div className="text-sm text-gray-800 font-semibold mt-1">
-                    {event.title}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center text-gray-400 py-5">
-                No events for this day
-              </div>
-            )}
           </div>
         </div>
       </div>

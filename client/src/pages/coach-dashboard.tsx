@@ -317,8 +317,7 @@ export default function CoachDashboard() {
         <div className="px-6">
           {activeTab === "calendar" && (
             <div className="-mx-6">
-              <PlayerCalendar events={coachEvents as any} currentUser={{ ...currentUser, email: currentUser.email || "" }} />
-
+              {/* Event Summaries - moved above calendar */}
               <div className="px-6 py-6 space-y-4">
                 <section className="space-y-2">
                   <h3 className="text-lg font-bold text-gray-900">Today</h3>
@@ -359,6 +358,9 @@ export default function CoachDashboard() {
                   )}
                 </section>
               </div>
+
+              {/* Calendar component - moved below events */}
+              <PlayerCalendar events={coachEvents as any} currentUser={{ ...currentUser, email: currentUser.email || "" }} />
             </div>
           )}
 

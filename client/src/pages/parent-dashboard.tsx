@@ -233,10 +233,7 @@ export default function ParentDashboard() {
         <div className="px-6">
           {activeTab === "calendar" && (
             <div className="-mx-6">
-              {/* Reuse PlayerCalendar for unified view across all linked players */}
-              <PlayerCalendar events={parentEvents as any} currentUser={{...currentUser, email: currentUser.email || ''}} />
-
-              {/* Summaries */}
+              {/* Event Summaries - moved above calendar */}
               <div className="px-6 py-6 space-y-4">
                 <section className="space-y-2">
                   <h3 className="text-lg font-bold text-gray-900">Today</h3>
@@ -281,6 +278,9 @@ export default function ParentDashboard() {
                   )}
                 </section>
               </div>
+
+              {/* Calendar component - moved below events */}
+              <PlayerCalendar events={parentEvents as any} currentUser={{...currentUser, email: currentUser.email || ''}} />
             </div>
           )}
 

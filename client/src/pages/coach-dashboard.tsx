@@ -840,6 +840,7 @@ function BadgesTab() {
   const [q, setQ] = useState("");
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
   const [note, setNote] = useState("");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const { data: badges = [] as Array<{ id: number; name: string; description?: string }> } = useQuery({
     queryKey: ["/api/badges/list"],
@@ -893,7 +894,7 @@ function BadgesTab() {
             <div className="max-h-48 overflow-y-auto border rounded-md">
               {search.length ? (
                 search.map((p) => (
-                  <div key={p.id} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => setSelectedPlayer(p)} data-testid={`player-result-${p.id}`}>
+                  <div key={p.id} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => { setSelectedPlayer(p); setProfileModalOpen(true); }} data-testid={`player-result-${p.id}`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={p.profileImageUrl || undefined} />
@@ -912,31 +913,207 @@ function BadgesTab() {
               )}
             </div>
           )}
-
-          <div className="space-y-2">
-            <div className="text-sm text-gray-600">Optional note</div>
-            <Input placeholder="e.g., Leadership in practice this week" value={note} onChange={(e) => setNote(e.target.value)} data-testid="input-badge-note" />
-          </div>
         </CardContent>
       </Card>
 
-      {/* Badge list */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="grid grid-cols-2 gap-3">
-            {badges.map((b) => (
-              <Button key={b.id} variant="outline" className="justify-start h-auto py-3" onClick={() => assignMutation.mutate(b.id)} disabled={!selectedPlayer || assignMutation.isPending} data-testid={`button-badge-${b.id}`}>
-                <Trophy className="h-4 w-4 mr-2" />
-                <div className="text-left">
-                  <div className="text-sm font-semibold text-gray-900">{b.name}</div>
-                  {b.description ? <div className="text-xs text-gray-500">{b.description}</div> : null}
+      {selectedPlayer && (
+        <Card className="border-0 shadow-sm border-green-200 bg-green-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
+                  <AvatarFallback className="text-sm">{selectedPlayer.firstName?.[0]}{selectedPlayer.lastName?.[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium text-gray-900">{selectedPlayer.firstName} {selectedPlayer.lastName}</div>
+                  <div className="text-sm text-gray-600">{selectedPlayer.teamName || "No team assigned"}</div>
                 </div>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setProfileModalOpen(true)}
+                data-testid="button-open-profile"
+              >
+                View Profile
               </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Player Profile Modal */}
+      <PlayerProfileModal 
+        open={profileModalOpen}
+        onOpenChange={setProfileModalOpen}
+        player={selectedPlayer}
+        badges={badges}
+        note={note}
+        setNote={setNote}
+        onAssignBadge={assignMutation.mutate}
+        assigning={assignMutation.isPending}
+      />
     </div>
+  );
+}
+
+/* ---------- Player Profile Modal ---------- */
+function PlayerProfileModal({
+  open,
+  onOpenChange,
+  player,
+  badges,
+  note,
+  setNote,
+  onAssignBadge,
+  assigning,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  player: PlayerLite | null;
+  badges: Array<{ id: number; name: string; description?: string }>;
+  note: string;
+  setNote: (note: string) => void;
+  onAssignBadge: (badgeId: number) => void;
+  assigning: boolean;
+}) {
+  const [activeTab, setActiveTab] = useState<"profile" | "badges">("profile");
+
+  if (!player) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={player.profileImageUrl || undefined} />
+              <AvatarFallback className="text-lg">{player.firstName?.[0]}{player.lastName?.[0]}</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="text-xl font-semibold">{player.firstName} {player.lastName}</div>
+              <div className="text-sm text-gray-600">{player.teamName || "No team assigned"}</div>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Tab Navigation */}
+        <div className="flex gap-2 border-b">
+          <Button 
+            variant={activeTab === "profile" ? "default" : "ghost"} 
+            className={`rounded-b-none ${activeTab === "profile" ? "bg-red-600 hover:bg-red-700" : ""}`}
+            onClick={() => setActiveTab("profile")}
+            data-testid="tab-profile"
+          >
+            <User className="h-4 w-4 mr-2" />
+            View Profile
+          </Button>
+          <Button 
+            variant={activeTab === "badges" ? "default" : "ghost"}
+            className={`rounded-b-none ${activeTab === "badges" ? "bg-red-600 hover:bg-red-700" : ""}`}
+            onClick={() => setActiveTab("badges")}
+            data-testid="tab-badges"
+          >
+            <Trophy className="h-4 w-4 mr-2" />
+            Award Badge
+          </Button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="min-h-[300px]">
+          {activeTab === "profile" && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">First Name</label>
+                  <div className="text-gray-900">{player.firstName}</div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Last Name</label>
+                  <div className="text-gray-900">{player.lastName}</div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-600">Team</label>
+                <div className="text-gray-900">{player.teamName || "No team assigned"}</div>
+              </div>
+
+              {player.email && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Email</label>
+                  <div className="text-gray-900">{player.email}</div>
+                </div>
+              )}
+
+              {(player as any).grade && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Grade</label>
+                  <div className="text-gray-900">{(player as any).grade}</div>
+                </div>
+              )}
+
+              {(player as any).position && (
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Position</label>
+                  <div className="text-gray-900">{(player as any).position}</div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t">
+                <div className="text-center text-sm text-gray-500">
+                  Additional player details and performance history would appear here
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "badges" && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-600">Optional note</label>
+                <Input 
+                  placeholder="e.g., Leadership in practice this week" 
+                  value={note} 
+                  onChange={(e) => setNote(e.target.value)} 
+                  data-testid="input-badge-note-modal" 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
+                {badges.map((b) => (
+                  <Button 
+                    key={b.id} 
+                    variant="outline" 
+                    className="justify-start h-auto py-3" 
+                    onClick={() => {
+                      onAssignBadge(b.id);
+                      onOpenChange(false);
+                    }} 
+                    disabled={assigning} 
+                    data-testid={`button-badge-modal-${b.id}`}
+                  >
+                    <Trophy className="h-4 w-4 mr-3" />
+                    <div className="text-left">
+                      <div className="text-sm font-semibold text-gray-900">{b.name}</div>
+                      {b.description && <div className="text-xs text-gray-500">{b.description}</div>}
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Actions */}
+        <div className="flex justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)} data-testid="button-close-modal">
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

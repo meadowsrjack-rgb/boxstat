@@ -75,15 +75,9 @@ export class NotionPlayerService {
     console.log('Starting Notion sync...');
     
     try {
-      // Fetch all pages from the database
+      // Fetch all pages from the database (no filter to get all players)
       const response = await notion.databases.query({
-        database_id: DATABASE_ID,
-        filter: {
-          property: 'Status',
-          select: {
-            equals: 'Active'
-          }
-        }
+        database_id: DATABASE_ID
       });
 
       const players: NotionPlayer[] = [];
@@ -99,7 +93,11 @@ export class NotionPlayerService {
           continue;
         }
 
-        const status = getNotionProperty(properties, 'Status', 'select') || 'Inactive';
+        // Try different property types for Status
+        const status = getNotionProperty(properties, 'Status', 'select') || 
+                      getNotionProperty(properties, 'Status', 'multi_select')?.[0] || 
+                      getNotionProperty(properties, 'Status', 'rich_text') || 
+                      'Active';
         const currentProgram = getNotionProperty(properties, 'Current Program', 'select');
         const youthClubTeam = getNotionProperty(properties, 'Youth Club Team', 'select') || getNotionProperty(properties, 'Youth Club Team', 'relation');
         const hsTeam = getNotionProperty(properties, 'HS Team', 'rich_text');

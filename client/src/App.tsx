@@ -46,6 +46,9 @@ import PhotoUpload from "@/pages/photo-upload";
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  
+  // Check if user needs profile setup
+  const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
   // Register service worker for PWA
   useEffect(() => {
@@ -62,7 +65,7 @@ function Router() {
     // Add global error handler for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('Unhandled promise rejection:', event.reason);
-      event.preventDefault();
+      event.preventDefault(); // Prevent the default behavior
     };
 
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
@@ -72,52 +75,71 @@ function Router() {
     };
   }, []);
 
-  // Show loading state while authentication is being determined
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-lg">Loading UYP Basketball...</p>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
-  // If not authenticated, show landing page
-  if (!isAuthenticated || !user) {
+  // Only show landing page if we're not loading and definitely not authenticated
+  if (!isLoading && !user) {
+    console.log("User not authenticated, showing landing page");
     return (
       <Switch>
-        <Route path="/privacy" component={PrivacySettingsPage} />
-        <Route path="/teams" component={Teams} />
+      <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/teams" component={Teams} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
     );
   }
+  
+  // If still loading, show loading state
+  if (isLoading) {
+    console.log("Authentication loading, showing spinner");
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Check if user needs profile setup
-  const needsProfileSetup = !(user as any)?.profileCompleted;
-
-  if (needsProfileSetup) {
+  // Always redirect authenticated users to profile selection if they haven't completed setup
+  // This ensures new users go through profile selection after sign-in
+  console.log('User data for profile check:', user);
+  console.log('Profile completed status:', (user as any)?.profileCompleted);
+  console.log('IsAuthenticated:', isAuthenticated);
+  console.log('IsLoading:', isLoading);
+  
+  const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
+  
+  // If we have a user and they haven't completed profile setup, show profile selection
+  if (user && !hasCompletedProfileSetup) {
+    console.log('Redirecting to profile selection - profile not completed');
     return (
       <Switch>
-        <Route path="/privacy" component={PrivacySettingsPage} />
-        <Route path="/teams" component={Teams} />
+      <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/teams" component={Teams} />
         <Route path="/profile-selection" component={ProfileSelection} />
         <Route path="/create-profile" component={CreateProfile} />
         <Route component={ProfileSelection} />
       </Switch>
     );
   }
+  
+  console.log('User has completed profile setup, proceeding to dashboard');
 
-  // User is authenticated and has completed profile setup
+  // This section is handled above - users without completed profiles go to profile selection
+
   return (
     <Switch>
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
-
-      {/* Main dashboard route - redirects based on user type */}
       <Route path="/" component={() => {
         switch ((user as any)?.userType) {
           case "admin":
@@ -131,18 +153,17 @@ function Router() {
             return <ParentDashboard />;
         }
       }} />
-
-      {/* Direct dashboard routes */}
-      <Route path="/player-dashboard" component={PlayerDashboard} />
-      <Route path="/parent-dashboard" component={ParentDashboard} />
-      <Route path="/admin-dashboard" component={AdminDashboard} />
-      <Route path="/coach-dashboard" component={CoachDashboard} />
-
+      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
+      <Route path="/parent-dashboard" component={() => <ParentDashboard />} />
+      <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
+      <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
+      <Route path="/admin" component={() => <AdminDashboard />} />
+      
       {/* Player/Team search and detail routes */}
       <Route path="/search" component={SearchPage} />
       <Route path="/teams/:slug" component={TeamDetailPage} />
       <Route path="/players/:id" component={PlayerDetailPage} />
-
+      
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />
       <Route path="/settings" component={SettingsPage} />
@@ -161,7 +182,7 @@ function Router() {
       <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
-
+      
       {/* Parent-specific routes */}
       {(user as any)?.userType === 'parent' && (
         <>
@@ -170,14 +191,14 @@ function Router() {
           <Route path="/family" component={FamilyManagement} />
         </>
       )}
-
+      
       {/* Player-specific routes */}
       {(user as any)?.userType === 'player' && (
         <>
           <Route path="/player/team-chat" component={PlayerTeamChat} />
         </>
       )}
-
+      
       {/* Admin routes */}
       {(user as any)?.userType === 'admin' && (
         <>
@@ -188,7 +209,7 @@ function Router() {
           <Route path="/family" component={FamilyManagement} />
         </>
       )}
-
+      
       <Route component={NotFound} />
     </Switch>
   );

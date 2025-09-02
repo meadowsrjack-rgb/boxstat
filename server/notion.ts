@@ -7,7 +7,16 @@ const notion = new Client({
   auth: process.env.NOTION_API_KEY,
 });
 
-const DATABASE_ID = process.env.NOTION_DB_ID!;
+// Extract database ID from URL or use as-is if already an ID
+const DATABASE_ID = (() => {
+  const dbId = process.env.NOTION_DB_ID!;
+  if (dbId.includes('notion.so')) {
+    // Extract ID from URL: https://www.notion.so/2418bde4fb2c80289fbff19de6c7e53d?v=...
+    const match = dbId.match(/\/([a-f0-9]{32})/);
+    return match ? match[1] : dbId;
+  }
+  return dbId;
+})();
 
 // Helper function to safely extract property values
 function getNotionProperty(properties: any, propertyName: string, type: string): any {

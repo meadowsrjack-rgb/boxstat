@@ -550,9 +550,14 @@ function SecurityTab({ user, childProfiles, onSwitchProfile }: {
   onSwitchProfile: (targetUserId: string) => void;
 }) {
   const { logout } = useAuth();
+  const [, setLocation] = useLocation();
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleSwitchProfile = () => {
+    setLocation('/profile-selection');
   };
 
   return (
@@ -567,17 +572,12 @@ function SecurityTab({ user, childProfiles, onSwitchProfile }: {
         <div className="flex items-center justify-between">
           <div>
             <label className="text-sm font-medium">Switch Profile</label>
-            <p className="text-xs text-gray-600">Switch between coach and player modes</p>
+            <p className="text-xs text-gray-600">Switch to a different profile</p>
           </div>
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => {
-              if (childProfiles && childProfiles.length > 0) {
-                onSwitchProfile(childProfiles[0].id);
-              }
-            }}
-            disabled={!childProfiles || childProfiles.length === 0}
+            onClick={handleSwitchProfile}
             data-testid="button-switch-profile"
           >
             Switch

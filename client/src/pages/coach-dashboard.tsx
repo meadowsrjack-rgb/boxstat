@@ -31,7 +31,6 @@ import {
   Sparkles,
   User,
   Award,
-  RefreshCw,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -120,10 +119,6 @@ export default function CoachDashboard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Handle switch profile navigation
-  const handleSwitchProfile = () => {
-    setLocation('/profile-selection');
-  };
 
   // Roster row modals
   const [evalOpen, setEvalOpen] = useState(false);
@@ -280,16 +275,6 @@ export default function CoachDashboard() {
           <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100" aria-label="Notifications" data-testid="button-notifications">
               <Bell className="h-6 w-6" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-              onClick={handleSwitchProfile}
-              aria-label="Switch Profile"
-              data-testid="button-switch-profile"
-            >
-              <RefreshCw className="h-6 w-6" />
             </Button>
             <Button
               variant="ghost"

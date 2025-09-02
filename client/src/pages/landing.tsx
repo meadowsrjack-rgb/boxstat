@@ -2,13 +2,13 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Basketball, Users, Trophy, Calendar, Star, ChevronRight, Play } from "lucide-react";
+import { Target, Users, Trophy, Calendar, Star, ChevronRight, Play } from "lucide-react";
 
 const carouselFeatures = [
   {
     title: "Unlock Your Basketball Potential",
     description: "Track your development, celebrate milestones, and follow your personal journey to greatness.",
-    icon: Basketball,
+    icon: Target,
     color: "from-red-500 to-red-600"
   },
   {
@@ -122,7 +122,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
-              <Basketball className="h-7 w-7 text-white" />
+              <Target className="h-7 w-7 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">UYP Basketball</h1>
           </div>
@@ -194,7 +194,10 @@ export default function Landing() {
                   className="text-center"
                 >
                   <div className={`inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br ${carouselFeatures[currentSlide].color} rounded-full mb-6`}>
-                    <carouselFeatures[currentSlide].icon className="h-10 w-10 text-white" />
+                    {(() => {
+                      const IconComponent = carouselFeatures[currentSlide].icon;
+                      return <IconComponent className="h-10 w-10 text-white" />;
+                    })()}
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
                     {carouselFeatures[currentSlide].title}
@@ -345,7 +348,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center space-x-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
-              <Basketball className="h-6 w-6 text-white" />
+              <Target className="h-6 w-6 text-white" />
             </div>
             <h3 className="text-xl font-bold text-white">UYP Basketball</h3>
           </div>

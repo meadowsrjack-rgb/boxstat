@@ -32,7 +32,7 @@ import {
   Sparkles,
   User,
   Award,
-  Basketball,
+  Target,
   BarChart3,
   MessageCircle,
   Settings,
@@ -182,14 +182,14 @@ export default function CoachDashboard() {
   /* ===== Computed Values ===== */
   const todayEvents = useMemo(() => {
     const today = startOfDay(new Date());
-    return coachEvents.filter(event => isSameDay(parseISO(event.startTime), today));
+    return coachEvents.filter(event => isSameDay(new Date(event.startTime), today));
   }, [coachEvents]);
 
   const upcomingEvents = useMemo(() => {
     const now = new Date();
     return coachEvents
-      .filter(event => isAfter(parseISO(event.startTime), now))
-      .sort((a, b) => parseISO(a.startTime).getTime() - parseISO(b.startTime).getTime())
+      .filter(event => isAfter(new Date(event.startTime), now))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
       .slice(0, 5);
   }, [coachEvents]);
 
@@ -228,7 +228,7 @@ export default function CoachDashboard() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Basketball className="h-12 w-12 text-orange-200" />
+              <Target className="h-12 w-12 text-orange-200" />
             </div>
           </div>
         </div>
@@ -325,7 +325,7 @@ export default function CoachDashboard() {
                           <div>
                             <h4 className="font-medium">{event.title}</h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(parseISO(event.startTime), "h:mm a")} - {format(parseISO(event.endTime), "h:mm a")}
+                              {format(new Date(event.startTime), "h:mm a")} - {format(new Date(event.endTime), "h:mm a")}
                             </p>
                           </div>
                           <Badge variant="outline">{event.eventType}</Badge>

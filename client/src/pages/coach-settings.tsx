@@ -240,7 +240,13 @@ export default function CoachSettingsPage() {
               {currentTab === "coaching" && <CoachingTab user={currentUser} />}
               {currentTab === "privacy" && <PrivacyTab user={currentUser} />}
               {currentTab === "notifications" && <NotificationsTab user={currentUser} />}
-              {currentTab === "security" && <SecurityTab user={currentUser} />}
+              {currentTab === "security" && (
+                <SecurityTab 
+                  user={currentUser} 
+                  childProfiles={childProfiles}
+                  onSwitchProfile={handleSwitchProfile}
+                />
+              )}
               {currentTab === "connections" && <ConnectionsTab user={currentUser} />}
               {currentTab === "billing" && <BillingTab user={currentUser} />}
               {currentTab === "devices" && <DevicesTab user={currentUser} />}
@@ -538,16 +544,45 @@ function NotificationsTab({ user }: { user: UserType }) {
   );
 }
 
-function SecurityTab({ user }: { user: UserType }) {
+function SecurityTab({ user, childProfiles, onSwitchProfile }: { 
+  user: UserType; 
+  childProfiles: any[];
+  onSwitchProfile: (targetUserId: string) => void;
+}) {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center">
           <Key className="mr-2 h-5 w-5" />
-          Security
+          Account & Security
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium">Switch Profile</label>
+            <p className="text-xs text-gray-600">Switch between coach and player modes</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => {
+              if (childProfiles && childProfiles.length > 0) {
+                onSwitchProfile(childProfiles[0].id);
+              }
+            }}
+            disabled={!childProfiles || childProfiles.length === 0}
+            data-testid="button-switch-profile"
+          >
+            Switch
+          </Button>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <label className="text-sm font-medium">Two-Factor Authentication</label>
@@ -564,6 +599,20 @@ function SecurityTab({ user }: { user: UserType }) {
           </div>
           <Button variant="outline" size="sm">
             Update
+          </Button>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm font-medium">Log Out</label>
+            <p className="text-xs text-gray-600">Sign out of your account</p>
+          </div>
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
+            Log Out
           </Button>
         </div>
       </CardContent>

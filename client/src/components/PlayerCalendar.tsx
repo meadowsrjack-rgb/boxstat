@@ -17,11 +17,22 @@ interface PlayerCalendarProps {
   events: UypEvent[];
   className?: string;
   currentUser: { id: string; email: string; firstName?: string; lastName?: string };
+  selectedDate?: Date;
+  onDateSelect?: (date: Date) => void;
 }
 
-export default function PlayerCalendar({ events, className = "", currentUser }: PlayerCalendarProps) {
+export default function PlayerCalendar({ 
+  events, 
+  className = "", 
+  currentUser, 
+  selectedDate: externalSelectedDate,
+  onDateSelect 
+}: PlayerCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [internalSelectedDate, setInternalSelectedDate] = useState(new Date());
+  
+  // Use external selectedDate if provided, otherwise use internal state
+  const selectedDate = externalSelectedDate || internalSelectedDate;
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
   const [limit, setLimit] = useState<{ open: boolean; title: string; body: string }>({ open: false, title: "", body: "" });
@@ -307,7 +318,11 @@ export default function PlayerCalendar({ events, className = "", currentUser }: 
   };
 
   const selectDate = (date: Date) => {
-    setSelectedDate(date);
+    if (onDateSelect) {
+      onDateSelect(date);
+    } else {
+      setInternalSelectedDate(date);
+    }
   };
 
   const calendarDays = renderCalendar();

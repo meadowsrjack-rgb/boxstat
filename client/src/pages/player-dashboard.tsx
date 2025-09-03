@@ -358,12 +358,24 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   }, [displayEvents]);
 
   const upcomingEvents = useMemo(() => {
-    const start = startOfDay(new Date());
-    return displayEvents
-      .filter((ev) => isAfter(new Date(ev.startTime || (ev as any).start_time), start))
-      .filter((ev) => !isSameDay(new Date(ev.startTime || (ev as any).start_time), new Date()))
-      .slice(0, 3);
-  }, [displayEvents]);
+    const today = new Date();
+    const isSelectedToday = isSameDay(selectedDate, today);
+    
+    if (isSelectedToday) {
+      // Show actual upcoming events when today is selected
+      const start = startOfDay(new Date());
+      return displayEvents
+        .filter((ev) => isAfter(new Date(ev.startTime || (ev as any).start_time), start))
+        .filter((ev) => !isSameDay(new Date(ev.startTime || (ev as any).start_time), new Date()))
+        .slice(0, 3);
+    } else {
+      // Show selected day's events when a different day is selected
+      return displayEvents.filter((ev) => {
+        const dt = new Date(ev.startTime || (ev as any).start_time);
+        return isSameDay(dt, selectedDate);
+      });
+    }
+  }, [displayEvents, selectedDate]);
 
   // Filter events relevant to the current user/player
   const relevantEvents = useMemo(() => {
@@ -716,7 +728,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </section>
 
                 <section className="space-y-2">
-                  <h3 className="text-lg font-bold text-gray-900">Upcoming</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {isSameDay(selectedDate, new Date()) ? "Upcoming" : `Events for ${format(selectedDate, 'MMM d')}`}
+                  </h3>
                   {upcomingEvents.length ? (
                     upcomingEvents.map((event) => (
                       <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
@@ -731,13 +745,20 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </div>
                     ))
                   ) : (
-                    <div className="text-sm text-gray-500">No upcoming events.</div>
+                    <div className="text-sm text-gray-500">
+                      {isSameDay(selectedDate, new Date()) ? "No upcoming events." : `No events for ${format(selectedDate, 'MMM d')}.`}
+                    </div>
                   )}
                 </section>
               </div>
 
               {/* Calendar component - moved below events */}
-              <PlayerCalendar events={relevantEvents} currentUser={currentUser} />
+              <PlayerCalendar 
+                events={relevantEvents} 
+                currentUser={currentUser} 
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+              />
             </div>
           )}
 

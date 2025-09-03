@@ -13,6 +13,7 @@ import {
   real,
   unique
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -147,6 +148,9 @@ export const teams = pgTable("teams", {
   ageGroup: varchar("age_group").notNull(),
   color: varchar("color").notNull().default("#1E40AF"),
   coachId: varchar("coach_id").references(() => users.id),
+  division: varchar("division"),
+  coachNames: varchar("coach_names"),
+  notionId: varchar("notion_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -390,6 +394,57 @@ export const playerEvaluations = pgTable("player_evaluations", {
   uniqueEvaluation: unique().on(table.playerId, table.quarter, table.year)
 }));
 
+// Search & Claim system tables (with Notion sync)
+export const players = pgTable("players", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fullName: varchar("full_name").notNull(),
+  dob: date("dob"),
+  jerseyNumber: varchar("jersey_number"),
+  photoUrl: varchar("photo_url"),
+  teamId: integer("team_id").references(() => teams.id),
+  status: varchar("status", { enum: ["active", "inactive", "pending"] }).notNull().default("active"),
+  claimState: varchar("claim_state", { enum: ["unclaimed", "claimed", "locked"] }).notNull().default("unclaimed"),
+  guardianEmail: varchar("guardian_email"),
+  guardianPhone: varchar("guardian_phone"),
+  notionId: varchar("notion_id").unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Guardians table (parent ↔ player links)
+export const guardians = pgTable("guardians", {
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  accountId: varchar("account_id").notNull().references(() => users.id),
+  relationship: varchar("relationship", { enum: ["parent", "guardian", "sibling", "grandparent"] }).default("parent"),
+  isPrimary: boolean("is_primary").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  pk: unique().on(table.playerId, table.accountId),
+}));
+
+// Claim codes table (verification)
+export const claimCodes = pgTable("claim_codes", {
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  contact: varchar("contact").notNull(),
+  code: varchar("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  attempts: integer("attempts").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  pk: unique().on(table.playerId, table.contact),
+}));
+
+// Approval requests table (fallback)
+export const approvals = pgTable("approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playerId: varchar("player_id").notNull().references(() => players.id),
+  accountId: varchar("account_id").notNull().references(() => users.id),
+  type: varchar("type").notNull().default("claim"),
+  status: varchar("status", { enum: ["pending", "approved", "denied"] }).notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
@@ -570,6 +625,28 @@ export const playerEvaluationsRelations = relations(playerEvaluations, ({ one })
   }),
 }));
 
+// Search & Claim system relations
+export const playersRelations = relations(players, ({ one, many }) => ({
+  team: one(teams, { fields: [players.teamId], references: [teams.id] }),
+  guardians: many(guardians),
+  claimCodes: many(claimCodes),
+  approvals: many(approvals),
+}));
+
+export const guardiansRelations = relations(guardians, ({ one }) => ({
+  player: one(players, { fields: [guardians.playerId], references: [players.id] }),
+  account: one(users, { fields: [guardians.accountId], references: [users.id] }),
+}));
+
+export const claimCodesRelations = relations(claimCodes, ({ one }) => ({
+  player: one(players, { fields: [claimCodes.playerId], references: [players.id] }),
+}));
+
+export const approvalsRelations = relations(approvals, ({ one }) => ({
+  player: one(players, { fields: [approvals.playerId], references: [players.id] }),
+  account: one(users, { fields: [approvals.accountId], references: [users.id] }),
+}));
+
 // Insert schemas for new tables
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true, updatedAt: true });
@@ -598,6 +675,12 @@ export const insertPlayerPointsSchema = createInsertSchema(playerPoints).omit({ 
 export const insertPlayerEvaluationSchema = createInsertSchema(playerEvaluations).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTrophySchema = createInsertSchema(trophies).omit({ id: true, createdAt: true });
 export const insertUserTrophySchema = createInsertSchema(userTrophies).omit({ id: true, earnedAt: true });
+
+// Search & Claim system insert schemas
+export const insertPlayerSchema = createInsertSchema(players).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGuardianSchema = createInsertSchema(guardians).omit({ createdAt: true });
+export const insertClaimCodeSchema = createInsertSchema(claimCodes).omit({ createdAt: true });
+export const insertApprovalSchema = createInsertSchema(approvals).omit({ id: true, createdAt: true, resolvedAt: true });
 
 // New types
 export type Account = typeof accounts.$inferSelect;
@@ -659,6 +742,16 @@ export type InsertPlayerPoints = z.infer<typeof insertPlayerPointsSchema>;
 export type InsertPlayerEvaluation = z.infer<typeof insertPlayerEvaluationSchema>;
 export type InsertTrophy = z.infer<typeof insertTrophySchema>;
 export type InsertUserTrophy = z.infer<typeof insertUserTrophySchema>;
+
+// Search & Claim system types
+export type Player = typeof players.$inferSelect;
+export type Guardian = typeof guardians.$inferSelect;
+export type ClaimCode = typeof claimCodes.$inferSelect;
+export type Approval = typeof approvals.$inferSelect;
+export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
+export type InsertGuardian = z.infer<typeof insertGuardianSchema>;
+export type InsertClaimCode = z.infer<typeof insertClaimCodeSchema>;
+export type InsertApproval = z.infer<typeof insertApprovalSchema>;
 
 // Notion-based types
 export type NotionPlayer = {

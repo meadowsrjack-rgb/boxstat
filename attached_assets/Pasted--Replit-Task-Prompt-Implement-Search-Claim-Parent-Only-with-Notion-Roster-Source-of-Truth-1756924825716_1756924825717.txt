@@ -1,0 +1,816 @@
+# Replit Task Prompt — Implement **Search & Claim** (Parent-Only) with Notion Roster Source of Truth
+
+**Context**: UYP app already uses React/TypeScript, TanStack Query, shadcn/ui, lucide-react, and an auth hook (e.g., `useAuth()`). We have Players and Teams stored in **Notion** (source of truth). We want a **parent-friendly Search & Claim flow**: parents create an account, search the Notion-backed roster, and **claim** their player(s) via a short verification code (or coach approval fallback). Team assignment is **read-only** and auto from Notion. The Player Profile must show a **Team** tab with the correct team pulled from Notion (and roster listing).
+
+> Scope **intentionally excludes** QR and manual pending creation for this task (can add later). Only **Search & Claim** flow is required here.
+
+---
+
+## Goals & Acceptance Criteria
+
+1. **Account & Profile Creation Flow** (parent):
+
+   * New user picks **Parent** role → lands on **Players** screen.
+   * Parent can **Add Player** → opens modal with **Search & Claim**.
+   * Parent searches roster (backed by Notion sync) → **Claim** a player.
+   * Claim uses **verification code** (email/SMS) if guardian contact exists; otherwise create a **coach approval** request.
+   * On success, player appears under parent’s **My Players** list.
+
+2. **Roster Source of Truth from Notion**:
+
+   * Add a **Notion sync** (nightly + on-demand) that pulls Players + Teams.
+   * Match players by `notionId` (primary) or `(fullName + DOB)` fallback.
+   * Update player bio/team/status; do **NOT** overwrite guardianship links.
+   * Mark stale players inactive.
+
+3. **Search & Claim UX**:
+
+   * Search results show **name + team** (no sensitive data until claimed).
+   * Clicking **Claim** triggers code flow:
+
+     * If guardian email/phone on file → **send code** → input modal → verify.
+     * Else → **coach approval** fallback (create approval request).
+   * Error states: invalid code, rate limit, already claimed, etc.
+
+4. **Player Profile → Team Tab**:
+
+   * From Player Profile, show **Team** tab with read-only team name, division, coach(es), and **current roster** (players on same team) pulled from API.
+
+5. **APIs & DB**:
+
+   * Implement SQLite DB (via `better-sqlite3`) with tables in this doc.
+   * Provide endpoints:
+
+     * `GET /api/players?search=` (fuzzy search, joins team name)
+     * `POST /api/claim/request` → initiate code delivery
+     * `POST /api/players/claim` → verify code & link guardian
+     * `GET /api/teams` → list teams
+     * `GET /api/teams/:id` → team details
+     * `GET /api/teams/:id/players` → roster for team
+     * `POST /api/sync/notion` (admin-only) → on-demand sync
+
+6. **Security & Audit**:
+
+   * Require auth for mutation routes.
+   * Log claim attempts and approvals.
+   * Rate-limit `/api/claim/request` by `playerId+contact`.
+
+---
+
+## Environment Variables (Replit Secrets)
+
+```
+NOTION_TOKEN=secret_xyz
+NOTION_PLAYERS_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+NOTION_TEAMS_DB_ID=yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+MAIL_PROVIDER=console            # or 'resend' | 'sendgrid'
+MAIL_FROM="UYP Support <no-reply@uyp.app>"
+RESEND_API_KEY=...               # if using Resend
+SENDGRID_API_KEY=...             # if using SendGrid
+DEV_MODE_CODE=000000             # used if no mail provider or for local testing
+```
+
+> Update Notion property names in `NOTION_FIELD_MAP` below to match your actual schema.
+
+---
+
+## DB Schema (SQLite via `better-sqlite3`)
+
+### `src/lib/db.ts`
+
+```ts
+import Database from 'better-sqlite3';
+import path from 'path';
+
+const db = new Database(path.resolve(process.cwd(), 'data.sqlite'));
+
+db.pragma('journal_mode = WAL');
+
+// ACCOUNTS
+// role: 'parent' | 'player' | 'coach' | 'admin'
+db.exec(`
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE,
+  role TEXT NOT NULL,
+  name TEXT,
+  phone TEXT
+);
+`);
+
+// TEAMS
+db.exec(`
+CREATE TABLE IF NOT EXISTS teams (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  division TEXT,
+  coach_names TEXT,
+  notion_id TEXT UNIQUE
+);
+CREATE INDEX IF NOT EXISTS idx_teams_name ON teams(name);
+`);
+
+// PLAYERS
+// claim_state: 'unclaimed' | 'claimed' | 'locked'
+// status: 'active' | 'inactive' | 'pending'
+db.exec(`
+CREATE TABLE IF NOT EXISTS players (
+  id TEXT PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  dob TEXT,
+  jersey_number TEXT,
+  photo_url TEXT,
+  team_id TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  claim_state TEXT NOT NULL DEFAULT 'unclaimed',
+  guardian_email TEXT,
+  guardian_phone TEXT,
+  notion_id TEXT UNIQUE,
+  FOREIGN KEY(team_id) REFERENCES teams(id)
+);
+CREATE INDEX IF NOT EXISTS idx_players_name ON players(full_name);
+CREATE INDEX IF NOT EXISTS idx_players_team ON players(team_id);
+`);
+
+// GUARDIANS (parent ↔ player links)
+db.exec(`
+CREATE TABLE IF NOT EXISTS guardians (
+  player_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  relationship TEXT,
+  is_primary INTEGER DEFAULT 1,
+  PRIMARY KEY (player_id, account_id)
+);
+`);
+
+// CLAIM CODES (verification)
+db.exec(`
+CREATE TABLE IF NOT EXISTS claim_codes (
+  player_id TEXT NOT NULL,
+  contact TEXT NOT NULL,
+  code TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  attempts INTEGER DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (player_id, contact)
+);
+`);
+
+// APPROVAL REQUESTS (fallback)
+db.exec(`
+CREATE TABLE IF NOT EXISTS approvals (
+  id TEXT PRIMARY KEY,
+  player_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  type TEXT NOT NULL, -- 'claim'
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at INTEGER NOT NULL,
+  resolved_at INTEGER
+);
+`);
+
+export default db;
+```
+
+### Simple DB Helpers `src/lib/repo.ts`
+
+```ts
+import db from './db';
+import { randomUUID } from 'crypto';
+
+export const repo = {
+  upsertTeam(input: { id?: string; name: string; division?: string|null; coachNames?: string|null; notionId: string }): string {
+    const id = input.id ?? randomUUID();
+    const stmt = db.prepare(`INSERT INTO teams(id, name, division, coach_names, notion_id)
+      VALUES(@id, @name, @division, @coachNames, @notionId)
+      ON CONFLICT(notion_id) DO UPDATE SET name=excluded.name, division=excluded.division, coach_names=excluded.coach_names
+      RETURNING id`);
+    return stmt.get({ id, name: input.name, division: input.division ?? null, coachNames: input.coachNames ?? null, notionId: input.notionId }).id as string;
+  },
+
+  upsertPlayer(input: {
+    id?: string; fullName: string; dob?: string|null; jerseyNumber?: string|null; photoUrl?: string|null;
+    teamId?: string|null; status?: 'active'|'inactive'|'pending'; claimState?: 'unclaimed'|'claimed'|'locked';
+    guardianEmail?: string|null; guardianPhone?: string|null; notionId: string;
+  }): string {
+    const id = input.id ?? randomUUID();
+    const stmt = db.prepare(`INSERT INTO players(id, full_name, dob, jersey_number, photo_url, team_id, status, claim_state, guardian_email, guardian_phone, notion_id)
+      VALUES(@id, @fullName, @dob, @jerseyNumber, @photoUrl, @teamId, @status, @claimState, @guardianEmail, @guardianPhone, @notionId)
+      ON CONFLICT(notion_id) DO UPDATE SET
+        full_name=excluded.full_name,
+        dob=excluded.dob,
+        jersey_number=excluded.jersey_number,
+        photo_url=excluded.photo_url,
+        team_id=excluded.team_id,
+        status=excluded.status
+      RETURNING id`);
+    return stmt.get({
+      id,
+      fullName: input.fullName,
+      dob: input.dob ?? null,
+      jerseyNumber: input.jerseyNumber ?? null,
+      photoUrl: input.photoUrl ?? null,
+      teamId: input.teamId ?? null,
+      status: input.status ?? 'active',
+      claimState: input.claimState ?? 'unclaimed',
+      guardianEmail: input.guardianEmail ?? null,
+      guardianPhone: input.guardianPhone ?? null,
+      notionId: input.notionId
+    }).id as string;
+  },
+
+  markInactiveByMissingNotionIds(remainingNotionIds: string[]) {
+    const placeholders = remainingNotionIds.map(() => '?').join(',');
+    db.prepare(`UPDATE players SET status='inactive' WHERE notion_id NOT IN (${placeholders})`).run(...remainingNotionIds);
+  },
+
+  searchPlayersByName(q: string) {
+    const like = `%${q.toLowerCase()}%`;
+    const rows = db.prepare(`
+      SELECT p.id, p.full_name as fullName, p.photo_url as photoUrl, p.jersey_number as jerseyNumber,
+             p.team_id as teamId, t.name as teamName, p.status
+      FROM players p LEFT JOIN teams t ON p.team_id = t.id
+      WHERE lower(p.full_name) LIKE ? AND p.status='active'
+      ORDER BY p.full_name ASC LIMIT 50
+    `).all(like);
+    return rows;
+  },
+
+  getTeam(teamId: string) {
+    return db.prepare(`SELECT id, name, division, coach_names as coachNames FROM teams WHERE id = ?`).get(teamId);
+  },
+
+  getTeamPlayers(teamId: string) {
+    return db.prepare(`
+      SELECT id, full_name as fullName, jersey_number as jerseyNumber, photo_url as photoUrl
+      FROM players WHERE team_id = ? AND status='active' ORDER BY full_name
+    `).all(teamId);
+  },
+
+  linkGuardian({ playerId, accountId, relationship, isPrimary = true }:{ playerId:string; accountId:string; relationship?:string; isPrimary?:boolean}) {
+    db.prepare(`INSERT OR REPLACE INTO guardians(player_id, account_id, relationship, is_primary) VALUES(?, ?, ?, ?)`)
+      .run(playerId, accountId, relationship ?? 'parent', isPrimary ? 1 : 0);
+    db.prepare(`UPDATE players SET claim_state='claimed' WHERE id=?`).run(playerId);
+  },
+
+  getPlayerById(id: string) {
+    return db.prepare(`SELECT * FROM players WHERE id = ?`).get(id);
+  },
+
+  createApproval({ playerId, accountId }:{playerId:string; accountId:string}) {
+    const id = randomUUID();
+    db.prepare(`INSERT INTO approvals(id, player_id, account_id, type, status, created_at) VALUES(?, ?, ?, 'claim', 'pending', ?)`)
+      .run(id, playerId, accountId, Date.now());
+    return id;
+  },
+
+  upsertClaimCode({ playerId, contact, code, ttlSec }:{ playerId:string; contact:string; code:string; ttlSec:number}) {
+    const exp = Date.now() + ttlSec*1000;
+    db.prepare(`INSERT INTO claim_codes(player_id, contact, code, expires_at, attempts, created_at)
+               VALUES(?, ?, ?, ?, 0, ?)
+               ON CONFLICT(player_id, contact) DO UPDATE SET code=excluded.code, expires_at=excluded.expires_at, attempts=0, created_at=excluded.created_at`)
+      .run(playerId, contact, code, exp, Date.now());
+  },
+
+  verifyClaimCode({ playerId, contact, code }:{ playerId:string; contact:string; code:string}) {
+    const row = db.prepare(`SELECT code, expires_at, attempts FROM claim_codes WHERE player_id=? AND contact=?`).get(playerId, contact);
+    if (!row) return { ok: false, reason: 'no_code' } as const;
+    if (Date.now() > row.expires_at) return { ok: false, reason: 'expired' } as const;
+    if (row.code !== code) {
+      db.prepare(`UPDATE claim_codes SET attempts = attempts + 1 WHERE player_id=? AND contact=?`).run(playerId, contact);
+      return { ok: false, reason: 'mismatch' } as const;
+    }
+    db.prepare(`DELETE FROM claim_codes WHERE player_id=? AND contact=?`).run(playerId, contact);
+    return { ok: true } as const;
+  }
+};
+```
+
+---
+
+## Notion Adapter + Sync
+
+### `src/lib/notion.ts`
+
+```ts
+import { Client } from '@notionhq/client';
+
+export const notion = new Client({ auth: process.env.NOTION_TOKEN });
+
+export const NOTION_FIELD_MAP = {
+  playersDbId: process.env.NOTION_PLAYERS_DB_ID!,
+  teamsDbId: process.env.NOTION_TEAMS_DB_ID!,
+  player: {
+    fullName: 'Name',            // Title
+    dob: 'DOB',                  // Date or text
+    jerseyNumber: 'Jersey',      // Number or text
+    photoUrl: 'Photo',           // Files/URL (optional)
+    teamRelation: 'Team',        // Relation → Teams DB
+    guardianEmail: 'Guardian Email', // Email text
+    guardianPhone: 'Guardian Phone', // Phone text
+    status: 'Status'             // Select: Active/Inactive
+  },
+  team: {
+    name: 'Name',                // Title
+    division: 'Division',        // Select/Text
+    coachNames: 'Coach',         // People/Text (stringify)
+  }
+} as const;
+
+function propText(p: any): string|undefined {
+  if (!p) return undefined;
+  if (p.type === 'title') return p.title?.[0]?.plain_text;
+  if (p.type === 'rich_text') return p.rich_text?.[0]?.plain_text;
+  if (p.type === 'select') return p.select?.name;
+  if (p.type === 'number') return String(p.number ?? '');
+  if (p.type === 'date') return p.date?.start ?? undefined;
+  if (p.type === 'url') return p.url ?? undefined;
+  if (p.type === 'files') return p.files?.[0]?.file?.url ?? p.files?.[0]?.external?.url;
+  if (p.type === 'email') return p.email ?? undefined;
+  if (p.type === 'phone_number') return p.phone_number ?? undefined;
+  return undefined;
+}
+
+export async function fetchTeamsFromNotion() {
+  const pages: any[] = [];
+  let cursor: string|undefined;
+  while (true) {
+    const resp = await notion.databases.query({ database_id: NOTION_FIELD_MAP.teamsDbId, start_cursor: cursor });
+    pages.push(...resp.results);
+    if (!resp.has_more) break;
+    cursor = resp.next_cursor as string | undefined;
+  }
+  return pages.map(pg => {
+    const props: any = (pg as any).properties;
+    const name = propText(props[NOTION_FIELD_MAP.team.name]) ?? 'Unnamed Team';
+    const division = propText(props[NOTION_FIELD_MAP.team.division]);
+    const coach = propText(props[NOTION_FIELD_MAP.team.coachNames]);
+    return {
+      notionId: pg.id,
+      name,
+      division: division ?? null,
+      coachNames: coach ?? null,
+    };
+  });
+}
+
+export async function fetchPlayersFromNotion() {
+  const pages: any[] = [];
+  let cursor: string|undefined;
+  while (true) {
+    const resp = await notion.databases.query({ database_id: NOTION_FIELD_MAP.playersDbId, start_cursor: cursor });
+    pages.push(...resp.results);
+    if (!resp.has_more) break;
+    cursor = resp.next_cursor as string | undefined;
+  }
+  return pages.map(pg => {
+    const props: any = (pg as any).properties;
+    const name = propText(props[NOTION_FIELD_MAP.player.fullName]) ?? 'Unnamed Player';
+    const dob = propText(props[NOTION_FIELD_MAP.player.dob]);
+    const jersey = propText(props[NOTION_FIELD_MAP.player.jerseyNumber]);
+    const photo = propText(props[NOTION_FIELD_MAP.player.photoUrl]);
+    const status = propText(props[NOTION_FIELD_MAP.player.status])?.toLowerCase() === 'inactive' ? 'inactive' : 'active';
+    const teamRel = props[NOTION_FIELD_MAP.player.teamRelation];
+    const teamNotionId = teamRel?.relation?.[0]?.id as string | undefined;
+    const guardianEmail = propText(props[NOTION_FIELD_MAP.player.guardianEmail]);
+    const guardianPhone = propText(props[NOTION_FIELD_MAP.player.guardianPhone]);
+    return {
+      notionId: pg.id,
+      fullName: name,
+      dob: dob ?? null,
+      jerseyNumber: jersey ?? null,
+      photoUrl: photo ?? null,
+      teamNotionId: teamNotionId ?? null,
+      status,
+      guardianEmail: guardianEmail ?? null,
+      guardianPhone: guardianPhone ?? null,
+    };
+  });
+}
+```
+
+### Sync Logic `src/lib/syncNotion.ts`
+
+```ts
+import { fetchPlayersFromNotion, fetchTeamsFromNotion } from './notion';
+import { repo } from './repo';
+
+export async function syncFromNotion() {
+  // 1) Teams first (so players can link to team_id)
+  const teams = await fetchTeamsFromNotion();
+  const teamIdByNotion: Record<string,string> = {};
+  for (const t of teams) {
+    const id = repo.upsertTeam({ name: t.name, division: t.division, coachNames: t.coachNames, notionId: t.notionId });
+    teamIdByNotion[t.notionId] = id;
+  }
+
+  // 2) Players
+  const players = await fetchPlayersFromNotion();
+  const remainingNotionIds: string[] = [];
+  for (const p of players) {
+    const teamId = p.teamNotionId ? teamIdByNotion[p.teamNotionId] : null;
+    repo.upsertPlayer({
+      fullName: p.fullName,
+      dob: p.dob,
+      jerseyNumber: p.jerseyNumber,
+      photoUrl: p.photoUrl,
+      teamId,
+      status: p.status as any,
+      guardianEmail: p.guardianEmail,
+      guardianPhone: p.guardianPhone,
+      notionId: p.notionId,
+    });
+    remainingNotionIds.push(p.notionId);
+  }
+
+  // 3) Mark missing as inactive
+  repo.markInactiveByMissingNotionIds(remainingNotionIds);
+
+  return { teams: teams.length, players: players.length };
+}
+```
+
+### Sync Endpoint `src/app/api/sync/notion/route.ts` (Next.js App Router)
+
+```ts
+import { NextResponse } from 'next/server';
+import { syncFromNotion } from '@/lib/syncNotion';
+
+export async function POST() {
+  // TODO: require admin auth
+  const out = await syncFromNotion();
+  return NextResponse.json({ ok: true, ...out });
+}
+```
+
+---
+
+## API Endpoints (Search & Claim + Teams)
+
+### `GET /api/players` (search)
+
+`src/app/api/players/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const q = (searchParams.get('search') || '').trim();
+  if (!q) return NextResponse.json([]);
+  const rows = repo.searchPlayersByName(q);
+  return NextResponse.json(rows);
+}
+```
+
+### `POST /api/claim/request` (send code)
+
+`src/app/api/claim/request/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+import { randomInt } from 'crypto';
+
+async function sendCode(contact: string, code: string) {
+  const prov = process.env.MAIL_PROVIDER || 'console';
+  if (prov === 'console') {
+    console.log(`[CLAIM CODE] → ${contact}: ${code}`);
+    return;
+  }
+  if (prov === 'resend') {
+    // Example using Resend
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: process.env.MAIL_FROM, to: contact, subject: 'Your UYP verification code', html: `<p>Your code: <b>${code}</b></p>` })
+    });
+    if (!res.ok) throw new Error('Mail send failed');
+    return;
+  }
+  // TODO: add sendgrid
+}
+
+export async function POST(req: NextRequest) {
+  // TODO: require auth (parent)
+  const { playerId } = await req.json();
+  if (!playerId) return NextResponse.json({ error: 'playerId required' }, { status: 400 });
+  const player = repo.getPlayerById(playerId);
+  if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (player.claim_state === 'claimed') return NextResponse.json({ error: 'Already claimed' }, { status: 409 });
+
+  const contact = player.guardian_email ?? player.guardian_phone;
+  if (!contact) {
+    // Fallback → coach approval
+    const id = repo.createApproval({ playerId, accountId: 'coach-approval-queue' });
+    return NextResponse.json({ pendingApproval: true, approvalId: id });
+  }
+
+  const code = process.env.DEV_MODE_CODE || String(randomInt(100000, 999999));
+  repo.upsertClaimCode({ playerId, contact, code, ttlSec: 15 * 60 });
+  await sendCode(contact, code);
+  return NextResponse.json({ sent: true, via: contact.includes('@') ? 'email' : 'sms' });
+}
+```
+
+### `POST /api/players/claim` (verify & link)
+
+`src/app/api/players/claim/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+
+async function requireAuthAccountId(req: NextRequest): Promise<string> {
+  // TODO: integrate with your auth; for now mock
+  const id = req.headers.get('x-account-id');
+  if (!id) throw new Error('Unauthenticated');
+  return id;
+}
+
+export async function POST(req: NextRequest) {
+  const accountId = await requireAuthAccountId(req);
+  const { playerId, code } = await req.json();
+  if (!playerId) return NextResponse.json({ error: 'playerId required' }, { status: 400 });
+  const player = repo.getPlayerById(playerId);
+  if (!player) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const contact = player.guardian_email ?? player.guardian_phone;
+  if (!contact) {
+    // This case should have gone through approval flow
+    const apId = repo.createApproval({ playerId, accountId });
+    return NextResponse.json({ pendingApproval: true, approvalId: apId });
+  }
+
+  const result = repo.verifyClaimCode({ playerId, contact, code });
+  if (!result.ok) return NextResponse.json({ error: 'Invalid or expired code', reason: (result as any).reason }, { status: 400 });
+
+  repo.linkGuardian({ playerId, accountId, relationship: 'parent', isPrimary: true });
+  return NextResponse.json({ ok: true });
+}
+```
+
+### Teams Endpoints
+
+`src/app/api/teams/route.ts`
+
+```ts
+import { NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+
+export async function GET() {
+  // Simple list
+  const rows = (repo as any).db?.prepare?. // fallback if we want a quick list
+    ("SELECT id, name, division FROM teams ORDER BY name").all?.() ?? [];
+  return NextResponse.json(rows);
+}
+```
+
+`src/app/api/teams/[id]/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+
+export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+  const team = repo.getTeam(params.id);
+  if (!team) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(team);
+}
+```
+
+`src/app/api/teams/[id]/players/route.ts`
+
+```ts
+import { NextRequest, NextResponse } from 'next/server';
+import { repo } from '@/lib/repo';
+
+export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+  const players = repo.getTeamPlayers(params.id);
+  return NextResponse.json(players);
+}
+```
+
+---
+
+## Client Components
+
+### Add Player (Search & Claim)
+
+`src/components/AddPlayerModal.tsx`
+
+```tsx
+'use client';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { useMutation, useQuery } from '@tanstack/react-query';
+
+export default function AddPlayerModal({ open, onOpenChange, onLinked }:{
+  open:boolean; onOpenChange:(v:boolean)=>void; onLinked?:()=>void;
+}) {
+  const [q, setQ] = useState('');
+  const [selectedId, setSelectedId] = useState<string|null>(null);
+  const [code, setCode] = useState('');
+  const [stage, setStage] = useState<'search'|'code'>('search');
+
+  const { data: results, isFetching } = useQuery({
+    queryKey: ['players-search', q],
+    queryFn: async () => q ? (await fetch(`/api/players?search=${encodeURIComponent(q)}`)).json() : [],
+  });
+
+  const requestCode = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch('/api/claim/request', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ playerId }) });
+      if (!res.ok) throw new Error('Failed to send code');
+      return res.json();
+    },
+    onSuccess: () => setStage('code')
+  });
+
+  const submitClaim = useMutation({
+    mutationFn: async ({ playerId, code }:{ playerId:string; code:string }) => {
+      const res = await fetch('/api/players/claim', { method: 'POST', headers: { 'Content-Type':'application/json', 'x-account-id': 'demo-parent' }, body: JSON.stringify({ playerId, code }) });
+      if (!res.ok) throw new Error('Claim failed');
+      return res.json();
+    },
+    onSuccess: () => { onLinked?.(); onOpenChange(false); }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogTitle>Add Player</DialogTitle>
+        {stage === 'search' && (
+          <div className="space-y-3">
+            <Input placeholder="Search player name…" value={q} onChange={e=>setQ(e.target.value)} />
+            <ul className="space-y-2 max-h-64 overflow-auto">
+              {(results ?? []).map((p:any)=> (
+                <li key={p.id} className="p-2 border rounded flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{p.fullName}</div>
+                    <div className="text-xs text-muted-foreground">{p.teamName ?? 'No team'}</div>
+                  </div>
+                  <Button size="sm" disabled={requestCode.isPending} onClick={()=>{ setSelectedId(p.id); requestCode.mutate(p.id); }}>Claim</Button>
+                </li>
+              ))}
+            </ul>
+            {isFetching && <p className="text-xs text-muted-foreground">Searching…</p>}
+          </div>
+        )}
+
+        {stage === 'code' && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Enter the 6-digit code sent to the guardian contact on file.</p>
+            <Input value={code} onChange={e=>setCode(e.target.value)} placeholder="123456" />
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={()=>setStage('search')}>Back</Button>
+              <Button onClick={()=> selectedId && submitClaim.mutate({ playerId: selectedId, code })} disabled={!code || submitClaim.isPending}>Verify & Link</Button>
+            </div>
+            {(submitClaim.isError || requestCode.isError) && <p className="text-sm text-destructive">There was a problem. Try again.</p>}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+### Player Card
+
+`src/components/PlayerCard.tsx`
+
+```tsx
+export function PlayerCard({ player }:{player:any}) {
+  return (
+    <div className="p-4 rounded-2xl border shadow-sm hover:shadow-md transition">
+      <div className="flex items-center gap-3">
+        <img src={player.photoUrl ?? '/avatar.png'} className="w-12 h-12 rounded-full object-cover" />
+        <div>
+          <div className="font-semibold">{player.fullName}</div>
+          <div className="text-xs text-muted-foreground">{player.teamName ?? 'Unassigned'}</div>
+        </div>
+      </div>
+      <div className="mt-3 text-sm grid grid-cols-2 gap-2">
+        <div>Jersey: {player.jerseyNumber ?? '-'}</div>
+        <div>Age: {player.age ?? '-'}</div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Player Profile with **Team** Tab
+
+`src/components/PlayerProfile.tsx`
+
+```tsx
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { PlayerCard } from './PlayerCard';
+
+export default function PlayerProfile({ playerId }:{ playerId:string }) {
+  const { data: player } = useQuery({ queryKey:['player', playerId], queryFn: async()=> (await fetch(`/api/player/${playerId}`)).json() });
+  const teamId = player?.teamId;
+  const { data: team } = useQuery({ enabled: !!teamId, queryKey:['team', teamId], queryFn: async()=> (await fetch(`/api/teams/${teamId}`)).json() });
+  const { data: roster } = useQuery({ enabled: !!teamId, queryKey:['team-players', teamId], queryFn: async()=> (await fetch(`/api/teams/${teamId}/players`)).json() });
+
+  if (!player) return <div className="p-4">Loading…</div>;
+
+  return (
+    <div className="space-y-4">
+      <PlayerCard player={{ ...player, teamName: team?.name }} />
+      <Tabs defaultValue="overview">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview">
+          <div className="text-sm text-muted-foreground">Badges, check-ins, etc. (placeholder)</div>
+        </TabsContent>
+        <TabsContent value="team">
+          {team ? (
+            <div className="space-y-3">
+              <div>
+                <div className="text-lg font-semibold">{team.name}</div>
+                <div className="text-sm text-muted-foreground">{team.division ?? ''} {team.coachNames ? `• Coach: ${team.coachNames}` : ''}</div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(roster ?? []).map((p:any)=> <PlayerCard key={p.id} player={p} />)}
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No team assigned.</div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+```
+
+> Add a basic `GET /api/player/[id]` route that returns one record (similar to team endpoints) joining team name.
+
+### Teams → Roster
+
+`src/app/teams/page.tsx` (example)
+
+```tsx
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { PlayerCard } from '@/components/PlayerCard';
+
+export default function TeamsPage() {
+  const { data: teams } = useQuery({ queryKey:['teams'], queryFn: async()=> (await fetch('/api/teams')).json() });
+  return (
+    <div className="space-y-6 p-4">
+      {(teams ?? []).map((t:any) => (
+        <section key={t.id}>
+          <h2 className="text-lg font-bold">{t.name}</h2>
+          <TeamPlayers teamId={t.id} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function TeamPlayers({ teamId }:{ teamId:string }) {
+  const { data: players } = useQuery({ queryKey:['team-players', teamId], queryFn: async()=> (await fetch(`/api/teams/${teamId}/players`)).json() });
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+      {(players ?? []).map((p:any)=> <PlayerCard key={p.id} player={p} />)}
+    </div>
+  );
+}
+```
+
+---
+
+## Account & Profile Flow (recommended)
+
+1. **Sign Up / Login** → choose role = **Parent**.
+2. Redirect to **My Players** (empty state): "Add Player" button.
+3. **Add Player** → Search & Claim flow (send code → verify → link).
+4. After link, parent sees player card(s); clicking a card opens **Player Profile** → **Team** tab shows team info + roster.
+5. Team is **read-only** here; any changes go via coach/admin in future tasks.
+
+---
+
+## Notes & Edge Cases
+
+* Use `DEV_MODE_CODE` during development to bypass email provider.
+* Rate-limit `/api/claim/request` by `(playerId, ip)` if exposed publicly.
+* Don’t show sensitive PII in search results; only name + team.
+* Sync schedule: call `/api/sync/notion` nightly (cron) and allow manual via admin UI.
+* If a player is already `claimed`, the Claim button should be disabled or show “Request Access” (future).
+
+---
+
+## Definition of Done
+
+* Parent can log in, open **Add Player**, find their child, click **Claim**, receive code (console in dev), enter code, and see the child under **My Players**.
+* Player Profile shows a **Team** tab with the correct team name/coach and current roster members.
+* Notion sync populates Players and Teams, and subsequent changes in Notion reflect in the app after sync.

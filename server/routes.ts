@@ -16,6 +16,7 @@ import searchRoutes from "./routes/search";
 import notionRoutes from "./routes/notion";
 import privacyRoutes from "./routes/privacy";
 import claimsRoutes from "./routes/claims";
+import registerClaimRoutes from "./routes/claim-routes";
 
 import multer from "multer";
 import path from "path";
@@ -3253,6 +3254,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/notion', notionRoutes);
   app.use('/api/privacy', privacyRoutes);
   app.use('/api/claims', claimsRoutes);
+
+  // Register Search & Claim routes
+  registerClaimRoutes(app);
 
   return httpServer;
 }

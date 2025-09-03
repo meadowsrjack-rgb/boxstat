@@ -1,0 +1,277 @@
+Great question—this touches identity, data sync, and UX. The cleanest setup for UYP is a hybrid, source-of-truth + claim model:
+
+TL;DR (recommended)
+
+Notion is the roster source of truth. Players + team membership live there.
+
+In the app, users claim player profiles (with verification) rather than free-typing teams.
+
+Parents create an account ➜ add one or more player profiles by claiming them from the roster (or creating a pending profile if the player isn’t in Notion yet).
+
+Players can also self-claim themselves.
+
+Team assignment is auto from Notion, with an admins/coaches approval flow for changes.
+
+Edge cases handled by invite/claim codes, fuzzy matching, and coach approval.
+
+Why this beats “user picks team” or “auto sort only”
+
+Avoids bad data: Free-selecting teams leads to misassignments and duplicates.
+
+Avoids lock-outs: Pure auto-sort (Notion only) strands new signups not yet in Notion.
+
+Auditable: Every join has a paper trail (who claimed whom, when, and how verified).
+
+Data model (minimal)
+Account
+  id, email, role: 'parent' | 'player' | 'coach' | 'admin'
+  parentProfile?: { name, phone }
+  linkedPlayerIds: Player.id[]
+
+Player  (1 player, 0..n linked Accounts)
+  id (stable UUID), fullName, dob, jerseyNumber?, photoUrl?
+  teamId?, status: 'active'|'inactive'|'pending'
+  external: { notionId }
+  claimState: 'unclaimed'|'claimed'|'locked'
+  guardians: [{ accountId, relationship, isPrimary }]
+
+Team
+  id, name, division, coachIds: Account.id[]
+
+ClaimToken (short-lived, one-time)
+  token, playerId, expiresAt, issuedBy, usedBy?
+
+Notion sync (source of truth)
+
+Nightly + on-demand sync pulls Players and Teams:
+
+Match by notionId (primary) or (fullName+DOB) / (name + jersey + team).
+
+Update Player and Team records; mark stale players inactive.
+
+Never overwrite guardianship links on sync; only player bio/team/status fields.
+
+Emit “delta” events (team changed, new player added) for coach review.
+
+Claiming & verification flows (choose any, support all)
+
+Search & claim (fuzzy match)
+Parent searches “Jayden Smith” → app lists matches from roster:
+
+tap Claim → verify with shared secret (DOB last 4, guardian phone on file, or emailed code to parent email on file) → success.
+
+If no secret on file, fall back to Coach approval (coach gets a one-tap approve in dashboard).
+
+Invite/QR code from coach
+Coach prints or shares QR for each player (contains playerId + short nonce). Parent scans → auto-links.
+
+Manual create → pending
+If the player isn’t yet in Notion, parent creates a Pending Player (no team). When Notion adds them later, the sync merges by name+DOB and links automatically. Until then, they can still join events as “unassigned” if you allow it.
+
+Result: Parents can manage multiple players under one account; each player has exactly one canonical profile tied to Notion.
+
+Team membership
+
+Primary assignment comes from Notion.
+
+App shows team read-only with a “Request Team Change” button (coach/admin approve).
+
+For tournaments/multi-roster: allow temporary assignments (effective date range) without changing the Notion primary team.
+
+Permissions
+
+Parent account: can see/edit only their linked players; request joins/changes.
+
+Player account: can self-claim if 13+ (or with parent code).
+
+Coach: approve claims, see team roster, generate claim QR codes.
+
+Admin: override & merge duplicates.
+
+UX you already have (event list) + new bits
+
+On first login, parent sees “Who are you managing?” → Add Player.
+
+Add Player screen:
+
+Search field + list of suggested matches (from Notion).
+
+“Can’t find them? Create pending profile.”
+
+If a candidate is found: Claim → quick verification step.
+
+Player profile card shows Team, Coach, Age, Badges, Check-ins.
+
+Team page auto-lists players from Notion; claimed players show a ✅ badge.
+
+Anti-dup & safety
+
+Soft-block creating a new player with same name + DOB as an existing one.
+
+Merge tool for admins (choose “keep bio from A, guardians from B”).
+
+Log all claims with IP/device for audit.
+
+Rate-limit claim attempts.
+
+Minimal API you’ll need
+GET  /api/players?search=jayden&teamId=...
+POST /api/players/claim   { playerId, method: 'code'|'qr'|'approval', code? }
+POST /api/players         { fullName, dob, guardian: {...} }  // pending create
+POST /api/players/:id/request-team { teamId } // coach/admin approve
+GET  /api/teams           // list teams
+GET  /api/teams/:id/players
+POST /api/claim-tokens    { playerId } // coach creates QR token
+
+Replit-ready snippets
+Search & claim (client, React/TanStack)
+// components/ClaimPlayer.tsx
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+export default function ClaimPlayer({ accountId }:{accountId:string}) {
+  const [q, setQ] = useState("");
+  const { data } = useQuery({
+    queryKey: ["players-search", q],
+    queryFn: async () => {
+      if (!q) return [];
+      const res = await fetch(`/api/players?search=${encodeURIComponent(q)}`);
+      return res.json();
+    }
+  });
+
+  const claim = useMutation({
+    mutationFn: async ({ playerId, code }:{playerId:string; code?:string}) => {
+      const res = await fetch(`/api/players/claim`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ playerId, method: code ? "code" : "approval", code })
+      });
+      if (!res.ok) throw new Error("Claim failed");
+      return res.json();
+    }
+  });
+
+  return (
+    <div className="space-y-3">
+      <Input placeholder="Search player name..." value={q} onChange={e=>setQ(e.target.value)} />
+      <ul className="space-y-2">
+        {(data ?? []).map((p:any)=>(
+          <li key={p.id} className="p-2 border rounded flex items-center justify-between">
+            <div>
+              <div className="font-medium">{p.fullName}</div>
+              <div className="text-xs text-muted-foreground">{p.teamName ?? "No team"}</div>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={()=>claim.mutate({ playerId: p.id })}>Request Claim</Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+Player profile card (clickable from search/team)
+// components/PlayerCard.tsx
+export function PlayerCard({ player }:{player:any}) {
+  return (
+    <div className="p-4 rounded-2xl border shadow-sm hover:shadow-md transition">
+      <div className="flex items-center gap-3">
+        <img src={player.photoUrl ?? "/avatar.png"} className="w-12 h-12 rounded-full object-cover" />
+        <div>
+          <div className="font-semibold">{player.fullName}</div>
+          <div className="text-xs text-muted-foreground">{player.teamName ?? "Unassigned"}</div>
+        </div>
+      </div>
+      <div className="mt-3 text-sm grid grid-cols-2 gap-2">
+        <div>Jersey: {player.jerseyNumber ?? "-"}</div>
+        <div>Age: {player.age ?? "-"}</div>
+      </div>
+    </div>
+  );
+}
+
+Teams → players (sorted into teams)
+// pages/Teams.tsx (excerpt)
+import { useQuery } from "@tanstack/react-query";
+import { PlayerCard } from "@/components/PlayerCard";
+
+export default function Teams() {
+  const { data: teams } = useQuery({ queryKey:["teams"], queryFn: async()=> (await fetch("/api/teams")).json() });
+
+  return (
+    <div className="space-y-6">
+      {(teams ?? []).map((t:any)=>(
+        <section key={t.id}>
+          <h2 className="text-lg font-bold">{t.name}</h2>
+          <TeamPlayers teamId={t.id} />
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function TeamPlayers({ teamId }:{teamId:string}) {
+  const { data: players } = useQuery({
+    queryKey:["team-players", teamId],
+    queryFn: async()=> (await fetch(`/api/teams/${teamId}/players`)).json()
+  });
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+      {(players ?? []).map((p:any)=> <PlayerCard key={p.id} player={p} />)}
+    </div>
+  );
+}
+
+API: search players (server)
+// /api/players (GET)
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const q = (url.searchParams.get("search") || "").trim();
+  if (!q) return new Response(JSON.stringify([]));
+  // Example: fuzzy search in DB by name; join team name
+  const rows = await db.searchPlayersByName(q); // implement with trigram/LIKE
+  return Response.json(rows);
+}
+
+API: claim player (server)
+// /api/players/claim (POST)
+export async function POST(req: Request) {
+  const { playerId, method, code } = await req.json();
+  const accountId = await requireAuth(req);
+
+  const player = await db.getPlayer(playerId);
+  if (!player) return Response.json({ error: "Not found" }, { status: 404 });
+
+  // If Notion has guardian email/phone, verify 'code' sent to that contact.
+  if (method === "code") {
+    const ok = await verifyGuardianCode(playerId, code);
+    if (!ok) return Response.json({ error: "Invalid code" }, { status: 400 });
+  } else if (method === "approval") {
+    await db.createApprovalRequest({ playerId, accountId, type: "claim" });
+    return Response.json({ pending: true });
+  } else if (method === "qr") {
+    // Validate one-time token previously generated for this player
+    // (Coach dashboard → /api/claim-tokens)
+  }
+
+  await db.linkGuardian({ playerId, accountId, relationship: "parent", isPrimary: true });
+  // Flip claimState
+  await db.updatePlayer(playerId, { claimState: "claimed" });
+  return Response.json({ ok: true });
+}
+
+Operational notes
+
+Sync first: run an initial Notion → DB import to populate players/teams.
+
+Generate claim codes (or send verification) for each player with contact info.
+
+Coach dashboard: one screen to approve claims & team change requests.
+
+Privacy: show only minimal info in search results until claimed (e.g., name + team, no contact data).
+
+If you want, I can drop this into your canvas as a Replit task brief (like we did for Check-In) and wire it to your existing Notion adapter (IDs, fields, and endpoints). Just tell me your current Notion Player properties (name, DOB, team relation, jersey, guardian email/phone).

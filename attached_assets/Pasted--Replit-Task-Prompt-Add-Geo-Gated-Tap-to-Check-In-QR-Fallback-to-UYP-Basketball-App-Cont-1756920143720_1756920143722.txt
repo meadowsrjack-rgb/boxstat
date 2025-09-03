@@ -1,0 +1,500 @@
+# Replit Task Prompt — Add Geo‑Gated “Tap to Check‑In” + QR Fallback to UYP Basketball App
+
+**Context**: The app already pulls Google Calendar events and lists them above the calendar. When a user clicks an event, we want them to be able to **check in**. The check‑in should be **user‑initiated** (tap), **geo‑gated** to the event’s location (e.g., within 200 m), with a **QR fallback** the coach can display onsite. Use our existing stack (React/TypeScript, TanStack Query, shadcn/ui, lucide-react). Persist to our backend (provide both Next.js API route and Express examples; we’ll choose one).
+
+---
+
+## Goals
+
+1. Add a **Check‑In** button on the event details page/modal (opened when an event is clicked from the list above the calendar).
+2. **Geo‑gate** the check‑in: enabled only when the player is within a configurable radius (default 200 m) of the event lat/lng and within the allowed time window (−15 min to +30 min of the event start, configurable).
+3. Add **QR fallback**: a modal that scans a coach‑displayed QR; QR encodes `eventId`, `nonce`, and `exp`.
+4. Persist check‑ins server‑side with minimal anti‑abuse: verify distance server‑side, confirm event window, consume nonce once.
+5. Update the **Coach Roster** view in real time with ✅ and timestamps (basic UI placeholder okay; main requirement is server schema + client mutation updates).
+
+---
+
+## Acceptance Criteria
+
+* From the event list → clicking an event opens an event panel/modal with **Check In**.
+* If **outside radius**: button disabled + message showing approx distance; show **Scan QR** button.
+* If **inside radius**: button enabled. On tap, record `{ ts, lat, lng, method: "tap", deviceId }`.
+* **QR mode** works indoors where GPS is flaky. On scan success, call the same backend route but with `method: "qr"` and QR payload validation.
+* Server enforces: event is active (within time window), within radius, nonce unused (for QR), writes record idempotently (ignore exact duplicate submissions within a short window).
+* Check‑ins are visible (placeholder page/console log is fine) to a Coach roster view per `eventId`.
+
+---
+
+## Data Model (example; adapt to existing DB)
+
+```ts
+// events/{eventId}
+{
+  id: string,
+  title: string,
+  startTime: string, // ISO
+  endTime?: string,  // ISO
+  lat: number,
+  lng: number,
+  teamId: string
+}
+
+// checkins/{eventId}/{userId}
+{
+  userId: string,
+  eventId: string,
+  ts: string,            // ISO timestamp, server-generated
+  lat?: number,
+  lng?: number,
+  method: 'tap' | 'qr',
+  deviceId?: string,
+}
+```
+
+---
+
+## Client — Utilities
+
+### `src/utils/geo.ts`
+
+```ts
+export type LatLng = { lat: number; lng: number };
+
+// Haversine distance in meters
+export function distanceMeters(a: LatLng, b: LatLng): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371000; // meters
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export function withinWindow(startISO: string, endISO?: string, preMin = 15, postMin = 30): boolean {
+  const now = Date.now();
+  const start = new Date(startISO).getTime() - preMin * 60 * 1000;
+  const end = (endISO ? new Date(endISO).getTime() : new Date(startISO).getTime()) + postMin * 60 * 1000;
+  return now >= start && now <= end;
+}
+```
+
+### `src/hooks/useGeo.ts`
+
+```ts
+import { useEffect, useState } from 'react';
+
+export function useGeo(highAccuracy = true) {
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function getOnce(timeout = 8000) {
+    setLoading(true);
+    setError(null);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: highAccuracy,
+          timeout,
+          maximumAge: 0,
+        });
+      });
+      setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (e: any) {
+      setError(e?.message || 'Location unavailable');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return { coords, error, loading, getOnce };
+}
+```
+
+---
+
+## Client — Check‑In Button Component
+
+### `src/components/CheckInButton.tsx`
+
+```tsx
+'use client';
+import { useState, useMemo } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { MapPin, QrCode, Check } from 'lucide-react';
+import { useGeo } from '@/hooks/useGeo';
+import { distanceMeters, withinWindow } from '@/utils/geo';
+
+export type UypEvent = {
+  id: string;
+  title: string;
+  startTime: string; // ISO
+  endTime?: string;  // ISO
+  lat: number;
+  lng: number;
+};
+
+type Props = {
+  event: UypEvent;
+  userId: string;
+  radiusMeters?: number; // default 200
+  onCheckedIn?: () => void;
+  openQr?: () => void; // open QR scanner modal
+};
+
+export default function CheckInButton({ event, userId, radiusMeters = 200, onCheckedIn, openQr }: Props) {
+  const { coords, loading, error, getOnce } = useGeo(true);
+  const [distance, setDistance] = useState<number | null>(null);
+
+  const timeOk = withinWindow(event.startTime, event.endTime);
+
+  const nearby = useMemo(() => {
+    if (!coords) return false;
+    const d = distanceMeters(coords, { lat: event.lat, lng: event.lng });
+    setDistance(d);
+    return d <= radiusMeters;
+  }, [coords, event.lat, event.lng, radiusMeters]);
+
+  const { mutate: checkIn, isPending, isSuccess } = useMutation({
+    mutationFn: async (pos: { lat: number | null; lng: number | null }) => {
+      const res = await fetch(`/api/checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event.id,
+          userId,
+          method: 'tap',
+          lat: pos.lat,
+          lng: pos.lng,
+        }),
+      });
+      if (!res.ok) throw new Error('Check-in failed');
+      return res.json();
+    },
+    onSuccess: () => onCheckedIn?.(),
+  });
+
+  const handleCheckDistance = async () => {
+    const pos = await getOnce();
+    if (!pos) return;
+  };
+
+  const handleCheckIn = async () => {
+    const pos = coords ?? (await getOnce());
+    checkIn({ lat: pos?.lat ?? null, lng: pos?.lng ?? null });
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Button variant="default" disabled={!timeOk || loading} onClick={handleCheckDistance}>
+          <MapPin className="mr-2 h-4 w-4" /> Get Location
+        </Button>
+        {typeof distance === 'number' && (
+          <Badge variant={nearby ? 'default' : 'secondary'}>
+            {Math.round(distance)} m away
+          </Badge>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button onClick={handleCheckIn} disabled={!timeOk || !nearby || isPending}>
+          {isSuccess ? <Check className="mr-2 h-4 w-4" /> : <MapPin className="mr-2 h-4 w-4" />}
+          {isSuccess ? 'Checked In' : 'Check In'}
+        </Button>
+        <Button variant="outline" onClick={openQr}>
+          <QrCode className="mr-2 h-4 w-4" /> Scan QR
+        </Button>
+      </div>
+
+      {!timeOk && <p className="text-sm text-muted-foreground">Check-in opens 15 min before start and closes 30 min after.</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
+```
+
+---
+
+## Client — QR Scanner Modal (optional)
+
+> If you already have a scanner, wire `openQr` to it. Otherwise, here’s a simple approach using `react-qr-reader`.
+
+### Install (if allowed)
+
+```bash
+npm i react-qr-reader
+```
+
+### `src/components/QrScannerModal.tsx`
+
+```tsx
+'use client';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useMutation } from '@tanstack/react-query';
+import { QrReader } from 'react-qr-reader';
+
+export default function QrScannerModal({ open, onOpenChange, eventId, userId, onCheckedIn }:{
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  eventId: string;
+  userId: string;
+  onCheckedIn?: () => void;
+}) {
+  const { mutate } = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await fetch(`/api/checkin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: 'qr', userId, eventId, qr: payload }),
+      });
+      if (!res.ok) throw new Error('QR check-in failed');
+      return res.json();
+    },
+    onSuccess: () => { onCheckedIn?.(); onOpenChange(false); },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogTitle>Scan Event QR</DialogTitle>
+        <div className="p-2">
+          <QrReader
+            constraints={{ facingMode: 'environment' }}
+            onResult={(result, error) => {
+              if (!!result) {
+                try {
+                  const text = result.getText();
+                  const url = new URL(text);
+                  const payload = {
+                    event: url.searchParams.get('event'),
+                    nonce: url.searchParams.get('nonce'),
+                    exp: url.searchParams.get('exp'),
+                  };
+                  mutate(payload);
+                } catch {}
+              }
+            }}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+---
+
+## Client — Integrate with Event List & Detail
+
+> Assumes you already render an Event panel when an event is clicked from the list above the calendar. Add the button inside that panel.
+
+### `src/components/EventDetailPanel.tsx` (excerpt)
+
+```tsx
+import CheckInButton, { UypEvent } from '@/components/CheckInButton';
+import QrScannerModal from '@/components/QrScannerModal';
+import { useState } from 'react';
+
+export default function EventDetailPanel({ event, userId }: { event: UypEvent; userId: string }) {
+  const [qrOpen, setQrOpen] = useState(false);
+  return (
+    <div className="space-y-4">
+      <h3 className="text-xl font-semibold">{event.title}</h3>
+      <p className="text-sm text-muted-foreground">
+        {new Date(event.startTime).toLocaleString()} — {event.endTime ? new Date(event.endTime).toLocaleTimeString() : ''}
+      </p>
+      <CheckInButton event={event} userId={userId} openQr={() => setQrOpen(true)} />
+      <QrScannerModal open={qrOpen} onOpenChange={setQrOpen} eventId={event.id} userId={userId} />
+    </div>
+  );
+}
+```
+
+### `src/components/EventList.tsx` (excerpt integration)
+
+```tsx
+// When an event item is clicked, setSelectedEvent(event) and render <EventDetailPanel ... />
+<li key={ev.id} onClick={() => setSelectedEvent(ev)} className="cursor-pointer hover:bg-accent rounded p-2">
+  <div className="flex items-center justify-between">
+    <div>
+      <div className="font-medium">{ev.title}</div>
+      <div className="text-xs text-muted-foreground">{new Date(ev.startTime).toLocaleString()}</div>
+    </div>
+    {/* Optional: quick status badges can go here */}
+  </div>
+</li>
+```
+
+---
+
+## Server — Next.js Route Example
+
+### `src/pages/api/checkin.ts` (Next.js pages) or `src/app/api/checkin/route.ts` (App Router)
+
+```ts
+// Next.js App Router example
+import { NextRequest, NextResponse } from 'next/server';
+
+const RADIUS = 200; // meters
+const PRE_MIN = 15; // minutes before start
+const POST_MIN = 30; // minutes after start
+
+async function getEvent(eventId: string) {
+  // TODO: fetch from DB
+  return { id: eventId, title: 'Practice', startTime: new Date().toISOString(), lat: 33.7001, lng: -117.852, teamId: 't1' };
+}
+
+function distanceMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 6371000;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function withinWindow(startISO: string, endISO?: string) {
+  const now = Date.now();
+  const start = new Date(startISO).getTime() - PRE_MIN * 60 * 1000;
+  const end = (endISO ? new Date(endISO).getTime() : new Date(startISO).getTime()) + POST_MIN * 60 * 1000;
+  return now >= start && now <= end;
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { eventId, userId, method, lat, lng, qr } = body as {
+    eventId: string; userId: string; method: 'tap' | 'qr'; lat?: number | null; lng?: number | null; qr?: any;
+  };
+
+  if (!eventId || !userId || !method) return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+
+  const ev = await getEvent(eventId);
+  if (!ev) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+  if (!withinWindow(ev.startTime)) return NextResponse.json({ error: 'Outside check-in window' }, { status: 403 });
+
+  if (method === 'tap') {
+    if (typeof lat !== 'number' || typeof lng !== 'number') return NextResponse.json({ error: 'Location required' }, { status: 400 });
+    const d = distanceMeters({ lat, lng }, { lat: ev.lat, lng: ev.lng });
+    if (d > RADIUS) return NextResponse.json({ error: `Too far (${Math.round(d)} m)` }, { status: 403 });
+  } else if (method === 'qr') {
+    // Validate QR payload (nonce, exp, event match)
+    if (!qr?.event || qr.event !== eventId) return NextResponse.json({ error: 'Invalid QR' }, { status: 400 });
+    if (!qr?.nonce || !qr?.exp || Date.now() > Number(qr.exp)) return NextResponse.json({ error: 'QR expired/invalid' }, { status: 400 });
+    // TODO: ensure nonce unused; mark as used (e.g., Redis/DB) to prevent replay
+  }
+
+  // TODO: write to DB idempotently (upsert on eventId+userId)
+  const record = {
+    eventId,
+    userId,
+    ts: new Date().toISOString(),
+    method,
+    lat: typeof lat === 'number' ? lat : undefined,
+    lng: typeof lng === 'number' ? lng : undefined,
+  };
+
+  // await db.upsertCheckin(record)
+
+  return NextResponse.json({ ok: true, checkin: record });
+}
+```
+
+---
+
+## Server — Express Alternative
+
+```ts
+import express from 'express';
+const app = express();
+app.use(express.json());
+
+// reuse distanceMeters/withinWindow helpers as above
+
+app.post('/api/checkin', async (req, res) => {
+  const { eventId, userId, method, lat, lng, qr } = req.body;
+  if (!eventId || !userId || !method) return res.status(400).json({ error: 'Bad request' });
+  const ev = await getEvent(eventId);
+  if (!ev) return res.status(404).json({ error: 'Event not found' });
+  if (!withinWindow(ev.startTime)) return res.status(403).json({ error: 'Outside check-in window' });
+
+  if (method === 'tap') {
+    if (typeof lat !== 'number' || typeof lng !== 'number') return res.status(400).json({ error: 'Location required' });
+    const d = distanceMeters({ lat, lng }, { lat: ev.lat, lng: ev.lng });
+    if (d > 200) return res.status(403).json({ error: `Too far (${Math.round(d)} m)` });
+  } else if (method === 'qr') {
+    if (!qr?.event || qr.event !== eventId) return res.status(400).json({ error: 'Invalid QR' });
+    if (!qr?.nonce || !qr?.exp || Date.now() > Number(qr.exp)) return res.status(400).json({ error: 'QR expired/invalid' });
+    // TODO: nonce one-time use check here
+  }
+
+  const record = { eventId, userId, ts: new Date().toISOString(), method, lat, lng };
+  // await db.upsertCheckin(record)
+  res.json({ ok: true, checkin: record });
+});
+
+app.listen(3001, () => console.log('API on :3001'));
+```
+
+---
+
+## QR Code Generation (Coach)
+
+> You can render a QR on a coach device/tablet that encodes a URL like: `uyp://checkin?event=EVENT_ID&nonce=RANDOM&exp=TIMESTAMP` (or use an https URL your app can intercept).
+
+### `src/components/CoachQr.tsx`
+
+```tsx
+import QRCode from 'qrcode.react';
+
+export default function CoachQr({ eventId }:{ eventId: string }) {
+  const payload = new URL('https://uyp.app/checkin');
+  payload.searchParams.set('event', eventId);
+  payload.searchParams.set('nonce', Math.random().toString(36).slice(2, 10));
+  payload.searchParams.set('exp', String(Date.now() + 1000 * 60 * 120)); // 2h
+  return (
+    <div className="p-4">
+      <QRCode value={payload.toString()} size={192} includeMargin />
+      <p className="text-xs text-muted-foreground mt-2">Scan to check in</p>
+    </div>
+  );
+}
+```
+
+> Install: `npm i qrcode.react`
+
+---
+
+## Notes & Edge Cases
+
+* **Permissions**: Prompt for location only on demand (tap `Get Location`).
+* **Indoor gyms**: Expect higher GPS error → QR fallback covers this.
+* **Idempotency**: Server should upsert by `(eventId, userId)` and keep latest timestamp.
+* **Coach override**: Provide a simple admin route later to mark specific players as present.
+* **Security**: For QR, store and invalidate `nonce` server‑side (Redis/DB). Short TTL.
+* **Device identity**: Optionally store a hashed `deviceId` for audit; do not block multiple devices yet (just flag).
+
+---
+
+## Wiring Checklist (for Replit)
+
+* [ ] Add `src/utils/geo.ts` and `src/hooks/useGeo.ts`.
+* [ ] Add `CheckInButton.tsx` and integrate into the event detail panel shown after clicking an event from the list above the calendar.
+* [ ] Add `QrScannerModal.tsx` (optional) and wire `openQr`.
+* [ ] Implement server route `/api/checkin` (Next.js or Express) with radius & window enforcement.
+* [ ] (Optional) Add `CoachQr.tsx` for coaches to display.
+* [ ] Verify HMR + live preview works with `.tsx` changes.
+
+---
+
+**Done when**: User can click an event → see **Check In**. If near venue & within time window, tap succeeds and persists; otherwise QR path works. Coach can view check‑ins per event in a simple list (even just console/JSON is fine for v1).

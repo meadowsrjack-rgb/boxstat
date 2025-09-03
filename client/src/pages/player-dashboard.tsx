@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
+import EventDetailPanel from "@/components/EventDetailPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -168,6 +169,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<UypEvent | null>(null);
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
 
@@ -708,7 +711,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   <h3 className="text-lg font-bold text-gray-900">Today</h3>
                   {todayEvents.length ? (
                     todayEvents.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                      <div 
+                        key={event.id} 
+                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => {
+                          setSelectedEvent(event as UypEvent);
+                          setEventDetailOpen(true);
+                        }}
+                        data-testid={`event-item-${event.id}`}
+                      >
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
@@ -720,6 +731,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             )}
                           </div>
                         </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     ))
                   ) : (
@@ -733,7 +745,15 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   </h3>
                   {upcomingEvents.length ? (
                     upcomingEvents.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                      <div 
+                        key={event.id} 
+                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => {
+                          setSelectedEvent(event as UypEvent);
+                          setEventDetailOpen(true);
+                        }}
+                        data-testid={`upcoming-event-item-${event.id}`}
+                      >
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
@@ -742,6 +762,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             </span>
                           </div>
                         </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     ))
                   ) : (
@@ -761,6 +782,14 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               />
             </div>
           )}
+
+          {/* Event Detail Modal */}
+          <EventDetailPanel
+            event={selectedEvent}
+            userId={currentUser.id}
+            open={eventDetailOpen}
+            onOpenChange={setEventDetailOpen}
+          />
 
           {/* Activity Original (commented out) */}
           {false && activeTab === "activity" && (

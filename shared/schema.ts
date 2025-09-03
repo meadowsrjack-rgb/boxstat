@@ -158,6 +158,8 @@ export const events = pgTable("events", {
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
   location: varchar("location").notNull(),
+  latitude: real("latitude"), // Geo coordinate for check-in validation
+  longitude: real("longitude"), // Geo coordinate for check-in validation
   teamId: integer("team_id").references(() => teams.id),
   playerId: varchar("player_id").references(() => users.id), // Link to specific player
   opponentTeam: varchar("opponent_team"),

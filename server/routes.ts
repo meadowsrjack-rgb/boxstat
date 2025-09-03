@@ -9,6 +9,7 @@ import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
 import { notionService } from "./notion";
+import { distanceMeters, withinWindow, validateAndConsumeNonce } from './utils/geo.js';
 
 import calendarRoutes from "./routes/calendar";
 import searchRoutes from "./routes/search";
@@ -2343,16 +2344,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/checkins', isAuthenticated, async (req: any, res) => {
     try {
-      const { eventId, type, lat, lng } = req.body;
+      const { eventId, type, lat, lng, method, qr } = req.body;
       const userId = req.body.userId || req.user.claims.sub;
+      
+      // Get event details for validation
+      const event = await storage.getEvent(parseInt(eventId));
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      // Check time window
+      if (!withinWindow(event.startTime.toISOString(), event.endTime?.toISOString())) {
+        return res.status(400).json({ 
+          message: "Check-in window is closed. Check-in is available 15 minutes before to 30 minutes after event start." 
+        });
+      }
+      
+      // Validate based on method
+      if (method === 'qr') {
+        // QR code validation
+        if (!qr || !qr.event || !qr.nonce || !qr.exp) {
+          return res.status(400).json({ message: "Invalid QR code format" });
+        }
+        
+        if (qr.event !== eventId.toString()) {
+          return res.status(400).json({ message: "QR code is for a different event" });
+        }
+        
+        if (!validateAndConsumeNonce(qr.nonce, qr.exp)) {
+          return res.status(400).json({ message: "QR code has expired or already been used" });
+        }
+      } else {
+        // GPS validation for tap check-in
+        if (type === 'onsite' && event.latitude && event.longitude) {
+          if (!lat || !lng) {
+            return res.status(400).json({ message: "Location data required for check-in" });
+          }
+          
+          const distance = distanceMeters(
+            { lat: event.latitude, lng: event.longitude },
+            { lat: parseFloat(lat), lng: parseFloat(lng) }
+          );
+          
+          const RADIUS_METERS = 200;
+          if (distance > RADIUS_METERS) {
+            return res.status(400).json({ 
+              message: `You must be within ${RADIUS_METERS}m of the event location to check in. You are ${Math.round(distance)}m away.` 
+            });
+          }
+        }
+      }
+      
+      // Check for duplicate check-in
+      const existingCheckins = await storage.getUserAttendances(userId);
+      const existingCheckin = existingCheckins.find(c => 
+        c.eventId === parseInt(eventId) && c.type === (type || "advance")
+      );
+      
+      if (existingCheckin) {
+        return res.status(400).json({ message: "Already checked in for this event" });
+      }
       
       const checkinData = {
         userId,
         eventId: parseInt(eventId),
         type: type || "advance",
-        latitude: lat,
-        longitude: lng,
-        qrCodeData: `UYP-CHECKIN-${userId}-${eventId}-${Date.now()}`,
+        latitude: lat ? parseFloat(lat) : null,
+        longitude: lng ? parseFloat(lng) : null,
+        qrCodeData: method === 'qr' ? 
+          `QR-${qr.nonce}` : 
+          `UYP-CHECKIN-${userId}-${eventId}-${Date.now()}`,
       };
       
       const checkin = await storage.createAttendance(checkinData);

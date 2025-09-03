@@ -1,55 +1,65 @@
-// Server-side geo utilities
-export type LatLng = { lat: number; lng: number };
+// Geo utility functions for server-side validation
 
-// Haversine distance in meters
-export function distanceMeters(a: LatLng, b: LatLng): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const R = 6371000; // meters
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+interface Coordinates {
+  lat: number;
+  lng: number;
 }
 
-export function withinWindow(startISO: string, endISO?: string, preMin = 15, postMin = 30): boolean {
-  const now = Date.now();
-  const start = new Date(startISO).getTime() - preMin * 60 * 1000;
-  const end = (endISO ? new Date(endISO).getTime() : new Date(startISO).getTime()) + postMin * 60 * 1000;
-  return now >= start && now <= end;
+/**
+ * Calculate distance between two coordinates using Haversine formula
+ * Returns distance in meters
+ */
+export function distanceMeters(coord1: Coordinates, coord2: Coordinates): number {
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (coord1.lat * Math.PI) / 180;
+  const φ2 = (coord2.lat * Math.PI) / 180;
+  const Δφ = ((coord2.lat - coord1.lat) * Math.PI) / 180;
+  const Δλ = ((coord2.lng - coord1.lng) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 }
 
-// Simple in-memory nonce store (in production, use Redis or database)
-const usedNonces = new Map<string, number>();
+/**
+ * Check if current time is within the event check-in window
+ * Window: 15 minutes before start to 30 minutes after start
+ */
+export function withinWindow(startTime: string, endTime?: string): boolean {
+  const now = new Date();
+  const start = new Date(startTime);
+  const windowStart = new Date(start.getTime() - 15 * 60 * 1000); // 15 min before
+  const windowEnd = new Date(start.getTime() + 30 * 60 * 1000); // 30 min after start
 
-// Clean up expired nonces every 10 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [nonce, expiry] of usedNonces.entries()) {
-    if (now > expiry) {
-      usedNonces.delete(nonce);
-    }
-  }
-}, 10 * 60 * 1000);
+  return now >= windowStart && now <= windowEnd;
+}
 
-export function validateAndConsumeNonce(nonce: string, expiration: string): boolean {
-  const exp = parseInt(expiration);
-  const now = Date.now();
-  
-  // Check if expired
-  if (now > exp) {
-    return false;
-  }
-  
-  // Check if already used
+/**
+ * Simple in-memory nonce validation for QR codes
+ * In production, this should use Redis or database storage
+ */
+const usedNonces = new Set<string>();
+
+export function validateAndConsumeNonce(nonce: string, expiration: number): boolean {
+  // Check if nonce has already been used
   if (usedNonces.has(nonce)) {
     return false;
   }
+
+  // Check if nonce has expired
+  if (Date.now() > expiration) {
+    return false;
+  }
+
+  // Mark nonce as used
+  usedNonces.add(nonce);
   
-  // Mark as used
-  usedNonces.set(nonce, exp);
+  // Clean up old nonces (simple cleanup - in production use a proper cleanup strategy)
+  if (usedNonces.size > 10000) {
+    usedNonces.clear();
+  }
+
   return true;
 }

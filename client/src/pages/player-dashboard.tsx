@@ -1460,7 +1460,8 @@ function TeamBlock() {
     enabled: !!currentUser.id,
   });
   
-  const { data: searchResults, error: searchError } = useQuery({
+  // Search both teams and players
+  const { data: teamResults } = useQuery({
     queryKey: ["/api/search/teams", searchQuery],
     queryFn: async () => {
       console.log("Searching for teams with query:", searchQuery);
@@ -1475,6 +1476,32 @@ function TeamBlock() {
     },
     enabled: searchQuery.length >= 0, // Show all teams when no query
   });
+
+  const { data: playerResults } = useQuery({
+    queryKey: ["/api/players/search", searchQuery],
+    queryFn: async () => {
+      if (searchQuery.length < 2) return [];
+      try {
+        const response = await fetch(`/api/players/search?search=${encodeURIComponent(searchQuery)}`, {
+          credentials: 'include'
+        });
+        if (!response.ok) return [];
+        return response.json();
+      } catch (error) {
+        console.log("Player search not available:", error);
+        return [];
+      }
+    },
+    enabled: searchQuery.length >= 2,
+  });
+
+  // Combine results with type indicators
+  const searchResults = {
+    ok: true,
+    teams: teamResults?.teams || [],
+    players: playerResults || []
+  };
+  const searchError = null; // Since we're handling errors gracefully
   
   const { data: teamDetails } = useQuery({
     queryKey: ["/api/search/teams", selectedTeam?.id],
@@ -1574,29 +1601,70 @@ function TeamBlock() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Find teams or players..."
+              placeholder="Search teams and players..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
           
-          {searchResults?.teams && searchResults.teams.length > 0 && (
+          {(searchResults?.teams?.length > 0 || searchResults?.players?.length > 0) && (
             <Card className="border-0 shadow-sm">
               <CardContent className="p-0">
                 <div className="max-h-64 overflow-y-auto">
-                  {searchResults.teams.map((team: any) => (
+                  {/* Teams */}
+                  {searchResults.teams?.map((team: any) => (
                     <div 
-                      key={team.id} 
+                      key={`team-${team.id}`} 
                       className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
                       onClick={() => setSelectedTeam(team)}
+                      data-testid={`team-result-${team.id}`}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{team.name}</h4>
-                          <p className="text-sm text-gray-500">{team.roster_count} players</p>
+                        <div className="flex items-center gap-3">
+                          <Users className="w-5 h-5 text-blue-600" />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{team.name}</h4>
+                            <p className="text-sm text-gray-500">{team.roster_count} players</p>
+                          </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Players */}
+                  {searchResults.players?.map((player: any) => (
+                    <div 
+                      key={`player-${player.id}`} 
+                      className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
+                      data-testid={`player-result-${player.id}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <User className="w-5 h-5 text-green-600" />
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{player.fullName}</h4>
+                            <p className="text-sm text-gray-500">
+                              {player.teamName ? `${player.teamName}` : "No team"}
+                              {player.jerseyNumber && ` • #${player.jerseyNumber}`}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast({
+                              title: "Player Found",
+                              description: `This is ${player.fullName}. Go to Search & Claim to claim their profile.`
+                            });
+                          }}
+                        >
+                          View
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1611,12 +1679,19 @@ function TeamBlock() {
             </div>
           )}
           
-          {!searchResults?.teams || (searchResults.teams.length === 0 && !searchError) ? (
+          {(!searchResults?.teams?.length && !searchResults?.players?.length && searchQuery) && (
             <div className="text-center py-8 text-gray-500">
               <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p>{searchQuery ? `No teams found matching "${searchQuery}"` : "No teams found"}</p>
+              <p>No teams or players found matching "{searchQuery}"</p>
             </div>
-          ) : null}
+          )}
+          
+          {(!searchQuery && (!searchResults?.teams?.length && !searchResults?.players?.length)) && (
+            <div className="text-center py-8 text-gray-500">
+              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+              <p>Search for teams and players...</p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,0 +1,413 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=aAp2mFmWMrlM' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=aAp2mFmWMrlM' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=4eae3f18:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+chunk-RPCDYKBN.js?v=e0a272c4:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:5 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1051
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+useAuth.ts:5 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1051
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-QCHXOAYK.js?v=e0a272c4:1062 Uncaught TypeError: Cannot read properties of null (reading 'useContext')
+    at Object.useContext (chunk-QCHXOAYK.js?v=e0a272c4:1062:29)
+    at useQueryClient (@tanstack_react-query.js?v=e0a272c4:2795:24)
+    at useBaseQuery (@tanstack_react-query.js?v=e0a272c4:2999:18)
+    at useQuery (@tanstack_react-query.js?v=e0a272c4:3068:10)
+    at useAuth (useAuth.ts:5:46)
+    at Router (App.tsx:48:48)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=4eae3f18:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=4eae3f18:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=4eae3f18:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=4eae3f18:3674:22)
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1062
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+use-toast.ts:172 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1065
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+use-toast.ts:172 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1065
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-QCHXOAYK.js?v=e0a272c4:1066 Uncaught TypeError: Cannot read properties of null (reading 'useState')
+    at Object.useState (chunk-QCHXOAYK.js?v=e0a272c4:1066:29)
+    at useToast (use-toast.ts:172:35)
+    at Toaster (toaster.tsx:12:22)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=4eae3f18:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=4eae3f18:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=4eae3f18:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=4eae3f18:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=4eae3f18:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=4eae3f18:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=4eae3f18:19765:15)
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1066
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18678
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+useAuth.ts:5 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1051
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+useAuth.ts:5 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1051
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-QCHXOAYK.js?v=e0a272c4:1062 Uncaught TypeError: Cannot read properties of null (reading 'useContext')
+    at Object.useContext (chunk-QCHXOAYK.js?v=e0a272c4:1062:29)
+    at useQueryClient (@tanstack_react-query.js?v=e0a272c4:2795:24)
+    at useBaseQuery (@tanstack_react-query.js?v=e0a272c4:2999:18)
+    at useQuery (@tanstack_react-query.js?v=e0a272c4:3068:10)
+    at useAuth (useAuth.ts:5:46)
+    at Router (App.tsx:48:48)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=4eae3f18:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=4eae3f18:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=4eae3f18:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=4eae3f18:3674:22)
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1062
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+use-toast.ts:172 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1065
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+use-toast.ts:172 Warning: Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.
+printWarning @ chunk-QCHXOAYK.js?v=e0a272c4:136
+error @ chunk-QCHXOAYK.js?v=e0a272c4:120
+resolveDispatcher @ chunk-QCHXOAYK.js?v=e0a272c4:1045
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1065
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-QCHXOAYK.js?v=e0a272c4:1066 Uncaught TypeError: Cannot read properties of null (reading 'useState')
+    at Object.useState (chunk-QCHXOAYK.js?v=e0a272c4:1066:29)
+    at useToast (use-toast.ts:172:35)
+    at Toaster (toaster.tsx:12:22)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=4eae3f18:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=4eae3f18:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=4eae3f18:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=4eae3f18:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=4eae3f18:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=4eae3f18:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=4eae3f18:19765:15)
+useState @ chunk-QCHXOAYK.js?v=e0a272c4:1066
+useToast @ use-toast.ts:172
+Toaster @ toaster.tsx:12
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=4eae3f18:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=4eae3f18:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=4eae3f18:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-RPCDYKBN.js?v=4eae3f18:14032 The above error occurred in the <Router> component:
+
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?v=5MDddHMbbvtFtOJTCqbI6:60:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=4eae3f18:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=4eae3f18:14032
+update.callback @ chunk-RPCDYKBN.js?v=4eae3f18:14052
+callCallback @ chunk-RPCDYKBN.js?v=4eae3f18:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=4eae3f18:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=4eae3f18:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=4eae3f18:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=4eae3f18:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=4eae3f18:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=4eae3f18:19353
+commitRoot @ chunk-RPCDYKBN.js?v=4eae3f18:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=4eae3f18:18760
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18718
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-RPCDYKBN.js?v=4eae3f18:14032 The above error occurred in the <Toaster> component:
+
+    at Toaster (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/components/ui/toaster.tsx:29:22)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=4eae3f18:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=4eae3f18:14032
+update.callback @ chunk-RPCDYKBN.js?v=4eae3f18:14052
+callCallback @ chunk-RPCDYKBN.js?v=4eae3f18:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=4eae3f18:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=4eae3f18:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=4eae3f18:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=4eae3f18:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=4eae3f18:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=4eae3f18:19353
+commitRoot @ chunk-RPCDYKBN.js?v=4eae3f18:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=4eae3f18:18760
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18718
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+chunk-RPCDYKBN.js?v=4eae3f18:19413 Uncaught TypeError: Cannot read properties of null (reading 'useContext')
+    at Object.useContext (chunk-QCHXOAYK.js?v=e0a272c4:1062:29)
+    at useQueryClient (@tanstack_react-query.js?v=e0a272c4:2795:24)
+    at useBaseQuery (@tanstack_react-query.js?v=e0a272c4:2999:18)
+    at useQuery (@tanstack_react-query.js?v=e0a272c4:3068:10)
+    at useAuth (useAuth.ts:5:46)
+    at Router (App.tsx:48:48)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=4eae3f18:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=4eae3f18:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=4eae3f18:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=4eae3f18:19753:22)
+useContext @ chunk-QCHXOAYK.js?v=e0a272c4:1062
+useQueryClient @ @tanstack_react-query.js?v=e0a272c4:2795
+useBaseQuery @ @tanstack_react-query.js?v=e0a272c4:2999
+useQuery @ @tanstack_react-query.js?v=e0a272c4:3068
+useAuth @ useAuth.ts:5
+Router @ App.tsx:48
+renderWithHooks @ chunk-RPCDYKBN.js?v=4eae3f18:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=4eae3f18:14926
+beginWork @ chunk-RPCDYKBN.js?v=4eae3f18:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=4eae3f18:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=4eae3f18:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=4eae3f18:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=4eae3f18:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=4eae3f18:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=4eae3f18:18684
+workLoop @ chunk-RPCDYKBN.js?v=4eae3f18:197
+flushWork @ chunk-RPCDYKBN.js?v=4eae3f18:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=4eae3f18:384
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}

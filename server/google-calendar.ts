@@ -15,7 +15,7 @@ const calendar = google.calendar({
 });
 
 // Geocoding function to convert address to coordinates
-async function geocodeLocation(address: string): Promise<{ lat: number; lng: number } | null> {
+export async function geocodeLocation(address: string): Promise<{ lat: number; lng: number } | null> {
   if (!address || address === 'TBD') {
     return null;
   }

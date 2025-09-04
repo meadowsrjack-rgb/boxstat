@@ -1474,7 +1474,7 @@ function TeamBlock() {
       console.log("Search results:", data);
       return data;
     },
-    enabled: searchQuery.length >= 0, // Show all teams when no query
+    enabled: searchQuery.trim().length > 0, // Only search when user types something
   });
 
   const { data: playerResults } = useQuery({

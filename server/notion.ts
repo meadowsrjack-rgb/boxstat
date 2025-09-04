@@ -233,7 +233,8 @@ export class NotionPlayerService {
     const lowerQuery = query.toLowerCase();
     return this.getAllTeams().filter(team =>
       team.name.toLowerCase().includes(lowerQuery) ||
-      team.coach?.name.toLowerCase().includes(lowerQuery)
+      team.coach?.name.toLowerCase().includes(lowerQuery) ||
+      team.program?.toLowerCase().includes(lowerQuery)
     ).slice(0, 10);
   }
 

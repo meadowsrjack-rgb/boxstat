@@ -55,7 +55,13 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
     const q = (req.query.q as string || "").trim();
     
     try {
+      const allTeams = notionService.getAllTeams();
+      console.log(`Searching teams with query: "${q}"`);
+      console.log(`Available teams: ${allTeams.map(t => t.name).join(', ')}`);
+      
       const teams = notionService.searchTeams(q);
+      console.log(`Found ${teams.length} matching teams:`, teams.map(t => t.name));
+      
       res.json({ ok: true, teams: teams.map(team => ({
         id: team.slug,
         name: team.name,

@@ -472,49 +472,6 @@ function SecuritySection() {
         </CardContent>
       </Card>
 
-      {/* Family Connection Section */}
-      <div className="space-y-6">
-        <SectionHeader icon={Users} title="Family Connection" subtitle="Share your invite code with your parent" />
-        
-        <Card className="bg-transparent border-0 shadow-none">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
-                <Users className="h-5 w-5 text-red-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-900 mb-1">Your Invite Code</h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  Share this code with your parent so they can add you to their dashboard
-                </p>
-                <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
-                  <div className="text-center">
-                    <div className="text-xl font-mono font-bold text-red-800 tracking-wider break-all">
-                      {(user as any)?.qrCodeData || `UYP-${(user as any)?.id}-${Date.now()}`}
-                    </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-3 text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => {
-                        const code = (user as any)?.qrCodeData || `UYP-${(user as any)?.id}-${Date.now()}`;
-                        navigator.clipboard.writeText(code);
-                        toast({ title: "Copied!", description: "Invite code copied to clipboard" });
-                      }}
-                    >
-                      <Copy className="h-4 w-4 mr-1" />
-                      Copy Code
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Parents can use this code in their "Add Player" section
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }

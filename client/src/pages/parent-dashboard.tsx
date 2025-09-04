@@ -24,6 +24,7 @@ import {
   Check,
   Gauge,
   Sparkles,
+  Search,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -125,12 +126,12 @@ export default function ParentDashboard() {
 
   /* ===== Mutations ===== */
   const linkPlayerMutation = useMutation({
-    mutationFn: async (payload: { inviteCode?: string; playerEmail?: string; playerId?: number; dob?: string }) => {
+    mutationFn: async (payload: { playerId: string }) => {
       const res = await fetch("/api/parent/players", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ playerId: payload.playerId }),
       });
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
@@ -365,14 +366,49 @@ function PlayersTab({
   isAdding,
 }: {
   players: LinkedPlayer[];
-  onAdd: (p: { inviteCode?: string; playerEmail?: string; playerId?: number; dob?: string }) => void;
+  onAdd: (p: { playerId: string }) => void;
   onRemove: (id: number) => void;
   isAdding: boolean;
 }) {
   const [showAdd, setShowAdd] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
-  const [playerEmail, setPlayerEmail] = useState("");
-  const [dob, setDob] = useState(""); // YYYY-MM-DD
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+
+  // Search players query using Notion data
+  const { data: searchResponse, isLoading: isSearching } = useQuery({
+    queryKey: ['/api/search/notion-players', searchQuery],
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 2) return { ok: true, players: [] };
+      
+      const response = await fetch(`/api/search/notion-players?q=${encodeURIComponent(searchQuery)}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    enabled: searchQuery.length >= 2,
+    staleTime: 30000,
+  });
+
+  const searchResults = searchResponse?.players || [];
+
+  const handleAddPlayer = () => {
+    if (selectedPlayer) {
+      onAdd({ playerId: selectedPlayer.id });
+      setShowAdd(false);
+      setSearchQuery("");
+      setSelectedPlayer(null);
+    }
+  };
+
+  const resetSearch = () => {
+    setSearchQuery("");
+    setSelectedPlayer(null);
+  };
 
   return (
     <div className="space-y-5">
@@ -404,46 +440,83 @@ function PlayersTab({
           <div className="flex items-start gap-2">
             <Sparkles className="h-5 w-5 text-red-600" />
             <p className="text-sm text-gray-600">
-              Linking players automatically imports their calendar, skills, and trophies so your dashboard stays in sync.
+              Search and link players to automatically import their calendar, skills, and trophies to your dashboard.
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Add dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-md mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 p-0">
+      {/* Add dialog with search */}
+      <Dialog open={showAdd} onOpenChange={(open) => { setShowAdd(open); if (!open) resetSearch(); }}>
+        <DialogContent className="max-w-lg mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 p-0">
           <DialogTitle className="sr-only">Add Player</DialogTitle>
           <div className="p-6 space-y-5">
-            <h3 className="text-lg font-bold text-gray-900">Link a Player</h3>
-            <p className="text-sm text-gray-600">Use a coach-provided invite code, or enter the player's email and date of birth to verify.</p>
+            <h3 className="text-lg font-bold text-gray-900">Search and Add Player</h3>
+            <p className="text-sm text-gray-600">Search for a player to add them to your dashboard.</p>
 
+            {/* Search Input */}
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Invite Code (optional)</label>
-              <Input placeholder="e.g., UYP-ABC123" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
+              <label className="text-sm font-medium text-gray-700">Search Players</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input 
+                  placeholder="Search by name, team, or program..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Player Email (optional)</label>
-                <Input type="email" placeholder="player@email.com" value={playerEmail} onChange={(e) => setPlayerEmail(e.target.value)} />
+            {/* Search Results */}
+            {searchQuery.length >= 2 && (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {isSearching ? (
+                  <div className="text-center py-4 text-sm text-gray-500">Searching...</div>
+                ) : searchResults.length > 0 ? (
+                  searchResults.map((player: any) => (
+                    <div
+                      key={player.id}
+                      onClick={() => setSelectedPlayer(player)}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedPlayer?.id === player.id
+                          ? "border-red-500 bg-red-50"
+                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900">{player.displayText || player.fullName}</div>
+                      {player.team && (
+                        <div className="text-sm text-gray-600">{player.team}</div>
+                      )}
+                      {player.currentProgram && (
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          {player.currentProgram}
+                        </Badge>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-sm text-gray-500">No players found</div>
+                )}
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Date of Birth (optional)</label>
-                <Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
+            )}
+
+            {searchQuery.length < 2 && (
+              <div className="text-center py-4 text-sm text-gray-500">
+                Type at least 2 characters to search
               </div>
-            </div>
+            )}
 
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowAdd(false)}>Cancel</Button>
+              <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); resetSearch(); }}>
+                Cancel
+              </Button>
               <Button
                 className="flex-1 bg-red-600 hover:bg-red-700"
-                disabled={isAdding}
-                onClick={() => {
-                  onAdd({ inviteCode: inviteCode || undefined, playerEmail: playerEmail || undefined, dob: dob || undefined });
-                }}
+                disabled={!selectedPlayer || isAdding}
+                onClick={handleAddPlayer}
               >
-                {isAdding ? "Linking…" : "Link Player"}
+                {isAdding ? "Adding…" : "Add Player"}
               </Button>
             </div>
           </div>

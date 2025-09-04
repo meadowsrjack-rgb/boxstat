@@ -148,30 +148,31 @@ export default function PlayerSettingsPage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6">
-          <nav className="flex space-x-8 overflow-x-auto">
-            {sections.map((section) => (
-              <button
-                key={section.key}
-                onClick={() => setTab(section.key as TabKey)}
-                className={`flex items-center gap-2 px-3 py-4 border-b-2 text-sm font-medium transition-all whitespace-nowrap ${
-                  tab === section.key
-                    ? "border-red-500 text-red-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <section.icon className="h-4 w-4" />
-                {section.label}
-              </button>
-            ))}
-          </nav>
+        {/* Horizontal Tabs */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-6">
+            <nav className="flex gap-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {sections.map((section) => (
+                <button
+                  key={section.key}
+                  onClick={() => setTab(section.key as TabKey)}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-t-lg whitespace-nowrap transition-all border-b-2 ${
+                    tab === section.key
+                      ? "bg-red-50 text-red-700 border-red-500 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent"
+                  }`}
+                >
+                  <section.icon className="h-4 w-4 shrink-0" />
+                  <span className="text-sm">{section.label}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
         </div>
 
         {/* Content */}
         <div className="p-6 max-w-4xl mx-auto">
           {tab === "profile" && <ProfileSection />}
-
           {tab === "privacy" && <PrivacySection />}
           {tab === "notifications" && <NotificationsSection />}
           {tab === "security" && <SecuritySection />}

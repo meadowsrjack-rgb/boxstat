@@ -197,69 +197,65 @@ export default function CoachSettingsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-12 gap-8">
-          {/* Sidebar */}
-          <div className="col-span-12 md:col-span-3">
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <nav className="space-y-1">
-                {[
-                  { key: "profile", label: "Profile", icon: User },
-                  { key: "coaching", label: "Coaching Info", icon: Users },
-                  { key: "privacy", label: "Privacy", icon: Shield },
-                  { key: "notifications", label: "Notifications", icon: Bell },
-                  { key: "security", label: "Security", icon: Key },
-                  { key: "connections", label: "Connections", icon: LinkIcon },
-                  { key: "billing", label: "Billing", icon: CreditCard },
-                  { key: "devices", label: "Devices", icon: Smartphone },
-                  { key: "legal", label: "Legal", icon: FileText },
-                  { key: "danger", label: "Account Actions", icon: AlertTriangle },
-                ].map(({ key, label, icon: Icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => setCurrentTab(key as TabKey)}
-                    className={`w-full text-left flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      currentTab === key
-                        ? "bg-red-100 text-red-700"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid={`tab-${key}`}
-                  >
-                    <Icon className="mr-3 h-4 w-4" />
-                    {label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </div>
+      {/* Horizontal Tabs */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-6">
+          <nav className="flex gap-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {[
+              { key: "profile", label: "Profile", icon: User },
+              { key: "coaching", label: "Coaching Info", icon: Users },
+              { key: "privacy", label: "Privacy", icon: Shield },
+              { key: "notifications", label: "Notifications", icon: Bell },
+              { key: "security", label: "Security", icon: Key },
+              { key: "connections", label: "Connections", icon: LinkIcon },
+              { key: "billing", label: "Billing", icon: CreditCard },
+              { key: "devices", label: "Devices", icon: Smartphone },
+              { key: "legal", label: "Legal", icon: FileText },
+              { key: "danger", label: "Account Actions", icon: AlertTriangle },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setCurrentTab(key as TabKey)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-t-lg whitespace-nowrap transition-all border-b-2 ${
+                  currentTab === key
+                    ? "bg-red-50 text-red-700 border-red-500 font-medium"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-transparent"
+                }`}
+                data-testid={`tab-${key}`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="text-sm">{label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
 
-          {/* Main Content */}
-          <div className="col-span-12 md:col-span-9">
-            <div className="space-y-6">
-              {currentTab === "profile" && <ProfileTab user={currentUser} />}
-              {currentTab === "coaching" && <CoachingTab user={currentUser} />}
-              {currentTab === "privacy" && <PrivacyTab user={currentUser} />}
-              {currentTab === "notifications" && <NotificationsTab user={currentUser} />}
-              {currentTab === "security" && (
-                <SecurityTab 
-                  user={currentUser} 
-                  childProfiles={childProfiles}
-                  onSwitchProfile={handleSwitchProfile}
-                />
-              )}
-              {currentTab === "connections" && <ConnectionsTab user={currentUser} />}
-              {currentTab === "billing" && <BillingTab user={currentUser} />}
-              {currentTab === "devices" && <DevicesTab user={currentUser} />}
-              {currentTab === "legal" && <LegalTab user={currentUser} />}
-              {currentTab === "danger" && (
-                <DangerTab 
-                  user={currentUser} 
-                  childProfiles={childProfiles}
-                  onSwitchProfile={handleSwitchProfile}
-                />
-              )}
-            </div>
-          </div>
+      {/* Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6">
+          {currentTab === "profile" && <ProfileTab user={currentUser} />}
+          {currentTab === "coaching" && <CoachingTab user={currentUser} />}
+          {currentTab === "privacy" && <PrivacyTab user={currentUser} />}
+          {currentTab === "notifications" && <NotificationsTab user={currentUser} />}
+          {currentTab === "security" && (
+            <SecurityTab 
+              user={currentUser} 
+              childProfiles={childProfiles}
+              onSwitchProfile={handleSwitchProfile}
+            />
+          )}
+          {currentTab === "connections" && <ConnectionsTab user={currentUser} />}
+          {currentTab === "billing" && <BillingTab user={currentUser} />}
+          {currentTab === "devices" && <DevicesTab user={currentUser} />}
+          {currentTab === "legal" && <LegalTab user={currentUser} />}
+          {currentTab === "danger" && (
+            <DangerTab 
+              user={currentUser} 
+              childProfiles={childProfiles}
+              onSwitchProfile={handleSwitchProfile}
+            />
+          )}
         </div>
       </div>
 

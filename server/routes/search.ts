@@ -123,6 +123,42 @@ router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res
   res.json({ ok: true });
 });
 
+// Search Notion players with rich data (name, team, program)
+router.get("/notion-players", isAuthenticated, async (req: any, res) => {
+  try {
+    const q = (req.query.q as string || "").trim();
+    
+    if (!q || q.length < 2) {
+      return res.json({ ok: true, players: [] });
+    }
+
+    try {
+      const players = notionService.searchPlayers(q);
+      res.json({ 
+        ok: true, 
+        players: players.map(player => ({
+          id: player.id,
+          fullName: player.name,
+          team: player.team,
+          currentProgram: player.currentProgram,
+          profileUrl: player.profileUrl,
+          displayText: `${player.name}${player.team ? `, ${player.team}` : ''}${player.currentProgram ? ` (${player.currentProgram})` : ''}`
+        }))
+      });
+    } catch (notionError: any) {
+      console.error("Notion player search failed:", notionError.message);
+      res.json({ 
+        ok: false, 
+        error: "Unable to load player data. Please ensure Notion integration is properly configured.",
+        players: []
+      });
+    }
+  } catch (error) {
+    console.error("Error searching Notion players:", error);
+    res.status(500).json({ ok: false, error: "Failed to search players" });
+  }
+});
+
 async function getViewerTeamIds(accountId?: string): Promise<number[]> {
   if (!accountId) return [];
   const r = await pool.query(`SELECT DISTINCT team_id FROM profiles WHERE account_id=$1 AND team_id IS NOT NULL`, [accountId]);

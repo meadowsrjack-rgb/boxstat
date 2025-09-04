@@ -41,12 +41,27 @@ export default function SearchClaimPlayer() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Search players query
-  const { data: searchResults = [], isLoading: isSearching } = useQuery({
-    queryKey: ['/api/players/search', searchQuery],
+  // Search players query using Notion data
+  const { data: searchResponse, isLoading: isSearching } = useQuery({
+    queryKey: ['/api/search/notion-players', searchQuery],
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 2) return { ok: true, players: [] };
+      
+      const response = await fetch(`/api/search/notion-players?q=${encodeURIComponent(searchQuery)}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
     enabled: searchQuery.length >= 2,
     staleTime: 30000, // Cache for 30 seconds
   });
+
+  const searchResults = searchResponse?.players || [];
 
   // Claim request mutation
   const claimRequestMutation = useMutation({
@@ -208,15 +223,15 @@ export default function SearchClaimPlayer() {
                     )}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-gray-900 truncate">
-                        {player.fullName}
+                        {player.displayText || player.fullName}
                       </h4>
-                      {player.teamName && (
-                        <p className="text-sm text-gray-600">{player.teamName}</p>
-                      )}
-                      {player.jerseyNumber && (
-                        <Badge variant="outline" className="mt-1">
-                          #{player.jerseyNumber}
-                        </Badge>
+                      {(player.team || player.currentProgram) && (
+                        <p className="text-sm text-gray-600">
+                          {player.team && player.currentProgram 
+                            ? `${player.team} (${player.currentProgram})`
+                            : player.team || player.currentProgram
+                          }
+                        </p>
                       )}
                     </div>
                     <Button
@@ -251,17 +266,20 @@ export default function SearchClaimPlayer() {
             <div className="space-y-4">
               {/* Player Info */}
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                {selectedPlayer.photoUrl && (
-                  <img 
-                    src={selectedPlayer.photoUrl} 
-                    alt={selectedPlayer.fullName}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                )}
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <span className="text-red-600 font-semibold text-sm">
+                    {selectedPlayer.fullName?.charAt(0) || '?'}
+                  </span>
+                </div>
                 <div>
-                  <p className="font-semibold">{selectedPlayer.fullName}</p>
-                  {selectedPlayer.teamName && (
-                    <p className="text-sm text-gray-600">{selectedPlayer.teamName}</p>
+                  <p className="font-semibold">{selectedPlayer.displayText || selectedPlayer.fullName}</p>
+                  {(selectedPlayer.team || selectedPlayer.currentProgram) && (
+                    <p className="text-sm text-gray-600">
+                      {selectedPlayer.team && selectedPlayer.currentProgram 
+                        ? `${selectedPlayer.team} (${selectedPlayer.currentProgram})`
+                        : selectedPlayer.team || selectedPlayer.currentProgram
+                      }
+                    </p>
                   )}
                 </div>
               </div>

@@ -1478,18 +1478,19 @@ function TeamBlock() {
   });
 
   const { data: playerResults } = useQuery({
-    queryKey: ["/api/players/search", searchQuery],
+    queryKey: ["/api/search/notion-players", searchQuery],
     queryFn: async () => {
-      if (searchQuery.length < 2) return [];
+      if (searchQuery.length < 2) return { ok: true, players: [] };
       try {
-        const response = await fetch(`/api/players/search?search=${encodeURIComponent(searchQuery)}`, {
+        const response = await fetch(`/api/search/notion-players?q=${encodeURIComponent(searchQuery)}`, {
           credentials: 'include'
         });
-        if (!response.ok) return [];
-        return response.json();
+        if (!response.ok) return { ok: true, players: [] };
+        const data = await response.json();
+        return data;
       } catch (error) {
         console.log("Player search not available:", error);
-        return [];
+        return { ok: true, players: [] };
       }
     },
     enabled: searchQuery.length >= 2,
@@ -1499,7 +1500,7 @@ function TeamBlock() {
   const searchResults = {
     ok: true,
     teams: teamResults?.teams || [],
-    players: playerResults || []
+    players: playerResults?.players || []
   };
   const searchError = null; // Since we're handling errors gracefully
   

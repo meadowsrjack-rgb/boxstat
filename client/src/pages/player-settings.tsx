@@ -32,7 +32,7 @@ import {
   Globe,
   Users,
   Lock,
-
+  MapPin,
   Trophy,
   Copy,
 } from "lucide-react";
@@ -520,18 +520,171 @@ function SecuritySection() {
 
 // Devices section
 function DevicesSection() {
+  const { toast } = useToast();
+  const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'denied' | 'testing'>('unknown');
+  const [isTestingLocation, setIsTestingLocation] = useState(false);
+
+  // Check location permission status on component mount
+  useEffect(() => {
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        setLocationPermission(result.state as 'granted' | 'denied');
+      }).catch(() => {
+        setLocationPermission('unknown');
+      });
+    }
+  }, []);
+
+  const testLocation = async () => {
+    setIsTestingLocation(true);
+    setLocationPermission('testing');
+    
+    try {
+      const timeoutId = setTimeout(() => {
+        setIsTestingLocation(false);
+        setLocationPermission('denied');
+        toast({
+          title: 'Location Test Failed',
+          description: 'Location request timed out. Please enable location access in your browser.',
+          variant: 'destructive',
+        });
+      }, 10000);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timeoutId);
+          setIsTestingLocation(false);
+          setLocationPermission('granted');
+          toast({
+            title: 'Location Access Working!',
+            description: `Your location was detected successfully. Check-in will work properly.`,
+          });
+        },
+        (error) => {
+          clearTimeout(timeoutId);
+          setIsTestingLocation(false);
+          setLocationPermission('denied');
+          let errorMessage = 'Location access was denied or failed.';
+          
+          if (error.code === 1) {
+            errorMessage = 'Location access denied. Please enable location permissions for this website.';
+          } else if (error.code === 2) {
+            errorMessage = 'Location unavailable. Please ensure GPS is enabled on your device.';
+          } else if (error.code === 3) {
+            errorMessage = 'Location request timed out. Please try again.';
+          }
+          
+          toast({
+            title: 'Location Test Failed',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 9000,
+          maximumAge: 30000
+        }
+      );
+    } catch (error) {
+      setIsTestingLocation(false);
+      setLocationPermission('denied');
+      toast({
+        title: 'Location Not Supported',
+        description: 'Your browser does not support location services.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getLocationStatusColor = () => {
+    switch (locationPermission) {
+      case 'granted': return 'text-green-600';
+      case 'denied': return 'text-red-600';
+      case 'testing': return 'text-blue-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getLocationStatusText = () => {
+    switch (locationPermission) {
+      case 'granted': return 'Enabled ✓';
+      case 'denied': return 'Denied ✗';
+      case 'testing': return 'Testing...';
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <SectionHeader icon={Smartphone} title="Devices" subtitle="Trusted devices and app permissions." />
+      <SectionHeader icon={Smartphone} title="Devices & Permissions" subtitle="Manage device access and app permissions for check-ins." />
 
+      {/* Location Permissions Section */}
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
+          <div>
+            <h3 className="text-md font-medium mb-4 flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-red-600" />
+              Location Access for Check-ins
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <h4 className="font-medium">Location Permission Status</h4>
+                  <p className="text-sm text-gray-500">Required for gym check-ins and attendance tracking</p>
+                </div>
+                <div className="text-right">
+                  <div className={`font-medium ${getLocationStatusColor()}`}>
+                    {getLocationStatusText()}
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={testLocation}
+                    disabled={isTestingLocation}
+                    className="mt-2"
+                  >
+                    {isTestingLocation ? 'Testing...' : 'Test Location'}
+                  </Button>
+                </div>
+              </div>
+
+              {locationPermission === 'denied' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-medium text-red-800 mb-2">Location Access Required</h4>
+                  <p className="text-sm text-red-700 mb-3">
+                    To use the check-in feature at events, you need to enable location access. Here's how:
+                  </p>
+                  <div className="text-sm text-red-700 space-y-1">
+                    <p><strong>Chrome/Edge:</strong> Click the location icon in the address bar → Allow</p>
+                    <p><strong>Firefox:</strong> Click the shield icon → Enable Location</p>
+                    <p><strong>Safari:</strong> Safari → Settings → Websites → Location → Allow</p>
+                    <p><strong>Mobile:</strong> Go to browser settings → Site permissions → Location → Allow</p>
+                  </div>
+                </div>
+              )}
+
+              {locationPermission === 'granted' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-medium text-green-800 mb-2">Location Access Enabled ✓</h4>
+                  <p className="text-sm text-green-700">
+                    Perfect! You can now use the check-in feature at events. The system will automatically detect when you're within 200 meters of the gym and enable check-in 30 minutes before events start.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Current Device */}
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-md font-medium">Current Device</h3>
-              <p className="text-sm text-gray-500">Chrome on macOS - Last active now</p>
+              <p className="text-sm text-gray-500">This browser session - Last active now</p>
             </div>
-            <Button variant="outline" size="sm">Revoke</Button>
+            <Badge variant="outline">Active</Badge>
           </div>
         </CardContent>
       </Card>

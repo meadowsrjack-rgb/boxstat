@@ -14,6 +14,36 @@ const calendar = google.calendar({
   auth: GOOGLE_CALENDAR_API_KEY
 });
 
+// Geocoding function to convert address to coordinates
+async function geocodeLocation(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (!address || address === 'TBD') {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_CALENDAR_API_KEY}`
+    );
+    
+    const data = await response.json();
+    
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      console.log(`Geocoded "${address}" to coordinates: ${location.lat}, ${location.lng}`);
+      return {
+        lat: location.lat,
+        lng: location.lng
+      };
+    } else {
+      console.log(`Geocoding failed for "${address}": ${data.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error geocoding location "${address}":`, error);
+    return null;
+  }
+}
+
 export interface GoogleCalendarEvent {
   id: string;
   summary: string;
@@ -89,13 +119,19 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     // Extract team information if available
     const teamId = extractTeamId(googleEvent.summary, googleEvent.description);
 
+    // Geocode the location to get coordinates for check-in functionality
+    const location = googleEvent.location || 'TBD';
+    const coordinates = await geocodeLocation(location);
+
     const eventData = {
       title: googleEvent.summary || 'Untitled Event',
       description: googleEvent.description || '',
       eventType,
       startTime,
       endTime,
-      location: googleEvent.location || 'TBD',
+      location,
+      latitude: coordinates?.lat || null,
+      longitude: coordinates?.lng || null,
       teamId,
       playerId: null,
       opponentTeam: extractOpponentTeam(googleEvent.summary, googleEvent.description),
@@ -114,11 +150,21 @@ async function processGoogleCalendarEvent(googleEvent: any) {
       const hasChanged = 
         existingEvent.title !== eventData.title ||
         existingEvent.startTime.getTime() !== eventData.startTime.getTime() ||
-        existingEvent.location !== eventData.location;
+        existingEvent.location !== eventData.location ||
+        existingEvent.latitude !== eventData.latitude ||
+        existingEvent.longitude !== eventData.longitude;
 
       if (hasChanged) {
         await storage.updateEvent(existingEvent.id, eventData);
-        console.log(`Updated event: ${eventData.title}`);
+        console.log(`Updated event: ${eventData.title}${coordinates ? ` (geocoded to ${coordinates.lat}, ${coordinates.lng})` : ''}`);
+      } else if (!existingEvent.latitude && !existingEvent.longitude && coordinates) {
+        // Update events that don't have coordinates yet
+        await storage.updateEvent(existingEvent.id, { 
+          ...eventData, 
+          latitude: coordinates.lat, 
+          longitude: coordinates.lng 
+        });
+        console.log(`Added coordinates to existing event: ${eventData.title} (${coordinates.lat}, ${coordinates.lng})`);
       }
     } else {
       // Create new event
@@ -131,7 +177,7 @@ async function processGoogleCalendarEvent(googleEvent: any) {
   }
 }
 
-function determineEventType(summary: string, description: string): string {
+function determineEventType(summary: string, description: string): 'practice' | 'game' | 'tournament' | 'camp' | 'skills' {
   const text = `${summary} ${description}`.toLowerCase();
   
   if (text.includes('practice') || text.includes('training')) {

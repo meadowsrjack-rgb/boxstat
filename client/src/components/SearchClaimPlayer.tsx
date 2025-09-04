@@ -9,7 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import { debounce } from 'lodash';
+// Simple debounce implementation
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+};
 
 interface SearchResult {
   id: string;
@@ -17,6 +24,11 @@ interface SearchResult {
   teamName?: string;
   jerseyNumber?: string;
   photoUrl?: string;
+  // New Notion fields
+  displayText?: string;
+  team?: string;
+  currentProgram?: string;
+  profileUrl?: string;
 }
 
 interface ClaimRequestData {
@@ -68,7 +80,7 @@ export default function SearchClaimPlayer() {
     mutationFn: async (data: ClaimRequestData) => 
       apiRequest('/api/players/claim/request', {
         method: 'POST',
-        body: JSON.stringify(data)
+        data: data
       }),
     onSuccess: (response) => {
       if (response.type === 'verification') {
@@ -103,7 +115,7 @@ export default function SearchClaimPlayer() {
     mutationFn: async (data: VerifyClaimData) =>
       apiRequest('/api/players/claim/verify', {
         method: 'POST',
-        body: JSON.stringify(data)
+        data: data
       }),
     onSuccess: (response) => {
       setClaimStep('success');
@@ -210,7 +222,7 @@ export default function SearchClaimPlayer() {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {searchResults.map((player) => (
+            {searchResults.map((player: SearchResult) => (
               <Card key={player.id} className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardContent className="pt-4">
                   <div className="flex items-center space-x-3">

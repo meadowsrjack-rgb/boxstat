@@ -38,7 +38,8 @@ export default function Teams() {
       const url = '/api/search/players?q=' + encodeURIComponent(q);
       const res = await fetch(url);
       return res.json();
-    }
+    },
+    enabled: q.trim().length > 0
   });
   const { data: teams = { teams: [] as TeamCard[] } } = useQuery({
     queryKey: ['search', 'teams', q],
@@ -46,7 +47,8 @@ export default function Teams() {
       const url = '/api/search/teams?q=' + encodeURIComponent(q);
       const res = await fetch(url);
       return res.json();
-    }
+    },
+    enabled: q.trim().length > 0
   });
 
   const [, navigate] = useLocation();
@@ -81,8 +83,14 @@ export default function Teams() {
       </div>
 
       {tab === 'players' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {players.players.map(p => (
+        <div className="space-y-4">
+          {q.trim().length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Start typing to search for players...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {players.players.map((p: PlayerCard) => (
             <Card key={p.id} className="hover:shadow-md transition">
               <CardContent className="p-3 flex gap-3">
                 <Avatar className="w-12 h-12">
@@ -102,13 +110,21 @@ export default function Teams() {
                 <Button variant="outline" onClick={() => navigate(`/player/${p.id}`)}>View</Button>
               </CardContent>
             </Card>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {tab === 'teams' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {teams.teams.map(t => (
+        <div className="space-y-4">
+          {q.trim().length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Start typing to search for teams...
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {teams.teams.map((t: TeamCard) => (
             <Card key={t.id} className="hover:shadow-md transition">
               <CardContent className="p-3">
                 <div className="font-semibold">{t.name}</div>
@@ -123,33 +139,11 @@ export default function Teams() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={openTeamId!==null} onOpenChange={(v) => !v && setOpenTeamId(null)}>
-        <DialogContent>
-          <DialogTitle>Team Snapshot</DialogTitle>
-          {teamSnapshot.data?.ok && (
-            <div className="space-y-2">
-              <div className="font-semibold">{teamSnapshot.data.team.name}</div>
-              <div className="text-sm opacity-70">{teamSnapshot.data.team.ageGroup}</div>
-              <div className="text-sm opacity-70">Coach: {teamSnapshot.data.team.coachName || 'TBD'}</div>
-              <div className="mt-2 font-medium">Roster</div>
-              <div className="grid grid-cols-1 gap-2 max-h-80 overflow-auto pr-1">
-                {teamSnapshot.data.roster.map((p: any) => (
-                  <div key={p.id} className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      {p.profile_image_url ? <AvatarImage src={p.profile_image_url}/> : <AvatarFallback>{(p.first_name||'?')[0]}{(p.last_name||'?')[0]}</AvatarFallback>}
-                    </Avatar>
-                    <div className="text-sm">{p.first_name} {p.last_name}</div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
     </div>
   );

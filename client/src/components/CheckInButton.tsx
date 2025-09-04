@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -36,10 +36,21 @@ export default function CheckInButton({
 }: Props) {
   const { coords, loading, error, getOnce } = useGeo(true);
   const [distance, setDistance] = useState<number | null>(null);
+  const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
   const { toast } = useToast();
 
   // Check if event is within time window (15 min before to 30 min after start)
   const timeOk = withinWindow(event.startTime, event.endTime);
+
+  // Automatically get location when time window opens
+  useEffect(() => {
+    if (timeOk && !autoLocationAttempted && !coords && !loading) {
+      setAutoLocationAttempted(true);
+      getOnce().catch(() => {
+        // Silent fail for auto-attempt - user can manually retry
+      });
+    }
+  }, [timeOk, autoLocationAttempted, coords, loading, getOnce]);
 
   // Check if user is within radius of event location
   const nearby = useMemo(() => {
@@ -90,7 +101,14 @@ export default function CheckInButton({
 
   const handleCheckDistance = async () => {
     const pos = await getOnce();
-    if (!pos) return;
+    if (!pos) {
+      toast({
+        title: 'Location Access Needed',
+        description: 'Please allow location access to check your distance from the event.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     if (!event.latitude || !event.longitude) {
       toast({
@@ -100,6 +118,12 @@ export default function CheckInButton({
       });
       return;
     }
+
+    // Location was successfully obtained and distance calculated via useMemo
+    toast({
+      title: 'Location Updated',
+      description: distance !== null ? `You are ${Math.round(distance)}m from the event location.` : 'Location check complete.',
+    });
   };
 
   const handleCheckIn = async () => {
@@ -202,15 +226,21 @@ export default function CheckInButton({
         </p>
       )}
       
+      {timeOk && !coords && !loading && (
+        <p className="text-sm text-orange-600" data-testid="text-location-needed">
+          Location access needed - click "Check Location" to enable check-in.
+        </p>
+      )}
+      
       {timeOk && !nearby && distance !== null && (
         <p className="text-sm text-orange-600" data-testid="text-distance-warning">
-          You must be within {radiusMeters}m of the event location to check in.
+          You must be within {radiusMeters}m of the event location to check in. Currently {Math.round(distance)}m away.
         </p>
       )}
       
       {error && (
         <p className="text-sm text-destructive" data-testid="text-location-error">
-          {error}
+          {error} - Click "Check Location" to try again.
         </p>
       )}
     </div>

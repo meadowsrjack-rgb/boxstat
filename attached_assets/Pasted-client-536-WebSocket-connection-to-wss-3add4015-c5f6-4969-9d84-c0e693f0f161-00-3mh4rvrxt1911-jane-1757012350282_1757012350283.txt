@@ -1,0 +1,255 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=tvvg8gmGzCXc' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=tvvg8gmGzCXc' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=04723172:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+App.tsx:58 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:114 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+App.tsx:115 Profile completed status: true
+App.tsx:116 IsAuthenticated: true
+App.tsx:117 IsLoading: false
+App.tsx:135 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:647 Awards Summary: undefined
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:114 User data for profile check: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+App.tsx:115 Profile completed status: true
+App.tsx:116 IsAuthenticated: true
+App.tsx:117 IsLoading: false
+App.tsx:135 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:647 Awards Summary: undefined
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:349 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ player-dashboard.tsx:349
+safelyCallDestroy @ chunk-RPCDYKBN.js?v=04723172:16748
+commitHookEffectListUnmount @ chunk-RPCDYKBN.js?v=04723172:16875
+commitPassiveUnmountInsideDeletedTreeOnFiber @ chunk-RPCDYKBN.js?v=04723172:18283
+commitPassiveUnmountEffectsInsideOfDeletedTree_begin @ chunk-RPCDYKBN.js?v=04723172:18245
+commitPassiveUnmountEffects_begin @ chunk-RPCDYKBN.js?v=04723172:18181
+commitPassiveUnmountEffects @ chunk-RPCDYKBN.js?v=04723172:18169
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=04723172:19489
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=04723172:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=04723172:19416
+commitRoot @ chunk-RPCDYKBN.js?v=04723172:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=04723172:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=04723172:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=04723172:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=04723172:555
+flush @ @tanstack_react-query.js?v=04723172:569
+batch @ @tanstack_react-query.js?v=04723172:587
+dispatch_fn @ @tanstack_react-query.js?v=04723172:996
+setData @ @tanstack_react-query.js?v=04723172:696
+onSuccess @ @tanstack_react-query.js?v=04723172:897
+resolve @ @tanstack_react-query.js?v=04723172:456
+Promise.then
+run @ @tanstack_react-query.js?v=04723172:498
+start @ @tanstack_react-query.js?v=04723172:536
+fetch @ @tanstack_react-query.js?v=04723172:926
+executeFetch_fn @ @tanstack_react-query.js?v=04723172:2211
+onSubscribe @ @tanstack_react-query.js?v=04723172:1898
+subscribe @ @tanstack_react-query.js?v=04723172:24
+(anonymous) @ @tanstack_react-query.js?v=04723172:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=04723172:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=04723172:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=04723172:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=04723172:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=04723172:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=04723172:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=04723172:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=04723172:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=04723172:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=04723172:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=04723172:19432
+commitRoot @ chunk-RPCDYKBN.js?v=04723172:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=04723172:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=04723172:18718
+workLoop @ chunk-RPCDYKBN.js?v=04723172:197
+flushWork @ chunk-RPCDYKBN.js?v=04723172:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=04723172:384
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:647 Awards Summary: {rookieBadgesCount: 0, starterBadgesCount: 3, allStarBadgesCount: 2, superstarBadgesCount: 1, hofBadgesCount: 0, …}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: 1
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: 13
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(0)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: 13u
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(0)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: y
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: yo
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: you
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: yout
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:1467 Searching for teams with query: youth
+player-dashboard.tsx:1471 Search response status: 200
+player-dashboard.tsx:1474 Search results: {ok: true, teams: Array(10)}
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgA…AAAAACPr/2hFWAAAAAIYAp2KG8prCCI8AAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true

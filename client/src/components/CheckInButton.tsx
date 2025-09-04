@@ -57,6 +57,20 @@ export default function CheckInButton({
     if (!coords || !event.latitude || !event.longitude) return false;
     const d = distanceMeters(coords, { lat: event.latitude, lng: event.longitude });
     setDistance(d);
+    
+    // Debug logging
+    console.log('Location Debug:', {
+      userLat: coords.lat,
+      userLng: coords.lng, 
+      eventLat: event.latitude,
+      eventLng: event.longitude,
+      distance: d,
+      radiusMeters,
+      withinRadius: d <= radiusMeters,
+      eventTitle: event.title,
+      eventLocation: event.location
+    });
+    
     return d <= radiusMeters;
   }, [coords, event.latitude, event.longitude, radiusMeters]);
 

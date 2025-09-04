@@ -104,30 +104,21 @@ export class NotionPlayerService {
         if (!youthClubTeam) {
           // If it's a relation field, try to get the page title
           const relationId = getNotionProperty(properties, 'Youth Club Team', 'relation');
-          console.log(`Player ${name}: relationId for Youth Club Team = ${relationId}`);
           if (relationId) {
             try {
               // Fetch the related page to get its title
-              console.log(`Fetching page details for team ${relationId}...`);
               const relatedPage = await notion.pages.retrieve({ page_id: relationId });
               if ('properties' in relatedPage) {
                 // Find the title property
                 const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title');
                 youthClubTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
-                console.log(`Resolved team name: ${youthClubTeam}`);
-              } else {
-                console.log(`No properties found in page ${relationId}`);
               }
             } catch (error) {
               console.error(`Error fetching team page ${relationId}:`, error);
               // Fallback to the relation ID
               youthClubTeam = relationId;
             }
-          } else {
-            console.log(`Player ${name}: No relation ID found for Youth Club Team`);
           }
-        } else {
-          console.log(`Player ${name}: Team from select field = ${youthClubTeam}`);
         }
         const hsTeam = getNotionProperty(properties, 'HS Team', 'rich_text');
         const grade = getNotionProperty(properties, 'Grade', 'number') || getNotionProperty(properties, 'Grade', 'select');

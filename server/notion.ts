@@ -99,7 +99,27 @@ export class NotionPlayerService {
                       getNotionProperty(properties, 'Status', 'rich_text') || 
                       'Active';
         const currentProgram = getNotionProperty(properties, 'Current Program', 'select');
-        const youthClubTeam = getNotionProperty(properties, 'Youth Club Team', 'select') || getNotionProperty(properties, 'Youth Club Team', 'relation');
+        // Handle Youth Club Team - could be select or relation
+        let youthClubTeam = getNotionProperty(properties, 'Youth Club Team', 'select');
+        if (!youthClubTeam) {
+          // If it's a relation field, try to get the page title
+          const relationId = getNotionProperty(properties, 'Youth Club Team', 'relation');
+          if (relationId) {
+            try {
+              // Fetch the related page to get its title
+              const relatedPage = await notion.pages.retrieve({ page_id: relationId });
+              if ('properties' in relatedPage) {
+                // Find the title property
+                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title');
+                youthClubTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
+              }
+            } catch (error) {
+              console.error(`Error fetching team page ${relationId}:`, error);
+              // Fallback to the relation ID
+              youthClubTeam = relationId;
+            }
+          }
+        }
         const hsTeam = getNotionProperty(properties, 'HS Team', 'rich_text');
         const grade = getNotionProperty(properties, 'Grade', 'number') || getNotionProperty(properties, 'Grade', 'select');
         const sessionTags = getNotionProperty(properties, 'Session', 'multi_select');

@@ -149,7 +149,7 @@ export default function CheckInButton({
   const getTimeWindowInfo = () => {
     const now = new Date();
     const start = new Date(event.startTime);
-    const checkInStart = new Date(start.getTime() - 15 * 60 * 1000); // 15 min before
+    const checkInStart = new Date(start.getTime() - 30 * 60 * 1000); // 30 min before
     const checkInEnd = new Date(start.getTime() + 30 * 60 * 1000); // 30 min after
     
     if (now < checkInStart) {
@@ -222,7 +222,7 @@ export default function CheckInButton({
       {/* Status messages */}
       {!timeOk && (
         <p className="text-sm text-muted-foreground" data-testid="text-time-window-info">
-          Check-in opens 15 minutes before event start and closes 30 minutes after.
+          Check-in opens 30 minutes before event start and closes 30 minutes after.
         </p>
       )}
       

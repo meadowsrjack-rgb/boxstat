@@ -215,13 +215,32 @@ function ProfileSection() {
       if (!response.ok) throw new Error("Failed to update profile");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedUser) => {
+      // Update local profile state with server response
+      setProfile({
+        firstName: updatedUser.firstName || "",
+        lastName: updatedUser.lastName || "",
+        position: updatedUser.position || "",
+        jerseyNumber: updatedUser.jerseyNumber || "",
+        city: updatedUser.city || "",
+      });
+      
+      // Invalidate queries to refresh all user data across the app
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
-      toast({ title: "Profile updated successfully" });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/team`] });
+      
+      toast({ 
+        title: "Profile Updated", 
+        description: "Your player profile has been successfully updated."
+      });
     },
-    onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Update Profile", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -230,79 +249,103 @@ function ProfileSection() {
       <SectionHeader icon={User} title="Player Profile" subtitle="Update your basketball information and personal details" />
 
       <Card className="bg-transparent border-0 shadow-none">
-        <CardContent className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-              <Input
-                value={profile.firstName}
-                onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
-                placeholder="Enter first name"
-              />
+        <CardContent className="p-6">
+          <div className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Personal Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">First Name</label>
+                  <Input
+                    value={profile.firstName}
+                    onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
+                    placeholder="Enter first name"
+                    data-testid="input-first-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                  <Input
+                    value={profile.lastName}
+                    onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
+                    placeholder="Enter last name"
+                    data-testid="input-last-name"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">City (From)</label>
+                <Input
+                  value={profile.city}
+                  onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                  placeholder="Enter your city"
+                  className="max-w-md"
+                  data-testid="input-city"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <Input
-                value={profile.lastName}
-                onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
-                placeholder="Enter last name"
-              />
-            </div>
-          </div>
 
-          <Separator />
+            {/* Basketball Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium text-gray-900 border-b pb-2">Basketball Information</h3>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Team</label>
+                <Input
+                  value={(teamData as any)?.name || "No team assigned"}
+                  disabled
+                  className="bg-gray-100 text-gray-500 cursor-not-allowed max-w-md"
+                  placeholder="Team will be assigned when you join"
+                  data-testid="input-team"
+                />
+                <p className="text-xs text-gray-500">Team is set when you request to join a team</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 max-w-md">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Position</label>
+                  <Select value={profile.position} onValueChange={(value) => setProfile(p => ({ ...p, position: value }))}>
+                    <SelectTrigger data-testid="select-position">
+                      <SelectValue placeholder="Select position" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {POSITION_OPTIONS.map((position) => (
+                        <SelectItem key={position} value={position}>{position}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Jersey Number</label>
+                  <Select value={profile.jerseyNumber} onValueChange={(value) => setProfile(p => ({ ...p, jerseyNumber: value }))}>
+                    <SelectTrigger data-testid="select-jersey">
+                      <SelectValue placeholder="Select number" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JERSEY_OPTIONS.map((number) => (
+                        <SelectItem key={number} value={number}>#{number}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
-              <Input
-                value={(teamData as any)?.name || "No team assigned"}
-                disabled
-                className="bg-gray-100 text-gray-500 cursor-not-allowed"
-                placeholder="Team will be assigned when you join"
-              />
-              <p className="text-xs text-gray-500 mt-1">Team is set when you request to join a team</p>
+            {/* Save Button */}
+            <div className="pt-6 border-t">
+              <Button 
+                onClick={() => mutation.mutate(profile)} 
+                disabled={mutation.isPending}
+                className="px-8"
+                data-testid="button-save-profile"
+              >
+                {mutation.isPending ? "Saving Changes..." : "Save Changes"}
+              </Button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City (From)</label>
-              <Input
-                value={profile.city}
-                onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
-                placeholder="Enter your city"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
-              <Select value={profile.position} onValueChange={(value) => setProfile(p => ({ ...p, position: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select position" />
-                </SelectTrigger>
-                <SelectContent>
-                  {POSITION_OPTIONS.map((position) => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
-              <Select value={profile.jerseyNumber} onValueChange={(value) => setProfile(p => ({ ...p, jerseyNumber: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select number" />
-                </SelectTrigger>
-                <SelectContent>
-                  {JERSEY_OPTIONS.map((number) => (
-                    <SelectItem key={number} value={number}>#{number}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <Button onClick={() => mutation.mutate(profile)} disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Save Profile"}
-            </Button>
           </div>
         </CardContent>
       </Card>

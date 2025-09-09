@@ -2,6 +2,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { users, userBadges, userTrophies, attendances, events } from "@shared/schema";
 import { eq, and, count, sql } from "drizzle-orm";
+import { notificationService } from "./services/notificationService";
 
 // Import awards system from shared
 import { AUTO_AWARDS, handleAwardTrigger, getAwardProgress, type UserStats } from "../shared/awards.registry";
@@ -132,6 +133,13 @@ export class AwardsService {
           await this.saveEarnedAward(userId, awardId);
         }
       }
+
+      // Check for trophy progress notifications (for awards not yet earned)
+      try {
+        await this.checkTrophyProgress(userId, userStats);
+      } catch (progressError) {
+        console.error("Error checking trophy progress:", progressError);
+      }
       
       return newlyEarned;
     } catch (error) {
@@ -157,20 +165,50 @@ export class AwardsService {
         const badgeNumericId = await this.getBadgeNumericId(awardId);
         
         // Insert into userBadges table
-        await db.insert(userBadges).values({
+        const insertResult = await db.insert(userBadges).values({
           userId,
           badgeId: badgeNumericId,
         }).onConflictDoNothing(); // Prevent duplicates
+        
+        // Send notification for badge earned (only if actually inserted)
+        if (insertResult.rowCount && insertResult.rowCount > 0) {
+          try {
+            await notificationService.notifyBadgeEarned(
+              userId,
+              award.name,
+              award.description
+            );
+          } catch (notificationError) {
+            console.error("Error sending badge notification:", notificationError);
+          }
+        }
         
       } else if (award.kind === "Trophy") {
         // Similar for trophies
         const trophyNumericId = this.getTrophyNumericId(awardId);
         
-        await db.insert(userTrophies).values({
+        const insertResult = await db.insert(userTrophies).values({
           userId,
           trophyId: trophyNumericId,
           earnedAt: new Date(),
         }).onConflictDoNothing();
+        
+        // Send notification for trophy earned (only if actually inserted)
+        if (insertResult.rowCount && insertResult.rowCount > 0) {
+          try {
+            await notificationService.createNotification({
+              userId,
+              type: 'trophy_earned',
+              title: 'Trophy Unlocked! 🏆',
+              message: `You earned the ${award.name} trophy! ${award.description}`,
+              priority: 'high',
+              actionUrl: '/trophies-badges',
+              data: { trophyName: award.name, trophyDescription: award.description }
+            });
+          } catch (notificationError) {
+            console.error("Error sending trophy notification:", notificationError);
+          }
+        }
       }
 
       console.log(`Saved award ${awardId} for user ${userId}`);
@@ -223,6 +261,77 @@ export class AwardsService {
     } catch (error) {
       console.error("Error manually awarding badge:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Check trophy progress and send notifications at milestones
+   */
+  private async checkTrophyProgress(userId: string, userStats: UserStats): Promise<void> {
+    try {
+      // Get user's existing awards to avoid duplicate notifications
+      const earnedBadges = await db
+        .select({ badgeId: userBadges.badgeId })
+        .from(userBadges)
+        .where(eq(userBadges.userId, userId));
+
+      const earnedTrophies = await db
+        .select({ trophyId: userTrophies.trophyId })
+        .from(userTrophies)
+        .where(eq(userTrophies.userId, userId));
+
+      const earnedAwardIds = new Set([
+        ...earnedBadges.map(b => `badge-${b.badgeId}`),
+        ...earnedTrophies.map(t => `trophy-${t.trophyId}`)
+      ]);
+
+      // Check progress for trophies (high-tier awards)
+      const trophyAwards = AUTO_AWARDS.filter(award => 
+        award.kind === "Trophy" && 
+        !earnedAwardIds.has(award.id) &&
+        award.progressKind === "counter"
+      );
+
+      for (const trophy of trophyAwards) {
+        const progress = getAwardProgress(trophy, userStats);
+        
+        if (progress.progressKind === "counter" && progress.current !== undefined && progress.target !== undefined) {
+          const progressPercentage = Math.floor((progress.current / progress.target) * 100);
+          
+          // Send notifications at 25%, 50%, 75% progress milestones
+          const milestones = [25, 50, 75];
+          
+          for (const milestone of milestones) {
+            if (progressPercentage >= milestone && progressPercentage < milestone + 10) {
+              // Check if we've already sent this milestone notification recently
+              const recentNotifications = await notificationService.getUserNotifications(userId, {
+                limit: 5,
+                unreadOnly: false
+              });
+              
+              const alreadySent = recentNotifications.some(n => 
+                n.type === 'trophy_progress' &&
+                n.data?.trophyName === trophy.name &&
+                n.data?.progress === milestone &&
+                new Date(n.createdAt) > new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+              );
+
+              if (!alreadySent) {
+                await notificationService.notifyTrophyProgress(
+                  userId,
+                  trophy.name,
+                  milestone
+                );
+                
+                // Only send one milestone notification per check
+                break;
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error checking trophy progress:", error);
     }
   }
 }

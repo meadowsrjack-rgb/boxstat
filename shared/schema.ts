@@ -445,6 +445,74 @@ export const approvals = pgTable("approvals", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+// Notifications system tables
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  type: varchar("type", { 
+    enum: [
+      "event_rsvp_available", 
+      "event_checkin_available", 
+      "event_reminder", 
+      "trophy_progress", 
+      "badge_earned", 
+      "training_reminder", 
+      "skills_evaluation", 
+      "improvement_recommendation", 
+      "payment_due", 
+      "team_message"
+    ] 
+  }).notNull(),
+  title: varchar("title").notNull(),
+  message: text("message").notNull(),
+  data: jsonb("data"), // Extra data specific to notification type
+  isRead: boolean("is_read").default(false),
+  isPushSent: boolean("is_push_sent").default(false),
+  pushSentAt: timestamp("push_sent_at"),
+  priority: varchar("priority", { enum: ["low", "normal", "high", "urgent"] }).default("normal"),
+  expiresAt: timestamp("expires_at"), // Optional expiration for time-sensitive notifications
+  actionUrl: varchar("action_url"), // Deep link or route to relevant page
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  eventRsvp: boolean("event_rsvp").default(true),
+  eventCheckin: boolean("event_checkin").default(true),
+  eventReminders: boolean("event_reminders").default(true),
+  trophyProgress: boolean("trophy_progress").default(true),
+  badgeEarned: boolean("badge_earned").default(true),
+  trainingReminders: boolean("training_reminders").default(true),
+  skillsEvaluation: boolean("skills_evaluation").default(true),
+  improvementRecommendation: boolean("improvement_recommendation").default(true),
+  paymentDue: boolean("payment_due").default(true),
+  teamMessages: boolean("team_messages").default(true),
+  pushNotifications: boolean("push_notifications").default(true),
+  emailNotifications: boolean("email_notifications").default(true),
+  quietHoursStart: varchar("quiet_hours_start").default("22:00"), // 10 PM
+  quietHoursEnd: varchar("quiet_hours_end").default("07:00"), // 7 AM
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueUserPreferences: unique().on(table.userId),
+}));
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  endpoint: text("endpoint").notNull(),
+  p256dhKey: text("p256dh_key").notNull(),
+  authKey: text("auth_key").notNull(),
+  userAgent: text("user_agent"),
+  deviceType: varchar("device_type", { enum: ["desktop", "mobile", "tablet"] }),
+  isActive: boolean("is_active").default(true),
+  lastUsed: timestamp("last_used").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserEndpoint: unique().on(table.userId, table.endpoint),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
@@ -472,6 +540,9 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   parentsAsPlayer: many(familyMembers, {
     relationName: "playerRelation",
   }),
+  notifications: many(notifications),
+  notificationPreferences: one(notificationPreferences),
+  pushSubscriptions: many(pushSubscriptions),
 }));
 
 // New relations for accounts and profiles
@@ -647,6 +718,19 @@ export const approvalsRelations = relations(approvals, ({ one }) => ({
   account: one(users, { fields: [approvals.accountId], references: [users.id] }),
 }));
 
+// Notification relations
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}));
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, { fields: [notificationPreferences.userId], references: [users.id] }),
+}));
+
+export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one }) => ({
+  user: one(users, { fields: [pushSubscriptions.userId], references: [users.id] }),
+}));
+
 // Insert schemas for new tables
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true, updatedAt: true });
@@ -681,6 +765,11 @@ export const insertPlayerSchema = createInsertSchema(players).omit({ id: true, c
 export const insertGuardianSchema = createInsertSchema(guardians).omit({ createdAt: true });
 export const insertClaimCodeSchema = createInsertSchema(claimCodes).omit({ createdAt: true });
 export const insertApprovalSchema = createInsertSchema(approvals).omit({ id: true, createdAt: true, resolvedAt: true });
+
+// Notification insert schemas
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, pushSentAt: true });
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true, lastUsed: true });
 
 // New types
 export type Account = typeof accounts.$inferSelect;
@@ -752,6 +841,14 @@ export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
 export type InsertGuardian = z.infer<typeof insertGuardianSchema>;
 export type InsertClaimCode = z.infer<typeof insertClaimCodeSchema>;
 export type InsertApproval = z.infer<typeof insertApprovalSchema>;
+
+// Notification system types
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 
 // Notion-based types
 export type NotionPlayer = {

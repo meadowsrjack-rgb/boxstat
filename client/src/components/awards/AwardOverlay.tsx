@@ -40,12 +40,7 @@ export function AwardOverlay({ award, progress, isOpen, onClose }: AwardOverlayP
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto" data-testid="overlay-award">
         <SheetHeader className="space-y-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="text-lg">{award.name}</SheetTitle>
-            <Button variant="ghost" size="sm" onClick={onClose} data-testid="button-close-overlay">
-              ✕
-            </Button>
-          </div>
+          <SheetTitle className="text-lg">{award.name}</SheetTitle>
         </SheetHeader>
         
         <div className="space-y-6 mt-6">

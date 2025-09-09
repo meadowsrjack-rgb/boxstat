@@ -126,20 +126,12 @@ export default function QrScannerModal({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md" data-testid="qr-scanner-modal">
-        <div className="flex items-center justify-between mb-4">
+        <DialogHeader className="mb-4">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
             Scan Event QR Code
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            data-testid="button-close-qr-scanner"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        </DialogHeader>
         
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">

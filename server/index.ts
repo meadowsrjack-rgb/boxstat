@@ -5,6 +5,7 @@ import { ensureAuxTables } from "./boot";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeScheduler } from "./scheduler";
 import { notionService } from "./notion";
+import { notificationScheduler } from "./services/notificationScheduler";
 
 const app = express();
 app.use(express.json());
@@ -80,6 +81,9 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     // Initialize calendar sync scheduler after server starts
     initializeScheduler();
+    
+    // Initialize notification scheduler
+    notificationScheduler.start();
     
     // Initialize Notion sync on startup
     if (process.env.NOTION_API_KEY && process.env.NOTION_DB_ID) {

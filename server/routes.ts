@@ -10,6 +10,7 @@ import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
 import { notionService } from "./notion";
+import { notificationService } from "./services/notificationService";
 import { distanceMeters, withinWindow, validateAndConsumeNonce } from './utils/geo.js';
 
 import calendarRoutes from "./routes/calendar";
@@ -371,6 +372,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const eventData = insertEventSchema.parse(req.body);
       const event = await storage.createEvent(eventData);
+
+      // Trigger RSVP available notification for team members
+      if (event.teamId) {
+        try {
+          const teamMembers = await storage.getTeamMembers(event.teamId);
+          for (const member of teamMembers) {
+            await notificationService.notifyEventRSVPAvailable(
+              member.userId, 
+              event.id, 
+              event.title
+            );
+          }
+        } catch (notificationError) {
+          console.error("Error sending RSVP notifications:", notificationError);
+          // Don't fail the request if notifications fail
+        }
+      }
+
       res.json(event);
     } catch (error) {
       console.error("Error creating event:", error);
@@ -2430,6 +2449,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (type === "onsite") {
         // Attendance trigger for on-site check-in
         await awardsService.processAwardTriggers(userId, "attendance");
+        
+        // Send notification confirming successful check-in
+        try {
+          const event = await storage.getEvent(parseInt(eventId));
+          if (event) {
+            await notificationService.createNotification({
+              userId,
+              type: 'event_checkin_complete',
+              title: 'Check-in Successful!',
+              message: `You've successfully checked in to "${event.title}"`,
+              priority: 'normal',
+              actionUrl: `/events/${eventId}`,
+              data: { eventId: parseInt(eventId), eventTitle: event.title }
+            });
+          }
+        } catch (notificationError) {
+          console.error("Error sending check-in confirmation notification:", notificationError);
+        }
       }
       
       res.json(checkin);

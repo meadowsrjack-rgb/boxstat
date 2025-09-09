@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
+import EventDetailPanel from "@/components/EventDetailPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -80,6 +81,11 @@ export default function ParentDashboard() {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Enhanced calendar state
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("parentDashboardTab", activeTab);
@@ -178,12 +184,18 @@ export default function ParentDashboard() {
   }, [parentEvents]);
 
   const upcomingEvents = useMemo(() => {
-    const start = startOfDay(new Date());
-    return parentEvents
-      .filter((ev) => isAfter(new Date((ev as any).startTime || (ev as any).start_time), start))
-      .filter((ev) => !isSameDay(new Date((ev as any).startTime || (ev as any).start_time), new Date()))
-      .slice(0, 3);
-  }, [parentEvents]);
+    if (isSameDay(selectedDate, new Date())) {
+      const start = startOfDay(new Date());
+      return parentEvents
+        .filter((ev) => isAfter(new Date((ev as any).startTime || (ev as any).start_time), start))
+        .filter((ev) => !isSameDay(new Date((ev as any).startTime || (ev as any).start_time), new Date()))
+        .slice(0, 3);
+    } else {
+      return parentEvents
+        .filter((ev) => isSameDay(new Date((ev as any).startTime || (ev as any).start_time), selectedDate))
+        .slice(0, 10);
+    }
+  }, [parentEvents, selectedDate]);
 
   const initials = `${(currentUser.firstName || "").charAt(0)}${(currentUser.lastName || "").charAt(0)}`.toUpperCase();
 
@@ -240,7 +252,15 @@ export default function ParentDashboard() {
                   <h3 className="text-lg font-bold text-gray-900">Today</h3>
                   {todayEvents.length ? (
                     todayEvents.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                      <div 
+                        key={event.id} 
+                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => {
+                          setSelectedEvent(event as Event);
+                          setEventDetailOpen(true);
+                        }}
+                        data-testid={`event-item-${event.id}`}
+                      >
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
@@ -252,6 +272,7 @@ export default function ParentDashboard() {
                             )}
                           </div>
                         </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     ))
                   ) : (
@@ -260,10 +281,20 @@ export default function ParentDashboard() {
                 </section>
 
                 <section className="space-y-2">
-                  <h3 className="text-lg font-bold text-gray-900">Upcoming</h3>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {isSameDay(selectedDate, new Date()) ? "Upcoming" : `Events for ${format(selectedDate, 'MMM d')}`}
+                  </h3>
                   {upcomingEvents.length ? (
                     upcomingEvents.map((event) => (
-                      <div key={event.id} className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm">
+                      <div 
+                        key={event.id} 
+                        className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => {
+                          setSelectedEvent(event as Event);
+                          setEventDetailOpen(true);
+                        }}
+                        data-testid={`upcoming-event-item-${event.id}`}
+                      >
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
@@ -272,16 +303,24 @@ export default function ParentDashboard() {
                             </span>
                           </div>
                         </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     ))
                   ) : (
-                    <div className="text-sm text-gray-500">No upcoming events.</div>
+                    <div className="text-sm text-gray-500">
+                      {isSameDay(selectedDate, new Date()) ? "No upcoming events." : `No events for ${format(selectedDate, 'MMM d')}.`}
+                    </div>
                   )}
                 </section>
               </div>
 
               {/* Calendar component - moved below events */}
-              <PlayerCalendar events={parentEvents as any} currentUser={{...currentUser, email: currentUser.email || ''}} />
+              <PlayerCalendar 
+                events={parentEvents as any} 
+                currentUser={{...currentUser, email: currentUser.email || ''}}
+                selectedDate={selectedDate}
+                onDateSelect={setSelectedDate}
+              />
             </div>
           )}
 
@@ -297,6 +336,14 @@ export default function ParentDashboard() {
           {activeTab === "payments" && (
             <PaymentsTab billing={billing || undefined} onOpenStripe={openStripePortal} />
           )}
+
+          {/* Event Detail Modal */}
+          <EventDetailPanel
+            event={selectedEvent}
+            userId={currentUser.id}
+            open={eventDetailOpen}
+            onOpenChange={setEventDetailOpen}
+          />
         </div>
       </main>
     </div>

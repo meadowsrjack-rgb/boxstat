@@ -37,6 +37,8 @@ import {
   Users,
   Copy,
 } from "lucide-react";
+import NotificationCenter from "@/components/NotificationCenter";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
 import { Input } from "@/components/ui/input";
@@ -661,10 +663,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       {/* Top Bar (QR removed) */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
-          <div className="flex items-center justify-end">
-            <Button variant="ghost" size="icon" className="h-12 w-12">
-              <Bell className="h-12 w-12" />
-            </Button>
+          <div className="flex items-center justify-end gap-2">
+            <NotificationCenter />
             <Button
               variant="ghost"
               size="icon"
@@ -705,6 +705,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Activity */}
           {activeTab === "activity" && (
             <div className="-mx-6">
+              {/* Push Notification Setup */}
+              <div className="px-6 mb-6">
+                <PushNotificationSetup compact />
+              </div>
               {/* Event Summaries - moved above calendar */}
               <div className="px-6 py-6 space-y-4">
                 <section className="space-y-2">

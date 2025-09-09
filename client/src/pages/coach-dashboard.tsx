@@ -595,6 +595,7 @@ function RosterTab({
       {/* Roster list */}
       <div className="space-y-2">
         <h3 className="text-lg font-bold text-gray-900">Roster</h3>
+        {console.log("Team roster:", team.roster?.length, "players")}
         {team.roster?.length ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
@@ -626,7 +627,12 @@ function RosterTab({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onReward(p as any)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          console.log("Trophy button clicked for player:", p.firstName, p.lastName);
+                          onReward(p as any);
+                        }}
                         className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
                         data-testid={`button-reward-${p.id}`}
                       >

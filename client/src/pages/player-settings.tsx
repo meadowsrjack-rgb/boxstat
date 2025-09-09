@@ -201,16 +201,22 @@ function ProfileSection() {
     lastName: (user as any)?.lastName || "",
     position: (user as any)?.position || "",
     jerseyNumber: (user as any)?.jerseyNumber || "",
-    city: (user as any)?.city || "",
+    city: (user as any)?.city || (user as any)?.address || "",
   });
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
+      // Send both city and address fields to ensure compatibility
+      const updateData = {
+        ...data,
+        address: data.city, // Also update address field for dashboard compatibility
+      };
+      
       const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(data),
+        body: JSON.stringify(updateData),
       });
       if (!response.ok) throw new Error("Failed to update profile");
       return response.json();
@@ -222,13 +228,15 @@ function ProfileSection() {
         lastName: updatedUser.lastName || "",
         position: updatedUser.position || "",
         jerseyNumber: updatedUser.jerseyNumber || "",
-        city: updatedUser.city || "",
+        city: updatedUser.city || updatedUser.address || "",
       });
       
       // Invalidate queries to refresh all user data across the app
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/team`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/awards`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/events`] });
       
       toast({ 
         title: "Profile Updated", 

@@ -161,6 +161,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     height: "",
     weight: "",
     location: "",
+    city: "", // Add city field to match what the UI displays
     position: "",
     jerseyNumber: "",
     instagram: "",
@@ -182,6 +183,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Update editable profile when user data changes
   useEffect(() => {
     if (currentUser) {
+      const cityValue = currentUser.city || currentUser.address || "";
       setEditableProfile(prev => ({
         ...prev,
         firstName: currentUser.firstName || "",
@@ -189,7 +191,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         teamName: currentUser.teamName || "",
         age: currentUser.age || "",
         height: currentUser.height || "",
-        location: currentUser.address || "",
+        location: cityValue, // Use city/address for location
+        city: cityValue, // Also set city field for display
         position: currentUser.position || "",
         jerseyNumber: currentUser.jerseyNumber?.toString() || "",
       }));
@@ -1095,7 +1098,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                         <CityTypeahead
                           value={editableProfile.city}
-                          onChange={(city) => setEditableProfile((p) => ({ ...p, city: city }))}
+                          onChange={(city) => setEditableProfile((p) => ({ ...p, city: city, location: city }))}
                         />
                       </div>
                     </div>

@@ -428,8 +428,10 @@ export default function CoachDashboard() {
               }}
 
               onReward={(p) => {
+                console.log("onReward called with player:", p);
                 setSelectedPlayer(p);
                 setAwardsOpen(true);
+                console.log("awardsOpen set to true");
               }}
             />
           )}
@@ -839,6 +841,8 @@ function AwardsDialog({
 }) {
   const [tab, setTab] = useState<"trophies" | "awards">("trophies");
   const list = tab === "trophies" ? TEAM_TROPHIES : COACH_AWARDS;
+  
+  console.log("AwardsDialog render - open:", open, "player:", player, "list length:", list.length);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

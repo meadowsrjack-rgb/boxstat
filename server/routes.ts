@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies } from "@shared/schema";
 import { eq, count } from "drizzle-orm";
@@ -25,6 +26,13 @@ import path from "path";
 import fs from "fs/promises";
 
 let wss: WebSocketServer | null = null;
+
+// Initialize Stripe if secret key is available
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { 
+      apiVersion: "2023-10-16",
+    })
+  : null;
 
 // Configure multer for file uploads
 const upload = multer({
@@ -3286,6 +3294,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error syncing from Notion:', error);
       res.status(500).json({ message: 'Sync failed' });
+    }
+  });
+
+  // Stripe billing portal route
+  app.post('/api/billing/portal', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!stripe) {
+        return res.status(400).json({ error: 'Stripe not configured' });
+      }
+
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user?.stripeCustomerId) {
+        return res.status(400).json({ error: 'No Stripe customer found' });
+      }
+
+      const session = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.protocol}://${req.get('host')}/parent-dashboard`,
+      });
+
+      res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating billing portal session:', error);
+      res.status(500).json({ error: 'Failed to create billing portal session' });
     }
   });
 

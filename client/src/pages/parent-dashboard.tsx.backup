@@ -171,10 +171,7 @@ export default function ParentDashboard() {
       const res = await fetch("/api/billing/portal", { method: "POST", credentials: "include" });
       const j = await res.json();
       if (j?.url) window.location.href = j.url;
-      else {
-        const errorMessage = j?.error || "Please try again.";
-        toast({ title: "Couldn't open billing portal", description: errorMessage, variant: "destructive" });
-      }
+      else toast({ title: "Couldn’t open billing portal", description: "Please try again.", variant: "destructive" });
     } catch (e) {
       toast({ title: "Billing portal error", description: "Please try again.", variant: "destructive" });
     }

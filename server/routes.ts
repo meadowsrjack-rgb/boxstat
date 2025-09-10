@@ -2147,6 +2147,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileCompleted: true
       });
 
+      // Find the parent profile for this user
+      const userProfiles = await storage.getAccountProfiles(userId);
+      const parentProfile = userProfiles.find(p => p.profileType === 'parent');
+      
+      if (!parentProfile) {
+        throw new Error('Parent profile not found. Please create a parent profile first.');
+      }
+
       // Create player profiles for each player
       const createdPlayers = [];
       for (const player of players) {
@@ -2168,12 +2176,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdPlayers.push(createdPlayer);
         console.log('Created player profile:', createdPlayer.id);
         
-        // Create family relationship between parent and player
-        await storage.addFamilyMember({
-          parentId: userId,
-          playerId: createdPlayer.id,
-          relationship: 'parent'
+        // Create profile relationship between parent and player
+        await storage.createProfileRelationship({
+          accountId: userId,
+          parentProfileId: parentProfile.id,
+          playerProfileId: createdPlayer.id,
+          relationship: 'parent',
+          canMakePayments: true,
+          canViewReports: true,
+          emergencyContact: false
         });
+        console.log('Created profile relationship:', parentProfile.id, '->', createdPlayer.id);
       }
 
       console.log('Family onboarding completed successfully');

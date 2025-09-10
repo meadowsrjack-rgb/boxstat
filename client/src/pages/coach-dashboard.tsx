@@ -345,9 +345,11 @@ export default function CoachDashboard() {
                         data-testid={`event-item-${event.id}`}
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Session"}</h4>
+                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                            <span>{format(new Date((event as any).startTime || (event as any).start_time), "h:mm a")}</span>
+                            <span>
+                              {format(new Date((event as any).startTime || (event as any).start_time), "h:mm a")}
+                            </span>
                             {(event as any).location && (
                               <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{(event as any).location}</span>
                             )}
@@ -357,13 +359,13 @@ export default function CoachDashboard() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-sm text-gray-500">No sessions today.</div>
+                    <div className="text-sm text-gray-500">No events today.</div>
                   )}
                 </section>
 
                 <section className="space-y-2">
                   <h3 className="text-lg font-bold text-gray-900">
-                    {isSameDay(selectedDate, new Date()) ? "Upcoming" : `Sessions for ${format(selectedDate, 'MMM d')}`}
+                    {isSameDay(selectedDate, new Date()) ? "Upcoming" : `Events for ${format(selectedDate, 'MMM d')}`}
                   </h3>
                   {upcomingEvents.length ? (
                     upcomingEvents.map((event) => (
@@ -377,9 +379,11 @@ export default function CoachDashboard() {
                         data-testid={`upcoming-event-item-${event.id}`}
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Session"}</h4>
+                          <h4 className="font-semibold text-gray-900 text-sm">{(event as any).title || (event as any).summary || "Event"}</h4>
                           <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                            <span>{format(new Date((event as any).startTime || (event as any).start_time), "EEE, MMM d • h:mm a")}</span>
+                            <span>
+                              {format(new Date((event as any).startTime || (event as any).start_time), "EEE, MMM d • h:mm a")}
+                            </span>
                           </div>
                         </div>
                         <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -387,7 +391,7 @@ export default function CoachDashboard() {
                     ))
                   ) : (
                     <div className="text-sm text-gray-500">
-                      {isSameDay(selectedDate, new Date()) ? "No upcoming sessions." : `No sessions for ${format(selectedDate, 'MMM d')}.`}
+                      {isSameDay(selectedDate, new Date()) ? "No upcoming events." : `No events for ${format(selectedDate, 'MMM d')}.`}
                     </div>
                   )}
                 </section>
@@ -428,10 +432,8 @@ export default function CoachDashboard() {
               }}
 
               onReward={(p) => {
-                console.log("onReward called with player:", p);
                 setSelectedPlayer(p);
                 setAwardsOpen(true);
-                console.log("awardsOpen set to true");
               }}
             />
           )}
@@ -595,7 +597,6 @@ function RosterTab({
       {/* Roster list */}
       <div className="space-y-2">
         <h3 className="text-lg font-bold text-gray-900">Roster</h3>
-        {console.log("Team roster:", team.roster?.length, "players")}
         {team.roster?.length ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
@@ -627,12 +628,7 @@ function RosterTab({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          console.log("Trophy button clicked for player:", p.firstName, p.lastName);
-                          onReward(p as any);
-                        }}
+                        onClick={() => onReward(p as any)}
                         className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
                         data-testid={`button-reward-${p.id}`}
                       >
@@ -847,8 +843,6 @@ function AwardsDialog({
 }) {
   const [tab, setTab] = useState<"trophies" | "awards">("trophies");
   const list = tab === "trophies" ? TEAM_TROPHIES : COACH_AWARDS;
-  
-  console.log("AwardsDialog render - open:", open, "player:", player, "list length:", list.length);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

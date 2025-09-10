@@ -1842,7 +1842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the user's current profile status
       await storage.updateUser(userId, { 
         profileCompleted: true,
-        userType: profile.profileType as "parent" | "player" | "admin"
+        userType: profile.profileType as "parent" | "player" | "admin" | "coach"
       });
       
       res.json(profile);

@@ -1,0 +1,573 @@
+# UYP App — Payments & Onboarding Integration (LeadConnector + Player Profiles)
+
+This single reply bundles everything you asked for:
+- The existing **Payments Tab** that embeds your five LeadConnector forms and **prefills** known fields.
+- A **Parent Onboarding Wizard** that collects all required parent + player details, automatically creating player profiles under the account.
+- A **My Purchases** card that shows purchase status per product.
+- Minimal backend/API + DB schema sketches (Drizzle/Prisma‑style) and a **webhook** outline to mark entitlements on successful payments.
+- A **Replit build prompt** to stitch this into your app.
+
+> Copy the files into your project structure as indicated. All components use shadcn/ui conventions you already have. Adjust imports/paths (`@/components/...`, `@/hooks/useAuth`, `@shared/schema`) if your layout differs.
+
+---
+
+## 1) `src/pages/PaymentsTab.tsx`
+```tsx
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Loader2, CreditCard, ExternalLink, UserPlus } from "lucide-react";
+import MyPurchasesCard from "@/components/payments/MyPurchasesCard";
+
+// ---- Configure your products here ---- //
+export const PRODUCTS = [
+  { id: "youth-club",        label: "Youth Club",           url: "https://api.leadconnectorhq.com/widget/form/zw8C9v1BasFRUO65I2ox" },
+  { id: "skills-academy",    label: "Skills Academy",       url: "https://api.leadconnectorhq.com/widget/form/lcm8WeBVF7Hqk18Xxmoz" },
+  { id: "friday-night-hoops",label: "Friday Night Hoops",   url: "https://api.leadconnectorhq.com/widget/form/NRA6ItmRxchrD9MiNApB" },
+  { id: "high-school-club",  label: "High School Club",     url: "https://api.leadconnectorhq.com/widget/form/4cxFXqmuOlJrz1LSms8S" },
+  { id: "irvine-flight",     label: "Irvine Flight",        url: "https://api.leadconnectorhq.com/widget/form/N3QlzEbYFqg0EEsYr6Tf" },
+] as const;
+
+export type ProductId = (typeof PRODUCTS)[number]["id"]; 
+
+function useLastTab(defaultId: ProductId) {
+  const key = "uyp:last-payments-tab";
+  const [value, setValue] = useState<ProductId>(() => {
+    const saved = typeof window !== "undefined" ? (localStorage.getItem(key) as ProductId | null) : null;
+    return saved ?? defaultId;
+  });
+  useEffect(() => { localStorage.setItem(key, value); }, [value]);
+  return [value, setValue] as const;
+}
+
+function buildSrc(baseUrl: string, prefill: Record<string, string | undefined>) {
+  const u = new URL(baseUrl);
+  Object.entries(prefill).forEach(([k, v]) => { if (v) u.searchParams.set(k, v); });
+  return u.toString();
+}
+
+function LeadConnectorFrame({ src }: { src: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [height, setHeight] = useState<number>(1200);
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const originOk = typeof e.origin === "string" && e.origin.includes("leadconnectorhq.com");
+      if (!originOk) return;
+      try {
+        const data: any = e.data;
+        const h = (typeof data === "number" && data) || data?.height || data?.h || data?.frameHeight || data?.payload?.height;
+        if (typeof h === "number" && h > 400 && h < 4000) setHeight(h + 24);
+      } catch {}
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  return (
+    <div className="relative w-full">
+      {!loaded && <div className="absolute inset-0 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+      <iframe
+        ref={frameRef}
+        title="UYP Payment Form"
+        src={src}
+        className={`w-full transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
+        style={{ minHeight: height, border: 0 }}
+        sandbox="allow-forms allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+        allow="payment *; clipboard-write; autoplay"
+        onLoad={() => setLoaded(true)}
+      />
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <Badge variant="secondary" className="hidden md:inline-flex">Secure checkout</Badge>
+        <a href={src} target="_blank" rel="noreferrer" className="inline-flex items-center text-sm hover:underline">
+          Open in new tab <ExternalLink className="ml-1 h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+export default function PaymentsTab() {
+  const { user } = useAuth();
+  const [tab, setTab] = useLastTab(PRODUCTS[0].id);
+
+  // Let parent choose which player they're registering, then pass to LC form via query params
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | undefined>(undefined);
+  const players = user?.players ?? []; // assume user.players is array from backend
+  const selectedPlayer = players.find(p => p.id === selectedPlayerId) ?? players[0];
+
+  const basePrefill = useMemo(() => ({
+    email: user?.email ?? undefined,
+    first_name: user?.profile?.firstName ?? undefined,
+    last_name: user?.profile?.lastName ?? undefined,
+    phone: user?.profile?.phone ?? undefined,
+  }), [user]);
+
+  const playerPrefill = useMemo(() => ({
+    // Replace cf_* with your actual LC custom field keys
+    cf_player_first: selectedPlayer?.firstName,
+    cf_player_last: selectedPlayer?.lastName,
+    cf_player_grade: selectedPlayer?.grade,
+    cf_player_team: selectedPlayer?.teamName,
+    cf_player_dob: selectedPlayer?.dob,
+  }), [selectedPlayer]);
+
+  return (
+    <div className="mx-auto max-w-5xl p-4 md:p-6 space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
+          <p className="text-muted-foreground">Register or purchase packages directly inside the app.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => (window.location.href = "/onboarding") } className="gap-2">
+            <UserPlus className="h-4 w-4"/> Add/Update Players
+          </Button>
+          <Button variant="default" className="gap-2" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
+            <CreditCard className="h-4 w-4" /> Checkout
+          </Button>
+        </div>
+      </div>
+
+      <MyPurchasesCard />
+
+      {players.length > 0 && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Registering player:</span>
+          <select
+            className="border rounded-md px-2 py-1"
+            value={selectedPlayerId ?? players[0]?.id}
+            onChange={(e) => setSelectedPlayerId(e.target.value)}
+          >
+            {players.map((p:any) => (
+              <option key={p.id} value={p.id}>{p.firstName} {p.lastName}{p.teamName ? ` — ${p.teamName}`: ""}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      <Card className="border-muted/40">
+        <CardContent className="pt-6">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as ProductId)}>
+            <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+              {PRODUCTS.map((p) => (
+                <TabsTrigger key={p.id} value={p.id} className="text-xs md:text-sm">
+                  {p.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {PRODUCTS.map((p) => {
+              const src = buildSrc(p.url, { ...basePrefill, ...playerPrefill });
+              return (
+                <TabsContent key={p.id} value={p.id} className="mt-4">
+                  <LeadConnectorFrame src={src} />
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <div className="text-sm text-muted-foreground">
+        <p className="mb-1 font-medium">Tips</p>
+        <ul className="list-inside list-disc space-y-1">
+          <li>If the form fails to load due to content blockers, use <span className="font-medium">Open in new tab</span> above.</li>
+          <li>Add tracking params (e.g., <code>playerId</code>, <code>team</code>) in <code>buildSrc()</code> for analytics.</li>
+          <li>Set up the webhook to instantly unlock entitlements after purchase.</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 2) `src/components/payments/MyPurchasesCard.tsx`
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Check, Clock, AlertCircle } from "lucide-react";
+import { PRODUCTS } from "@/pages/PaymentsTab";
+
+export type PurchaseStatus = {
+  productId: string;            // e.g. "skills-academy"
+  status: "active" | "pending" | "expired";
+  purchasedAt?: string;         // ISO
+  expiresAt?: string;           // ISO
+};
+
+export default function MyPurchasesCard() {
+  const { data, isLoading, error } = useQuery<PurchaseStatus[]>({
+    queryKey: ["my-purchases"],
+    queryFn: async () => {
+      const res = await fetch("/api/purchases/me");
+      if (!res.ok) throw new Error("Failed to fetch purchases");
+      return res.json();
+    },
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>My Purchases</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <p className="text-sm text-muted-foreground">Loading...</p>}
+        {error && <p className="text-sm text-red-600">Unable to load purchases.</p>}
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {PRODUCTS.map(p => {
+              const rec = data?.find(d => d.productId === p.id);
+              const status = rec?.status ?? "pending";
+              return (
+                <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <div className="text-sm font-medium">{p.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {rec?.purchasedAt ? new Date(rec.purchasedAt).toLocaleDateString() : "—"}
+                      {rec?.expiresAt ? ` • Expires ${new Date(rec.expiresAt).toLocaleDateString()}` : ""}
+                    </div>
+                  </div>
+                  <Badge variant={status === "active" ? "default" : status === "pending" ? "secondary" : "destructive"} className="gap-1">
+                    {status === "active" && <Check className="h-3 w-3"/>}
+                    {status === "pending" && <Clock className="h-3 w-3"/>}
+                    {status === "expired" && <AlertCircle className="h-3 w-3"/>}
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+---
+
+## 3) Onboarding — parent & players
+
+### 3.1 `src/pages/Onboarding.tsx`
+```tsx
+import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, Trash } from "lucide-react";
+
+// Minimal player shape for onboarding
+type NewPlayer = {
+  firstName: string;
+  lastName: string;
+  dob?: string;     // yyyy-mm-dd
+  grade?: string;
+  teamName?: string;
+};
+
+type Payload = {
+  parent: { firstName: string; lastName: string; phone?: string };
+  players: NewPlayer[];
+};
+
+export default function Onboarding() {
+  const [parent, setParent] = useState({ firstName: "", lastName: "", phone: "" });
+  const [players, setPlayers] = useState<NewPlayer[]>([{ firstName: "", lastName: "" }]);
+
+  const createProfiles = useMutation({
+    mutationFn: async (payload: Payload) => {
+      const res = await fetch("/api/onboarding/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to save onboarding");
+      return res.json();
+    },
+    onSuccess: () => {
+      window.location.href = "/payments"; // go straight to payments
+    },
+  });
+
+  const addPlayer = () => setPlayers(p => [...p, { firstName: "", lastName: "" }]);
+  const removePlayer = (idx: number) => setPlayers(p => p.filter((_, i) => i !== idx));
+
+  const updatePlayer = (idx: number, field: keyof NewPlayer, value: string) => {
+    setPlayers(prev => prev.map((p, i) => (i === idx ? { ...p, [field]: value } : p)));
+  };
+
+  const submit = () => {
+    const payload: Payload = { parent, players: players.filter(p => p.firstName && p.lastName) };
+    createProfiles.mutate(payload);
+  };
+
+  return (
+    <div className="mx-auto max-w-3xl p-4 md:p-6 space-y-6">
+      <Card>
+        <CardHeader><CardTitle>Parent Information</CardTitle></CardHeader>
+        <CardContent className="grid gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>First name</Label>
+              <Input value={parent.firstName} onChange={e => setParent({ ...parent, firstName: e.target.value })} />
+            </div>
+            <div>
+              <Label>Last name</Label>
+              <Input value={parent.lastName} onChange={e => setParent({ ...parent, lastName: e.target.value })} />
+            </div>
+            <div>
+              <Label>Phone</Label>
+              <Input value={parent.phone} onChange={e => setParent({ ...parent, phone: e.target.value })} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Players</CardTitle>
+          <Button variant="outline" size="sm" onClick={addPlayer} className="gap-2"><Plus className="h-4 w-4"/> Add Player</Button>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {players.map((pl, idx) => (
+            <div key={idx} className="rounded-lg border p-3 grid grid-cols-1 md:grid-cols-6 gap-3">
+              <div className="md:col-span-2">
+                <Label>First name</Label>
+                <Input value={pl.firstName} onChange={e => updatePlayer(idx, "firstName", e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <Label>Last name</Label>
+                <Input value={pl.lastName} onChange={e => updatePlayer(idx, "lastName", e.target.value)} />
+              </div>
+              <div>
+                <Label>DOB</Label>
+                <Input type="date" value={pl.dob ?? ""} onChange={e => updatePlayer(idx, "dob", e.target.value)} />
+              </div>
+              <div>
+                <Label>Grade</Label>
+                <Input value={pl.grade ?? ""} onChange={e => updatePlayer(idx, "grade", e.target.value)} />
+              </div>
+              <div className="md:col-span-3">
+                <Label>Team</Label>
+                <Input value={pl.teamName ?? ""} onChange={e => updatePlayer(idx, "teamName", e.target.value)} />
+              </div>
+              <div className="flex items-end justify-end">
+                <Button variant="ghost" size="icon" onClick={() => removePlayer(idx)}><Trash className="h-4 w-4"/></Button>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={submit} disabled={createProfiles.isPending} className="gap-2">
+          {createProfiles.isPending ? "Saving..." : "Save & Continue to Payments"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## 4) Minimal backend/API sketches
+
+> Adjust for your stack (Next.js Route Handlers, Express, Hono, etc.). Types below use Drizzle/Prisma‑style pseudo code.
+
+### 4.1 DB schema (concept)
+```ts
+// @shared/schema.ts (conceptual)
+export type User = {
+  id: string;
+  email: string;
+  profile?: { firstName?: string; lastName?: string; phone?: string };
+};
+
+export type Player = {
+  id: string;
+  parentId: string;          // FK -> User.id
+  firstName: string;
+  lastName: string;
+  dob?: string;
+  grade?: string;
+  teamName?: string;
+};
+
+export type Purchase = {
+  id: string;
+  userId: string;            // FK -> User.id (payer)
+  productId: string;         // one of PRODUCTS ids
+  status: "active" | "pending" | "expired";
+  purchasedAt?: string;      // ISO
+  expiresAt?: string;        // ISO
+};
+```
+
+### 4.2 API routes
+```ts
+// POST /api/onboarding/complete
+// Body: { parent: { firstName, lastName, phone }, players: [...] }
+// - updates current user's profile
+// - upserts players under the account
+
+// GET /api/purchases/me
+// - returns PurchaseStatus[] for current user
+
+// POST /api/webhooks/leadconnector
+// - receives payment success events, resolves user by email, sets Purchase records to active
+```
+
+### 4.3 Example: Express-style handlers
+```ts
+// src/server/routes/onboarding.ts
+import express from "express";
+export const router = express.Router();
+
+router.post("/complete", async (req, res) => {
+  const uid = req.user.id; // assume auth middleware
+  const { parent, players } = req.body as {
+    parent: { firstName: string; lastName: string; phone?: string };
+    players: Array<{ firstName: string; lastName: string; dob?: string; grade?: string; teamName?: string }>;
+  };
+
+  // update user profile
+  await db.user.update({ where: { id: uid }, data: { profile: parent } });
+
+  // upsert players
+  for (const pl of players) {
+    await db.player.upsert({
+      where: { parentId_first_last: { parentId: uid, firstName: pl.firstName, lastName: pl.lastName } },
+      update: { ...pl },
+      create: { parentId: uid, ...pl },
+    });
+  }
+
+  res.json({ ok: true });
+});
+```
+
+```ts
+// src/server/routes/purchases.ts
+import express from "express";
+export const router = express.Router();
+
+router.get("/me", async (req, res) => {
+  const uid = req.user.id;
+  const purchases = await db.purchase.findMany({ where: { userId: uid } });
+  res.json(purchases.map(p => ({
+    productId: p.productId,
+    status: p.status,
+    purchasedAt: p.purchasedAt,
+    expiresAt: p.expiresAt,
+  })));
+});
+```
+
+```ts
+// src/server/routes/webhooks.ts
+import express from "express";
+export const router = express.Router();
+
+router.post("/leadconnector", express.json(), async (req, res) => {
+  const event = req.body;
+  // TODO: verify signature if LC provides one
+  const email = event?.contact?.email || event?.payload?.customer?.email;
+  const productKey = event?.product_id || event?.offer_name || event?.form_name; // map to one of PRODUCTS ids
+
+  if (!email || !productKey) return res.status(400).json({ ok: false });
+
+  const user = await db.user.findUnique({ where: { email } });
+  if (!user) return res.status(404).json({ ok: false });
+
+  const productId = normalizeProduct(productKey); // implement mapping
+
+  await db.purchase.upsert({
+    where: { userId_productId: { userId: user.id, productId } },
+    update: { status: "active", purchasedAt: new Date().toISOString() },
+    create: { userId: user.id, productId, status: "active", purchasedAt: new Date().toISOString() },
+  });
+
+  res.json({ ok: true });
+});
+```
+
+---
+
+## 5) Routing additions
+```tsx
+// src/app/routes.tsx (example)
+import PaymentsTab from "@/pages/PaymentsTab";
+import Onboarding from "@/pages/Onboarding";
+
+export const routes = [
+  { path: "/payments", element: <PaymentsTab /> },
+  { path: "/onboarding", element: <Onboarding /> },
+];
+```
+
+Add a nav link to "/onboarding" for first-time parents (or redirect after signup until completed).
+
+---
+
+## 6) Replit build prompt (paste into Replit Ghostwriter / Tasks)
+```
+You are adding a Payments + Onboarding system to an existing TypeScript/React app that already uses shadcn/ui and a simple Node backend.
+
+Goals:
+1) Create parent onboarding to collect Parent info and one-or-more Players, then store them under the current account.
+2) Embed five LeadConnector checkout forms and prefill with parent + selected player info.
+3) Show a “My Purchases” card that reads /api/purchases/me and displays status across the five products.
+4) Add a webhook receiver for LeadConnector to mark purchases active.
+
+Tasks:
+- Add routes:
+  • /onboarding → from src/pages/Onboarding.tsx
+  • /payments   → from src/pages/PaymentsTab.tsx
+- Create components:
+  • src/components/payments/MyPurchasesCard.tsx
+- Backend (Express or Next Route Handlers):
+  • POST /api/onboarding/complete → updates current user profile and upserts players
+  • GET  /api/purchases/me        → returns PurchaseStatus[] for the logged-in user
+  • POST /api/webhooks/leadconnector → marks Purchase as active based on email + product
+- DB (Drizzle/Prisma): create tables User, Player(parentId FK), Purchase(userId FK, productId, status, purchasedAt, expiresAt). Add unique (userId, productId).
+- Auth hook useAuth() should return { user: { id, email, profile: { firstName, lastName, phone }, players: Player[] } } after onboarding.
+- In PaymentsTab, allow selecting a player to register, then pass to LeadConnector via query params (cf_* fields). Keep tab state in localStorage.
+- Ensure CORS/body parsing set for webhook. Add a mapping normalizeProduct(x) to map LC product/form names/ids to one of:
+  youth-club | skills-academy | friday-night-hoops | high-school-club | irvine-flight
+- QA checklist:
+  • New parent logs in → redirected to /onboarding → creates players → lands on /payments
+  • Prefill shows in LC forms (parent + player fields)
+  • After real/test purchase, webhook sets Purchase active and MyPurchasesCard updates
+```
+
+---
+
+## 7) Custom field mapping for LeadConnector
+In **PaymentsTab**, replace `cf_*` keys with your LeadConnector custom field API keys. If you don’t have them, create the custom fields in GHL → Settings → Custom Fields, then copy their keys and update `playerPrefill`.
+
+**Example mapping**
+```ts
+const playerPrefill = {
+  cf_player_first: selectedPlayer?.firstName,
+  cf_player_last: selectedPlayer?.lastName,
+  cf_player_grade: selectedPlayer?.grade,
+  cf_player_team: selectedPlayer?.teamName,
+  cf_player_dob: selectedPlayer?.dob,
+};
+```
+
+---
+
+### Done
+This bundle gives you: parent+player onboarding → profile creation → prefilled checkouts → post‑purchase unlocks with a status card. Adjust styling, paths, and DB layer as needed for your stack.

@@ -41,6 +41,8 @@ import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
+import FamilyOnboarding from "@/pages/family-onboarding";
+import PaymentsTab from "@/pages/payments";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
 
@@ -127,6 +129,8 @@ function Router() {
       <Route path="/teams" component={Teams} />
         <Route path="/profile-selection" component={ProfileSelection} />
         <Route path="/create-profile" component={CreateProfile} />
+        <Route path="/family-onboarding" component={FamilyOnboarding} />
+        <Route path="/payments" component={PaymentsTab} />
         <Route component={ProfileSelection} />
       </Switch>
     );

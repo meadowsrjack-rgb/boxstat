@@ -17,6 +17,7 @@ import {
   messages,
   teamMessages,
   payments,
+  purchases,
   drills,
   playerStats,
   familyMembers,
@@ -46,6 +47,7 @@ import {
   type Message,
   type TeamMessage,
   type Payment,
+  type Purchase,
   type Drill,
   type PlayerStats,
   type FamilyMember,
@@ -67,6 +69,7 @@ import {
   type InsertMessage,
   type InsertTeamMessage,
   type InsertPayment,
+  type InsertPurchase,
   type InsertDrill,
   type InsertPlayerStats,
   type InsertFamilyMember,
@@ -194,6 +197,11 @@ export interface IStorage {
   getUserPayments(userId: string): Promise<Payment[]>;
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePaymentStatus(paymentId: number, status: string, paidAt?: Date): Promise<Payment>;
+  
+  // Purchase operations (LeadConnector)
+  getUserPurchases(userId: string): Promise<Purchase[]>;
+  createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+  updatePurchaseStatus(purchaseId: number, status: string): Promise<Purchase>;
   
   // Stats operations
   getPlayerStats(userId: string): Promise<PlayerStats[]>;
@@ -866,6 +874,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(payments.id, paymentId))
       .returning();
     return payment;
+  }
+
+  // Purchase operations (LeadConnector)
+  async getUserPurchases(userId: string): Promise<Purchase[]> {
+    return await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.userId, userId))
+      .orderBy(desc(purchases.createdAt));
+  }
+
+  async createPurchase(purchase: InsertPurchase): Promise<Purchase> {
+    const [newPurchase] = await db.insert(purchases).values(purchase).returning();
+    return newPurchase;
+  }
+
+  async updatePurchaseStatus(purchaseId: number, status: string): Promise<Purchase> {
+    const [purchase] = await db
+      .update(purchases)
+      .set({ 
+        status: status as "active" | "pending" | "expired" | "cancelled",
+        updatedAt: new Date()
+      })
+      .where(eq(purchases.id, purchaseId))
+      .returning();
+    return purchase;
   }
 
   // Stats operations

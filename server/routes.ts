@@ -5,7 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases } from "@shared/schema";
 import { eq, count } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -1010,6 +1010,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing SportsEngine payment:", error);
       res.status(500).json({ message: "Failed to complete payment" });
+    }
+  });
+
+  // Purchase routes - LeadConnector Integration
+  app.get('/api/purchases', isAuthenticated, async (req: any, res) => {
+    try {
+      const purchases = await storage.getUserPurchases(req.user.claims.sub);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Error fetching purchases:", error);
+      res.status(500).json({ message: "Failed to fetch purchases" });
+    }
+  });
+
+  // Alias route for client compatibility
+  app.get('/api/purchases/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const purchases = await storage.getUserPurchases(req.user.claims.sub);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Error fetching purchases:", error);
+      res.status(500).json({ message: "Failed to fetch purchases" });
+    }
+  });
+
+  app.post('/api/purchases', isAuthenticated, async (req: any, res) => {
+    try {
+      const purchaseData = insertPurchaseSchema.parse({
+        ...req.body,
+        userId: req.user.claims.sub,
+      });
+      
+      const purchase = await storage.createPurchase(purchaseData);
+      
+      res.json(purchase);
+    } catch (error) {
+      console.error("Error creating purchase:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid purchase data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create purchase" });
+      }
+    }
+  });
+
+  // LeadConnector webhook for purchase status updates
+  // This endpoint should be called by LeadConnector when a purchase is confirmed/cancelled
+  app.post('/api/webhooks/leadconnector/purchase-status', async (req: any, res) => {
+    try {
+      // Verify webhook authenticity using secret token
+      const webhookSecret = process.env.LEADCONNECTOR_WEBHOOK_SECRET;
+      const providedSecret = req.headers['x-webhook-secret'];
+      
+      if (!webhookSecret) {
+        console.error("LeadConnector webhook secret not configured");
+        return res.status(500).json({ message: "Webhook not properly configured" });
+      }
+      
+      if (!providedSecret || providedSecret !== webhookSecret) {
+        console.warn("Unauthorized webhook attempt");
+        return res.status(401).json({ message: "Invalid webhook secret" });
+      }
+      
+      const webhookSchema = z.object({
+        purchaseId: z.number(),
+        leadConnectorOrderId: z.string(),
+        status: z.enum(["active", "pending", "expired", "cancelled"]),
+        userId: z.string().optional(), // For additional verification
+      });
+      
+      const { purchaseId, status, leadConnectorOrderId, userId } = webhookSchema.parse(req.body);
+      
+      // Verify purchase exists and optionally check userId if provided
+      const existingPurchase = await db.select().from(purchases).where(eq(purchases.id, purchaseId)).limit(1);
+      if (existingPurchase.length === 0) {
+        return res.status(404).json({ message: "Purchase not found" });
+      }
+      
+      // Additional verification if userId is provided
+      if (userId && existingPurchase[0].userId !== userId) {
+        console.warn(`Purchase ${purchaseId} userId mismatch: expected ${existingPurchase[0].userId}, got ${userId}`);
+        return res.status(400).json({ message: "Purchase user mismatch" });
+      }
+      
+      // Log the status transition for audit
+      console.log(`LeadConnector webhook: Purchase ${purchaseId} status changing from ${existingPurchase[0].status} to ${status}, Order: ${leadConnectorOrderId}`);
+      
+      const updatedPurchase = await storage.updatePurchaseStatus(purchaseId, status);
+      
+      console.log(`Purchase ${purchaseId} status successfully updated to ${updatedPurchase.status}`);
+      
+      res.json({ success: true, purchaseId, status: updatedPurchase.status });
+    } catch (error) {
+      console.error("Error processing LeadConnector webhook:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid webhook data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to process webhook" });
+      }
     }
   });
 
@@ -2027,6 +2126,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting child profile:", error);
       res.status(500).json({ message: "Failed to delete child profile" });
+    }
+  });
+
+  // Family onboarding completion endpoint
+  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { parent, players } = req.body;
+
+      console.log('Starting family onboarding for user:', userId);
+      console.log('Parent data:', parent);
+      console.log('Players data:', players);
+
+      // Update the user's profile with parent information
+      await storage.updateUser(userId, {
+        firstName: parent.firstName,
+        lastName: parent.lastName,
+        phoneNumber: parent.phone,
+        profileCompleted: true
+      });
+
+      // Create player profiles for each player
+      const createdPlayers = [];
+      for (const player of players) {
+        const playerProfileData = {
+          id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          accountId: userId,
+          profileType: 'player' as const,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          dateOfBirth: player.dob || undefined,
+          schoolGrade: player.grade,
+          teamName: player.teamName,
+          qrCodeData: `UYP-${Date.now()}-${player.firstName}`,
+          profileCompleted: true,
+          isActive: true
+        };
+        
+        const createdPlayer = await storage.createProfile(playerProfileData);
+        createdPlayers.push(createdPlayer);
+        console.log('Created player profile:', createdPlayer.id);
+        
+        // Create family relationship between parent and player
+        await storage.addFamilyMember({
+          parentId: userId,
+          playerId: createdPlayer.id,
+          relationship: 'parent'
+        });
+      }
+
+      console.log('Family onboarding completed successfully');
+      res.json({ 
+        success: true, 
+        message: 'Family setup completed successfully',
+        playersCreated: createdPlayers.length
+      });
+    } catch (error) {
+      console.error('Error completing family onboarding:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to complete family setup',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 

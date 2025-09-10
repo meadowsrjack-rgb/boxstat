@@ -295,6 +295,22 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// LeadConnector purchases table - for UYP program packages
+export const purchases = pgTable("purchases", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  productId: varchar("product_id").notNull(), // e.g. "youth-club", "skills-academy"
+  productLabel: varchar("product_label").notNull(), // Human readable name
+  status: varchar("status", { enum: ["active", "pending", "expired", "cancelled"] }).notNull().default("pending"),
+  leadConnectorOrderId: varchar("lead_connector_order_id"), // External order ID
+  amount: integer("amount").notNull(), // Purchase amount in cents to avoid float precision issues
+  currency: varchar("currency", { enum: ["usd", "eur", "gbp"] }).notNull().default("usd"),
+  purchasedAt: timestamp("purchased_at"),
+  expiresAt: timestamp("expires_at"), // For time-limited programs
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Training subscriptions table
 export const trainingSubscriptions = pgTable("training_subscriptions", {
   id: serial("id").primaryKey(),
@@ -746,6 +762,7 @@ export const insertAnnouncementSchema = createInsertSchema(announcements).omit({
 export const insertMessageReactionSchema = createInsertSchema(messageReactions).omit({ id: true, createdAt: true });
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true, paidAt: true });
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertDrillSchema = createInsertSchema(drills).omit({ id: true, createdAt: true });
 export const insertPlayerStatsSchema = createInsertSchema(playerStats).omit({ id: true, createdAt: true });
 export const insertTrainingSubscriptionSchema = createInsertSchema(trainingSubscriptions).omit({ id: true, createdAt: true, updatedAt: true });
@@ -793,6 +810,7 @@ export type Announcement = typeof announcements.$inferSelect;
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
+export type Purchase = typeof purchases.$inferSelect;
 export type Drill = typeof drills.$inferSelect;
 export type PlayerStats = typeof playerStats.$inferSelect;
 export type TrainingSubscription = typeof trainingSubscriptions.$inferSelect;
@@ -818,6 +836,7 @@ export type InsertAnnouncement = z.infer<typeof insertAnnouncementSchema>;
 export type InsertMessageReaction = z.infer<typeof insertMessageReactionSchema>;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type InsertDrill = z.infer<typeof insertDrillSchema>;
 export type InsertPlayerStats = z.infer<typeof insertPlayerStatsSchema>;
 export type InsertTrainingSubscription = z.infer<typeof insertTrainingSubscriptionSchema>;

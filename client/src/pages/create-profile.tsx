@@ -55,21 +55,21 @@ export default function CreateProfile() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [selectedType, setSelectedType] =
-    useState<"parent" | "player" | "coach" | null>(null);
+    useState<"member" | "coach" | null>(null);
 
-  // Teams (only when player selected)
+  // Teams - not needed for current UYP Member/Coach flow
   const { data: teams = [] } = useQuery<
     Array<{ id: number; name: string; ageGroup: string }>
   >({
     queryKey: ["/api/teams"],
-    enabled: selectedType === "player"
+    enabled: false // Teams not used in this simplified flow
   });
 
   const form = useForm<CreateProfileForm>({
     resolver: zodResolver(createProfileSchema),
     mode: "onChange",
     defaultValues: {
-      profileType: selectedType || "parent",
+      profileType: "parent", // Default to parent for UYP Member
       firstName: "",
       lastName: "",
       phoneNumber: "",
@@ -111,7 +111,14 @@ export default function CreateProfile() {
     onSuccess: (data) => {
       console.log("Profile created successfully:", data);
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
-      setLocation("/profile-selection");
+      
+      // If UYP Member (parent profile), redirect to family onboarding
+      // If UYP Coach, go directly to profile selection  
+      if (selectedType === "member") {
+        setLocation("/family-onboarding");
+      } else {
+        setLocation("/profile-selection");
+      }
     },
     onError: (error: Error) => {
       console.error("Profile creation failed:", error);
@@ -126,10 +133,12 @@ export default function CreateProfile() {
     createProfileMutation.mutate(data);
   };
 
-  const handleTypeSelect = (type: "parent" | "player" | "coach") => {
+  const handleTypeSelect = (type: "member" | "coach") => {
     console.log("Type selected:", type);
     setSelectedType(type);
-    form.setValue("profileType", type);
+    // Map UYP Member to parent profile type, UYP Coach to coach profile type
+    const profileType = type === "member" ? "parent" : "coach";
+    form.setValue("profileType", profileType);
     form.trigger();
   };
 
@@ -167,33 +176,25 @@ export default function CreateProfile() {
           <div className="space-y-8 pt-4">
             <div className="text-center">
               <h2 className="text-lg font-semibold mb-2">
-                What type of profile would you like to create?
+                Welcome to UYP Basketball!
               </h2>
               <p className="text-sm text-white/70">
-                Choose the type that best describes your role
+                Are you joining as a member or coach?
               </p>
             </div>
 
             <div className="space-y-4">
               <TypeCard
                 icon={<Users className="h-6 w-6" />}
-                title="Parent / Guardian"
-                subtitle="Manage family profiles, payments, and stay connected"
-                onClick={() => handleTypeSelect("parent")}
-                testId="card-parent-type"
-              />
-              <TypeCard
-                icon={<User className="h-6 w-6" />}
-                title="Player"
-                subtitle="Track progress, communicate with team, and access training"
-                onClick={() => handleTypeSelect("player")}
-                testId="card-player-type"
-                accent="green"
+                title="UYP Member"
+                subtitle="Join as a family - manage players, payments, and stay connected"
+                onClick={() => handleTypeSelect("member")}
+                testId="card-member-type"
               />
               <TypeCard
                 icon={<Briefcase className="h-6 w-6" />}
-                title="Coach"
-                subtitle="Manage teams, create schedules, communicate with families"
+                title="UYP Coach"
+                subtitle="Join as a coach - manage teams, create schedules, and develop players"
                 onClick={() => handleTypeSelect("coach")}
                 testId="card-coach-type"
                 accent="purple"
@@ -289,8 +290,8 @@ export default function CreateProfile() {
                     )}
                   />
 
-                  {/* Player fields */}
-                  {selectedType === "player" && (
+                  {/* Player fields - removed since UYP Member creates parent profile */}
+                  {false && (
                     <>
                       <FormField
                         control={form.control}
@@ -441,13 +442,11 @@ export default function CreateProfile() {
                     </>
                   )}
 
-                  {(selectedType === "parent" || selectedType === "coach") && (
-                    <div className="rounded-lg bg-white/5 border border-white/10 p-3 text-sm text-white/80">
-                      {selectedType === "parent"
-                        ? "As a parent, you can manage your children's profiles and access team information."
-                        : "As a coach, you can manage team rosters and communicate with families."}
-                    </div>
-                  )}
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-3 text-sm text-white/80">
+                    {selectedType === "member"
+                      ? "As a UYP Member, you'll create family profiles and manage payments for your players."
+                      : "As a UYP Coach, you can manage team rosters and communicate with families."}
+                  </div>
 
                   <FormField
                     control={form.control}

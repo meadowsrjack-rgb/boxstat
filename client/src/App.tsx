@@ -41,12 +41,31 @@ import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
-import FamilyOnboarding from "@/pages/family-onboarding";
 import PaymentsTab from "@/pages/payments";
-import Onboarding from "@/pages/Onboarding";
 import PaymentsTab2 from "@/pages/PaymentsTab";
+import NoProfiles from "@/pages/NoProfiles";
+import { useQuery } from "@tanstack/react-query";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
+
+function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
+  const { data: profiles, isLoading } = useQuery({
+    queryKey: ['/api/profiles/me'],
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
+  // If no profiles exist, show the NoProfiles fallback page
+  if (!profiles || profiles.length === 0) {
+    return <NoProfiles />;
+  }
+
+  // Profiles exist, render the wrapped component
+  return <>{children}</>;
+}
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -122,23 +141,8 @@ function Router() {
   
   const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
-  // If we have a user and they haven't completed profile setup, show simplified onboarding
-  if (user && !hasCompletedProfileSetup) {
-    console.log('Redirecting to simplified onboarding - profile not completed');
-    return (
-      <Switch>
-        <Route path="/privacy" component={PrivacySettingsPage} />
-        <Route path="/teams" component={Teams} />
-        <Route path="/onboarding" component={Onboarding} />
-        <Route path="/payments" component={PaymentsTab2} />
-        {/* Keep legacy routes for compatibility during transition */}
-        <Route path="/profile-selection" component={ProfileSelection} />
-        <Route path="/create-profile" component={CreateProfile} />
-        <Route path="/family-onboarding" component={FamilyOnboarding} />
-        <Route component={Onboarding} />
-      </Switch>
-    );
-  }
+  // Authenticated users go directly to payments (profiles pre-created from GoHighLevel)
+  console.log('User authenticated, directing to main app with pre-created profiles');
   
   console.log('User has completed profile setup, proceeding to dashboard');
 
@@ -149,6 +153,10 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
+        // For GoHighLevel users, check if profiles exist, otherwise show fallback
+        return <ProfileCheckWrapper><PaymentsTab2 /></ProfileCheckWrapper>;
+      }} />
+      <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {
           case "admin":
             return <AdminDashboard />;
@@ -188,6 +196,9 @@ function Router() {
       <Route path="/trophies-badges" component={TrophiesBadges} />
       <Route path="/skills" component={Skills} />
       <Route path="/photo-upload" component={PhotoUpload} />
+      <Route path="/payments" component={PaymentsTab2} />
+      <Route path="/no-profiles" component={NoProfiles} />
+      {/* Legacy routes for compatibility during transition */}
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
       

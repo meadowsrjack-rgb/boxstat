@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
@@ -2129,86 +2130,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simplified family onboarding completion endpoint (replaced old complex flow)
-  app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
+  // GoHighLevel webhook endpoint for profile pre-creation
+  app.post('/api/ghl/webhook', async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const { parent, players } = req.body;
-
-      console.log('Simplified onboarding request for user:', userId, 'parent:', parent, 'players:', players);
-
-      if (!parent?.firstName || !parent?.lastName) {
-        return res.status(400).json({ message: "Parent first and last name are required" });
-      }
-
-      if (!players || !Array.isArray(players) || players.length === 0) {
-        return res.status(400).json({ message: "At least one player is required" });
-      }
-
-      // Update user profile completion and parent info
-      await storage.updateUserProfile(userId, {
-        firstName: parent.firstName,
-        lastName: parent.lastName,
-        phoneNumber: parent.phone || '',
-        profileCompleted: true,
-        userType: 'parent'
-      });
-
-      // Create parent profile if it doesn't exist, or get existing one
-      let parentProfile;
-      const parentProfiles = await storage.getAccountProfiles(userId);
-      const existingParentProfile = parentProfiles.find(p => p.profileType === 'parent');
+      console.log('=== GoHighLevel webhook endpoint hit ===');
+      console.log('Method:', req.method);
+      console.log('URL:', req.url);
+      console.log('Headers:', req.headers);
+      console.log('Body:', req.body);
       
-      if (!existingParentProfile) {
-        // Create parent profile first
-        parentProfile = await storage.createProfile({
-          accountId: userId,
-          profileType: 'parent',
-          firstName: parent.firstName,
-          lastName: parent.lastName,
-          phoneNumber: parent.phone || ''
-        });
-        console.log('Created new parent profile:', parentProfile.id);
+      // TODO: Add webhook signature verification (implement with shared secret when GHL provides it)
+      // For now, add basic validation
+      if (!req.body?.contact?.email) {
+        return res.status(400).json({ error: 'Invalid webhook payload: missing contact email' });
+      }
+
+      const result = await goHighLevelService.processWebhook(req.body);
+      
+      if (result.success) {
+        res.json(result);
       } else {
-        parentProfile = existingParentProfile;
-        console.log('Using existing parent profile:', parentProfile.id);
+        res.status(400).json(result);
       }
-        
-      // Create player profiles and relationships
-      const createdPlayers = [];
-      for (const player of players) {
-        if (player.firstName && player.lastName) {
-          const playerProfile = await storage.createProfile({
-            accountId: userId,
-            profileType: 'player',
-            firstName: player.firstName,
-            lastName: player.lastName,
-            dateOfBirth: player.dob || undefined,
-            schoolGrade: player.grade || undefined
-          });
-          createdPlayers.push(playerProfile);
-          console.log('Created player profile:', playerProfile.id);
-
-          // Create relationship between parent and player
-          await storage.createProfileRelationship({
-            accountId: userId,
-            parentProfileId: parentProfile.id,
-            playerProfileId: playerProfile.id,
-            relationship: 'parent'
-          });
-          console.log('Created relationship:', parentProfile.id, '->', playerProfile.id);
-        }
-      }
-
-      console.log('Simplified onboarding completed successfully');
-      res.json({ 
-        message: "Onboarding completed successfully",
-        playersCreated: createdPlayers.length,
-        redirect: "/payments"
-      });
     } catch (error) {
-      console.error('Simplified onboarding error:', error);
-      res.status(500).json({ message: "Failed to complete onboarding" });
+      console.error('GoHighLevel webhook error:', error);
+      res.status(500).json({ error: 'Webhook processing failed' });
+    }
+  });
+
+  // On-demand GoHighLevel sync endpoint
+  app.get('/api/ghl/sync', isAuthenticated, async (req: any, res) => {
+    try {
+      const { email } = req.query;
+      const userId = req.user.claims.sub;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email parameter required' });
+      }
+
+      const result = await goHighLevelService.syncByEmail(email as string, userId);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error('GoHighLevel sync error:', error);
+      res.status(500).json({ error: 'Sync failed' });
     }
   });
 

@@ -64,8 +64,8 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    userType: "parent", // Default to parent, can be changed later in account setup
-    profileCompleted: false, // Ensure new users go to profile selection
+    userType: "parent" as const, // Default to parent, can be changed later in account setup
+    profileCompleted: false, // Will be set to true after checking if profiles exist
   };
   console.log("User data to upsert:", userData);
   await storage.upsertUser(userData);
@@ -116,7 +116,7 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/callback", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
-      successRedirect: "/",
+      successRedirect: "/payments", // Redirect to payments since profiles are pre-created
       failureRedirect: "/api/login",
     })(req, res, next);
   });

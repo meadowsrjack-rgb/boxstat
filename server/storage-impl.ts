@@ -109,6 +109,7 @@ import { z } from "zod";
 export interface IStorage {
   // Account operations (new unified system)
   getAccount(id: string): Promise<Account | undefined>;
+  getAccountByEmail(email: string): Promise<Account | undefined>;
   upsertAccount(account: InsertAccount): Promise<Account>;
   updateAccount(id: string, data: Partial<Account>): Promise<Account>;
   
@@ -231,6 +232,11 @@ export class DatabaseStorage implements IStorage {
   // Account operations (new unified system)
   async getAccount(id: string): Promise<Account | undefined> {
     const [account] = await db.select().from(accounts).where(eq(accounts.id, id));
+    return account;
+  }
+
+  async getAccountByEmail(email: string): Promise<Account | undefined> {
+    const [account] = await db.select().from(accounts).where(eq(accounts.email, email));
     return account;
   }
 
@@ -441,6 +447,9 @@ export class DatabaseStorage implements IStorage {
           ageGroup: 'Under 10',
           color: '#1E40AF',
           coachId: 'test-admin-001',
+          division: null,
+          coachNames: null,
+          notionId: null,
           createdAt: new Date()
         },
         {
@@ -449,6 +458,9 @@ export class DatabaseStorage implements IStorage {
           ageGroup: 'Under 12',
           color: '#7C3AED',
           coachId: 'test-admin-001',
+          division: null,
+          coachNames: null,
+          notionId: null,
           createdAt: new Date()
         },
         {
@@ -457,6 +469,9 @@ export class DatabaseStorage implements IStorage {
           ageGroup: 'Under 14',
           color: '#059669',
           coachId: 'test-admin-001',
+          division: null,
+          coachNames: null,
+          notionId: null,
           createdAt: new Date()
         }
       ];
@@ -508,7 +523,8 @@ export class DatabaseStorage implements IStorage {
           profileCompleted: false,
           stripeSubscriptionId: null,
           qrCodeData: null,
-          passcode: null
+          passcode: null,
+          youthClubTeam: null
         },
         {
           id: 'player2',
@@ -539,7 +555,8 @@ export class DatabaseStorage implements IStorage {
           profileCompleted: false,
           stripeSubscriptionId: null,
           qrCodeData: null,
-          passcode: null
+          passcode: null,
+          youthClubTeam: null
         }
       ];
     }
@@ -574,7 +591,8 @@ export class DatabaseStorage implements IStorage {
           profileCompleted: false,
           stripeSubscriptionId: null,
           qrCodeData: null,
-          passcode: null
+          passcode: null,
+          youthClubTeam: null
 
         }
       ];
@@ -633,6 +651,8 @@ export class DatabaseStorage implements IStorage {
           googleEventId: null,
           lastSyncedAt: null,
           isActive: true,
+          latitude: null,
+          longitude: null,
           createdAt: new Date()
         },
         {
@@ -652,6 +672,8 @@ export class DatabaseStorage implements IStorage {
           googleEventId: null,
           lastSyncedAt: null,
           isActive: true,
+          latitude: null,
+          longitude: null,
           createdAt: new Date()
         }
       ];
@@ -675,6 +697,8 @@ export class DatabaseStorage implements IStorage {
           googleEventId: null,
           lastSyncedAt: null,
           isActive: true,
+          latitude: null,
+          longitude: null,
           createdAt: new Date()
         }
       ];
@@ -698,6 +722,8 @@ export class DatabaseStorage implements IStorage {
           googleEventId: null,
           lastSyncedAt: null,
           isActive: true,
+          latitude: null,
+          longitude: null,
           createdAt: new Date()
         }
       ];
@@ -1202,7 +1228,6 @@ export class DatabaseStorage implements IStorage {
       id: team[0].id,
       name: team[0].name,
       ageGroup: team[0].ageGroup,
-      season: team[0].season,
       roster: roster
     };
   }
@@ -1260,51 +1285,7 @@ export class DatabaseStorage implements IStorage {
     return results[0];
   }
 
-  async awardBadge(playerId: string, badgeId: number, awardedBy: string): Promise<void> {
-    // Check if player already has this badge
-    const existing = await db
-      .select()
-      .from(userBadges)
-      .where(and(
-        eq(userBadges.userId, playerId),
-        eq(userBadges.badgeId, badgeId)
-      ))
-      .limit(1);
 
-    if (existing.length > 0) {
-      throw new Error('Player already has this badge');
-    }
-
-    await db.insert(userBadges).values({
-      userId: playerId,
-      badgeId: badgeId,
-      awardedBy,
-      earnedAt: new Date()
-    });
-  }
-
-  async awardTrophy(playerId: string, trophyId: number, awardedBy: string): Promise<void> {
-    // Check if player already has this trophy
-    const existing = await db
-      .select()
-      .from(userTrophies)
-      .where(and(
-        eq(userTrophies.userId, playerId),
-        eq(userTrophies.trophyId, trophyId)
-      ))
-      .limit(1);
-
-    if (existing.length > 0) {
-      throw new Error('Player already has this trophy');
-    }
-
-    await db.insert(userTrophies).values({
-      userId: playerId,
-      trophyId: trophyId,
-      awardedBy,
-      earnedAt: new Date()
-    });
-  }
 
   // Player evaluation operations
   async getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined> {
@@ -1316,7 +1297,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(playerEvaluations.playerId, playerId.toString()),
-          eq(playerEvaluations.quarter, quarter),
+          eq(playerEvaluations.quarter, quarter as "Q1" | "Q2" | "Q3" | "Q4"),
           eq(playerEvaluations.year, year)
         )
       )
@@ -1335,7 +1316,7 @@ export class DatabaseStorage implements IStorage {
         playerId: playerId.toString(),
         coachId,
         scores,
-        quarter,
+        quarter: quarter as "Q1" | "Q2" | "Q3" | "Q4",
         year,
         updatedAt: new Date(),
       })

@@ -2784,8 +2784,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Parent dashboard routes
   app.get('/api/parent/players', isAuthenticated, async (req: any, res) => {
     try {
-      const parentId = req.user.claims.sub;
-      const familyMembers = await storage.getFamilyMembers(parentId);
+      const userId = req.user.claims.sub;
+      
+      // First check if this user has an account (for GHL integration)
+      const account = await storage.getAccountByUserId(userId);
+      if (account) {
+        // Get profile relationships for this account
+        const profiles = await storage.getAccountProfiles(account.id);
+        const parentProfile = profiles.find(p => p.profileType === 'parent');
+        
+        if (parentProfile) {
+          const relationships = await storage.getProfileRelationships(account.id, parentProfile.id);
+          const players = [];
+          
+          for (const rel of relationships) {
+            const playerProfile = await storage.getProfile(rel.playerProfileId);
+            if (playerProfile) {
+              players.push({
+                id: playerProfile.id,
+                firstName: playerProfile.firstName || '',
+                lastName: playerProfile.lastName || '',
+                teamName: playerProfile.teamId || null,
+                profileImageUrl: playerProfile.profileImageUrl || null,
+                relationship: rel.relationship,
+                schoolGrade: playerProfile.schoolGrade,
+                position: playerProfile.position,
+                jerseyNumber: playerProfile.jerseyNumber,
+                nextEvent: null // TODO: Add next event logic if needed
+              });
+            }
+          }
+          
+          return res.json(players);
+        }
+      }
+      
+      // Fallback to original family members logic for non-GHL users
+      const familyMembers = await storage.getFamilyMembers(userId);
       
       // Transform to match expected format
       const players = familyMembers.map((member: any) => ({

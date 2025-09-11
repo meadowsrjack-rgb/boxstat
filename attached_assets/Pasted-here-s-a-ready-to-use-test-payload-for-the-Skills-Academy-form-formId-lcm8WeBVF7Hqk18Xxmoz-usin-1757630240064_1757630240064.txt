@@ -1,0 +1,64 @@
+here’s a ready-to-use test payload for the Skills Academy form (formId: "lcm8WeBVF7Hqk18Xxmoz") using your parent email ozdunks@gmail.com
+. This simulates a successful paid submission so your /api/intake/ghl route can upsert the parent + player, mark the purchase active, and print a magic link to your Replit logs.
+
+1) Save as payload.json
+{
+  "eventType": "payment_success",
+  "paymentStatus": "paid",
+  "formId": "lcm8WeBVF7Hqk18Xxmoz",
+  "formName": "Skills Academy Registration",
+  "submissionId": "subm_test_001",
+  "locationId": "loc_dev_001",
+  "createdAt": "2025-09-11T20:12:33.000Z",
+  "contact": {
+    "id": "cnt_dev_001",
+    "email": "ozdunks@gmail.com",
+    "firstName": "Oz",
+    "lastName": "Dunks",
+    "phone": "+1 555-555-0199",
+
+    "playerFirst": "Aiden",
+    "playerLast": "Dunks",
+    "playerDob": "2012-03-14",
+    "playerGrade": "7",
+    "playerTeam": "Irvine Flight 12U"
+  },
+  "order": {
+    "orderId": "ord_dev_001",
+    "amount": 129.00,
+    "currency": "USD",
+    "lineItems": [
+      {"sku": "uyp-skills-acad", "name": "Skills Academy", "qty": 1, "price": 129.00}
+    ],
+    "transactionId": "ch_test_001",
+    "processor": "stripe",
+    "status": "succeeded"
+  },
+  "source": {
+    "formUrl": "https://api.leadconnectorhq.com/widget/form/lcm8WeBVF7Hqk18Xxmoz",
+    "utm": {
+      "source": "instagram",
+      "medium": "bio",
+      "campaign": "fall_skills_2025"
+    }
+  }
+}
+
+2) Make sure your env is set (Replit Secrets or .env)
+GHL_WEBHOOK_SECRET=dev_secret_123
+APP_URL=https://uyp.app            # or your Replit preview URL
+MAIL_PROVIDER=console              # magic link printed to logs
+MAIL_FROM="UYP Support <no-reply@uyp.app>"
+
+3) Post it to your intake route
+curl -X POST https://<YOUR_APP_DOMAIN>/api/intake/ghl \
+  -H "Content-Type: application/json" \
+  -H "X-GHL-Webhook-Secret: dev_secret_123" \
+  --data @payload.json
+
+4) What you should see
+
+DB: User upserted for ozdunks@gmail.com; Player “Aiden Dunks” created/updated; Purchase set to active for skills-academy.
+
+Logs: Magic-link URL to /payments?welcome=1&token=... (because MAIL_PROVIDER=console). Click it to sign in as ozdunks@gmail.com
+ and verify My Purchases shows “Skills Academy — Active” with player info available.

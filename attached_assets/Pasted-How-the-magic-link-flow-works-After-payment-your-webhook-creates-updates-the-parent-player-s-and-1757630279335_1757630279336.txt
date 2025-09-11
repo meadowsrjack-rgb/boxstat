@@ -1,0 +1,75 @@
+How the magic-link flow works
+
+After payment your webhook creates/updates the parent + player(s) and generates a random token.
+
+You email a link like:
+https://uyp.app/payments?welcome=1&token=RAW_TOKEN
+
+Redeem route verifies the token, marks it consumed, creates a session (HttpOnly cookie), and redirects to /payments?welcome=1 (or /onboarding).
+Result: the user is signed in without ever typing a password.
+
+Minimal implementation pieces (TypeScript/Node)
+
+Table (or collection)
+
+magic_tokens:
+- id
+- userId
+- tokenHash          // store the hash, not the raw token
+- redirectPath       // e.g. "/payments?welcome=1"
+- expiresAt          // e.g. now + 15 minutes
+- consumedAt         // null until used
+- createdAt
+- (optional) ipHash, userAgent
+
+
+Create token
+
+import crypto from "crypto";
+
+function sha256(s: string) {
+  return crypto.createHash("sha256").update(s).digest("base64");
+}
+
+export async function createOneTimeToken({
+  userId,
+  redirectPath = "/payments?welcome=1",
+  ttlMinutes = 15,
+}: { userId: string; redirectPath?: string; ttlMinutes?: number }) {
+  const raw = crypto.randomBytes(32).toString("base64url"); // 256-bit
+  await db.magicToken.create({
+    data: {
+      userId,
+      tokenHash: sha256(raw),
+      redirectPath,
+      expiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+    },
+  });
+  return raw; // <-- send this in the email link
+}
+
+
+Redeem token → create session
+
+// GET /api/auth/token/:token
+app.get("/api/auth/token/:token", async (req, res) => {
+  const raw = req.params.token;
+  const rec = await db.magicToken.findFirst({
+    where: {
+      tokenHash: sha256(raw),
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    include: { user: true },
+  });
+  if (!rec) return res.status(400).send("Link expired or invalid");
+
+  // mark single-use
+  await db.magicToken.update({ where: { id: rec.id }, data: { consumedAt: new Date() } });
+
+  // create a logged-in session (set HttpOnly+Secure cookie)
+  await createSessionCookie(res, rec.user.id);
+
+  // redirect to the stored path (already includes ?welcome=1)
+  res.redirect(rec.redirectPath ?? "/payments");
+});

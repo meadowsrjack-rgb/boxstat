@@ -110,8 +110,10 @@ export interface IStorage {
   // Account operations (new unified system)
   getAccount(id: string): Promise<Account | undefined>;
   getAccountByEmail(email: string): Promise<Account | undefined>;
+  getAccountByMagicToken(token: string): Promise<Account | undefined>;
   upsertAccount(account: InsertAccount): Promise<Account>;
   updateAccount(id: string, data: Partial<Account>): Promise<Account>;
+  clearMagicLinkToken(accountId: string): Promise<void>;
   
   // Profile operations (new unified system)
   getProfile(id: string): Promise<Profile | undefined>;
@@ -260,6 +262,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(accounts.id, id))
       .returning();
     return result;
+  }
+
+  async getAccountByMagicToken(token: string): Promise<Account | undefined> {
+    const [account] = await db.select().from(accounts).where(eq(accounts.magicLinkToken, token));
+    return account;
+  }
+
+  async clearMagicLinkToken(accountId: string): Promise<void> {
+    await db.update(accounts)
+      .set({ 
+        magicLinkToken: null, 
+        magicLinkExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(accounts.id, accountId));
   }
 
   // Profile operations (new unified system)

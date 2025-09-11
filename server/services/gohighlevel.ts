@@ -1,4 +1,5 @@
 import { storage } from '../storage';
+import { nanoid } from 'nanoid';
 
 interface GoHighLevelContact {
   id: string;
@@ -24,6 +25,16 @@ interface PlayerData {
 }
 
 export class GoHighLevelService {
+  /**
+   * Generate a new magic link token with expiration
+   */
+  private generateMagicLinkToken(): { token: string; expires: Date } {
+    const token = `ghl_${nanoid(32)}`;
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7); // Token expires in 7 days
+    return { token, expires };
+  }
+
   /**
    * Process webhook data from GoHighLevel to create/update profiles
    */
@@ -70,17 +81,38 @@ export class GoHighLevelService {
       // Update payment status and registration status
       const registrationStatus = paymentStatus === 'paid' ? 'active' : 'payment_required';
       
+      // Generate magic link token if not provided (for authentication links in emails)
+      let magicLinkToken = accountData?.magic_link_token;
+      let magicLinkExpires = accountData?.expires_at ? new Date(accountData.expires_at) : undefined;
+      
+      if (!magicLinkToken) {
+        const { token, expires } = this.generateMagicLinkToken();
+        magicLinkToken = token;
+        magicLinkExpires = expires;
+        console.log(`Generated magic link token for account ${account.id}: ...${token.slice(-4)}`);
+      }
+      
       await storage.updateAccount(account.id, {
         paymentStatus,
         registrationStatus,
-        magicLinkToken: accountData?.magic_link_token,
-        magicLinkExpires: accountData?.expires_at ? new Date(accountData.expires_at) : undefined
+        magicLinkToken,
+        magicLinkExpires
       });
 
       console.log(`Updated payment status to ${paymentStatus} for account:`, account.id);
       
+      // Build properly formatted magic link URL
+      const baseUrl = process.env.REPLIT_DOMAINS ? 
+        `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 
+        'http://localhost:5000';
+      const magicLinkUrl = `${baseUrl}/api/auth/magic-link/${magicLinkToken}`;
+      
       return {
         success: true,
+        paymentStatus,
+        registrationStatus,
+        magic_link_url: magicLinkUrl,
+        magic_link_expires: magicLinkExpires?.toISOString(),
         message: `Payment status updated to ${paymentStatus}`
       };
     } catch (error) {
@@ -232,17 +264,33 @@ export class GoHighLevelService {
    */
   private async getOrCreateAccount(email: string, parentData: any, accountData?: any): Promise<string> {
     try {
-      // Create new account (or update existing one)
+      // Check if account already exists
+      const existingAccount = await storage.getAccountByEmail(email);
+      if (existingAccount) {
+        console.log('Found existing account for:', email);
+        return existingAccount.id;
+      }
+      
+      // Generate magic link token for new accounts
+      const { token, expires } = this.generateMagicLinkToken();
+      
+      // Create new account
       const accountId = `ghl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       await storage.upsertAccount({
         id: accountId,
         email: email,
+        firstName: parentData.firstName,
+        lastName: parentData.lastName,
         primaryAccountType: 'parent' as const,
-        accountCompleted: true
+        accountCompleted: true,
+        registrationStatus: 'payment_required', // Default status for new accounts
+        paymentStatus: 'pending',
+        magicLinkToken: token,
+        magicLinkExpires: expires
       });
 
-      console.log('Created/updated account from GoHighLevel:', accountId);
+      console.log(`Created account from GoHighLevel: ${accountId} with magic link: ...${token.slice(-4)}`);
       return accountId;
     } catch (error) {
       console.error('Error getting/creating account:', error);

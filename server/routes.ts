@@ -96,6 +96,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Magic link authentication for GoHighLevel integration
+  app.get('/api/auth/magic-link/:token', async (req: any, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Magic link token is required" });
+      }
+
+      // Find account with this magic link token
+      const account = await storage.getAccountByMagicToken(token);
+      
+      if (!account) {
+        return res.status(404).json({ message: "Invalid or expired magic link" });
+      }
+
+      // Check if token has expired
+      if (account.magicLinkExpires && new Date() > account.magicLinkExpires) {
+        return res.status(401).json({ message: "Magic link has expired" });
+      }
+
+      // Create user session for magic link authentication
+      const user = {
+        sub: account.id,
+        email: account.email,
+        name: account.firstName ? `${account.firstName} ${account.lastName || ''}`.trim() : account.email,
+        magic_link_auth: true
+      };
+
+      // Set session for Replit Auth compatibility
+      req.session.user = {
+        claims: user,
+        isAuthenticated: true,
+        authType: 'magic_link'
+      };
+
+      // Invalidate the magic link token after successful authentication
+      await storage.clearMagicLinkToken(account.id);
+
+      // Redirect to registration status page
+      res.redirect('/');
+      
+    } catch (error) {
+      console.error("Error processing magic link:", error);
+      res.status(500).json({ message: "Failed to process magic link" });
+    }
+  });
+
   // User routes
   app.get('/api/users/:id/team', isAuthenticated, async (req: any, res) => {
     try {

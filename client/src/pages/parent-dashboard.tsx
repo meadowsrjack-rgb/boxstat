@@ -656,55 +656,100 @@ function PlayerSnapshot({ player, onRemove }: { player: LinkedPlayer; onRemove: 
 
 /* =================== Payments Tab =================== */
 function PaymentsTab({ billing, onOpenStripe }: { billing?: BillingSummary; onOpenStripe: () => void }) {
-  const statusBadge = (s?: BillingSummary["status"]) => {
-    switch (s) {
-      case "paid":
-        return <Badge className="bg-green-100 text-green-700">Up to date</Badge>;
-      case "trialing":
-        return <Badge className="bg-blue-100 text-blue-700">Trial</Badge>;
-      case "past_due":
-        return <Badge className="bg-yellow-100 text-yellow-700">Past due</Badge>;
-      case "unpaid":
-        return <Badge className="bg-red-100 text-red-700">Payment required</Badge>;
+  const { data: account } = useQuery({
+    queryKey: ["/api/account/me"],
+    queryFn: async () => {
+      const res = await fetch("/api/account/me", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "active":
+        return <Badge className="bg-green-100 text-green-700">Active</Badge>;
+      case "payment_required":
+        return <Badge className="bg-red-100 text-red-700">Payment Required</Badge>;
+      case "pending":
+        return <Badge className="bg-blue-100 text-blue-700">Pending</Badge>;
       default:
-        return <Badge variant="secondary">—</Badge>;
+        return <Badge className="bg-gray-100 text-gray-700">Unknown</Badge>;
     }
   };
 
-  const currency = (billing?.currency || "usd").toUpperCase();
-  const amt = billing?.amountDueCents != null ? (billing.amountDueCents / 100).toLocaleString(undefined, { style: "currency", currency }) : null;
+  const getPaymentBadge = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case "paid":
+        return <Badge className="bg-green-100 text-green-700">Paid</Badge>;
+      case "pending":
+        return <Badge className="bg-blue-100 text-blue-700">Pending</Badge>;
+      case "overdue":
+        return <Badge className="bg-red-100 text-red-700">Overdue</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-700">Unknown</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-bold text-gray-900">Payments</h2>
+      <h2 className="text-xl font-bold text-gray-900">Registration Status</h2>
 
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-sm text-gray-500">Plan</div>
-              <div className="font-semibold text-gray-900">{billing?.planName || "—"}</div>
-              <div className="mt-3 text-sm text-gray-500">Status</div>
-              <div className="mt-1">{statusBadge(billing?.status)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Next payment</div>
-              <div className="font-semibold text-gray-900">
-                {billing?.nextPaymentDue ? format(new Date(billing.nextPaymentDue), "MMM d, yyyy") : "—"}
+          <div className="space-y-4">
+            {/* Registration Status */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-500">Registration</div>
+                <div className="font-semibold text-gray-900">
+                  {account?.registrationStatus === "active" ? "Complete" : "Incomplete"}
+                </div>
               </div>
-              <div className="mt-3 text-sm text-gray-500">Amount due</div>
-              <div className="font-semibold text-gray-900">{amt ?? "—"}</div>
+              <div>
+                {getStatusBadge(account?.registrationStatus || "pending")}
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4">
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={onOpenStripe}>
-              <CreditCard className="h-4 w-4 mr-2" /> Manage in Stripe
-            </Button>
+            {/* Payment Status */}
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-500">Payment</div>
+                <div className="font-semibold text-gray-900">
+                  {account?.paymentStatus === "paid" ? "Complete" : 
+                   account?.paymentStatus === "overdue" ? "Overdue" : "Pending"}
+                </div>
+              </div>
+              <div>
+                {getPaymentBadge(account?.paymentStatus || "pending")}
+              </div>
+            </div>
+
+            {/* Account Email */}
+            <div className="pt-2 border-t border-gray-100">
+              <div className="text-sm text-gray-500">Account</div>
+              <div className="font-semibold text-gray-900">{account?.email || "—"}</div>
+            </div>
+
+            {/* Status Message */}
+            {account?.registrationStatus === "active" && account?.paymentStatus === "paid" && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="text-sm text-green-700 font-medium">
+                  ✓ Your registration is complete and payment is up to date!
+                </div>
+              </div>
+            )}
+
+            {account?.registrationStatus === "payment_required" && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="text-sm text-red-700 font-medium">
+                  Payment is required to complete your registration.
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
-
     </div>
   );
 }

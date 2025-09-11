@@ -2129,79 +2129,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Family onboarding completion endpoint
+  // Simplified family onboarding completion endpoint (replaced old complex flow)
   app.post('/api/onboarding/complete', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { parent, players } = req.body;
 
-      console.log('Starting family onboarding for user:', userId);
-      console.log('Parent data:', parent);
-      console.log('Players data:', players);
+      console.log('Simplified onboarding request for user:', userId, 'parent:', parent, 'players:', players);
 
-      // Update the user's profile with parent information
-      await storage.updateUser(userId, {
+      if (!parent?.firstName || !parent?.lastName) {
+        return res.status(400).json({ message: "Parent first and last name are required" });
+      }
+
+      if (!players || !Array.isArray(players) || players.length === 0) {
+        return res.status(400).json({ message: "At least one player is required" });
+      }
+
+      // Update user profile completion and parent info
+      await storage.updateUserProfile(userId, {
         firstName: parent.firstName,
         lastName: parent.lastName,
-        phoneNumber: parent.phone,
-        profileCompleted: true
+        phoneNumber: parent.phone || '',
+        profileCompleted: true,
+        userType: 'parent'
       });
 
-      // Find the parent profile for this user
-      const userProfiles = await storage.getAccountProfiles(userId);
-      const parentProfile = userProfiles.find(p => p.profileType === 'parent');
+      // Create parent profile if it doesn't exist, or get existing one
+      let parentProfile;
+      const parentProfiles = await storage.getAccountProfiles(userId);
+      const existingParentProfile = parentProfiles.find(p => p.profileType === 'parent');
       
-      if (!parentProfile) {
-        throw new Error('Parent profile not found. Please create a parent profile first.');
+      if (!existingParentProfile) {
+        // Create parent profile first
+        parentProfile = await storage.createProfile({
+          accountId: userId,
+          profileType: 'parent',
+          firstName: parent.firstName,
+          lastName: parent.lastName,
+          phoneNumber: parent.phone || ''
+        });
+        console.log('Created new parent profile:', parentProfile.id);
+      } else {
+        parentProfile = existingParentProfile;
+        console.log('Using existing parent profile:', parentProfile.id);
       }
-
-      // Create player profiles for each player
+        
+      // Create player profiles and relationships
       const createdPlayers = [];
       for (const player of players) {
-        const playerProfileData = {
-          id: `player-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          accountId: userId,
-          profileType: 'player' as const,
-          firstName: player.firstName,
-          lastName: player.lastName,
-          dateOfBirth: player.dob || undefined,
-          schoolGrade: player.grade,
-          teamName: player.teamName,
-          qrCodeData: `UYP-${Date.now()}-${player.firstName}`,
-          profileCompleted: true,
-          isActive: true
-        };
-        
-        const createdPlayer = await storage.createProfile(playerProfileData);
-        createdPlayers.push(createdPlayer);
-        console.log('Created player profile:', createdPlayer.id);
-        
-        // Create profile relationship between parent and player
-        await storage.createProfileRelationship({
-          accountId: userId,
-          parentProfileId: parentProfile.id,
-          playerProfileId: createdPlayer.id,
-          relationship: 'parent',
-          canMakePayments: true,
-          canViewReports: true,
-          emergencyContact: false
-        });
-        console.log('Created profile relationship:', parentProfile.id, '->', createdPlayer.id);
+        if (player.firstName && player.lastName) {
+          const playerProfile = await storage.createProfile({
+            accountId: userId,
+            profileType: 'player',
+            firstName: player.firstName,
+            lastName: player.lastName,
+            dateOfBirth: player.dob || undefined,
+            schoolGrade: player.grade || undefined
+          });
+          createdPlayers.push(playerProfile);
+          console.log('Created player profile:', playerProfile.id);
+
+          // Create relationship between parent and player
+          await storage.createProfileRelationship({
+            accountId: userId,
+            parentProfileId: parentProfile.id,
+            playerProfileId: playerProfile.id,
+            relationship: 'parent'
+          });
+          console.log('Created relationship:', parentProfile.id, '->', playerProfile.id);
+        }
       }
 
-      console.log('Family onboarding completed successfully');
+      console.log('Simplified onboarding completed successfully');
       res.json({ 
-        success: true, 
-        message: 'Family setup completed successfully',
-        playersCreated: createdPlayers.length
+        message: "Onboarding completed successfully",
+        playersCreated: createdPlayers.length,
+        redirect: "/payments"
       });
     } catch (error) {
-      console.error('Error completing family onboarding:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Failed to complete family setup',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error('Simplified onboarding error:', error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
     }
   });
 
@@ -3495,6 +3502,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating billing portal session:', error);
       res.status(500).json({ error: 'Failed to create billing portal session' });
+    }
+  });
+
+
+  // Get user's purchase status
+  app.get('/api/purchases/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get purchases from database - for now return mock data
+      // TODO: Implement actual purchases table and queries
+      const mockPurchases = [
+        { productId: "youth-club", status: "pending" },
+        { productId: "skills-academy", status: "pending" },
+        { productId: "friday-night-hoops", status: "pending" },
+        { productId: "high-school-club", status: "pending" },
+        { productId: "irvine-flight", status: "pending" }
+      ];
+      
+      res.json(mockPurchases);
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+      res.status(500).json({ message: "Failed to fetch purchases" });
+    }
+  });
+
+  // LeadConnector webhook for payment processing
+  app.post('/api/webhooks/leadconnector', async (req, res) => {
+    try {
+      console.log('LeadConnector webhook received:', req.body);
+      
+      const event = req.body;
+      // TODO: verify signature if LC provides one
+      
+      const email = event?.contact?.email || event?.payload?.customer?.email;
+      const productKey = event?.product_id || event?.offer_name || event?.form_name;
+      
+      if (!email || !productKey) {
+        console.log('Missing email or product info in webhook');
+        return res.status(400).json({ ok: false, error: 'Missing email or product information' });
+      }
+
+      // TODO: Find user by email and update purchase status
+      // For now just log and return success
+      console.log('Would update purchase for email:', email, 'product:', productKey);
+      
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Webhook error:', error);
+      res.status(500).json({ ok: false, error: 'Webhook processing failed' });
     }
   });
 

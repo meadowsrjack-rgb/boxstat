@@ -43,6 +43,8 @@ import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import PaymentsTab from "@/pages/payments";
+import Onboarding from "@/pages/Onboarding";
+import PaymentsTab2 from "@/pages/PaymentsTab";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
 
@@ -120,18 +122,20 @@ function Router() {
   
   const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
   
-  // If we have a user and they haven't completed profile setup, show profile selection
+  // If we have a user and they haven't completed profile setup, show simplified onboarding
   if (user && !hasCompletedProfileSetup) {
-    console.log('Redirecting to profile selection - profile not completed');
+    console.log('Redirecting to simplified onboarding - profile not completed');
     return (
       <Switch>
-      <Route path="/privacy" component={PrivacySettingsPage} />
-      <Route path="/teams" component={Teams} />
+        <Route path="/privacy" component={PrivacySettingsPage} />
+        <Route path="/teams" component={Teams} />
+        <Route path="/onboarding" component={Onboarding} />
+        <Route path="/payments" component={PaymentsTab2} />
+        {/* Keep legacy routes for compatibility during transition */}
         <Route path="/profile-selection" component={ProfileSelection} />
         <Route path="/create-profile" component={CreateProfile} />
         <Route path="/family-onboarding" component={FamilyOnboarding} />
-        <Route path="/payments" component={PaymentsTab} />
-        <Route component={ProfileSelection} />
+        <Route component={Onboarding} />
       </Switch>
     );
   }

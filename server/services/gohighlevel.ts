@@ -129,38 +129,54 @@ export class GoHighLevelService {
    */
   private async createAccountAndProfiles(contact: any, accountData?: any, playersData?: any[]): Promise<{ success: boolean; message: string }> {
     try {
-      // Extract parent and player data from contact
+      // Extract parent and player data from contact - support multiple field name formats
       const parentData = {
         email: contact.email,
-        firstName: contact.first_name || contact.firstName,
-        lastName: contact.last_name || contact.lastName,
-        phoneNumber: contact.phone || '',
+        firstName: contact.first_name || contact.firstName || contact.parent_first_name || '',
+        lastName: contact.last_name || contact.lastName || contact.parent_last_name || '',
+        phoneNumber: contact.phone || contact.phoneNumber || contact.parent_phone || '',
       };
+
+      console.log('Extracted parent data:', JSON.stringify(parentData, null, 2));
 
       // Extract player data from webhook or contact custom fields
       const players = playersData || this.extractPlayersFromContact(contact);
 
+      console.log('Extracted players data:', JSON.stringify(players, null, 2));
+
       if (players.length === 0) {
-        console.log('No player data found in contact, skipping profile creation');
-        return { success: true, message: 'No player data found' };
+        console.log('No player data found in contact, checking for single player in contact root');
+        // Check if player data is in the root contact object
+        if (contact.player_first_name || contact.child_first_name) {
+          players.push({
+            firstName: contact.player_first_name || contact.child_first_name,
+            lastName: contact.player_last_name || contact.child_last_name || parentData.lastName,
+            dateOfBirth: contact.player_dob || contact.child_dob,
+            schoolGrade: contact.player_grade || contact.child_grade || contact.grade
+          });
+        }
+      }
+
+      if (players.length === 0) {
+        console.log('Still no player data found, proceeding with parent-only account');
       }
 
       // Create account with payment info
       const accountId = await this.getOrCreateAccount(contact.email, parentData, accountData);
 
-      // Create parent profile
+      // Create parent profile with proper data
       const parentProfile = await this.getOrCreateParentProfile(accountId, parentData);
 
       // Create player profiles and relationships
       const createdPlayers = [];
       for (const playerData of players) {
-        if (playerData.first_name && playerData.last_name) {
+        if (playerData.firstName) {
           const playerProfile = await storage.createProfile({
             id: `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             accountId: accountId,
             profileType: 'player',
-            firstName: playerData.first_name,
-            lastName: playerData.last_name,
+            firstName: playerData.firstName,
+            lastName: playerData.lastName || parentData.lastName, // Default to parent last name
             dateOfBirth: playerData.dateOfBirth,
             schoolGrade: playerData.schoolGrade?.toString()
           });
@@ -174,13 +190,13 @@ export class GoHighLevelService {
             relationship: 'parent'
           });
 
-          console.log('Created player profile and relationship:', playerProfile.id);
+          console.log('Created player profile and relationship:', playerProfile.id, playerData.firstName, playerData.lastName);
         }
       }
 
       return {
         success: true,
-        message: `Created profiles for ${createdPlayers.length} players`
+        message: `Created account and profiles: 1 parent + ${createdPlayers.length} players`
       };
     } catch (error) {
       console.error('Error creating account and profiles:', error);
@@ -231,32 +247,73 @@ export class GoHighLevelService {
   /**
    * Extract player data from GoHighLevel contact custom fields
    */
-  private extractPlayersFromContact(contact: GoHighLevelContact): PlayerData[] {
-    const players: PlayerData[] = [];
+  private extractPlayersFromContact(contact: any): any[] {
+    const players: any[] = [];
     
-    if (!contact.customFields) {
-      return players;
-    }
-
-    // Look for player data in custom fields
-    // This assumes GoHighLevel has custom fields like: player1_first_name, player1_last_name, etc.
-    for (let i = 1; i <= 5; i++) { // Support up to 5 players per family
-      const firstName = contact.customFields[`player${i}_first_name`] || contact.customFields[`player_${i}_first_name`];
-      const lastName = contact.customFields[`player${i}_last_name`] || contact.customFields[`player_${i}_last_name`];
-      const dob = contact.customFields[`player${i}_dob`] || contact.customFields[`player_${i}_dob`];
-      const grade = contact.customFields[`player${i}_grade`] || contact.customFields[`player_${i}_grade`];
-
-      if (firstName && lastName) {
+    // First check for direct player data in the contact object
+    const directPlayerFields = [
+      'player_first_name', 'child_first_name', 'student_first_name',
+      'player1_first_name', 'child1_first_name'
+    ];
+    
+    for (const field of directPlayerFields) {
+      if (contact[field]) {
+        const lastNameField = field.replace('first_name', 'last_name');
+        const dobField = field.replace('first_name', 'dob');
+        const gradeField = field.replace('first_name', 'grade');
+        
         players.push({
-          firstName: String(firstName).trim(),
-          lastName: String(lastName).trim(),
-          dateOfBirth: dob ? String(dob).trim() : undefined,
-          schoolGrade: grade ? parseInt(String(grade), 10) : undefined
+          firstName: String(contact[field]).trim(),
+          lastName: contact[lastNameField] ? String(contact[lastNameField]).trim() : '',
+          dateOfBirth: contact[dobField] ? String(contact[dobField]).trim() : undefined,
+          schoolGrade: contact[gradeField] ? parseInt(String(contact[gradeField]), 10) : undefined
         });
       }
     }
 
-    return players;
+    // Then check custom fields if they exist
+    if (contact.customFields) {
+      // Support multiple naming conventions for player data
+      const fieldVariations = [
+        'player', 'child', 'student', 'kid'
+      ];
+      
+      for (const variation of fieldVariations) {
+        for (let i = 1; i <= 5; i++) { // Support up to 5 players per family
+          const fieldPatterns = [
+            `${variation}${i}_first_name`,
+            `${variation}_${i}_first_name`,
+            `${variation}${i}FirstName`,
+            `${variation}_${i}_firstName`
+          ];
+          
+          for (const pattern of fieldPatterns) {
+            const firstName = contact.customFields[pattern];
+            if (firstName) {
+              const lastNamePattern = pattern.replace(/first.*name/i, 'last_name');
+              const dobPattern = pattern.replace(/first.*name/i, 'dob');
+              const gradePattern = pattern.replace(/first.*name/i, 'grade');
+              
+              players.push({
+                firstName: String(firstName).trim(),
+                lastName: contact.customFields[lastNamePattern] ? String(contact.customFields[lastNamePattern]).trim() : '',
+                dateOfBirth: contact.customFields[dobPattern] ? String(contact.customFields[dobPattern]).trim() : undefined,
+                schoolGrade: contact.customFields[gradePattern] ? parseInt(String(contact.customFields[gradePattern]), 10) : undefined
+              });
+              break; // Found this player, move to next number
+            }
+          }
+        }
+      }
+    }
+
+    // Remove duplicates and empty names
+    const uniquePlayers = players.filter((player, index, arr) => 
+      player.firstName && 
+      arr.findIndex(p => p.firstName === player.firstName && p.lastName === player.lastName) === index
+    );
+
+    return uniquePlayers;
   }
 
   /**
@@ -268,20 +325,37 @@ export class GoHighLevelService {
       const existingAccount = await storage.getAccountByEmail(email);
       if (existingAccount) {
         console.log('Found existing account for:', email);
+        
+        // Update existing account with parent data if missing
+        if (!existingAccount.firstName || !existingAccount.lastName) {
+          console.log('Updating existing account with parent data');
+          await storage.updateAccount(existingAccount.id, {
+            firstName: parentData.firstName,
+            lastName: parentData.lastName
+          });
+        }
+        
         return existingAccount.id;
       }
       
       // Generate magic link token for new accounts
       const { token, expires } = this.generateMagicLinkToken();
       
-      // Create new account
+      // Create new account with proper parent data
       const accountId = `ghl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      console.log('Creating new account with parent data:', {
+        email,
+        firstName: parentData.firstName,
+        lastName: parentData.lastName,
+        phoneNumber: parentData.phoneNumber
+      });
       
       await storage.upsertAccount({
         id: accountId,
         email: email,
-        firstName: parentData.firstName,
-        lastName: parentData.lastName,
+        firstName: parentData.firstName || '',
+        lastName: parentData.lastName || '',
         primaryAccountType: 'parent' as const,
         accountCompleted: true,
         registrationStatus: 'payment_required', // Default status for new accounts
@@ -290,7 +364,7 @@ export class GoHighLevelService {
         magicLinkExpires: expires
       });
 
-      console.log(`Created account from GoHighLevel: ${accountId} with magic link: ...${token.slice(-4)}`);
+      console.log(`Created account from GoHighLevel: ${accountId} for ${parentData.firstName} ${parentData.lastName} (${email})`);
       return accountId;
     } catch (error) {
       console.error('Error getting/creating account:', error);

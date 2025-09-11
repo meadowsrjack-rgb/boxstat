@@ -42,14 +42,14 @@ import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
 import PaymentsTab from "@/pages/payments";
-import PaymentsTab2 from "@/pages/PaymentsTab";
+import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import { useQuery } from "@tanstack/react-query";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
 
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
-  const { data: profiles, isLoading } = useQuery({
+  const { data: profiles, isLoading } = useQuery<any[]>({
     queryKey: ['/api/profiles/me'],
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
@@ -153,8 +153,8 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
-        // For GoHighLevel users, check if profiles exist, otherwise show fallback
-        return <ProfileCheckWrapper><PaymentsTab2 /></ProfileCheckWrapper>;
+        // Show registration status directly - payment status should be visible regardless of profiles
+        return <RegistrationStatus />;
       }} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {
@@ -196,7 +196,7 @@ function Router() {
       <Route path="/trophies-badges" component={TrophiesBadges} />
       <Route path="/skills" component={Skills} />
       <Route path="/photo-upload" component={PhotoUpload} />
-      <Route path="/payments" component={PaymentsTab2} />
+      <Route path="/payments" component={RegistrationStatus} />
       <Route path="/no-profiles" component={NoProfiles} />
       {/* Legacy routes for compatibility during transition */}
       <Route path="/profile-selection" component={ProfileSelection} />

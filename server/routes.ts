@@ -69,6 +69,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user account info (unified system for GoHighLevel integration)
+  app.get('/api/account/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const account = await storage.getAccount(userId);
+      if (!account) {
+        return res.status(404).json({ message: 'Account not found' });
+      }
+      res.json(account);
+    } catch (error) {
+      console.error("Error fetching account:", error);
+      res.status(500).json({ message: "Failed to fetch account" });
+    }
+  });
+
+  // Get user profiles (unified system for GoHighLevel integration)
+  app.get('/api/profiles/me', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const profiles = await storage.getAccountProfiles(userId);
+      res.json(profiles);
+    } catch (error) {
+      console.error("Error fetching profiles:", error);
+      res.status(500).json({ message: "Failed to fetch profiles" });
+    }
+  });
+
   // User routes
   app.get('/api/users/:id/team', isAuthenticated, async (req: any, res) => {
     try {

@@ -117,26 +117,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Magic link has expired" });
       }
 
-      // Create user session for magic link authentication
-      const user = {
+      // Create claims compatible with Replit Auth structure
+      const claims = {
         sub: account.id,
         email: account.email,
-        name: account.firstName ? `${account.firstName} ${account.lastName || ''}`.trim() : account.email,
-        magic_link_auth: true
+        first_name: account.firstName || '',
+        last_name: account.lastName || '',
+        profile_image_url: null,
+        exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days from now
       };
 
-      // Set session for Replit Auth compatibility
-      req.session.user = {
-        claims: user,
-        isAuthenticated: true,
-        authType: 'magic_link'
+      // Create user object compatible with Passport.js structure
+      const user = {
+        claims: claims,
+        access_token: 'magic_link_token', // Placeholder for compatibility
+        refresh_token: null,
+        expires_at: claims.exp
       };
 
-      // Invalidate the magic link token after successful authentication
-      await storage.clearMagicLinkToken(account.id);
+      // Ensure user exists in the users table for compatibility
+      await storage.upsertUser({
+        id: account.id,
+        email: account.email,
+        firstName: account.firstName,
+        lastName: account.lastName,
+        userType: account.primaryAccountType || 'parent',
+        profileCompleted: account.accountCompleted || false
+      });
 
-      // Redirect to registration status page
-      res.redirect('/');
+      // Use Passport's login function to create proper session
+      req.login(user, (err: any) => {
+        if (err) {
+          console.error("Error creating session:", err);
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        
+        console.log("Magic link authentication successful for:", account.email);
+        
+        // Invalidate the magic link token after successful authentication
+        storage.clearMagicLinkToken(account.id).catch(console.error);
+        
+        // Redirect to registration status page
+        res.redirect('/');
+      });
       
     } catch (error) {
       console.error("Error processing magic link:", error);

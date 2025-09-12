@@ -36,7 +36,6 @@ export default function Sidebar() {
     { href: "/schedule", icon: Calendar, label: "Schedule", badge: null },
     { href: "/team", icon: Users, label: "Team", badge: null },
     { href: "/chat", icon: MessageCircle, label: "Messages", badge: "2" },
-    { href: "/payments", icon: CreditCard, label: "Payments", badge: null },
     { href: "/settings", icon: Settings, label: "Settings", badge: null },
   ];
 

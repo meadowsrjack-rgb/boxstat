@@ -691,6 +691,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               size={88}
             />
           </div>
+          <div className="text-sm text-gray-600">
+            Hey, <span className="font-semibold text-gray-900">{currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}</span>! 🏀
+          </div>
         </div>
 
         {/* Tabs */}

@@ -2787,14 +2787,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       
       // First check if this user has an account (for GHL integration)
-      const account = await storage.getAccountByUserId(userId);
+      const account = await storage.getAccount(userId);
       if (account) {
         // Get profile relationships for this account
         const profiles = await storage.getAccountProfiles(account.id);
         const parentProfile = profiles.find(p => p.profileType === 'parent');
         
         if (parentProfile) {
-          const relationships = await storage.getProfileRelationships(account.id, parentProfile.id);
+          const relationships = await storage.getProfileRelationships(account.id);
           const players = [];
           
           for (const rel of relationships) {

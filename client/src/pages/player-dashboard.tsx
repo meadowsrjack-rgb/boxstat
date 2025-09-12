@@ -80,7 +80,30 @@ const WEIGHT_OPTIONS = Array.from({ length: 121 }, (_, i) => `${80 + i}`);
 const JERSEY_OPTIONS = Array.from({ length: 100 }, (_, i) => `${i}`);
 
 /* ===== Types ===== */
-type UypEvent = Event;
+type UypEvent = {
+  id: string;
+  title: string;
+  startTime: string;
+  endTime?: string;
+  eventType?: string;
+  location?: string;
+  description?: string;
+  teamId?: number | null;
+};
+
+// Helper function to convert database Event to UypEvent
+function convertEventToUypEvent(event: Event): UypEvent {
+  return {
+    id: event.id.toString(),
+    title: event.title,
+    startTime: event.startTime.toISOString(),
+    endTime: event.endTime?.toISOString(),
+    eventType: event.eventType,
+    location: event.location,
+    description: event.description || undefined,
+    teamId: event.teamId,
+  };
+}
 type Task = {
   id: string | number;
   type: "ATTENDANCE" | "PROFILE_BIO" | "HOMEWORK" | "MODULE";
@@ -725,7 +748,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event as UypEvent);
+                          setSelectedEvent(convertEventToUypEvent(event));
                           setEventDetailOpen(true);
                         }}
                         data-testid={`event-item-${event.id}`}
@@ -759,7 +782,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event as UypEvent);
+                          setSelectedEvent(convertEventToUypEvent(event));
                           setEventDetailOpen(true);
                         }}
                         data-testid={`upcoming-event-item-${event.id}`}
@@ -785,8 +808,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
               {/* Calendar component - moved below events */}
               <PlayerCalendar 
-                events={relevantEvents} 
-                currentUser={currentUser} 
+                events={relevantEvents.map(convertEventToUypEvent)} 
+                currentUser={{...currentUser, email: currentUser.email || ''}} 
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />

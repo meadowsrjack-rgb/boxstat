@@ -111,7 +111,7 @@ export function registerClaimRoutes(app: Express): void {
       });
 
       // Send claim email
-      const claimLink = `${process.env.REPL_URL || 'http://localhost:5000'}/claim?token=${magicLinkToken}`;
+      const claimLink = `${process.env.REPL_URL || 'http://localhost:5000'}/claim-verify?token=${magicLinkToken}`;
       
       try {
         // In development, just log the claim link
@@ -165,6 +165,8 @@ export function registerClaimRoutes(app: Express): void {
 
       // Check if token is expired
       if (!account.magicLinkExpires || account.magicLinkExpires < new Date()) {
+        // Clear expired token
+        await storage.clearMagicLinkToken(account.id);
         return res.status(400).json({ message: 'Claim link has expired. Please request a new one.' });
       }
 

@@ -181,8 +181,9 @@ export default function Landing() {
             {/* Primary CTA Button - Made more red */}
             <Button 
               size="lg" 
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => setLocation('/claim')}
               className="bg-red-500 hover:bg-red-600 text-white text-lg font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px]"
+              data-testid="button-lets-go"
             >
               LET'S GO
             </Button>
@@ -191,8 +192,9 @@ export default function Landing() {
             <div className="text-white/80 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => setLocation('/claim')}
                 className="text-white font-semibold underline hover:text-gray-200 transition-colors"
+                data-testid="button-sign-in"
               >
                 SIGN IN
               </button>

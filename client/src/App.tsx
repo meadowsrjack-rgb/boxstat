@@ -48,6 +48,8 @@ import FamilyOnboarding from "@/pages/family-onboarding";
 import { useQuery } from "@tanstack/react-query";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
+import AccountClaim from "@/pages/account-claim";
+import ClaimVerify from "@/pages/claim-verify";
 
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
   const { data: profiles, isLoading } = useQuery<any[]>({
@@ -112,8 +114,10 @@ function Router() {
     console.log("User not authenticated, showing landing page");
     return (
       <Switch>
-      <Route path="/privacy" component={PrivacySettingsPage} />
-      <Route path="/teams" component={Teams} />
+        <Route path="/privacy" component={PrivacySettingsPage} />
+        <Route path="/teams" component={Teams} />
+        <Route path="/claim" component={AccountClaim} />
+        <Route path="/claim-verify" component={ClaimVerify} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>

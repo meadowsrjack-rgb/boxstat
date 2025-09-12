@@ -1395,17 +1395,22 @@ export class DatabaseStorage implements IStorage {
   async getCoachEvents(coachId: string): Promise<Event[]> {
     // Get the coach's team first
     const coach = await db.select().from(users).where(eq(users.id, coachId)).limit(1);
-    if (!coach.length || !coach[0].teamId) return [];
+    if (!coach.length) return [];
 
     const teamId = coach[0].teamId;
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
+    // Get team events AND league-wide events (like Google Calendar events) - same as getUserEvents
     return await db
       .select()
       .from(events)
       .where(and(
-        eq(events.teamId, teamId),
-        gte(events.startTime, now),
+        or(
+          eq(events.teamId, teamId || 0),   // Team-specific events
+          isNull(events.teamId)             // League-wide events (Google Calendar)
+        ),
+        gte(events.startTime, startOfToday),
         eq(events.isActive, true)
       ))
       .orderBy(asc(events.startTime));

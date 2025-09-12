@@ -153,8 +153,8 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
-        // Show registration status directly - payment status should be visible regardless of profiles
-        return <RegistrationStatus />;
+        // Redirect to profile selection for all users
+        return <ProfileSelection />;
       }} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {

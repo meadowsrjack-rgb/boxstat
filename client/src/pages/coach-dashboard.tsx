@@ -950,7 +950,7 @@ function BadgesTab() {
             <div className="max-h-48 overflow-y-auto border rounded-md">
               {search.length ? (
                 search.map((p: any, index: number) => (
-                  <div key={`${p.id}-${index}`} className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${selectedPlayer?.id === p.id ? "bg-red-50" : ""}`} onClick={() => { setSelectedPlayer(p); setProfileModalOpen(true); }} data-testid={`player-result-${p.id}`}>
+                  <div key={`${p.id}-${index}`} className="p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 hover:bg-red-50" onClick={() => { setSelectedPlayer(p); setProfileModalOpen(true); }} data-testid={`player-result-${p.id}`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-7 w-7">
                         <AvatarImage src={p.profileImageUrl || undefined} />
@@ -961,7 +961,7 @@ function BadgesTab() {
                         <div className="text-[11px] text-gray-500">{p.teamName || "—"}</div>
                       </div>
                     </div>
-                    {selectedPlayer?.id === p.id ? <Badge className="bg-green-100 text-green-700">Selected</Badge> : null}
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
                   </div>
                 ))
               ) : (
@@ -972,32 +972,6 @@ function BadgesTab() {
         </CardContent>
       </Card>
 
-      {selectedPlayer && (
-        <Card className="border-0 shadow-sm border-green-200 bg-green-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={selectedPlayer.profileImageUrl || undefined} />
-                  <AvatarFallback className="text-sm">{selectedPlayer.firstName?.[0]}{selectedPlayer.lastName?.[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <div className="font-medium text-gray-900">{selectedPlayer.firstName} {selectedPlayer.lastName}</div>
-                  <div className="text-sm text-gray-600">{selectedPlayer.teamName || "No team assigned"}</div>
-                </div>
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setProfileModalOpen(true)}
-                data-testid="button-open-profile"
-              >
-                View Profile
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Player Profile Modal */}
       <PlayerProfileModal 

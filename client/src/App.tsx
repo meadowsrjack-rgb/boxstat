@@ -44,6 +44,7 @@ import CreateProfile from "@/pages/create-profile";
 import PaymentsTab from "@/pages/payments";
 import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
+import FamilyOnboarding from "@/pages/family-onboarding";
 import { useQuery } from "@tanstack/react-query";
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
@@ -201,6 +202,7 @@ function Router() {
       {/* Legacy routes for compatibility during transition */}
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
+      <Route path="/family-onboarding" component={FamilyOnboarding} />
       
       {/* Parent-specific routes */}
       {(user as any)?.userType === 'parent' && (

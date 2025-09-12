@@ -88,7 +88,7 @@ export class NotionAccountSyncService {
 
     // Convert to AccountGroup format
     const accountGroups: AccountGroup[] = [];
-    for (const [email, peopleGroup] of groups) {
+    for (const [email, peopleGroup] of Array.from(groups.entries())) {
       // Determine primary account type - prefer parent > coach > player
       let primaryType: 'parent' | 'player' | 'coach' = 'player';
       let registrationStatus: 'pending' | 'active' | 'payment_required' = 'pending';
@@ -152,7 +152,7 @@ export class NotionAccountSyncService {
           personType: person.personType,
           dob: person.dob,
           age,
-          jerseyNumber: person.jerseyNumber ? parseInt(person.jerseyNumber) : undefined,
+          jerseyNumber: person.jerseyNumber,
           photoUrl: person.photoUrl,
           teamId: undefined, // Will be set by team mapping logic
           phoneNumber: person.phoneNumber

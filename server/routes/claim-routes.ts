@@ -4,6 +4,9 @@ import { isAuthenticated } from "../replitAuth";
 import { claimRepo } from "../lib/claim-repository";
 import { emailService, smsService, generateVerificationCode, getDevModeCode } from "../lib/email-service";
 import { fetchNotionData } from "../lib/notion-adapter";
+import { notionAccountSync } from "../services/notionAccountSync.js";
+import { storage } from "../storage-impl.js";
+import { nanoid } from "nanoid";
 
 // Rate limiting store (in-memory for simplicity)
 const rateLimitStore = new Map<string, { attempts: number; lastAttempt: number }>();
@@ -25,6 +28,10 @@ const verifyClaimSchema = z.object({
   playerId: z.string().uuid(),
   contact: z.string(),
   code: z.string().length(6)
+});
+
+const requestAccountClaimSchema = z.object({
+  email: z.string().email()
 });
 
 function checkRateLimit(key: string): boolean {
@@ -54,6 +61,174 @@ function checkRateLimit(key: string): boolean {
 }
 
 export function registerClaimRoutes(app: Express): void {
+  
+  // ========== EMAIL-BASED ACCOUNT CLAIMING ==========
+  app.post('/api/auth/request-claim', async (req, res) => {
+    try {
+      const { email } = requestAccountClaimSchema.parse(req.body);
+      const normalizedEmail = email.toLowerCase().trim();
+      
+      // Rate limiting by email
+      const rateLimitKey = `claim:${normalizedEmail}`;
+      if (!checkRateLimit(rateLimitKey)) {
+        return res.status(429).json({ 
+          message: 'Too many attempts. Please wait 5 minutes before trying again.' 
+        });
+      }
+
+      // Check if account exists in our system (generated from Notion)
+      let account = await storage.getAccountByEmail(normalizedEmail);
+      
+      if (!account) {
+        // Run a fresh sync from Notion to see if this email is now available
+        console.log(`Account not found for ${normalizedEmail}, running Notion sync...`);
+        try {
+          await notionAccountSync.syncAccountsFromNotion();
+          account = await storage.getAccountByEmail(normalizedEmail);
+        } catch (syncError) {
+          console.error('Notion sync failed during claim request:', syncError);
+        }
+      }
+      
+      if (!account) {
+        return res.status(404).json({ 
+          message: 'No account found for this email address. Please contact the academy if you believe this is an error.',
+          suggestions: [
+            'Check that you\'re using the same email address provided to the academy',
+            'Contact the academy administration to verify your registration'
+          ]
+        });
+      }
+
+      // Generate magic link token and expiry
+      const magicLinkToken = nanoid(32);
+      const magicLinkExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      // Update account with magic link token
+      await storage.updateAccount(account.id, {
+        magicLinkToken,
+        magicLinkExpires
+      });
+
+      // Send claim email
+      const claimLink = `${process.env.REPL_URL || 'http://localhost:5000'}/claim?token=${magicLinkToken}`;
+      
+      try {
+        // In development, just log the claim link
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`\n🎯 ACCOUNT CLAIM LINK for ${normalizedEmail}:`);
+          console.log(`${claimLink}\n`);
+        }
+        
+        // TODO: Send actual email in production
+        // await emailService.sendClaimEmail(normalizedEmail, claimLink, account.primaryAccountType);
+        
+        res.json({
+          success: true,
+          message: `Account claim instructions have been sent to ${normalizedEmail}`,
+          ...(process.env.NODE_ENV === 'development' && { 
+            devClaimLink: claimLink,
+            devNote: 'In development mode, use the claim link above'
+          })
+        });
+      } catch (emailError) {
+        console.error('Failed to send claim email:', emailError);
+        res.status(500).json({ 
+          message: 'Failed to send claim email. Please try again or contact support.' 
+        });
+      }
+
+    } catch (error) {
+      console.error('Error requesting account claim:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid email format', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to process claim request' });
+    }
+  });
+
+  // ========== VERIFY MAGIC LINK TOKEN ==========
+  app.get('/api/auth/verify-claim/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ message: 'Missing claim token' });
+      }
+
+      // Find account by magic link token
+      const account = await storage.getAccountByMagicToken(token);
+      
+      if (!account) {
+        return res.status(404).json({ message: 'Invalid or expired claim link' });
+      }
+
+      // Check if token is expired
+      if (!account.magicLinkExpires || account.magicLinkExpires < new Date()) {
+        return res.status(400).json({ message: 'Claim link has expired. Please request a new one.' });
+      }
+
+      // Get account profiles
+      const profiles = await storage.getAccountProfiles(account.id);
+      
+      // Clear the magic link token (single use)
+      await storage.clearMagicLinkToken(account.id);
+
+      res.json({
+        success: true,
+        account: {
+          id: account.id,
+          email: account.email,
+          primaryAccountType: account.primaryAccountType,
+          registrationStatus: account.registrationStatus
+        },
+        profiles: profiles.map(p => ({
+          id: p.id,
+          profileType: p.profileType,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          profileImageUrl: p.profileImageUrl
+        }))
+      });
+
+    } catch (error) {
+      console.error('Error verifying claim token:', error);
+      res.status(500).json({ message: 'Failed to verify claim token' });
+    }
+  });
+
+  // ========== ACCOUNT SYNC STATS ==========
+  app.get('/api/admin/sync-stats', async (req, res) => {
+    try {
+      // TODO: Add admin role check
+      const stats = await notionAccountSync.getSyncStats();
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching sync stats:', error);
+      res.status(500).json({ message: 'Failed to fetch sync stats' });
+    }
+  });
+
+  // ========== MANUAL NOTION SYNC ==========
+  app.post('/api/admin/sync-accounts', async (req, res) => {
+    try {
+      // TODO: Add admin role check
+      console.log('Starting manual Notion account sync...');
+      
+      const result = await notionAccountSync.syncAccountsFromNotion();
+      
+      console.log('Manual account sync completed:', result);
+      
+      res.json({
+        success: true,
+        ...result,
+        message: `Synced ${result.accountsCreated} accounts with ${result.profilesCreated} profiles`
+      });
+    } catch (error) {
+      console.error('Error syncing accounts from Notion:', error);
+      res.status(500).json({ message: 'Failed to sync accounts from Notion' });
+    }
+  });
   
   // ========== SEARCH PLAYERS ==========
   app.get('/api/players/search', isAuthenticated, async (req: any, res) => {

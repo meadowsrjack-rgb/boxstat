@@ -297,6 +297,16 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async clearMagicLinkToken(accountId: string): Promise<void> {
+    await db.update(accounts)
+      .set({ 
+        magicLinkToken: null, 
+        magicLinkExpires: null,
+        updatedAt: new Date() 
+      })
+      .where(eq(accounts.id, accountId));
+  }
+
   async getAccountByMagicToken(token: string): Promise<Account | undefined> {
     const [account] = await db.select().from(accounts).where(eq(accounts.magicLinkToken, token));
     return account;

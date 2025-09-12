@@ -110,7 +110,7 @@ export class NotionPlayerService {
               const relatedPage = await notion.pages.retrieve({ page_id: relationId });
               if ('properties' in relatedPage) {
                 // Find the title property
-                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title');
+                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title') as any;
                 youthClubTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
               }
             } catch (error) {

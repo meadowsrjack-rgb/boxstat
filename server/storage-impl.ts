@@ -233,6 +233,34 @@ export interface IStorage {
   
   // Player relationship operations (for backward compatibility)
   getPlayersByGuardianEmail(email: string): Promise<Player[]>;
+
+  // New methods for account claiming system
+  upsertAccountFromNotion(email: string, data: { 
+    primaryAccountType: 'parent' | 'player' | 'coach';
+    registrationStatus?: 'pending' | 'active' | 'payment_required';
+    magicLinkToken?: string;
+    magicLinkExpires?: Date;
+  }): Promise<Account>;
+  
+  upsertProfileFromNotion(accountId: string, notionData: {
+    notionId: string;
+    fullName: string;
+    personType: 'parent' | 'player' | 'coach';
+    dob?: string;
+    age?: number;
+    jerseyNumber?: string;
+    photoUrl?: string;
+    teamId?: number;
+    phoneNumber?: string;
+  }): Promise<Profile>;
+  
+  getAccountByEmail(email: string): Promise<Account | undefined>;
+  
+  linkParentPlayer(accountId: string, parentProfileId: string, playerProfileId: string): Promise<ProfileRelationship>;
+  
+  // Helper methods for accounts and profiles
+  getAccounts(): Promise<Account[]>;
+  getProfiles(): Promise<Profile[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -335,6 +363,106 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.insert(profileRelationships).values(relationship).returning();
     return result;
   }
+
+  // New methods for account claiming system
+  async upsertAccountFromNotion(email: string, data: { 
+    primaryAccountType: 'parent' | 'player' | 'coach';
+    registrationStatus?: 'pending' | 'active' | 'payment_required';
+    magicLinkToken?: string;
+    magicLinkExpires?: Date;
+  }): Promise<Account> {
+    const accountId = `account-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const [account] = await db
+      .insert(accounts)
+      .values({
+        id: accountId,
+        email,
+        primaryAccountType: data.primaryAccountType,
+        registrationStatus: data.registrationStatus || 'pending',
+        magicLinkToken: data.magicLinkToken,
+        magicLinkExpires: data.magicLinkExpires,
+      })
+      .onConflictDoUpdate({
+        target: accounts.email,
+        set: {
+          primaryAccountType: data.primaryAccountType,
+          registrationStatus: data.registrationStatus || 'pending',
+          magicLinkToken: data.magicLinkToken,
+          magicLinkExpires: data.magicLinkExpires,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    
+    return account;
+  }
+
+  async upsertProfileFromNotion(accountId: string, notionData: {
+    notionId: string;
+    fullName: string;
+    personType: 'parent' | 'player' | 'coach';
+    dob?: string;
+    age?: number;
+    jerseyNumber?: string;
+    photoUrl?: string;
+    teamId?: number;
+    phoneNumber?: string;
+  }): Promise<Profile> {
+    const profileId = `${notionData.personType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const nameParts = notionData.fullName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+    
+    const [profile] = await db
+      .insert(profiles)
+      .values({
+        id: profileId,
+        accountId,
+        profileType: notionData.personType,
+        firstName,
+        lastName,
+        profileImageUrl: notionData.photoUrl,
+        dateOfBirth: notionData.dob ? new Date(notionData.dob) : undefined,
+        phoneNumber: notionData.phoneNumber,
+        teamId: notionData.teamId,
+        jerseyNumber: notionData.jerseyNumber,
+        profileCompleted: true, // Auto-populated from Notion
+      })
+      .onConflictDoNothing() // Don't overwrite existing profiles
+      .returning();
+    
+    return profile;
+  }
+
+  async linkParentPlayer(accountId: string, parentProfileId: string, playerProfileId: string): Promise<ProfileRelationship> {
+    const [relationship] = await db
+      .insert(profileRelationships)
+      .values({
+        accountId,
+        parentProfileId,
+        playerProfileId,
+        relationship: 'parent',
+        canMakePayments: true,
+        canViewReports: true,
+        emergencyContact: false,
+      })
+      .onConflictDoNothing() // Don't create duplicate relationships
+      .returning();
+    
+    return relationship;
+  }
+
+  // Helper methods for sync statistics
+  async getAccounts(): Promise<Account[]> {
+    return await db.select().from(accounts);
+  }
+
+  async getProfiles(): Promise<Profile[]> {
+    return await db.select().from(profiles);
+  }
+
   // User operations (required for Replit Auth)
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));

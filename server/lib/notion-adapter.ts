@@ -3,18 +3,23 @@ import { z } from 'zod';
 
 export const notion = new Client({ auth: process.env.NOTION_API_KEY });
 
-// Field mapping for Notion properties
+// Field mapping for Notion properties - Updated for account claiming system
 export const NOTION_FIELD_MAP = {
   playersDbId: process.env.NOTION_DB_ID!,
   teamsDbId: process.env.NOTION_DB_ID!, // Using same DB for now, can be split later
-  player: {
-    fullName: 'Name',            // Title
-    dob: 'DOB',                  // Date or text
+  person: {
+    fullName: 'Name',            // Title - Name of the person (parent or player)
+    email: 'Email',              // Email - The person's account email
+    personType: 'Type',          // Select: Parent/Player/Coach
+    registrationStatus: 'Registration Status', // Select: Pending/Active/Payment Required
+    dob: 'DOB',                  // Date or text - Date of birth
+    age: 'Age',                  // Number - Age (calculated or manual)
     jerseyNumber: 'Jersey',      // Number or text
     photoUrl: 'Photo',           // Files/URL (optional)
     teamRelation: 'Team',        // Relation → Teams DB
-    guardianEmail: 'Guardian Email', // Email text
+    guardianEmail: 'Guardian Email', // Email text - For legacy compatibility
     guardianPhone: 'Guardian Phone', // Phone text
+    phoneNumber: 'Phone',        // Phone - The person's phone number
     status: 'Status'             // Select: Active/Inactive
   },
   team: {
@@ -44,14 +49,20 @@ function propText(p: any): string|undefined {
   return undefined;
 }
 
-// Player data structure from Notion
-export interface NotionPlayerData {
+// Person data structure from Notion (can be parent, player, or coach)
+export interface NotionPersonData {
   notionId: string;
   fullName: string;
+  email?: string;
+  personType: 'parent' | 'player' | 'coach';
+  registrationStatus: 'pending' | 'active' | 'payment_required';
   dob?: string;
+  age?: number;
   jerseyNumber?: string;
   photoUrl?: string;
   teamRelationId?: string;
+  phoneNumber?: string;
+  // Legacy fields for backward compatibility
   guardianEmail?: string;
   guardianPhone?: string;
   status: 'active' | 'inactive';
@@ -65,10 +76,10 @@ export interface NotionTeamData {
   coachNames?: string;
 }
 
-// Fetch all players from Notion
-export async function fetchNotionPlayers(): Promise<NotionPlayerData[]> {
+// Fetch all people (parents, players, coaches) from Notion
+export async function fetchNotionPeople(): Promise<NotionPersonData[]> {
   try {
-    const players: NotionPlayerData[] = [];
+    const people: NotionPersonData[] = [];
     let cursor: string | undefined;
 
     do {
@@ -81,33 +92,64 @@ export async function fetchNotionPlayers(): Promise<NotionPlayerData[]> {
       for (const page of response.results as any[]) {
         const props = page.properties;
         
-        const fullName = propText(props[NOTION_FIELD_MAP.player.fullName]);
+        const fullName = propText(props[NOTION_FIELD_MAP.person.fullName]);
         if (!fullName) continue; // Skip entries without names
 
-        const player: NotionPlayerData = {
+        // Parse person type - default to 'player' for backward compatibility
+        const personTypeRaw = propText(props[NOTION_FIELD_MAP.person.personType])?.toLowerCase();
+        let personType: 'parent' | 'player' | 'coach' = 'player';
+        if (personTypeRaw === 'parent' || personTypeRaw === 'coach') {
+          personType = personTypeRaw;
+        }
+
+        // Parse registration status - default to 'pending'
+        const regStatusRaw = propText(props[NOTION_FIELD_MAP.person.registrationStatus])?.toLowerCase();
+        let registrationStatus: 'pending' | 'active' | 'payment_required' = 'pending';
+        if (regStatusRaw === 'active' || regStatusRaw === 'payment_required') {
+          registrationStatus = regStatusRaw;
+        }
+
+        // Parse age as number
+        const ageRaw = propText(props[NOTION_FIELD_MAP.person.age]);
+        const age = ageRaw ? parseInt(ageRaw, 10) : undefined;
+
+        const person: NotionPersonData = {
           notionId: page.id,
           fullName,
-          dob: propText(props[NOTION_FIELD_MAP.player.dob]),
-          jerseyNumber: propText(props[NOTION_FIELD_MAP.player.jerseyNumber]),
-          photoUrl: propText(props[NOTION_FIELD_MAP.player.photoUrl]),
-          teamRelationId: propText(props[NOTION_FIELD_MAP.player.teamRelation]),
-          guardianEmail: propText(props[NOTION_FIELD_MAP.player.guardianEmail]),
-          guardianPhone: propText(props[NOTION_FIELD_MAP.player.guardianPhone]),
-          status: propText(props[NOTION_FIELD_MAP.player.status])?.toLowerCase() === 'active' ? 'active' : 'inactive'
+          email: propText(props[NOTION_FIELD_MAP.person.email]),
+          personType,
+          registrationStatus,
+          dob: propText(props[NOTION_FIELD_MAP.person.dob]),
+          age: age && !isNaN(age) ? age : undefined,
+          jerseyNumber: propText(props[NOTION_FIELD_MAP.person.jerseyNumber]),
+          photoUrl: propText(props[NOTION_FIELD_MAP.person.photoUrl]),
+          teamRelationId: propText(props[NOTION_FIELD_MAP.person.teamRelation]),
+          phoneNumber: propText(props[NOTION_FIELD_MAP.person.phoneNumber]),
+          // Legacy fields for backward compatibility
+          guardianEmail: propText(props[NOTION_FIELD_MAP.person.guardianEmail]),
+          guardianPhone: propText(props[NOTION_FIELD_MAP.person.guardianPhone]),
+          status: propText(props[NOTION_FIELD_MAP.person.status])?.toLowerCase() === 'active' ? 'active' : 'inactive'
         };
 
-        players.push(player);
+        people.push(person);
       }
 
       cursor = response.next_cursor || undefined;
     } while (cursor);
 
-    console.log(`Fetched ${players.length} players from Notion`);
-    return players;
+    console.log(`Fetched ${people.length} people from Notion`);
+    return people;
   } catch (error) {
-    console.error('Error fetching Notion players:', error);
-    throw new Error('Failed to fetch players from Notion');
+    console.error('Error fetching Notion people:', error);
+    throw new Error('Failed to fetch people from Notion');
   }
+}
+
+// Legacy function for backward compatibility
+export async function fetchNotionPlayers(): Promise<NotionPersonData[]> {
+  const people = await fetchNotionPeople();
+  // Return only players for backward compatibility
+  return people.filter(p => p.personType === 'player');
 }
 
 // Fetch all teams from Notion (or from a separate teams database if configured)
@@ -159,7 +201,7 @@ export async function fetchNotionData() {
 }
 
 // Search functionality for claim system
-export async function searchNotionPlayers(query: string, limit = 50): Promise<NotionPlayerData[]> {
+export async function searchNotionPlayers(query: string, limit = 50): Promise<NotionPersonData[]> {
   if (!query || query.length < 2) return [];
   
   try {
@@ -195,7 +237,7 @@ const rateLimiter = {
 };
 
 // Enhanced fetch with rate limiting
-export async function fetchNotionPlayersWithRateLimit(): Promise<NotionPlayerData[]> {
+export async function fetchNotionPlayersWithRateLimit(): Promise<NotionPersonData[]> {
   await rateLimiter.wait();
   return fetchNotionPlayers();
 }

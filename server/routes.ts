@@ -73,10 +73,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/account/me', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const account = await storage.getAccount(userId);
+      const email = req.user.claims.email;
+      
+      let account = await storage.getAccount(userId);
+      
+      // If no account exists but user exists, create account for backward compatibility
       if (!account) {
-        return res.status(404).json({ message: 'Account not found' });
+        const user = await storage.getUser(userId);
+        if (user) {
+          // Create account from existing user data
+          account = await storage.upsertAccount({
+            id: userId,
+            email: user.email || email,
+            primaryAccountType: user.userType as "parent" | "player" | "coach" || "parent",
+            accountCompleted: user.profileCompleted || false,
+            registrationStatus: "active",
+            paymentStatus: "pending"
+          });
+        } else {
+          return res.status(404).json({ message: 'Account not found' });
+        }
       }
+      
       res.json(account);
     } catch (error) {
       console.error("Error fetching account:", error);
@@ -88,7 +106,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/profiles/me', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const profiles = await storage.getAccountProfiles(userId);
+      const email = req.user.claims.email;
+      
+      // First try the new accounts/profiles system (GHL integration)
+      let profiles = await storage.getAccountProfiles(userId);
+      
+      // If no profiles found, check legacy players table for backward compatibility
+      if (profiles.length === 0) {
+        const user = await storage.getUser(userId);
+        const userEmail = user?.email || email;
+        
+        if (userEmail) {
+          // Get players linked to this user's email from the legacy players table
+          const players = await storage.getPlayersByGuardianEmail(userEmail);
+          
+          // Transform players to profile format for compatibility
+          profiles = players.map((player: any) => ({
+            id: player.id,
+            accountId: userId,
+            profileType: 'player',
+            firstName: player.firstName || player.full_name?.split(' ')[0] || '',
+            lastName: player.lastName || player.full_name?.split(' ').slice(1).join(' ') || '',
+            profileImageUrl: player.profileImageUrl || null,
+            dateOfBirth: player.dateOfBirth || player.dob || null,
+            teamId: player.teamId || null,
+            schoolGrade: player.schoolGrade || null,
+            position: player.position || null,
+            jerseyNumber: player.jerseyNumber || null,
+            isActive: true,
+            createdAt: player.createdAt || new Date(),
+            updatedAt: player.updatedAt || new Date()
+          }));
+        }
+      }
+      
       res.json(profiles);
     } catch (error) {
       console.error("Error fetching profiles:", error);

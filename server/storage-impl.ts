@@ -26,6 +26,7 @@ import {
   playerTasks,
   playerPoints,
   playerEvaluations,
+  players,
   // New types
   type Account,
   type Profile,
@@ -56,6 +57,7 @@ import {
   type PlayerTask,
   type PlayerPoints,
   type PlayerEvaluation,
+  type Player,
   // Legacy insert types
   type InsertUser,
   type InsertTeam,
@@ -228,6 +230,9 @@ export interface IStorage {
   // Player evaluation operations
   getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined>;
   savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation>;
+  
+  // Player relationship operations (for backward compatibility)
+  getPlayersByGuardianEmail(email: string): Promise<Player[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1348,6 +1353,11 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result;
+  }
+
+  // Player relationship operations (for backward compatibility)
+  async getPlayersByGuardianEmail(email: string): Promise<Player[]> {
+    return await db.select().from(players).where(eq(players.guardianEmail, email));
   }
 }
 

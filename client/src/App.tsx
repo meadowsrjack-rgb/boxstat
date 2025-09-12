@@ -210,6 +210,7 @@ function Router() {
           <Route path="/roster" component={RosterManagement} />
           <Route path="/schedule-requests" component={ScheduleRequests} />
           <Route path="/family" component={FamilyManagement} />
+          <Route path="/family-management" component={FamilyManagement} />
         </>
       )}
       
@@ -228,6 +229,7 @@ function Router() {
           <Route path="/roster" component={RosterManagement} />
           <Route path="/schedule-requests" component={ScheduleRequests} />
           <Route path="/family" component={FamilyManagement} />
+          <Route path="/family-management" component={FamilyManagement} />
         </>
       )}
       

@@ -86,20 +86,31 @@ type UypEvent = {
   startTime: string;
   endTime?: string;
   eventType?: string;
-  location?: string;
+  location: string;
   description?: string;
   teamId?: number | null;
 };
 
 // Helper function to convert database Event to UypEvent
-function convertEventToUypEvent(event: Event): UypEvent {
+function convertEventToUypEvent(event: Event | any): UypEvent {
+  // If already a UypEvent, return as is
+  if (typeof event.id === 'string' && typeof event.startTime === 'string') {
+    const result = event as UypEvent;
+    // Ensure location is always a string for CheckInButton compatibility
+    return {
+      ...result,
+      location: result.location || 'TBD'
+    };
+  }
+  
+  // Convert database Event to UypEvent
   return {
-    id: event.id.toString(),
-    title: event.title,
-    startTime: event.startTime.toISOString(),
-    endTime: event.endTime?.toISOString(),
+    id: event.id?.toString() || '',
+    title: event.title || event.summary || '',
+    startTime: event.startTime instanceof Date ? event.startTime.toISOString() : event.startTime || event.start_time || '',
+    endTime: event.endTime instanceof Date ? event.endTime.toISOString() : event.endTime || event.end_time,
     eventType: event.eventType,
-    location: event.location,
+    location: event.location || 'TBD',
     description: event.description || undefined,
     teamId: event.teamId,
   };
@@ -809,7 +820,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               {/* Calendar component - moved below events */}
               <PlayerCalendar 
                 events={relevantEvents.map(convertEventToUypEvent)} 
-                currentUser={{...currentUser, email: currentUser.email || ''}} 
+                currentUser={{
+                  id: currentUser.id,
+                  email: currentUser.email || '',
+                  firstName: currentUser.firstName || undefined,
+                  lastName: currentUser.lastName || undefined
+                }} 
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />
@@ -1535,7 +1551,7 @@ function TeamBlock() {
     teams: teamResults?.teams || [],
     players: playerResults?.players || []
   };
-  const searchError = null; // Since we're handling errors gracefully
+  const searchError = null; // Will handle errors gracefully in queries
   
   const { data: teamDetails } = useQuery({
     queryKey: ["/api/search/teams", selectedTeam?.id],
@@ -1709,7 +1725,7 @@ function TeamBlock() {
           
           {searchError && (
             <div className="text-center py-8 text-red-500">
-              <p>Error searching teams: {searchError.message}</p>
+              <p>Error searching teams: {(searchError as any)?.message || 'An error occurred'}</p>
             </div>
           )}
           

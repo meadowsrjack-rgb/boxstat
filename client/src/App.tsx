@@ -51,6 +51,42 @@ import PhotoUpload from "@/pages/photo-upload";
 import AccountClaim from "@/pages/account-claim";
 import ClaimVerify from "@/pages/claim-verify";
 
+// Individual Setting Pages
+import { 
+  PlayerProfilePage, 
+  PlayerPrivacyPage, 
+  PlayerNotificationsPage, 
+  PlayerSecurityPage, 
+  PlayerDevicesPage, 
+  PlayerLegalPage 
+} from "@/pages/player-setting-pages";
+
+import { 
+  CoachProfilePage, 
+  CoachCoachingPage, 
+  CoachPrivacyPage, 
+  CoachNotificationsPage, 
+  CoachSecurityPage, 
+  CoachConnectionsPage, 
+  CoachBillingPage, 
+  CoachDevicesPage, 
+  CoachLegalPage, 
+  CoachDangerPage 
+} from "@/pages/coach-setting-pages";
+
+import { 
+  ParentProfilePage, 
+  ParentFamilyPage, 
+  ParentPrivacyPage, 
+  ParentNotificationsPage, 
+  ParentSecurityPage, 
+  ParentConnectionsPage, 
+  ParentBillingPage, 
+  ParentDevicesPage, 
+  ParentLegalPage, 
+  ParentDangerPage 
+} from "@/pages/parent-setting-pages";
+
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
   const { data: profiles, isLoading } = useQuery<any[]>({
     queryKey: ['/api/profiles/me'],
@@ -191,6 +227,38 @@ function Router() {
       <Route path="/parent-settings" component={ParentSettingsPage} />
       <Route path="/player-settings" component={PlayerSettingsPage} />
       <Route path="/coach-settings" component={CoachSettingsPage} />
+      
+      {/* Individual Player Setting Pages */}
+      <Route path="/player-settings/profile" component={PlayerProfilePage} />
+      <Route path="/player-settings/privacy" component={PlayerPrivacyPage} />
+      <Route path="/player-settings/notifications" component={PlayerNotificationsPage} />
+      <Route path="/player-settings/security" component={PlayerSecurityPage} />
+      <Route path="/player-settings/devices" component={PlayerDevicesPage} />
+      <Route path="/player-settings/legal" component={PlayerLegalPage} />
+      
+      {/* Individual Coach Setting Pages */}
+      <Route path="/coach-settings/profile" component={CoachProfilePage} />
+      <Route path="/coach-settings/coaching" component={CoachCoachingPage} />
+      <Route path="/coach-settings/privacy" component={CoachPrivacyPage} />
+      <Route path="/coach-settings/notifications" component={CoachNotificationsPage} />
+      <Route path="/coach-settings/security" component={CoachSecurityPage} />
+      <Route path="/coach-settings/connections" component={CoachConnectionsPage} />
+      <Route path="/coach-settings/billing" component={CoachBillingPage} />
+      <Route path="/coach-settings/devices" component={CoachDevicesPage} />
+      <Route path="/coach-settings/legal" component={CoachLegalPage} />
+      <Route path="/coach-settings/danger" component={CoachDangerPage} />
+      
+      {/* Individual Parent Setting Pages */}
+      <Route path="/parent-settings/profile" component={ParentProfilePage} />
+      <Route path="/parent-settings/family" component={ParentFamilyPage} />
+      <Route path="/parent-settings/privacy" component={ParentPrivacyPage} />
+      <Route path="/parent-settings/notifications" component={ParentNotificationsPage} />
+      <Route path="/parent-settings/security" component={ParentSecurityPage} />
+      <Route path="/parent-settings/connections" component={ParentConnectionsPage} />
+      <Route path="/parent-settings/billing" component={ParentBillingPage} />
+      <Route path="/parent-settings/devices" component={ParentDevicesPage} />
+      <Route path="/parent-settings/legal" component={ParentLegalPage} />
+      <Route path="/parent-settings/danger" component={ParentDangerPage} />
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
       <Route path="/calendar-sync" component={CalendarSync} />

@@ -212,6 +212,7 @@ function Router() {
       }} />
       <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
       <Route path="/parent-dashboard" component={() => <ParentDashboard />} />
+      <Route path="/parent/dashboard" component={() => <ParentDashboard />} />
       <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
       <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
       <Route path="/admin" component={() => <AdminDashboard />} />

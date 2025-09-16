@@ -241,7 +241,7 @@ export default function ParentDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="px-6 mb-6">
+        <div className="px-6 mb-6" data-testid="parent-dashboard-tabs">
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="players" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
@@ -332,7 +332,9 @@ export default function ParentDashboard() {
           )}
 
           {activeTab === "players" && (
-            <PlayersTab />
+            <div data-testid="players-tab-content">
+              <PlayersTab />
+            </div>
           )}
 
           {activeTab === "payments" && (

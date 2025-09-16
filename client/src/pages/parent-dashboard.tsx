@@ -30,6 +30,8 @@ import {
   CheckCircle,
   Clock,
   AlertTriangle,
+  Globe,
+  Calendar,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -415,7 +417,7 @@ function PlayersTab() {
 
   // Query for comprehensive player data
   const { data: linkedPlayers = [], isLoading } = useQuery({
-    queryKey: [`/api/parent/players/comprehensive`],
+    queryKey: ['/api/parent/players/comprehensive'],
   });
 
   return (

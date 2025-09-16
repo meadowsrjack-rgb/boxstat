@@ -533,6 +533,41 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   uniqueUserEndpoint: unique().on(table.userId, table.endpoint),
 }));
 
+// Device management tables
+export const trustedDevices = pgTable("trusted_devices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  deviceFingerprint: varchar("device_fingerprint").notNull(),
+  deviceName: varchar("device_name").notNull(),
+  deviceType: varchar("device_type", { enum: ["desktop", "mobile", "tablet"] }).notNull(),
+  userAgent: text("user_agent"),
+  lastLocation: varchar("last_location"),
+  lastIpAddress: varchar("last_ip_address"),
+  isCurrent: boolean("is_current").default(false),
+  isActive: boolean("is_active").default(true),
+  lastUsed: timestamp("last_used").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueUserDevice: unique().on(table.userId, table.deviceFingerprint),
+}));
+
+export const deviceSettings = pgTable("device_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  locationPermissions: boolean("location_permissions").default(true),
+  notificationPermissions: boolean("notification_permissions").default(true),
+  cameraPermissions: boolean("camera_permissions").default(false),
+  microphonePermissions: boolean("microphone_permissions").default(false),
+  autoLogin: boolean("auto_login").default(true),
+  biometricLogin: boolean("biometric_login").default(false),
+  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  trustedDevicesOnly: boolean("trusted_devices_only").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  uniqueUserSettings: unique().on(table.userId),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   team: one(teams, { fields: [users.teamId], references: [teams.id] }),
@@ -563,6 +598,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   notifications: many(notifications),
   notificationPreferences: one(notificationPreferences),
   pushSubscriptions: many(pushSubscriptions),
+  trustedDevices: many(trustedDevices),
+  deviceSettings: one(deviceSettings),
 }));
 
 // New relations for accounts and profiles
@@ -716,6 +753,15 @@ export const playerEvaluationsRelations = relations(playerEvaluations, ({ one })
   }),
 }));
 
+// Device management relations
+export const trustedDevicesRelations = relations(trustedDevices, ({ one }) => ({
+  user: one(users, { fields: [trustedDevices.userId], references: [users.id] }),
+}));
+
+export const deviceSettingsRelations = relations(deviceSettings, ({ one }) => ({
+  user: one(users, { fields: [deviceSettings.userId], references: [users.id] }),
+}));
+
 // Search & Claim system relations
 export const playersRelations = relations(players, ({ one, many }) => ({
   team: one(teams, { fields: [players.teamId], references: [teams.id] }),
@@ -791,6 +837,10 @@ export const insertApprovalSchema = createInsertSchema(approvals).omit({ id: tru
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true, pushSentAt: true });
 export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true, lastUsed: true });
+
+// Device management insert schemas
+export const insertTrustedDeviceSchema = createInsertSchema(trustedDevices).omit({ id: true, createdAt: true, lastUsed: true });
+export const insertDeviceSettingsSchema = createInsertSchema(deviceSettings).omit({ id: true, createdAt: true, updatedAt: true });
 
 // New types
 export type Account = typeof accounts.$inferSelect;
@@ -872,6 +922,12 @@ export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+
+// Device management types
+export type TrustedDevice = typeof trustedDevices.$inferSelect;
+export type DeviceSettings = typeof deviceSettings.$inferSelect;
+export type InsertTrustedDevice = z.infer<typeof insertTrustedDeviceSchema>;
+export type InsertDeviceSettings = z.infer<typeof insertDeviceSettingsSchema>;
 
 // Notion-based types
 export type NotionPlayer = {

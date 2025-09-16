@@ -3,6 +3,9 @@ import {
   accounts,
   profiles,
   profileRelationships,
+  // Device management tables
+  trustedDevices,
+  deviceSettings,
   // Legacy tables
   users,
   teams,
@@ -34,6 +37,11 @@ import {
   type InsertAccount,
   type InsertProfile,
   type InsertProfileRelationship,
+  // Device management types
+  type TrustedDevice,
+  type DeviceSettings,
+  type InsertTrustedDevice,
+  type InsertDeviceSettings,
   // Legacy types
   type User,
   type Team,
@@ -83,6 +91,9 @@ import {
   insertAccountSchema,
   insertProfileSchema,
   insertProfileRelationshipSchema,
+  // Device management insert schemas
+  insertTrustedDeviceSchema,
+  insertDeviceSettingsSchema,
   // Legacy insert schemas
   insertUserSchema,
   insertTeamSchema,
@@ -261,6 +272,16 @@ export interface IStorage {
   // Helper methods for accounts and profiles
   getAccounts(): Promise<Account[]>;
   getProfiles(): Promise<Profile[]>;
+  
+  // Device management operations
+  getTrustedDevices(userId: string): Promise<TrustedDevice[]>;
+  getDeviceSettings(userId: string): Promise<DeviceSettings | undefined>;
+  createOrUpdateDeviceSettings(userId: string, settings: InsertDeviceSettings): Promise<DeviceSettings>;
+  revokeTrustedDevice(userId: string, deviceId: string): Promise<void>;
+  verifyDevicePin(userId: string, pin: string): Promise<boolean>;
+  unlockDevice(userId: string, deviceFingerprint: string): Promise<void>;
+  getDeviceModeConfig(userId: string): Promise<any>;
+  createOrUpdateDeviceModeConfig(userId: string, config: any): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1501,6 +1522,68 @@ export class DatabaseStorage implements IStorage {
   // Player relationship operations (for backward compatibility)
   async getPlayersByGuardianEmail(email: string): Promise<Player[]> {
     return await db.select().from(players).where(eq(players.guardianEmail, email));
+  }
+
+  // Device management operations
+  async getTrustedDevices(userId: string): Promise<TrustedDevice[]> {
+    return await db
+      .select()
+      .from(trustedDevices)
+      .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.isActive, true)))
+      .orderBy(desc(trustedDevices.lastUsed));
+  }
+
+  async getDeviceSettings(userId: string): Promise<DeviceSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(deviceSettings)
+      .where(eq(deviceSettings.userId, userId));
+    return settings;
+  }
+
+  async createOrUpdateDeviceSettings(userId: string, settings: InsertDeviceSettings): Promise<DeviceSettings> {
+    const [result] = await db
+      .insert(deviceSettings)
+      .values({ ...settings, userId })
+      .onConflictDoUpdate({
+        target: deviceSettings.userId,
+        set: {
+          ...settings,
+          updatedAt: new Date(),
+        }
+      })
+      .returning();
+    return result;
+  }
+
+  async revokeTrustedDevice(userId: string, deviceId: string): Promise<void> {
+    await db
+      .update(trustedDevices)
+      .set({ isActive: false })
+      .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.id, deviceId)));
+  }
+
+  async verifyDevicePin(userId: string, pin: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    return user?.passcode === pin || false;
+  }
+
+  async unlockDevice(userId: string, deviceFingerprint: string): Promise<void> {
+    // Update device last used time
+    await db
+      .update(trustedDevices)
+      .set({ lastUsed: new Date() })
+      .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.deviceFingerprint, deviceFingerprint)));
+  }
+
+  // Legacy device mode config methods (for backward compatibility)
+  async getDeviceModeConfig(userId: string): Promise<any> {
+    const settings = await this.getDeviceSettings(userId);
+    return settings || {};
+  }
+
+  async createOrUpdateDeviceModeConfig(userId: string, config: any): Promise<any> {
+    return await this.createOrUpdateDeviceSettings(userId, config);
   }
 }
 

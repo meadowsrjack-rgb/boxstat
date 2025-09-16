@@ -2066,7 +2066,7 @@ export function ParentDevicesPage() {
   const [, setLocation] = useLocation();
 
   const { data: devices, isLoading } = useQuery({
-    queryKey: [`/api/devices`],
+    queryKey: ['/api/devices'],
     enabled: !!(user as any)?.id
   });
 
@@ -2090,20 +2090,18 @@ export function ParentDevicesPage() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: typeof settings) => {
-      const response = await fetch(`/api/devices/settings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+      return apiRequest('/api/devices/settings', {
+        method: 'POST',
         body: JSON.stringify(data),
       });
-      if (!response.ok) throw new Error("Failed to update device settings");
-      return response.json();
     },
     onSuccess: () => {
       toast({ 
         title: "Device Settings Updated", 
         description: "Your device preferences have been saved."
       });
+      // Invalidate cache to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
     },
     onError: (error: any) => {
       toast({ 
@@ -2116,18 +2114,17 @@ export function ParentDevicesPage() {
 
   const revokeDeviceMutation = useMutation({
     mutationFn: async (deviceId: string) => {
-      const response = await fetch(`/api/devices/${deviceId}/revoke`, {
-        method: "POST",
-        credentials: "include",
+      return apiRequest(`/api/devices/${deviceId}/revoke`, {
+        method: 'POST',
       });
-      if (!response.ok) throw new Error("Failed to revoke device access");
-      return response.json();
     },
     onSuccess: () => {
       toast({ 
         title: "Device Access Revoked", 
         description: "The device has been removed from your trusted devices."
       });
+      // Invalidate cache to refresh device list
+      queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
     },
     onError: (error: any) => {
       toast({ 

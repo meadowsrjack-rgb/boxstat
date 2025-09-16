@@ -450,6 +450,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Device management routes
+  app.get('/api/devices', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Get trusted devices and device settings
+      const devices = await storage.getTrustedDevices(userId);
+      const settings = await storage.getDeviceSettings(userId);
+      
+      res.json({ devices, settings });
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+      res.status(500).json({ message: 'Failed to fetch devices' });
+    }
+  });
+
+  app.post('/api/devices/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const settings = req.body;
+      
+      // Validate the settings using the zod schema
+      const { insertDeviceSettingsSchema } = await import('@shared/schema');
+      const validatedSettings = insertDeviceSettingsSchema.parse({
+        ...settings,
+        userId
+      });
+      
+      const updatedSettings = await storage.createOrUpdateDeviceSettings(userId, validatedSettings);
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error('Error updating device settings:', error);
+      res.status(500).json({ message: 'Failed to update device settings' });
+    }
+  });
+
+  app.post('/api/devices/:deviceId/revoke', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const deviceId = req.params.deviceId;
+      
+      // Revoke the device (mark as inactive)
+      await storage.revokeTrustedDevice(userId, deviceId);
+      
+      res.json({ message: 'Device access revoked successfully' });
+    } catch (error) {
+      console.error('Error revoking device:', error);
+      res.status(500).json({ message: 'Failed to revoke device access' });
+    }
+  });
+
+  app.post('/api/devices/verify-pin', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { pin } = req.body;
+      
+      const isValid = await storage.verifyDevicePin(userId, pin);
+      res.json({ verified: isValid });
+    } catch (error) {
+      console.error('Error verifying device PIN:', error);
+      res.status(500).json({ message: 'Failed to verify PIN' });
+    }
+  });
+
+  app.post('/api/devices/unlock', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { deviceFingerprint } = req.body;
+      
+      await storage.unlockDevice(userId, deviceFingerprint);
+      res.json({ message: 'Device unlocked successfully' });
+    } catch (error) {
+      console.error('Error unlocking device:', error);
+      res.status(500).json({ message: 'Failed to unlock device' });
+    }
+  });
+
   // Team routes
   app.get('/api/teams/:id', isAuthenticated, async (req: any, res) => {
     try {

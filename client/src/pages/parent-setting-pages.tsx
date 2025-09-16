@@ -268,75 +268,13 @@ export function ParentFamilyPage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Query for child profiles
-  const { data: childProfiles = [], isLoading } = useQuery({
-    queryKey: [`/api/profiles/me`],
+  // Query for linked player profiles with comprehensive data
+  const { data: linkedPlayers = [], isLoading } = useQuery({
+    queryKey: [`/api/parent/players/comprehensive`],
     enabled: !!(user as any)?.id
   });
 
-  const typedChildProfiles = (childProfiles as any[]) || [];
-
-  const [showAddChild, setShowAddChild] = useState(false);
-  const [newChildData, setNewChildData] = useState({
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
-    relationship: "child",
-  });
-
-  const addChildMutation = useMutation({
-    mutationFn: async (data: typeof newChildData) => {
-      const response = await fetch(`/api/family/add-child`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error("Failed to add child");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/me`] });
-      setShowAddChild(false);
-      setNewChildData({ firstName: "", lastName: "", dateOfBirth: "", relationship: "child" });
-      toast({ 
-        title: "Child Added", 
-        description: "Child profile has been successfully added to your family."
-      });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to Add Child", 
-        description: error?.message || "Please try again later.",
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const removeChildMutation = useMutation({
-    mutationFn: async (childId: string) => {
-      const response = await fetch(`/api/family/children/${childId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to remove child");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/me`] });
-      toast({ 
-        title: "Child Removed", 
-        description: "Child has been removed from your family."
-      });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Failed to Remove Child", 
-        description: error?.message || "Please try again later.",
-        variant: "destructive" 
-      });
-    },
-  });
+  const typedLinkedPlayers = (linkedPlayers as any[]) || [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -367,129 +305,127 @@ export function ParentFamilyPage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Children List */}
+          {/* Player Snapshots */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Children & Family Members
-                </CardTitle>
-                <Button
-                  onClick={() => setShowAddChild(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  data-testid="button-add-child"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Child
-                </Button>
-              </div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Linked Players
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-500">Loading children...</div>
+                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                  <div className="text-gray-500">Loading player information...</div>
                 </div>
-              ) : typedChildProfiles.filter((p: any) => p.profileType === 'player').length === 0 ? (
+              ) : typedLinkedPlayers.length === 0 ? (
                 <div className="text-center py-8">
                   <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <div className="text-gray-500 mb-2">No children added yet</div>
-                  <div className="text-sm text-gray-400">Add your first child to get started</div>
+                  <div className="text-gray-500 mb-2">No players linked yet</div>
+                  <div className="text-sm text-gray-400">Players will automatically appear here when linked to your account</div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {typedChildProfiles.filter((child: any) => child.profileType === 'player').map((child: any) => (
-                    <div key={child.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center">
-                          {child.firstName?.[0]?.toUpperCase() || 'C'}
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100">
-                            {child.firstName} {child.lastName}
+                  {typedLinkedPlayers.map((player: any) => (
+                    <Card 
+                      key={player.id} 
+                      className="cursor-pointer hover:shadow-md transition-shadow border border-gray-200 hover:border-blue-300"
+                      onClick={() => setLocation(`/player-profile/${player.id}`)}
+                      data-testid={`player-snapshot-${player.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          {/* Player Avatar */}
+                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+                            {player.firstName?.[0]?.toUpperCase() || 'P'}{player.lastName?.[0]?.toUpperCase() || ''}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            {child.dateOfBirth ? `Born ${new Date(child.dateOfBirth).toLocaleDateString()}` : 'Date of birth not set'}
+                          
+                          {/* Player Info */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                                  {player.firstName} {player.lastName}
+                                </h3>
+                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                                  <span className="flex items-center gap-1">
+                                    <Globe className="h-3 w-3" />
+                                    {player.team?.name || 'No team assigned'}
+                                  </span>
+                                  {player.age && (
+                                    <span className="flex items-center gap-1">
+                                      <Calendar className="h-3 w-3" />
+                                      Age {player.age}
+                                    </span>
+                                  )}
+                                  {player.jerseyNumber && (
+                                    <span className="text-blue-600 font-medium">#{player.jerseyNumber}</span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Registration Status */}
+                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                player.registrationStatus === 'active' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : player.registrationStatus === 'payment_required'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {player.registrationStatus === 'active' ? 'Up to Date' : 
+                                 player.registrationStatus === 'payment_required' ? 'Payment Required' : 'Pending'}
+                              </div>
+                            </div>
+                            
+                            {/* Stats Row */}
+                            <div className="grid grid-cols-4 gap-4 mb-3">
+                              {/* Skill Rating */}
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-blue-600">{player.skillRating || '--'}</div>
+                                <div className="text-xs text-gray-500">Skill Rating</div>
+                              </div>
+                              
+                              {/* Trophies */}
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-yellow-600">{player.trophyCount || 0}</div>
+                                <div className="text-xs text-gray-500">Trophies</div>
+                              </div>
+                              
+                              {/* Badges */}
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-purple-600">{player.badgeCount || 0}</div>
+                                <div className="text-xs text-gray-500">Badges</div>
+                              </div>
+                              
+                              {/* Achievement Total */}
+                              <div className="text-center">
+                                <div className="text-lg font-bold text-green-600">{(player.trophyCount || 0) + (player.badgeCount || 0)}</div>
+                                <div className="text-xs text-gray-500">Total Awards</div>
+                              </div>
+                            </div>
+                            
+                            {/* Last Check-in */}
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                              <Clock className="h-4 w-4" />
+                              <span>Last check-in:</span>
+                              {player.lastCheckin ? (
+                                <span>
+                                  {new Date(player.lastCheckin.checkedInAt).toLocaleDateString()} at {player.lastCheckin.location || 'Unknown location'}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">No recent check-ins</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeChildMutation.mutate(child.id)}
-                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                        data-testid={`button-remove-child-${child.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {/* Add Child Modal */}
-          {showAddChild && (
-            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
-              <CardHeader>
-                <CardTitle className="text-blue-800 dark:text-blue-200">Add New Child</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                    <Input
-                      value={newChildData.firstName}
-                      onChange={(e) => setNewChildData(d => ({ ...d, firstName: e.target.value }))}
-                      placeholder="Enter child's first name"
-                      data-testid="input-child-first-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                    <Input
-                      value={newChildData.lastName}
-                      onChange={(e) => setNewChildData(d => ({ ...d, lastName: e.target.value }))}
-                      placeholder="Enter child's last name"
-                      data-testid="input-child-last-name"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date of Birth</label>
-                  <Input
-                    type="date"
-                    value={newChildData.dateOfBirth}
-                    onChange={(e) => setNewChildData(d => ({ ...d, dateOfBirth: e.target.value }))}
-                    data-testid="input-child-dob"
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    onClick={() => addChildMutation.mutate(newChildData)}
-                    disabled={addChildMutation.isPending || !newChildData.firstName || !newChildData.lastName}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    data-testid="button-save-child"
-                  >
-                    {addChildMutation.isPending ? "Adding..." : "Add Child"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowAddChild(false);
-                      setNewChildData({ firstName: "", lastName: "", dateOfBirth: "", relationship: "child" });
-                    }}
-                    data-testid="button-cancel-add-child"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

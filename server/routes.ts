@@ -2890,6 +2890,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Parent dashboard comprehensive players route
+  app.get('/api/parent/players/comprehensive', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // First check if this user has an account (for GHL integration)
+      const account = await storage.getAccount(userId);
+      if (account) {
+        // Get profile relationships for this account
+        const profiles = await storage.getAccountProfiles(account.id);
+        const parentProfile = profiles.find(p => p.profileType === 'parent');
+        
+        if (parentProfile) {
+          const relationships = await storage.getProfileRelationships(account.id);
+          const players = [];
+          
+          for (const rel of relationships) {
+            if (!rel.playerProfileId) continue; // Skip if no player profile ID
+            
+            const playerProfile = await storage.getProfile(rel.playerProfileId);
+            if (playerProfile && playerProfile.profileType === 'player') {
+              // Get comprehensive data for each player
+              
+              // Team information
+              let team = null;
+              if (playerProfile.teamId) {
+                team = await storage.getTeam(playerProfile.teamId);
+              }
+              
+              // Age calculation
+              let age = null;
+              if (playerProfile.dateOfBirth) {
+                const today = new Date();
+                const birthDate = new Date(playerProfile.dateOfBirth);
+                age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                  age--;
+                }
+              }
+              
+              // Get trophies and badges counts
+              const [userTrophies, userBadges] = await Promise.all([
+                storage.getUserTrophies(rel.playerProfileId),
+                storage.getUserBadges(rel.playerProfileId)
+              ]);
+              
+              // Get last check-in
+              const attendances = await storage.getUserAttendances(rel.playerProfileId);
+              let lastCheckin = null;
+              if (attendances.length > 0) {
+                // Sort by most recent
+                const sortedAttendances = attendances.sort((a, b) => 
+                  new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
+                );
+                const lastAttendance = sortedAttendances[0];
+                
+                // Get event details for location
+                let location = 'Unknown location';
+                if (lastAttendance.eventId) {
+                  const event = await storage.getEvent(lastAttendance.eventId);
+                  if (event) {
+                    location = event.location;
+                  }
+                }
+                
+                lastCheckin = {
+                  checkedInAt: lastAttendance.checkedInAt,
+                  location: location
+                };
+              }
+              
+              // Registration status from account
+              const registrationStatus = account.registrationStatus || 'pending';
+              
+              // Calculate skill rating (for now, use a placeholder)
+              // TODO: Implement proper skill rating calculation
+              const skillRating = '--'; // This should be calculated from player stats/evaluations
+              
+              players.push({
+                id: playerProfile.id,
+                firstName: playerProfile.firstName || '',
+                lastName: playerProfile.lastName || '',
+                team: team ? { name: team.name, id: team.id } : null,
+                age: age,
+                jerseyNumber: playerProfile.jerseyNumber,
+                position: playerProfile.position,
+                skillRating: skillRating,
+                trophyCount: userTrophies.length,
+                badgeCount: userBadges.length,
+                lastCheckin: lastCheckin,
+                registrationStatus: registrationStatus,
+                profileImageUrl: playerProfile.profileImageUrl || null,
+                relationship: rel.relationship
+              });
+            }
+          }
+          
+          return res.json(players);
+        }
+      }
+      
+      // Fallback for non-GHL users - return empty array for now
+      res.json([]);
+    } catch (error) {
+      console.error('Error fetching comprehensive parent players:', error);
+      res.status(500).json({ message: 'Failed to fetch comprehensive player data' });
+    }
+  });
+
   app.post('/api/parent/players', isAuthenticated, async (req: any, res) => {
     try {
       const parentId = req.user.claims.sub;

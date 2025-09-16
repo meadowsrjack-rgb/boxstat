@@ -332,12 +332,7 @@ export default function ParentDashboard() {
           )}
 
           {activeTab === "players" && (
-            <PlayersTab
-              players={linkedPlayers}
-              onAdd={(payload) => linkPlayerMutation.mutate(payload)}
-              onRemove={(id) => unlinkPlayerMutation.mutate(id)}
-              isAdding={linkPlayerMutation.isPending}
-            />
+            <PlayersTab />
           )}
 
           {activeTab === "payments" && (
@@ -413,77 +408,40 @@ function ProfileAvatarRing({
 }
 
 /* =================== Players Tab =================== */
-function PlayersTab({
-  players,
-  onAdd,
-  onRemove,
-  isAdding,
-}: {
-  players: LinkedPlayer[];
-  onAdd: (p: { playerId: string }) => void;
-  onRemove: (id: number) => void;
-  isAdding: boolean;
-}) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+function PlayersTab() {
+  const [, setLocation] = useLocation();
 
-  // Search players query using Notion data
-  const { data: searchResponse, isLoading: isSearching } = useQuery({
-    queryKey: ['/api/search/notion-players', searchQuery],
-    queryFn: async () => {
-      if (!searchQuery || searchQuery.length < 2) return { ok: true, players: [] };
-      
-      const response = await fetch(`/api/search/notion-players?q=${encodeURIComponent(searchQuery)}`, {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
-      }
-      
-      return response.json();
-    },
-    enabled: searchQuery.length >= 2,
-    staleTime: 30000,
+  // Query for comprehensive player data
+  const { data: linkedPlayers = [], isLoading } = useQuery({
+    queryKey: [`/api/parent/players/comprehensive`],
   });
-
-  const searchResults = searchResponse?.players || [];
-
-  const handleAddPlayer = () => {
-    if (selectedPlayer) {
-      onAdd({ playerId: selectedPlayer.id });
-      setShowAdd(false);
-      setSearchQuery("");
-      setSelectedPlayer(null);
-    }
-  };
-
-  const resetSearch = () => {
-    setSearchQuery("");
-    setSelectedPlayer(null);
-  };
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Players</h2>
-        <Button className="bg-red-600 hover:bg-red-700" onClick={() => setShowAdd(true)}>
-          <UserPlus className="h-4 w-4 mr-2" /> Add Player
-        </Button>
+        <h2 className="text-xl font-bold text-gray-900">Linked Players</h2>
       </div>
 
-      {/* List */}
-      {players.length ? (
+      {/* Player Snapshots */}
+      {isLoading ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+            <div className="text-sm text-gray-500">Loading player information...</div>
+          </CardContent>
+        </Card>
+      ) : linkedPlayers.length ? (
         <div className="space-y-4">
-          {players.map((p) => (
-            <PlayerSnapshot key={p.id} player={p} onRemove={() => onRemove(p.id)} />
+          {linkedPlayers.map((player: any) => (
+            <ComprehensivePlayerSnapshot key={player.id} player={player} />
           ))}
         </div>
       ) : (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6 text-center text-sm text-gray-500">
-            No players linked yet. Click <span className="font-medium text-gray-700">Add Player</span> to get started.
+            <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <div className="text-gray-500 mb-2">No players linked yet</div>
+            <div className="text-xs text-gray-400">Players will automatically appear here when linked to your account</div>
           </CardContent>
         </Card>
       )}
@@ -494,89 +452,110 @@ function PlayersTab({
           <div className="flex items-start gap-2">
             <Sparkles className="h-5 w-5 text-red-600" />
             <p className="text-sm text-gray-600">
-              Search and link players to automatically import their calendar, skills, and trophies to your dashboard.
+              Player snapshots show real-time data including skills, achievements, attendance, and upcoming events.
             </p>
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
 
-      {/* Add dialog with search */}
-      <Dialog open={showAdd} onOpenChange={(open) => { setShowAdd(open); if (!open) resetSearch(); }}>
-        <DialogContent className="max-w-lg mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 p-0">
-          <DialogTitle className="sr-only">Add Player</DialogTitle>
-          <div className="p-6 space-y-5">
-            <h3 className="text-lg font-bold text-gray-900">Search and Add Player</h3>
-            <p className="text-sm text-gray-600">Search for a player to add them to your dashboard.</p>
-
-            {/* Search Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Search Players</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input 
-                  placeholder="Search by name, team, or program..." 
-                  value={searchQuery} 
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+function ComprehensivePlayerSnapshot({ player }: { player: any }) {
+  const [, setLocation] = useLocation();
+  
+  return (
+    <Card 
+      className="border-0 shadow-sm cursor-pointer hover:shadow-md transition-shadow hover:border-blue-300"
+      onClick={() => setLocation(`/player-profile/${player.id}`)}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start gap-4">
+          {/* Player Avatar */}
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+            {player.firstName?.[0]?.toUpperCase() || 'P'}{player.lastName?.[0]?.toUpperCase() || ''}
+          </div>
+          
+          {/* Player Info */}
+          <div className="flex-1">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <h3 className="font-semibold text-lg text-gray-900">
+                  {player.firstName} {player.lastName}
+                </h3>
+                <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <span className="flex items-center gap-1">
+                    <Globe className="h-3 w-3" />
+                    {player.team?.name || 'No team assigned'}
+                  </span>
+                  {player.age && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      Age {player.age}
+                    </span>
+                  )}
+                  {player.jerseyNumber && (
+                    <span className="text-blue-600 font-medium">#{player.jerseyNumber}</span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Registration Status */}
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                player.registrationStatus === 'active' 
+                  ? 'bg-green-100 text-green-800' 
+                  : player.registrationStatus === 'payment_required'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}>
+                {player.registrationStatus === 'active' ? 'Up to Date' : 
+                 player.registrationStatus === 'payment_required' ? 'Payment Required' : 'Pending'}
               </div>
             </div>
-
-            {/* Search Results */}
-            {searchQuery.length >= 2 && (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {isSearching ? (
-                  <div className="text-center py-4 text-sm text-gray-500">Searching...</div>
-                ) : searchResults.length > 0 ? (
-                  searchResults.map((player: any) => (
-                    <div
-                      key={player.id}
-                      onClick={() => setSelectedPlayer(player)}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedPlayer?.id === player.id
-                          ? "border-red-500 bg-red-50"
-                          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="font-medium text-gray-900">{player.displayText || player.fullName}</div>
-                      {player.team && (
-                        <div className="text-sm text-gray-600">{player.team}</div>
-                      )}
-                      {player.currentProgram && (
-                        <Badge variant="secondary" className="mt-1 text-xs">
-                          {player.currentProgram}
-                        </Badge>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-4 text-sm text-gray-500">No players found</div>
-                )}
+            
+            {/* Stats Row */}
+            <div className="grid grid-cols-4 gap-4 mb-3">
+              {/* Skill Rating */}
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{player.skillRating || '--'}</div>
+                <div className="text-xs text-gray-500">Skill Rating</div>
               </div>
-            )}
-
-            {searchQuery.length < 2 && (
-              <div className="text-center py-4 text-sm text-gray-500">
-                Type at least 2 characters to search
+              
+              {/* Trophies */}
+              <div className="text-center">
+                <div className="text-lg font-bold text-yellow-600">{player.trophyCount || 0}</div>
+                <div className="text-xs text-gray-500">Trophies</div>
               </div>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => { setShowAdd(false); resetSearch(); }}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 bg-red-600 hover:bg-red-700"
-                disabled={!selectedPlayer || isAdding}
-                onClick={handleAddPlayer}
-              >
-                {isAdding ? "Adding…" : "Add Player"}
-              </Button>
+              
+              {/* Badges */}
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">{player.badgeCount || 0}</div>
+                <div className="text-xs text-gray-500">Badges</div>
+              </div>
+              
+              {/* Achievement Total */}
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{(player.trophyCount || 0) + (player.badgeCount || 0)}</div>
+                <div className="text-xs text-gray-500">Total Awards</div>
+              </div>
+            </div>
+            
+            {/* Last Check-in */}
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Clock className="h-4 w-4" />
+              <span>Last check-in:</span>
+              {player.lastCheckin ? (
+                <span>
+                  {new Date(player.lastCheckin.checkedInAt).toLocaleDateString()} at {player.lastCheckin.location || 'Unknown location'}
+                </span>
+              ) : (
+                <span className="text-gray-400">No recent check-ins</span>
+              )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

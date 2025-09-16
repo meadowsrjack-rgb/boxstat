@@ -1,88 +1,1675 @@
 'use client';
 
+import React, { useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle } from "lucide-react";
 import SettingPage from "./setting-page";
 
+const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
+const COACHING_CERTIFICATIONS = [
+  "USA Basketball Coach License", 
+  "NFHS Coaching Certificate", 
+  "FIBA Coaching License",
+  "Youth Development Certificate",
+  "Sports Psychology Certificate",
+  "First Aid/CPR Certified",
+  "SafeSport Trained"
+];
+
 export function CoachProfilePage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  const [profile, setProfile] = useState({
+    firstName: (user as any)?.firstName || "",
+    lastName: (user as any)?.lastName || "",
+    phoneNumber: (user as any)?.phoneNumber || "",
+    email: (user as any)?.email || "",
+    city: (user as any)?.city || (user as any)?.address || "",
+    coachingExperience: (user as any)?.coachingExperience || "",
+    yearsExperience: (user as any)?.yearsExperience || "",
+    bio: (user as any)?.bio || "",
+    certifications: (user as any)?.certifications?.join(", ") || "",
+    previousTeams: (user as any)?.previousTeams || "",
+    playingExperience: (user as any)?.playingExperience || "",
+    philosophy: (user as any)?.philosophy || "",
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (data: typeof profile) => {
+      const updateData = {
+        ...data,
+        address: data.city,
+        certifications: data.certifications.split(",").map((cert: string) => cert.trim()).filter(Boolean),
+      };
+      
+      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updateData),
+      });
+      if (!response.ok) throw new Error("Failed to update coach profile");
+      return response.json();
+    },
+    onSuccess: (updatedUser) => {
+      setProfile({
+        firstName: updatedUser.firstName || "",
+        lastName: updatedUser.lastName || "",
+        phoneNumber: updatedUser.phoneNumber || "",
+        email: updatedUser.email || "",
+        city: updatedUser.city || updatedUser.address || "",
+        coachingExperience: updatedUser.coachingExperience || "",
+        yearsExperience: updatedUser.yearsExperience || "",
+        bio: updatedUser.bio || "",
+        certifications: updatedUser.certifications?.join(", ") || "",
+        previousTeams: updatedUser.previousTeams || "",
+        playingExperience: updatedUser.playingExperience || "",
+        philosophy: updatedUser.philosophy || "",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
+      
+      toast({ 
+        title: "Profile Updated", 
+        description: "Your coaching profile has been successfully updated."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Update Profile", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   return (
-    <SettingPage 
-      title="Profile"
-      description="Personal information and contact details"
-      backPath="/coach-settings"
-      userType="coach"
-      category="profile"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Coach Profile
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Personal information and coaching credentials
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Personal Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
+                  <Input
+                    value={profile.firstName}
+                    onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
+                    placeholder="Enter first name"
+                    data-testid="input-first-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
+                  <Input
+                    value={profile.lastName}
+                    onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
+                    placeholder="Enter last name"
+                    data-testid="input-last-name"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Mail className="h-4 w-4" />
+                    Email Address
+                  </label>
+                  <Input
+                    value={profile.email}
+                    onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))}
+                    placeholder="Enter email address"
+                    type="email"
+                    data-testid="input-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <Phone className="h-4 w-4" />
+                    Phone Number
+                  </label>
+                  <Input
+                    value={profile.phoneNumber}
+                    onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
+                    placeholder="Enter phone number"
+                    data-testid="input-phone"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <MapPin className="h-4 w-4" />
+                  City
+                </label>
+                <Input
+                  value={profile.city}
+                  onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                  placeholder="Enter your city"
+                  data-testid="input-city"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Coaching Experience */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="h-5 w-5" />
+                Coaching Experience
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Years of Experience</label>
+                  <Select value={profile.yearsExperience} onValueChange={(value) => setProfile(p => ({ ...p, yearsExperience: value }))}>
+                    <SelectTrigger data-testid="select-years-experience">
+                      <SelectValue placeholder="Select experience level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EXPERIENCE_LEVELS.map((level) => (
+                        <SelectItem key={level} value={level}>{level}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Certifications</label>
+                  <Input
+                    value={profile.certifications}
+                    onChange={(e) => setProfile(p => ({ ...p, certifications: e.target.value }))}
+                    placeholder="Enter certifications (comma separated)"
+                    data-testid="input-certifications"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">e.g., USA Basketball, NFHS, First Aid/CPR</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching Bio</label>
+                <Textarea
+                  value={profile.bio}
+                  onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))}
+                  placeholder="Tell players and parents about your coaching background and approach"
+                  rows={4}
+                  data-testid="textarea-bio"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">This will be visible to players and parents</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Previous Teams/Organizations</label>
+                <Textarea
+                  value={profile.previousTeams}
+                  onChange={(e) => setProfile(p => ({ ...p, previousTeams: e.target.value }))}
+                  placeholder="List previous teams or organizations you've coached"
+                  rows={3}
+                  data-testid="textarea-previous-teams"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Playing Experience</label>
+                <Textarea
+                  value={profile.playingExperience}
+                  onChange={(e) => setProfile(p => ({ ...p, playingExperience: e.target.value }))}
+                  placeholder="Describe your playing background"
+                  rows={3}
+                  data-testid="textarea-playing-experience"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching Philosophy</label>
+                <Textarea
+                  value={profile.philosophy}
+                  onChange={(e) => setProfile(p => ({ ...p, philosophy: e.target.value }))}
+                  placeholder="Share your coaching philosophy and what's important to you"
+                  rows={4}
+                  data-testid="textarea-philosophy"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-6">
+            <Button 
+              onClick={() => mutation.mutate(profile)} 
+              disabled={mutation.isPending}
+              className="px-8"
+              data-testid="button-save-profile"
+            >
+              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CoachCoachingPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  const [coaching, setCoaching] = useState({
+    specialties: (user as any)?.specialties?.join(", ") || "",
+    coachingLicense: (user as any)?.coachingLicense || "",
+    availability: (user as any)?.availability || "",
+    ageGroups: (user as any)?.ageGroups?.join(", ") || "",
+    coachingStyle: (user as any)?.coachingStyle || "",
+    emergencyContact: (user as any)?.emergencyContact || "",
+    emergencyPhone: (user as any)?.emergencyPhone || "",
+    medicalCertifications: (user as any)?.medicalCertifications?.join(", ") || "",
+    languages: (user as any)?.languages?.join(", ") || "",
+  });
+
+  const SPECIALTIES = ["Offense", "Defense", "Ball Handling", "Shooting", "Conditioning", "Mental Training", "Game Strategy", "Player Development"];
+  const AGE_GROUPS = ["U8", "U10", "U12", "U14", "U16", "U18", "Adult", "All Ages"];
+  const COACHING_STYLES = ["Instructional", "Motivational", "Disciplinary", "Supportive", "Competitive", "Developmental"];
+
+  const mutation = useMutation({
+    mutationFn: async (data: typeof coaching) => {
+      const updateData = {
+        ...data,
+        specialties: data.specialties.split(",").map((s: string) => s.trim()).filter(Boolean),
+        ageGroups: data.ageGroups.split(",").map((a: string) => a.trim()).filter(Boolean),
+        medicalCertifications: data.medicalCertifications.split(",").map((c: string) => c.trim()).filter(Boolean),
+        languages: data.languages.split(",").map((l: string) => l.trim()).filter(Boolean),
+      };
+      
+      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(updateData),
+      });
+      if (!response.ok) throw new Error("Failed to update coaching info");
+      return response.json();
+    },
+    onSuccess: (updatedUser) => {
+      setCoaching({
+        specialties: updatedUser.specialties?.join(", ") || "",
+        coachingLicense: updatedUser.coachingLicense || "",
+        availability: updatedUser.availability || "",
+        ageGroups: updatedUser.ageGroups?.join(", ") || "",
+        coachingStyle: updatedUser.coachingStyle || "",
+        emergencyContact: updatedUser.emergencyContact || "",
+        emergencyPhone: updatedUser.emergencyPhone || "",
+        medicalCertifications: updatedUser.medicalCertifications?.join(", ") || "",
+        languages: updatedUser.languages?.join(", ") || "",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
+      
+      toast({ 
+        title: "Coaching Info Updated", 
+        description: "Your coaching information has been successfully updated."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Update Coaching Info", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   return (
-    <SettingPage 
-      title="Coaching Info"
-      description="Coaching experience and qualifications"
-      backPath="/coach-settings"
-      userType="coach"
-      category="coaching"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Coaching Information
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Coaching experience and qualifications
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Coaching Specialties */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Coaching Specialties & Expertise</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Areas of Expertise</label>
+                <Input
+                  value={coaching.specialties}
+                  onChange={(e) => setCoaching(p => ({ ...p, specialties: e.target.value }))}
+                  placeholder="Enter specialties (comma separated)"
+                  data-testid="input-specialties"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">e.g., Defense, Shooting, Ball Handling, Mental Training</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching License</label>
+                  <Input
+                    value={coaching.coachingLicense}
+                    onChange={(e) => setCoaching(p => ({ ...p, coachingLicense: e.target.value }))}
+                    placeholder="License number or type"
+                    data-testid="input-license"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Age Groups</label>
+                  <Input
+                    value={coaching.ageGroups}
+                    onChange={(e) => setCoaching(p => ({ ...p, ageGroups: e.target.value }))}
+                    placeholder="Enter age groups (comma separated)"
+                    data-testid="input-age-groups"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">e.g., U12, U14, U16</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching Style</label>
+                <Select value={coaching.coachingStyle} onValueChange={(value) => setCoaching(p => ({ ...p, coachingStyle: value }))}>
+                  <SelectTrigger data-testid="select-coaching-style">
+                    <SelectValue placeholder="Select your coaching style" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COACHING_STYLES.map((style) => (
+                      <SelectItem key={style} value={style}>{style}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Availability & Contact */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Availability & Emergency Contact</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Availability</label>
+                <Textarea
+                  value={coaching.availability}
+                  onChange={(e) => setCoaching(p => ({ ...p, availability: e.target.value }))}
+                  placeholder="Describe your general availability (days, times, etc.)"
+                  rows={3}
+                  data-testid="textarea-availability"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Emergency Contact Name</label>
+                  <Input
+                    value={coaching.emergencyContact}
+                    onChange={(e) => setCoaching(p => ({ ...p, emergencyContact: e.target.value }))}
+                    placeholder="Emergency contact person"
+                    data-testid="input-emergency-contact"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Emergency Contact Phone</label>
+                  <Input
+                    value={coaching.emergencyPhone}
+                    onChange={(e) => setCoaching(p => ({ ...p, emergencyPhone: e.target.value }))}
+                    placeholder="Emergency contact phone"
+                    data-testid="input-emergency-phone"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Additional Certifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Additional Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Medical/Safety Certifications</label>
+                <Input
+                  value={coaching.medicalCertifications}
+                  onChange={(e) => setCoaching(p => ({ ...p, medicalCertifications: e.target.value }))}
+                  placeholder="First Aid, CPR, etc. (comma separated)"
+                  data-testid="input-medical-certs"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Languages Spoken</label>
+                <Input
+                  value={coaching.languages}
+                  onChange={(e) => setCoaching(p => ({ ...p, languages: e.target.value }))}
+                  placeholder="Languages (comma separated)"
+                  data-testid="input-languages"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-6">
+            <Button 
+              onClick={() => mutation.mutate(coaching)} 
+              disabled={mutation.isPending}
+              className="px-8"
+              data-testid="button-save-coaching"
+            >
+              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CoachPrivacyPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [privacy, setPrivacy] = useState({
+    profileVisible: true,
+    contactVisible: true,
+    scheduleVisible: true,
+    allowMessages: true,
+    allowPhoneCalls: false,
+    shareWithParents: true,
+    shareWithOtherCoaches: true,
+    dataSharing: true,
+  });
+
+  // Fetch current privacy settings
+  const { data: privacySettings } = useQuery({
+    queryKey: ['/api/privacy'],
+    select: (data: any) => data || {},
+  });
+
+  React.useEffect(() => {
+    if (privacySettings) {
+      setPrivacy({
+        profileVisible: privacySettings.profileVisible ?? true,
+        contactVisible: privacySettings.contactVisible ?? true,
+        scheduleVisible: privacySettings.scheduleVisible ?? true,
+        allowMessages: privacySettings.allowMessages ?? true,
+        allowPhoneCalls: privacySettings.allowPhoneCalls ?? false,
+        shareWithParents: privacySettings.shareWithParents ?? true,
+        shareWithOtherCoaches: privacySettings.shareWithOtherCoaches ?? true,
+        dataSharing: privacySettings.dataSharing ?? true,
+      });
+    }
+  }, [privacySettings]);
+
+  const mutation = useMutation({
+    mutationFn: async (settings: typeof privacy) => {
+      const response = await fetch("/api/privacy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ settings }),
+      });
+      if (!response.ok) throw new Error("Failed to update privacy settings");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Privacy settings updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update privacy settings", variant: "destructive" });
+    },
+  });
+
+  const ToggleRow = ({ label, description, checked, onChange, testId }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void; testId: string }) => (
+    <div className="flex items-start justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+      <div className="flex-1">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{label}</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} data-testid={testId} className="ml-4" />
+    </div>
+  );
+
   return (
-    <SettingPage 
-      title="Privacy"
-      description="Control your visibility and data sharing"
-      backPath="/coach-settings"
-      userType="coach"
-      category="privacy"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Privacy Settings
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Control your visibility and data sharing
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Visibility</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ToggleRow 
+                label="Coach Profile Visible" 
+                description="Allow players, parents, and other coaches to view your profile"
+                checked={privacy.profileVisible} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, profileVisible: v })); mutation.mutate({ ...privacy, profileVisible: v }); }}
+                testId="switch-profile-visible"
+              />
+              <ToggleRow 
+                label="Contact Information Visible" 
+                description="Show your contact details to team members"
+                checked={privacy.contactVisible} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, contactVisible: v })); mutation.mutate({ ...privacy, contactVisible: v }); }}
+                testId="switch-contact-visible"
+              />
+              <ToggleRow 
+                label="Schedule Information Visible" 
+                description="Allow others to see your coaching schedule and availability"
+                checked={privacy.scheduleVisible} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, scheduleVisible: v })); mutation.mutate({ ...privacy, scheduleVisible: v }); }}
+                testId="switch-schedule-visible"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Communication Preferences</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ToggleRow 
+                label="Allow Messages" 
+                description="Receive messages from players and parents through the app"
+                checked={privacy.allowMessages} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, allowMessages: v })); mutation.mutate({ ...privacy, allowMessages: v }); }}
+                testId="switch-allow-messages"
+              />
+              <ToggleRow 
+                label="Allow Phone Calls" 
+                description="Allow parents and administrators to call your phone number"
+                checked={privacy.allowPhoneCalls} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, allowPhoneCalls: v })); mutation.mutate({ ...privacy, allowPhoneCalls: v }); }}
+                testId="switch-allow-calls"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Sharing</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ToggleRow 
+                label="Share Information with Parents" 
+                description="Allow parents to view your coaching background and qualifications"
+                checked={privacy.shareWithParents} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, shareWithParents: v })); mutation.mutate({ ...privacy, shareWithParents: v }); }}
+                testId="switch-share-parents"
+              />
+              <ToggleRow 
+                label="Share Information with Other Coaches" 
+                description="Allow other coaches in the league to view your profile"
+                checked={privacy.shareWithOtherCoaches} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, shareWithOtherCoaches: v })); mutation.mutate({ ...privacy, shareWithOtherCoaches: v }); }}
+                testId="switch-share-coaches"
+              />
+              <ToggleRow 
+                label="Analytics and Improvement" 
+                description="Help improve the platform by sharing usage data"
+                checked={privacy.dataSharing} 
+                onChange={(v) => { setPrivacy(p => ({ ...p, dataSharing: v })); mutation.mutate({ ...privacy, dataSharing: v }); }}
+                testId="switch-data-sharing"
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 
+interface CoachNotificationPrefs {
+  teamUpdates: boolean;
+  scheduleChanges: boolean;
+  parentMessages: boolean;
+  adminAnnouncements: boolean;
+  playerProgress: boolean;
+  attendanceAlerts: boolean;
+  emergencyNotifications: boolean;
+  paymentReminders: boolean;
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+}
+
 export function CoachNotificationsPage() {
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [prefs, setPrefs] = useState<CoachNotificationPrefs>({
+    teamUpdates: true,
+    scheduleChanges: true,
+    parentMessages: true,
+    adminAnnouncements: true,
+    playerProgress: true,
+    attendanceAlerts: true,
+    emergencyNotifications: true,
+    paymentReminders: true,
+    pushNotifications: true,
+    emailNotifications: true,
+    smsNotifications: false,
+    quietHoursStart: "22:00",
+    quietHoursEnd: "07:00"
+  });
+
+  // Fetch notification preferences
+  const { data: notificationPrefs } = useQuery<Partial<CoachNotificationPrefs>>({
+    queryKey: ['/api/notifications/preferences'],
+  });
+
+  React.useEffect(() => {
+    if (notificationPrefs) {
+      setPrefs({
+        teamUpdates: notificationPrefs.teamUpdates ?? true,
+        scheduleChanges: notificationPrefs.scheduleChanges ?? true,
+        parentMessages: notificationPrefs.parentMessages ?? true,
+        adminAnnouncements: notificationPrefs.adminAnnouncements ?? true,
+        playerProgress: notificationPrefs.playerProgress ?? true,
+        attendanceAlerts: notificationPrefs.attendanceAlerts ?? true,
+        emergencyNotifications: notificationPrefs.emergencyNotifications ?? true,
+        paymentReminders: notificationPrefs.paymentReminders ?? true,
+        pushNotifications: notificationPrefs.pushNotifications ?? true,
+        emailNotifications: notificationPrefs.emailNotifications ?? true,
+        smsNotifications: notificationPrefs.smsNotifications ?? false,
+        quietHoursStart: notificationPrefs.quietHoursStart ?? "22:00",
+        quietHoursEnd: notificationPrefs.quietHoursEnd ?? "07:00"
+      });
+    }
+  }, [notificationPrefs]);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/notifications/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(prefs),
+      });
+      if (!response.ok) throw new Error("Failed to save preferences");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Notification settings saved" });
+    },
+    onError: () => {
+      toast({ title: "Failed to save notification settings", variant: "destructive" });
+    },
+  });
+
+  const ToggleRow = ({ label, description, checked, onChange, testId }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void; testId: string }) => (
+    <div className="flex items-start justify-between py-3">
+      <div className="flex-1">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} data-testid={testId} className="ml-4" />
+    </div>
+  );
+
   return (
-    <SettingPage 
-      title="Notifications"
-      description="Manage alerts and communications"
-      backPath="/coach-settings"
-      userType="coach"
-      category="notifications"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Notifications
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Manage alerts and communications
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Team & Schedule Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ToggleRow 
+                label="Team Updates" 
+                description="Get notified about team roster changes and announcements"
+                checked={prefs.teamUpdates} 
+                onChange={(v) => setPrefs((p) => ({ ...p, teamUpdates: v }))}
+                testId="switch-team-updates"
+              />
+              <ToggleRow 
+                label="Schedule Changes" 
+                description="Receive alerts when practice or game schedules are modified"
+                checked={prefs.scheduleChanges} 
+                onChange={(v) => setPrefs((p) => ({ ...p, scheduleChanges: v }))}
+                testId="switch-schedule-changes"
+              />
+              <ToggleRow 
+                label="Attendance Alerts" 
+                description="Get notified about player attendance and check-ins"
+                checked={prefs.attendanceAlerts} 
+                onChange={(v) => setPrefs((p) => ({ ...p, attendanceAlerts: v }))}
+                testId="switch-attendance-alerts"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Communication Notifications</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ToggleRow 
+                label="Parent Messages" 
+                description="Receive notifications when parents send you messages"
+                checked={prefs.parentMessages} 
+                onChange={(v) => setPrefs((p) => ({ ...p, parentMessages: v }))}
+                testId="switch-parent-messages"
+              />
+              <ToggleRow 
+                label="Administrative Announcements" 
+                description="Get notified about league and organizational updates"
+                checked={prefs.adminAnnouncements} 
+                onChange={(v) => setPrefs((p) => ({ ...p, adminAnnouncements: v }))}
+                testId="switch-admin-announcements"
+              />
+              <ToggleRow 
+                label="Emergency Notifications" 
+                description="Always receive critical and emergency communications"
+                checked={prefs.emergencyNotifications} 
+                onChange={(v) => setPrefs((p) => ({ ...p, emergencyNotifications: v }))}
+                testId="switch-emergency-notifications"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Player Development</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ToggleRow 
+                label="Player Progress Updates" 
+                description="Receive updates about player achievements and milestones"
+                checked={prefs.playerProgress} 
+                onChange={(v) => setPrefs((p) => ({ ...p, playerProgress: v }))}
+                testId="switch-player-progress"
+              />
+              <ToggleRow 
+                label="Payment Reminders" 
+                description="Get reminded about pending payments from team families"
+                checked={prefs.paymentReminders} 
+                onChange={(v) => setPrefs((p) => ({ ...p, paymentReminders: v }))}
+                testId="switch-payment-reminders"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery Methods</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ToggleRow 
+                label="Push Notifications" 
+                description="Receive push notifications on your mobile device"
+                checked={prefs.pushNotifications} 
+                onChange={(v) => setPrefs((p) => ({ ...p, pushNotifications: v }))}
+                testId="switch-push-notifications"
+              />
+              <ToggleRow 
+                label="Email Notifications" 
+                description="Receive notifications via email"
+                checked={prefs.emailNotifications} 
+                onChange={(v) => setPrefs((p) => ({ ...p, emailNotifications: v }))}
+                testId="switch-email-notifications"
+              />
+              <ToggleRow 
+                label="SMS Notifications" 
+                description="Receive critical notifications via text message"
+                checked={prefs.smsNotifications} 
+                onChange={(v) => setPrefs((p) => ({ ...p, smsNotifications: v }))}
+                testId="switch-sms-notifications"
+              />
+              
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quiet Hours</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Start Time</label>
+                    <Input
+                      type="time"
+                      value={prefs.quietHoursStart}
+                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursStart: e.target.value }))}
+                      data-testid="input-quiet-start"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">End Time</label>
+                    <Input
+                      type="time"
+                      value={prefs.quietHoursEnd}
+                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursEnd: e.target.value }))}
+                      data-testid="input-quiet-end"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Non-emergency notifications will be silenced during these hours</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-6">
+            <Button 
+              onClick={() => mutation.mutate()} 
+              disabled={mutation.isPending}
+              className="px-8"
+              data-testid="button-save-notifications"
+            >
+              {mutation.isPending ? "Saving Settings..." : "Save Settings"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CoachSecurityPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [trustedDevices, setTrustedDevices] = useState([
+    { id: 1, name: "iPhone 14", lastActive: "2025-09-15", current: true },
+    { id: 2, name: "MacBook Pro", lastActive: "2025-09-14", current: false },
+  ]);
+
+  const passwordMutation = useMutation({
+    mutationFn: async (data: typeof passwordForm) => {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update password");
+      return response.json();
+    },
+    onSuccess: () => {
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      toast({ title: "Password updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to update password", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const twoFactorMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const response = await fetch("/api/auth/2fa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ enabled }),
+      });
+      if (!response.ok) throw new Error("Failed to update 2FA settings");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setTwoFactorEnabled(data.enabled);
+      toast({ title: data.enabled ? "Two-factor authentication enabled" : "Two-factor authentication disabled" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update 2FA settings", variant: "destructive" });
+    },
+  });
+
+  const removeTrustedDevice = async (deviceId: number) => {
+    setTrustedDevices(devices => devices.filter(d => d.id !== deviceId));
+    toast({ title: "Device removed from trusted devices" });
+  };
+
+  const isPasswordFormValid = passwordForm.currentPassword && passwordForm.newPassword && passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.newPassword.length >= 8;
+
   return (
-    <SettingPage 
-      title="Security"
-      description="Password and account management"
-      backPath="/coach-settings"
-      userType="coach"
-      category="security"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Security Settings
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Password and account security management
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Password Change */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Current Password</label>
+                <Input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))}
+                  placeholder="Enter current password"
+                  data-testid="input-current-password"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+                <Input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
+                  placeholder="Enter new password"
+                  data-testid="input-new-password"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">Password must be at least 8 characters long</p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Confirm New Password</label>
+                <Input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                  placeholder="Confirm new password"
+                  data-testid="input-confirm-password"
+                />
+              </div>
+              
+              <Button 
+                onClick={() => passwordMutation.mutate(passwordForm)}
+                disabled={!isPasswordFormValid || passwordMutation.isPending}
+                data-testid="button-change-password"
+              >
+                {passwordMutation.isPending ? "Updating Password..." : "Update Password"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Two-Factor Authentication */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Two-Factor Authentication</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="text-md font-medium">Two-Factor Authentication (2FA)</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Add an extra layer of security to your account</p>
+                </div>
+                <Switch
+                  checked={twoFactorEnabled}
+                  onCheckedChange={(checked) => {
+                    setTwoFactorEnabled(checked);
+                    twoFactorMutation.mutate(checked);
+                  }}
+                  data-testid="switch-2fa"
+                />
+              </div>
+              
+              {twoFactorEnabled && (
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Two-factor authentication is enabled. You'll need to use an authenticator app to sign in.
+                  </p>
+                  <Button variant="outline" size="sm" className="mt-2" data-testid="button-2fa-setup">
+                    View Recovery Codes
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Trusted Devices */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Trusted Devices</CardTitle>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Devices that you've used to sign in to your account</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {trustedDevices.map((device) => (
+                <div key={device.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <div>
+                      <div className="text-sm font-medium flex items-center gap-2">
+                        {device.name}
+                        {device.current && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Current</span>}
+                      </div>
+                      <div className="text-xs text-gray-500">Last active: {device.lastActive}</div>
+                    </div>
+                  </div>
+                  {!device.current && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => removeTrustedDevice(device.id)}
+                      data-testid={`button-remove-device-${device.id}`}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* Account Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-sm">Last login</span>
+                  <span className="text-sm text-gray-500">September 15, 2025 - 11:43 PM</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-sm">Password changed</span>
+                  <span className="text-sm text-gray-500">September 10, 2025</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm">Account created</span>
+                  <span className="text-sm text-gray-500">August 1, 2025</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CoachConnectionsPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [connections, setConnections] = useState({
+    googleCalendar: false,
+    outlook: false,
+    slack: false,
+    zoom: false,
+    stripeConnect: false,
+    syncEnabled: true,
+  });
+
+  // Fetch current connection settings
+  const { data: connectionSettings } = useQuery({
+    queryKey: ['/api/connections'],
+    select: (data: any) => data || {},
+  });
+
+  React.useEffect(() => {
+    if (connectionSettings) {
+      setConnections({
+        googleCalendar: connectionSettings.googleCalendar ?? false,
+        outlook: connectionSettings.outlook ?? false,
+        slack: connectionSettings.slack ?? false,
+        zoom: connectionSettings.zoom ?? false,
+        stripeConnect: connectionSettings.stripeConnect ?? false,
+        syncEnabled: connectionSettings.syncEnabled ?? true,
+      });
+    }
+  }, [connectionSettings]);
+
+  const toggleConnection = async (service: string, enabled: boolean) => {
+    try {
+      const response = await fetch(`/api/connections/${service}`, {
+        method: enabled ? "POST" : "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      
+      if (!response.ok) throw new Error(`Failed to ${enabled ? 'connect' : 'disconnect'} ${service}`);
+      
+      setConnections(prev => ({ ...prev, [service]: enabled }));
+      toast({ 
+        title: `${service} ${enabled ? 'Connected' : 'Disconnected'}`, 
+        description: `Successfully ${enabled ? 'connected to' : 'disconnected from'} ${service}` 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: `Connection Error`, 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const ConnectionCard = ({ title, description, icon, service, connected, testId }: { 
+    title: string; description: string; icon: React.ReactNode; service: string; connected: boolean; testId: string 
+  }) => (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              {icon}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+              {connected && (
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                  <span className="text-xs text-green-600 dark:text-green-400">Connected</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <Button 
+            variant={connected ? "outline" : "default"}
+            onClick={() => toggleConnection(service, !connected)}
+            data-testid={testId}
+          >
+            {connected ? "Disconnect" : "Connect"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <SettingPage 
-      title="Connections"
-      description="External apps and integrations"
-      backPath="/coach-settings"
-      userType="coach"
-      category="connections"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Connections & Integrations
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Connect external apps and services
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Calendar Integrations */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Calendar Integrations</h2>
+            <div className="space-y-4">
+              <ConnectionCard
+                title="Google Calendar"
+                description="Sync your coaching schedule and team events with Google Calendar"
+                icon={<Calendar className="h-5 w-5" />}
+                service="googleCalendar"
+                connected={connections.googleCalendar}
+                testId="button-google-calendar"
+              />
+              <ConnectionCard
+                title="Microsoft Outlook"
+                description="Integrate with Outlook calendar for seamless scheduling"
+                icon={<Calendar className="h-5 w-5" />}
+                service="outlook"
+                connected={connections.outlook}
+                testId="button-outlook"
+              />
+            </div>
+          </div>
+
+          {/* Communication Tools */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Communication Tools</h2>
+            <div className="space-y-4">
+              <ConnectionCard
+                title="Slack"
+                description="Receive team notifications and updates in your Slack workspace"
+                icon={<Link2 className="h-5 w-5" />}
+                service="slack"
+                connected={connections.slack}
+                testId="button-slack"
+              />
+              <ConnectionCard
+                title="Zoom"
+                description="Schedule and manage team meetings with Zoom integration"
+                icon={<Link2 className="h-5 w-5" />}
+                service="zoom"
+                connected={connections.zoom}
+                testId="button-zoom"
+              />
+            </div>
+          </div>
+
+          {/* Payment Processing */}
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Payment Processing</h2>
+            <div className="space-y-4">
+              <ConnectionCard
+                title="Stripe Connect"
+                description="Receive direct payments for private coaching and camps"
+                icon={<CreditCard className="h-5 w-5" />}
+                service="stripeConnect"
+                connected={connections.stripeConnect}
+                testId="button-stripe"
+              />
+            </div>
+          </div>
+
+          {/* Sync Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Sync Settings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="text-md font-medium">Auto-sync Data</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Automatically sync schedule and attendance data with connected services</p>
+                </div>
+                <Switch
+                  checked={connections.syncEnabled}
+                  onCheckedChange={(checked) => setConnections(prev => ({ ...prev, syncEnabled: checked }))}
+                  data-testid="switch-auto-sync"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export function CoachBillingPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [billing, setBilling] = useState({
+    paypalEmail: (user as any)?.paypalEmail || "",
+    venmoUsername: (user as any)?.venmoUsername || "",
+    bankAccount: (user as any)?.bankAccount || "",
+    routingNumber: (user as any)?.routingNumber || "",
+    taxId: (user as any)?.taxId || "",
+    hourlyRate: (user as any)?.hourlyRate || "",
+    invoicePrefix: (user as any)?.invoicePrefix || "COACH",
+    autoInvoicing: true,
+  });
+
+  const [paymentMethods] = useState([
+    { id: 1, type: "PayPal", email: "coach@example.com", isDefault: true },
+    { id: 2, type: "Bank Account", last4: "1234", isDefault: false },
+  ]);
+
+  const [recentTransactions] = useState([
+    { id: 1, date: "2025-09-10", description: "Private lesson - John Smith", amount: 75, status: "paid" },
+    { id: 2, date: "2025-09-08", description: "Team camp - Eagles", amount: 200, status: "pending" },
+    { id: 3, date: "2025-09-05", description: "Skills training - Sarah Johnson", amount: 50, status: "paid" },
+  ]);
+
+  const mutation = useMutation({
+    mutationFn: async (data: typeof billing) => {
+      const response = await fetch(`/api/users/${(user as any)?.id}/billing`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update billing information");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Billing Information Updated", 
+        description: "Your payment and billing settings have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Update Billing", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   return (
-    <SettingPage 
-      title="Billing"
-      description="Payment methods and subscription"
-      backPath="/coach-settings"
-      userType="coach"
-      category="billing"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Billing & Payments
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Manage payment methods and billing settings
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Payment Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Payment Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">PayPal Email</label>
+                  <Input
+                    type="email"
+                    value={billing.paypalEmail}
+                    onChange={(e) => setBilling(p => ({ ...p, paypalEmail: e.target.value }))}
+                    placeholder="your@paypal.com"
+                    data-testid="input-paypal-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Venmo Username</label>
+                  <Input
+                    value={billing.venmoUsername}
+                    onChange={(e) => setBilling(p => ({ ...p, venmoUsername: e.target.value }))}
+                    placeholder="@your-venmo"
+                    data-testid="input-venmo"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bank Account Number</label>
+                  <Input
+                    value={billing.bankAccount}
+                    onChange={(e) => setBilling(p => ({ ...p, bankAccount: e.target.value }))}
+                    placeholder="Account number"
+                    data-testid="input-bank-account"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Routing Number</label>
+                  <Input
+                    value={billing.routingNumber}
+                    onChange={(e) => setBilling(p => ({ ...p, routingNumber: e.target.value }))}
+                    placeholder="Routing number"
+                    data-testid="input-routing-number"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tax ID / SSN</label>
+                <Input
+                  value={billing.taxId}
+                  onChange={(e) => setBilling(p => ({ ...p, taxId: e.target.value }))}
+                  placeholder="Tax ID or Social Security Number"
+                  data-testid="input-tax-id"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">Required for tax reporting purposes</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Coaching Rates */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Coaching Rates & Invoicing</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Hourly Rate ($)</label>
+                  <Input
+                    type="number"
+                    value={billing.hourlyRate}
+                    onChange={(e) => setBilling(p => ({ ...p, hourlyRate: e.target.value }))}
+                    placeholder="75"
+                    data-testid="input-hourly-rate"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Invoice Prefix</label>
+                  <Input
+                    value={billing.invoicePrefix}
+                    onChange={(e) => setBilling(p => ({ ...p, invoicePrefix: e.target.value }))}
+                    placeholder="COACH"
+                    data-testid="input-invoice-prefix"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">e.g., COACH-001, COACH-002</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="text-md font-medium">Auto-generate Invoices</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Automatically create invoices after coaching sessions</p>
+                </div>
+                <Switch
+                  checked={billing.autoInvoicing}
+                  onCheckedChange={(checked) => setBilling(p => ({ ...p, autoInvoicing: checked }))}
+                  data-testid="switch-auto-invoicing"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Transactions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentTransactions.map((transaction) => (
+                  <div key={transaction.id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium">{transaction.description}</div>
+                      <div className="text-xs text-gray-500">{transaction.date}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium">${transaction.amount}</div>
+                      <div className={`text-xs px-2 py-1 rounded ${
+                        transaction.status === 'paid' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {transaction.status}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <Button variant="outline" className="w-full" data-testid="button-view-all-transactions">
+                  View All Transactions
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end pt-6">
+            <Button 
+              onClick={() => mutation.mutate(billing)} 
+              disabled={mutation.isPending}
+              className="px-8"
+              data-testid="button-save-billing"
+            >
+              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -99,14 +1686,271 @@ export function CoachDevicesPage() {
 }
 
 export function CoachLegalPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [agreements, setAgreements] = useState({
+    coachingAgreement: false,
+    liabilityWaiver: false,
+    backgroundCheck: false,
+    safeSportTrained: false,
+    privacyPolicy: false,
+    codeOfConduct: false,
+  });
+
+  const [documents] = useState([
+    { 
+      id: 'coaching-agreement', 
+      title: 'Coaching Service Agreement', 
+      description: 'Terms and conditions for coaching services',
+      required: true,
+      signed: true,
+      signedDate: '2025-08-01'
+    },
+    { 
+      id: 'liability-waiver', 
+      title: 'Liability Waiver', 
+      description: 'Release of liability for coaching activities',
+      required: true,
+      signed: true,
+      signedDate: '2025-08-01'
+    },
+    { 
+      id: 'background-check', 
+      title: 'Background Check Authorization', 
+      description: 'Consent for background check verification',
+      required: true,
+      signed: false,
+      signedDate: null
+    },
+    { 
+      id: 'safe-sport', 
+      title: 'SafeSport Training Certificate', 
+      description: 'Completion of mandatory SafeSport education',
+      required: true,
+      signed: false,
+      signedDate: null
+    },
+    { 
+      id: 'code-of-conduct', 
+      title: 'Coach Code of Conduct', 
+      description: 'Ethical guidelines and professional behavior standards',
+      required: true,
+      signed: true,
+      signedDate: '2025-08-01'
+    }
+  ]);
+
+  // Fetch current legal agreements
+  const { data: legalStatus } = useQuery({
+    queryKey: ['/api/legal/status'],
+    select: (data: any) => data || {},
+  });
+
+  React.useEffect(() => {
+    if (legalStatus) {
+      setAgreements({
+        coachingAgreement: legalStatus.coachingAgreement ?? false,
+        liabilityWaiver: legalStatus.liabilityWaiver ?? false,
+        backgroundCheck: legalStatus.backgroundCheck ?? false,
+        safeSportTrained: legalStatus.safeSportTrained ?? false,
+        privacyPolicy: legalStatus.privacyPolicy ?? false,
+        codeOfConduct: legalStatus.codeOfConduct ?? false,
+      });
+    }
+  }, [legalStatus]);
+
+  const signDocument = async (documentId: string) => {
+    try {
+      const response = await fetch(`/api/legal/sign/${documentId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      
+      if (!response.ok) throw new Error("Failed to sign document");
+      
+      toast({ 
+        title: "Document Signed", 
+        description: "Your signature has been recorded." 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Signing Error", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const downloadDocument = (documentId: string, title: string) => {
+    // Simulate document download
+    toast({ 
+      title: "Download Started", 
+      description: `Downloading ${title}...` 
+    });
+  };
+
   return (
-    <SettingPage 
-      title="Legal"
-      description="Terms, privacy policy, and agreements"
-      backPath="/coach-settings"
-      userType="coach"
-      category="legal"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Legal Documents & Agreements
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Manage coaching agreements and legal compliance
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Compliance Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Compliance Status
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full" />
+                    <span className="text-sm font-medium">Agreements</span>
+                  </div>
+                  <div className="text-2xl font-bold">3/3</div>
+                  <div className="text-xs text-gray-500">Required agreements signed</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                    <span className="text-sm font-medium">Certifications</span>
+                  </div>
+                  <div className="text-2xl font-bold">1/2</div>
+                  <div className="text-xs text-gray-500">Required certifications</div>
+                </div>
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full" />
+                    <span className="text-sm font-medium">Background Check</span>
+                  </div>
+                  <div className="text-2xl font-bold">0/1</div>
+                  <div className="text-xs text-gray-500">Verification pending</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Legal Documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Legal Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-1 rounded-full ${
+                        doc.signed ? 'bg-green-100 text-green-600' : doc.required ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">{doc.title}</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{doc.description}</p>
+                        {doc.signed && doc.signedDate && (
+                          <p className="text-xs text-green-600 mt-1">Signed on {doc.signedDate}</p>
+                        )}
+                        {!doc.signed && doc.required && (
+                          <p className="text-xs text-red-600 mt-1">Signature required</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadDocument(doc.id, doc.title)}
+                        data-testid={`button-download-${doc.id}`}
+                      >
+                        View
+                      </Button>
+                      {!doc.signed && (
+                        <Button
+                          size="sm"
+                          onClick={() => signDocument(doc.id)}
+                          data-testid={`button-sign-${doc.id}`}
+                        >
+                          Sign
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Important Notices */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Important Notices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Background Check Required</h4>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                    You must complete a background check authorization to continue coaching. This is required for all youth sports coaches.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">SafeSport Training</h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Complete your SafeSport training to stay compliant with league requirements. Training must be renewed annually.
+                  </p>
+                  <Button size="sm" variant="outline" className="mt-2" data-testid="button-safesport-training">
+                    Start Training
+                  </Button>
+                </div>
+                
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Document Retention</h4>
+                  <p className="text-xs text-gray-700 dark:text-gray-300 mt-1">
+                    All signed documents are stored securely and maintained for legal compliance. You can request copies at any time.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
 

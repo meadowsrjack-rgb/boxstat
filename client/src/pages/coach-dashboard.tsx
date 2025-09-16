@@ -113,9 +113,15 @@ const COACH_AWARDS = [
 export default function CoachDashboard() {
   const { user } = useAuth();
   const currentUser = user as UserType | null;
-  const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "badges" | "pay" | "hr">(() =>
-    typeof window === "undefined" ? "calendar" : ((localStorage.getItem("coachDashboardTab") as any) || "calendar")
-  );
+  const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "pay" | "hr">(() => {
+    if (typeof window === "undefined") return "calendar";
+    const stored = localStorage.getItem("coachDashboardTab");
+    // Sanitize legacy "badges" values to default to "calendar"
+    if (stored === "badges" || !["calendar", "roster", "pay", "hr"].includes(stored || "")) {
+      return "calendar";
+    }
+    return stored as "calendar" | "roster" | "pay" | "hr";
+  });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -319,7 +325,6 @@ export default function CoachDashboard() {
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="roster" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
-            <TabButton label="badges" activeTab={activeTab} onClick={setActiveTab} Icon={Trophy} />
             <TabButton label="pay" activeTab={activeTab} onClick={setActiveTab} Icon={DollarSign} />
             <TabButton label="hr" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
           </div>
@@ -436,10 +441,6 @@ export default function CoachDashboard() {
                 setAwardsOpen(true);
               }}
             />
-          )}
-
-          {activeTab === "badges" && (
-            <BadgesTab />
           )}
 
           {activeTab === "pay" && (
@@ -1008,7 +1009,7 @@ function PlayerProfileModal({
   onAssignBadge: (badgeId: number) => void;
   assigning: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<"profile" | "badges">("profile");
+  const [activeTab, setActiveTab] = useState<"profile">("profile");
 
   if (!player) return null;
 
@@ -1031,22 +1032,12 @@ function PlayerProfileModal({
         {/* Tab Navigation */}
         <div className="flex gap-2 border-b">
           <Button 
-            variant={activeTab === "profile" ? "default" : "ghost"} 
-            className={`rounded-b-none ${activeTab === "profile" ? "bg-red-600 hover:bg-red-700" : ""}`}
-            onClick={() => setActiveTab("profile")}
+            variant="default"
+            className="rounded-b-none bg-red-600 hover:bg-red-700"
             data-testid="tab-profile"
           >
             <User className="h-4 w-4 mr-2" />
             View Profile
-          </Button>
-          <Button 
-            variant={activeTab === "badges" ? "default" : "ghost"}
-            className={`rounded-b-none ${activeTab === "badges" ? "bg-red-600 hover:bg-red-700" : ""}`}
-            onClick={() => setActiveTab("badges")}
-            data-testid="tab-badges"
-          >
-            <Trophy className="h-4 w-4 mr-2" />
-            Award Badge
           </Button>
         </div>
 
@@ -1126,60 +1117,6 @@ function PlayerProfileModal({
                     <div className="text-center text-sm text-gray-500">
                       Additional player details and performance history would appear here
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {activeTab === "badges" && (
-            <div className="space-y-4 py-4">
-              {!(player as any).hasAppProfile ? (
-                <div className="text-center py-8">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="flex items-center justify-center mb-4">
-                      <Award className="h-12 w-12 text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-600 mb-2">
-                      Cannot award badges
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {player.firstName} {player.lastName} needs to create an app account before badges can be awarded.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-600">Optional note</label>
-                    <Input 
-                      placeholder="e.g., Leadership in practice this week" 
-                      value={note} 
-                      onChange={(e) => setNote(e.target.value)} 
-                      data-testid="input-badge-note-modal" 
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
-                    {badges.map((b) => (
-                      <Button 
-                        key={b.id} 
-                        variant="outline" 
-                        className="justify-start h-auto py-3" 
-                        onClick={() => {
-                          onAssignBadge(b.id);
-                          onOpenChange(false);
-                        }} 
-                        disabled={assigning} 
-                        data-testid={`button-badge-modal-${b.id}`}
-                      >
-                        <Trophy className="h-4 w-4 mr-3" />
-                        <div className="text-left">
-                          <div className="text-sm font-semibold text-gray-900">{b.name}</div>
-                          {b.description && <div className="text-xs text-gray-500">{b.description}</div>}
-                        </div>
-                      </Button>
-                    ))}
                   </div>
                 </>
               )}

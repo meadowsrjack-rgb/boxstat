@@ -114,22 +114,28 @@ export function registerClaimRoutes(app: Express): void {
       const claimLink = `${process.env.REPL_URL || 'http://localhost:5000'}/claim-verify?token=${magicLinkToken}`;
       
       try {
-        // In development, just log the claim link
+        // In development mode, provide direct access to the claim link
         if (process.env.NODE_ENV === 'development') {
           console.log(`\n🎯 ACCOUNT CLAIM LINK for ${normalizedEmail}:`);
-          console.log(`${claimLink}\n`);
+          console.log(`${claimLink}`);
+          console.log(`🚀 Development mode: Use the link above to skip email verification\n`);
+          
+          return res.json({
+            success: true,
+            message: `Development mode: Account claim link generated for ${normalizedEmail}`,
+            autoRedirect: true,
+            redirectUrl: `/claim-verify?token=${magicLinkToken}`
+          });
         }
         
+        // Production mode: Send actual email
         // TODO: Send actual email in production
         // await emailService.sendClaimEmail(normalizedEmail, claimLink, account.primaryAccountType);
         
         res.json({
           success: true,
           message: `Account claim instructions have been sent to ${normalizedEmail}`,
-          ...(process.env.NODE_ENV === 'development' && { 
-            devClaimLink: claimLink,
-            devNote: 'In development mode, use the claim link above'
-          })
+          autoRedirect: false
         });
       } catch (emailError) {
         console.error('Failed to send claim email:', emailError);

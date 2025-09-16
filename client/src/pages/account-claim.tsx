@@ -14,6 +14,14 @@ interface ClaimResponse {
   message: string;
   devClaimLink?: string;
   devNote?: string;
+  autoRedirect?: boolean;
+  redirectUrl?: string;
+  profiles?: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+  }>;
 }
 
 export default function AccountClaim() {
@@ -39,6 +47,24 @@ export default function AccountClaim() {
       });
     },
     onSuccess: (data) => {
+      // Handle automatic redirect in development mode
+      if (data.autoRedirect && data.redirectUrl) {
+        toast({
+          title: "Development Mode",
+          description: data.message,
+        });
+
+        console.log("🎯 Development mode: Redirecting to claim verification");
+
+        // Redirect to the claim verification page
+        setTimeout(() => {
+          setLocation(data.redirectUrl!);
+        }, 1000); // Small delay to show the success message
+
+        return;
+      }
+
+      // Standard flow: show submitted state
       setIsSubmitted(true);
       toast({
         title: "Email sent!",

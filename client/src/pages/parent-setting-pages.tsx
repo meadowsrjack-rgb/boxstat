@@ -2062,7 +2062,92 @@ export function ParentLegalPage() {
 
 export function ParentDevicesPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  const { data: devices, isLoading } = useQuery({
+    queryKey: [`/api/devices`],
+    enabled: !!(user as any)?.id
+  });
+
+  const [settings, setSettings] = useState({
+    locationPermissions: true,
+    notificationPermissions: true,
+    cameraPermissions: false,
+    microphonePermissions: false,
+    autoLogin: true,
+    biometricLogin: false,
+    twoFactorEnabled: false,
+    trustedDevicesOnly: false,
+  });
+
+  // Update settings when data is loaded
+  React.useEffect(() => {
+    if (devices?.settings) {
+      setSettings(prev => ({ ...prev, ...devices.settings }));
+    }
+  }, [devices]);
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: async (data: typeof settings) => {
+      const response = await fetch(`/api/devices/settings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to update device settings");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Device Settings Updated", 
+        description: "Your device preferences have been saved."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Update Settings", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const revokeDeviceMutation = useMutation({
+    mutationFn: async (deviceId: string) => {
+      const response = await fetch(`/api/devices/${deviceId}/revoke`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to revoke device access");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Device Access Revoked", 
+        description: "The device has been removed from your trusted devices."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Revoke Access", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const currentDevices = devices?.devices || [
+    {
+      id: "current",
+      name: "Current Device",
+      type: "mobile",
+      lastUsed: new Date().toISOString(),
+      location: "Current Location",
+      isCurrent: true,
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -2092,27 +2177,188 @@ export function ParentDevicesPage() {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 space-y-6">
+          {/* App Permissions */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Device Management
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                App Permissions
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <div className="text-gray-500 dark:text-gray-400 mb-4">
-                    This device settings page is currently under development.
-                  </div>
-                  <div className="text-sm text-gray-400 dark:text-gray-500">
-                    Device management features will be available here soon.
-                  </div>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Location Access</div>
+                  <div className="text-sm text-gray-500">Allow app to access your location for check-ins and event notifications</div>
                 </div>
+                <Switch
+                  checked={settings.locationPermissions}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, locationPermissions: checked }))}
+                  data-testid="switch-location-permissions"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Push Notifications</div>
+                  <div className="text-sm text-gray-500">Receive notifications about your children's activities</div>
+                </div>
+                <Switch
+                  checked={settings.notificationPermissions}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, notificationPermissions: checked }))}
+                  data-testid="switch-notification-permissions"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Camera Access</div>
+                  <div className="text-sm text-gray-500">Allow taking photos for profile pictures and event sharing</div>
+                </div>
+                <Switch
+                  checked={settings.cameraPermissions}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, cameraPermissions: checked }))}
+                  data-testid="switch-camera-permissions"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Microphone Access</div>
+                  <div className="text-sm text-gray-500">Allow recording audio for voice messages (future feature)</div>
+                </div>
+                <Switch
+                  checked={settings.microphonePermissions}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, microphonePermissions: checked }))}
+                  data-testid="switch-microphone-permissions"
+                />
               </div>
             </CardContent>
           </Card>
+
+          {/* Security Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Security & Access
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Auto-login on trusted devices</div>
+                  <div className="text-sm text-gray-500">Stay logged in on devices you use regularly</div>
+                </div>
+                <Switch
+                  checked={settings.autoLogin}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, autoLogin: checked }))}
+                  data-testid="switch-auto-login"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Biometric authentication</div>
+                  <div className="text-sm text-gray-500">Use fingerprint or face recognition for quick access</div>
+                </div>
+                <Switch
+                  checked={settings.biometricLogin}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, biometricLogin: checked }))}
+                  data-testid="switch-biometric-login"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Two-factor authentication</div>
+                  <div className="text-sm text-gray-500">Require additional verification for sensitive actions</div>
+                </div>
+                <Switch
+                  checked={settings.twoFactorEnabled}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, twoFactorEnabled: checked }))}
+                  data-testid="switch-two-factor"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-gray-100">Trusted devices only</div>
+                  <div className="text-sm text-gray-500">Restrict access to explicitly trusted devices</div>
+                </div>
+                <Switch
+                  checked={settings.trustedDevicesOnly}
+                  onCheckedChange={(checked) => setSettings(s => ({ ...s, trustedDevicesOnly: checked }))}
+                  data-testid="switch-trusted-devices-only"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Trusted Devices */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Trusted Devices
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {currentDevices.map((device) => (
+                  <div key={device.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                        {device.type === 'mobile' ? (
+                          <Smartphone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        ) : (
+                          <Monitor className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-gray-100">
+                          {device.name}
+                          {device.isCurrent && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Last used: {new Date(device.lastUsed).toLocaleDateString()}
+                          {device.location && ` • ${device.location}`}
+                        </div>
+                      </div>
+                    </div>
+                    {!device.isCurrent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => revokeDeviceMutation.mutate(device.id)}
+                        disabled={revokeDeviceMutation.isPending}
+                        data-testid={`button-revoke-${device.id}`}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={() => updateSettingsMutation.mutate(settings)}
+              disabled={updateSettingsMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-save-device-settings"
+            >
+              {updateSettingsMutation.isPending ? "Saving..." : "Save Device Settings"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

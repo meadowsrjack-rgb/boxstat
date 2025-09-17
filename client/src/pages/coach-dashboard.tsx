@@ -35,6 +35,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
+import PlayerSearch from "@/components/PlayerSearch";
+import PlayerCard from "@/components/PlayerCard";
+import TeamChat from "@/components/TeamChat";
 
 /* =================== Types =================== */
 
@@ -136,6 +139,7 @@ export default function CoachDashboard() {
   const [evalOpen, setEvalOpen] = useState(false);
   const [awardsOpen, setAwardsOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
   // Quarter/Year for evals
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -440,6 +444,9 @@ export default function CoachDashboard() {
                 setSelectedPlayer(p);
                 setAwardsOpen(true);
               }}
+
+              selectedPlayerId={selectedPlayerId}
+              setSelectedPlayerId={setSelectedPlayerId}
             />
           )}
 
@@ -495,6 +502,16 @@ export default function CoachDashboard() {
         onGive={(awardId, kind) => awardMutation.mutate({ awardId, kind })}
         giving={awardMutation.isPending}
       />
+
+      {/* PlayerCard Modal */}
+      {selectedPlayerId && (
+        <PlayerCard
+          playerId={selectedPlayerId}
+          isOpen={!!selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+          isCoach={true}
+        />
+      )}
     </div>
   );
 }
@@ -542,13 +559,19 @@ function RosterTab({
   onSend,
   onEvaluate,
   onReward,
+  selectedPlayerId,
+  setSelectedPlayerId,
 }: {
   team?: CoachTeam | null;
   messages: any[];
   onSend: (m: string) => void;
   onEvaluate: (p: PlayerLite) => void;
   onReward: (p: PlayerLite) => void;
+  selectedPlayerId: string | null;
+  setSelectedPlayerId: (id: string | null) => void;
 }) {
+  const { user } = useAuth();
+  const currentUser = user as UserType;
   const [msg, setMsg] = useState("");
   const { toast } = useToast();
 
@@ -562,6 +585,16 @@ function RosterTab({
 
   return (
     <div className="space-y-6">
+      {/* Player Search */}
+      <div>
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Search Players</h3>
+        <PlayerSearch
+          teamId={team?.id}
+          onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
+          placeholder="Search for players across all teams..."
+        />
+      </div>
+      
       <div>
         <h2 className="text-xl font-bold text-gray-900 mb-4">My Team</h2>
         <Card className="border-0 shadow-sm">
@@ -646,48 +679,14 @@ function RosterTab({
         )}
       </div>
 
-      {/* Team messages */}
+      {/* Team Chat */}
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Team Messages</h3>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <div className="space-y-4 max-h-64 overflow-y-auto">
-              {messages?.length ? (
-                messages.map((m) => (
-                  <div key={m.id} className="flex space-x-3 py-3 border-b border-gray-100 last:border-b-0">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={m.sender?.profileImageUrl} />
-                      <AvatarFallback className="bg-red-100 text-red-600">
-                        {m.sender?.firstName?.[0]}{m.sender?.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium text-gray-900">{m.sender?.firstName} {m.sender?.lastName}</p>
-                        <p className="text-xs text-gray-500">{m.createdAt ? format(new Date(m.createdAt), "MMM d, h:mm a") : "Now"}</p>
-                      </div>
-                      <p className="text-sm text-gray-700 mt-1">{m.message}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Sparkles className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                  No messages yet.
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex gap-2">
-                <Input placeholder="Type a message…" value={msg} onChange={(e) => setMsg(e.target.value)} className="flex-1" data-testid="input-message" />
-                <Button size="icon" disabled={!msg.trim()} onClick={() => { onSend(msg.trim()); setMsg(""); }} data-testid="button-send-message">
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <h3 className="text-lg font-bold text-gray-900 mb-2">Team Chat</h3>
+        {team?.id ? (
+          <TeamChat teamId={team.id} />
+        ) : (
+          <div className="text-sm text-gray-500">No team chat available.</div>
+        )}
       </div>
     </div>
   );

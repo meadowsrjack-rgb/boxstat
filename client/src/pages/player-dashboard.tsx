@@ -6,6 +6,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { User as UserType, Team, Event } from "@shared/schema";
+import PlayerSearch from "@/components/PlayerSearch";
+import PlayerCard from "@/components/PlayerCard";
+import TeamChat from "@/components/TeamChat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1499,9 +1502,7 @@ function PriceCard({ title, priceLine, cta, badge }: { title: string; priceLine:
 function TeamBlock() {
   const { user } = useAuth();
   const currentUser = user as UserType;
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTeam, setSelectedTeam] = useState<any>(null);
-  const [joinMessage, setJoinMessage] = useState("");
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const { toast } = useToast();
   
   const { data: userTeam } = useQuery<Team>({
@@ -1509,114 +1510,12 @@ function TeamBlock() {
     enabled: !!currentUser.id,
   });
   
-  // Search both teams and players
-  const { data: teamResults } = useQuery({
-    queryKey: ["/api/search/teams", searchQuery],
-    queryFn: async () => {
-      console.log("Searching for teams with query:", searchQuery);
-      const response = await fetch(`/api/search/teams?q=${encodeURIComponent(searchQuery)}`, {
-        credentials: 'include'
-      });
-      console.log("Search response status:", response.status);
-      if (!response.ok) throw new Error('Failed to search teams');
-      const data = await response.json();
-      console.log("Search results:", data);
-      return data;
-    },
-    enabled: searchQuery.trim().length > 0, // Only search when user types something
-  });
-
-  const { data: playerResults } = useQuery({
-    queryKey: ["/api/search/notion-players", searchQuery],
-    queryFn: async () => {
-      if (searchQuery.length < 2) return { ok: true, players: [] };
-      try {
-        const response = await fetch(`/api/search/notion-players?q=${encodeURIComponent(searchQuery)}`, {
-          credentials: 'include'
-        });
-        if (!response.ok) return { ok: true, players: [] };
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        console.log("Player search not available:", error);
-        return { ok: true, players: [] };
-      }
-    },
-    enabled: searchQuery.length >= 2,
-  });
-
-  // Combine results with type indicators
-  const searchResults = {
-    ok: true,
-    teams: teamResults?.teams || [],
-    players: playerResults?.players || []
-  };
-  const searchError = null; // Will handle errors gracefully in queries
-  
-  const { data: teamDetails } = useQuery({
-    queryKey: ["/api/search/teams", selectedTeam?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/search/teams/${selectedTeam.id}`, {
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Failed to fetch team details');
-      return response.json();
-    },
-    enabled: !!selectedTeam?.id,
-  });
-  
-  const { data: teamMessages = [] } = useQuery<any[]>({
-    queryKey: ["/api/teams", userTeam?.id, "messages"],
-    enabled: !!userTeam?.id,
-    refetchInterval: 30000,
-  });
-  
-  const [newMessage, setNewMessage] = useState("");
-  const queryClient = useQueryClient();
-  
-  const sendMessageMutation = useMutation({
-    mutationFn: async (message: string) => {
-      const response = await fetch(`/api/teams/${userTeam?.id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ message, messageType: "text" }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      setNewMessage("");
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", userTeam?.id, "messages"] });
-      toast({ title: "Message sent", description: "Your message has been sent to the team." });
-    },
-  });
-  
-  const joinTeamMutation = useMutation({
-    mutationFn: async ({ teamId, message }: { teamId: number; message: string }) => {
-      const response = await fetch(`/api/search/teams/${teamId}/request-join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      if (!response.ok) throw new Error('Failed to request team join');
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Join request sent", description: "Your request to join the team has been sent to the coach." });
-      setSelectedTeam(null);
-      setJoinMessage("");
-    },
-  });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="team-block">
       {/* Current Team Section */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">My Team</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4" data-testid="text-my-team">My Team</h2>
         {userTeam ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
@@ -1625,8 +1524,8 @@ function TeamBlock() {
                   <Shirt className="h-8 w-8 text-red-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg">{userTeam.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">{userTeam.ageGroup}</p>
+                  <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{userTeam.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{userTeam.ageGroup}</p>
                   <div className="space-y-1 text-sm text-gray-500">
                     {userTeam.coachId && (
                       <div className="flex items-center space-x-2">
@@ -1640,259 +1539,40 @@ function TeamBlock() {
             </CardContent>
           </Card>
         ) : (
-          <div className="text-sm text-gray-500 mb-4">No team assigned yet. Search for teams below!</div>
+          <div className="text-sm text-gray-500 mb-4" data-testid="text-no-team">No team assigned yet. Search for teams below!</div>
         )}
       </div>
 
-      {/* Team Search Section */}
+      {/* Player Search Section */}
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Find Teams</h3>
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search teams and players..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          {(searchResults?.teams?.length > 0 || searchResults?.players?.length > 0) && (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-0">
-                <div className="max-h-64 overflow-y-auto">
-                  {/* Teams */}
-                  {searchResults.teams?.map((team: any) => (
-                    <div 
-                      key={`team-${team.id}`} 
-                      className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedTeam(team)}
-                      data-testid={`team-result-${team.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Users className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <h4 className="font-semibold text-gray-900">{team.name}</h4>
-                            <p className="text-sm text-gray-500">{team.roster_count} players</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Players */}
-                  {searchResults.players?.map((player: any) => (
-                    <div 
-                      key={`player-${player.id}`} 
-                      className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 cursor-pointer"
-                      data-testid={`player-result-${player.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <User className="w-5 h-5 text-green-600" />
-                          <div>
-                            <h4 className="font-semibold text-gray-900">{player.fullName}</h4>
-                            <p className="text-sm text-gray-500">
-                              {player.teamName ? `${player.teamName}` : "No team"}
-                              {player.jerseyNumber && ` • #${player.jerseyNumber}`}
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-green-600 border-green-600 hover:bg-green-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toast({
-                              title: "Player Found",
-                              description: `This is ${player.fullName}. Go to Search & Claim to claim their profile.`
-                            });
-                          }}
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          {searchError && (
-            <div className="text-center py-8 text-red-500">
-              <p>Error searching teams: {(searchError as any)?.message || 'An error occurred'}</p>
-            </div>
-          )}
-          
-          {(!searchResults?.teams?.length && !searchResults?.players?.length && searchQuery) && (
-            <div className="text-center py-8 text-gray-500">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p>No teams or players found matching "{searchQuery}"</p>
-            </div>
-          )}
-          
-          {(!searchQuery && (!searchResults?.teams?.length && !searchResults?.players?.length)) && (
-            <div className="text-center py-8 text-gray-500">
-              <Search className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-              <p>Search for teams and players...</p>
-            </div>
-          )}
-        </div>
+        <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-find-players">Find Players & Teams</h3>
+        <PlayerSearch
+          teamId={userTeam?.id}
+          onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
+          placeholder="Search for players and teams..."
+        />
       </div>
 
-      {/* Team Details Modal */}
-      {selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{selectedTeam.name}</h3>
-                <p className="text-sm text-gray-500">{selectedTeam.roster_count} players</p>
-              </div>
-              <button 
-                onClick={() => setSelectedTeam(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-            
-            {teamDetails?.roster && (
-              <div className="mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Current Roster</h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {teamDetails.roster.map((player: any) => (
-                    <div key={player.id} className="flex items-center space-x-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={player.profile_image_url} />
-                        <AvatarFallback className="text-xs">
-                          {player.first_name?.[0]}{player.last_name?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{player.first_name} {player.last_name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {!userTeam && (
-              <>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Message to coach (optional)
-                  </label>
-                  <textarea
-                    value={joinMessage}
-                    onChange={(e) => setJoinMessage(e.target.value)}
-                    placeholder="Tell the coach why you'd like to join..."
-                    className="w-full p-2 border border-gray-300 rounded-md text-sm resize-none"
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedTeam(null)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={() => joinTeamMutation.mutate({ teamId: selectedTeam.id, message: joinMessage })}
-                    disabled={joinTeamMutation.isPending}
-                    className="flex-1 bg-red-600 hover:bg-red-700"
-                  >
-                    Request to Join
-                  </Button>
-                </div>
-              </>
-            )}
-            
-            {userTeam && (
-              <p className="text-sm text-gray-500 text-center">
-                You're already on a team. Contact your coach to switch teams.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Team Messages */}
+      {/* Team Chat Section */}
       {userTeam && (
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Team Messages</h3>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="space-y-4 max-h-64 overflow-y-auto">
-                {teamMessages.length > 0 ? (
-                  teamMessages.map((message: any) => (
-                    <div key={message.id} className="flex space-x-3 py-3 border-b border-gray-100 last:border-b-0">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={message.sender?.profileImageUrl || "/placeholder-player.jpg"} />
-                        <AvatarFallback
-                          className={message.sender?.userType === "admin" ? "bg-red-100 text-red-600" : "bg-blue-100 text-blue-600"}
-                        >
-                          {message.sender?.firstName?.[0]}
-                          {message.sender?.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <p className="text-sm font-medium text-gray-900">
-                            {message.sender?.firstName} {message.sender?.lastName}
-                          </p>
-                          {message.sender?.userType === "admin" && (
-                            <Badge variant="secondary" className="text-xs bg-red-100 text-red-600">
-                              Coach
-                            </Badge>
-                          )}
-                          <p className="text-xs text-gray-500">
-                            {message.createdAt ? format(new Date(message.createdAt), "MMM d, h:mm a") : "Now"}
-                          </p>
-                        </div>
-                        <p className="text-sm text-gray-700 mt-1">{message.message}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-500 text-sm">No messages yet. Start the conversation!</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Message Input */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex space-x-2">
-                  <Input
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    size="icon"
-                    disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                    onClick={() => {
-                      if (newMessage.trim()) sendMessageMutation.mutate(newMessage.trim());
-                    }}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-chat">Team Chat</h3>
+          <TeamChat 
+            teamId={userTeam.id}
+          />
         </div>
       )}
+
+      {/* Player Card Modal */}
+      {selectedPlayerId && (
+        <PlayerCard
+          playerId={selectedPlayerId}
+          isOpen={!!selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+          isCoach={currentUser.userType === 'coach'}
+        />
+      )}
+
     </div>
   );
 }

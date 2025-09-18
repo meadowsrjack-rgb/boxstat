@@ -1093,6 +1093,7 @@ export function PlayerLegalPage() {
   // Fetch agreement status
   const { data: legalStatus } = useQuery({
     queryKey: ['/api/legal/status'],
+    initialData: {} as { termsAccepted?: boolean; privacyAccepted?: boolean; dataProcessingAccepted?: boolean; lastAccepted?: string },
   });
 
   React.useEffect(() => {

@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -439,7 +440,8 @@ export function ParentPrivacyPage() {
 
   const { data: privacySettings, isLoading } = useQuery({
     queryKey: [`/api/privacy`],
-    enabled: !!(user as any)?.id
+    enabled: !!(user as any)?.id,
+    initialData: {} as { profileVisible?: boolean; contactInfoVisible?: boolean; allowCoachMessages?: boolean; shareProgressReports?: boolean; shareAttendanceData?: boolean; allowPhotoSharing?: boolean; showOnTeamDirectory?: boolean }
   });
 
   const [settings, setSettings] = useState({
@@ -654,7 +656,8 @@ export function ParentNotificationsPage() {
 
   const { data: notificationPrefs, isLoading } = useQuery({
     queryKey: [`/api/notifications/preferences`],
-    enabled: !!(user as any)?.id
+    enabled: !!(user as any)?.id,
+    initialData: {} as { childScheduleChanges?: boolean; practiceReminders?: boolean; gameReminders?: boolean; childAttendance?: boolean; childProgress?: boolean; badgeEarned?: boolean; trophyEarned?: boolean; paymentReminders?: boolean; paymentConfirmation?: boolean; coachMessages?: boolean; teamAnnouncements?: boolean; emergencyAlerts?: boolean; emailNotifications?: boolean; pushNotifications?: boolean; smsNotifications?: boolean; quietHoursStart?: string; quietHoursEnd?: string }
   });
 
   const [settings, setSettings] = useState({

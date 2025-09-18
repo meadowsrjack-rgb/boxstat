@@ -729,7 +729,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             />
           </div>
           <div className="text-sm text-gray-600">
-            Hey, <span className="font-semibold text-gray-900">{currentChild?.firstName || currentUser.firstName} {currentChild?.lastName || currentUser.lastName}</span>! 🏀
+            Hey, <span className="font-semibold text-gray-900">{currentChild?.firstName || currentUser.firstName}</span>
           </div>
         </div>
 

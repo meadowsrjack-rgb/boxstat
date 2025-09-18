@@ -237,8 +237,8 @@ export default function ParentDashboard() {
           <div className="flex justify-center mb-2">
             <ProfileAvatarRing src={currentUser.profileImageUrl || undefined} initials={initials} size={88} />
           </div>
-          <div className="text-sm text-gray-600">
-            Welcome back, <span className="font-semibold text-gray-900">{currentUser.firstName}</span>
+          <div className="text-sm text-gray-600" data-testid="text-greeting">
+            Hey, <span className="font-semibold text-gray-900">{currentUser.firstName}</span>
           </div>
         </div>
 

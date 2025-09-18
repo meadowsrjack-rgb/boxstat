@@ -93,8 +93,8 @@ export default function Sidebar() {
             className="w-10 h-10 rounded-full object-cover"
           />
           <div className="flex-1 min-w-0">
-            <p className={`font-medium truncate ${isPlayer ? 'text-white' : 'text-gray-900'}`}>
-              {isPlayer ? `Hey ${user.firstName}! 🏀` : `${user.firstName} ${user.lastName}`}
+            <p className={`font-medium truncate ${isPlayer ? 'text-white' : 'text-gray-900'}`} data-testid="text-sidebar-greeting">
+              Hey, {user.firstName}
             </p>
             <div className="flex items-center space-x-2">
               <Badge 

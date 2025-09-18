@@ -112,6 +112,23 @@ export default function PlayerCard({
     return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
   };
 
+  const getPlayerHeaderTitle = (profile: PlayerProfile) => {
+    const fullName = getPlayerFullName(profile);
+    const position = profile.position ? ` | ${profile.position}` : '';
+    const jerseyNumber = profile.jerseyNumber ? ` #${profile.jerseyNumber}` : '';
+    return `${fullName}${position}${jerseyNumber}`;
+  };
+
+  const computeAge = (profile: PlayerProfile) => {
+    if (profile.age) return profile.age;
+    if (!profile.dateOfBirth) return null;
+    const birthDate = new Date(profile.dateOfBirth);
+    const today = new Date();
+    const diffTime = today.getTime() - birthDate.getTime();
+    const diffYears = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25));
+    return diffYears > 0 ? diffYears : null;
+  };
+
   const awardMutation = useMutation({
     mutationFn: async ({ awardId, type }: { awardId: string; type: 'badge' | 'trophy' }) => {
       const result = await apiRequest("/api/coach/award", {
@@ -154,10 +171,33 @@ export default function PlayerCard({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Player Profile
-            </DialogTitle>
+            <div className="flex-1">
+              <DialogTitle className="text-xl font-bold text-gray-900" data-testid="text-player-header">
+                {playerProfile ? getPlayerHeaderTitle(playerProfile) : 'Player Profile'}
+              </DialogTitle>
+              {playerProfile && (() => {
+                const playerAge = computeAge(playerProfile);
+                return (
+                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground" data-testid="text-player-meta">
+                    {playerAge && (
+                      <span className="flex items-center gap-1">
+                        🎂 {playerAge} yrs
+                      </span>
+                    )}
+                    {playerProfile.height && (
+                      <span className="flex items-center gap-1">
+                        📏 {playerProfile.height}
+                      </span>
+                    )}
+                    {playerProfile.city && (
+                      <span className="flex items-center gap-1">
+                        📍 {playerProfile.city}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -200,30 +240,12 @@ export default function PlayerCard({
               </Avatar>
               
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900" data-testid="text-player-name">
-                  {getPlayerFullName(playerProfile)}
-                </h2>
-                
-                <div className="flex items-center gap-2 mt-1">
-                  {playerProfile.jerseyNumber && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      <Hash className="h-3 w-3 mr-1" />
-                      #{playerProfile.jerseyNumber}
-                    </Badge>
-                  )}
-                  {playerProfile.position && (
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700">
-                      <Target className="h-3 w-3 mr-1" />
-                      {playerProfile.position}
-                    </Badge>
-                  )}
-                  {playerProfile.team_id && (
-                    <Badge variant="outline" className="bg-green-50 text-green-700">
-                      <Users className="h-3 w-3 mr-1" />
-                      Team {playerProfile.team_id}
-                    </Badge>
-                  )}
-                </div>
+                {playerProfile.team_id && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 mb-2">
+                    <Users className="h-3 w-3 mr-1" />
+                    Team {playerProfile.team_id}
+                  </Badge>
+                )}
               </div>
 
               {/* Coach Actions */}

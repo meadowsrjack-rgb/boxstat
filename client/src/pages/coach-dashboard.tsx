@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,8 @@ import {
   Sparkles,
   User,
   Award,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -141,6 +144,9 @@ export default function CoachDashboard() {
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
+  // Team filtering
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<'my-team' | number>('my-team');
+
   // Quarter/Year for evals
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [quarter, setQuarter] = useState<Quarter>(() => {
@@ -168,6 +174,28 @@ export default function CoachDashboard() {
     queryKey: ["/api/coach/team"],
     queryFn: async () => {
       const res = await fetch("/api/coach/team", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  // Query for all teams (for filter dropdown)
+  const { data: allTeams = [] } = useQuery<Array<{id: string; name: string; ageGroup?: string}>>({
+    queryKey: ["/api/search/teams"],
+    queryFn: async () => {
+      const res = await fetch("/api/search/teams", { credentials: "include" });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return data.teams || [];
+    },
+  });
+
+  // Query for selected team data (when filtering)
+  const { data: filteredTeam } = useQuery<CoachTeam | null>({
+    queryKey: ["/api/teams", selectedTeamFilter, "details"],
+    enabled: selectedTeamFilter !== 'my-team' && typeof selectedTeamFilter === 'number',
+    queryFn: async () => {
+      const res = await fetch(`/api/teams/${selectedTeamFilter}`, { credentials: "include" });
       if (!res.ok) return null;
       return res.json();
     },
@@ -418,10 +446,14 @@ export default function CoachDashboard() {
 
           {activeTab === "roster" && (
             <RosterTab
-              team={coachTeam || undefined}
+              team={(selectedTeamFilter === 'my-team' ? coachTeam : filteredTeam) || undefined}
               messages={teamMessages}
+              allTeams={allTeams}
+              selectedTeamFilter={selectedTeamFilter}
+              onTeamFilterChange={setSelectedTeamFilter}
               onSend={async (m) => {
-                const res = await fetch(`/api/teams/${coachTeam?.id}/messages`, {
+                const teamId = selectedTeamFilter === 'my-team' ? coachTeam?.id : selectedTeamFilter;
+                const res = await fetch(`/api/teams/${teamId}/messages`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   credentials: "include",
@@ -556,6 +588,9 @@ function ProfileAvatarRing({ src, initials, size = 80 }: { src?: string; initial
 function RosterTab({
   team,
   messages,
+  allTeams,
+  selectedTeamFilter,
+  onTeamFilterChange,
   onSend,
   onEvaluate,
   onReward,
@@ -564,6 +599,9 @@ function RosterTab({
 }: {
   team?: CoachTeam | null;
   messages: any[];
+  allTeams: Array<{id: string; name: string; ageGroup?: string}>;
+  selectedTeamFilter: 'my-team' | number;
+  onTeamFilterChange: (filter: 'my-team' | number) => void;
   onSend: (m: string) => void;
   onEvaluate: (p: PlayerLite) => void;
   onReward: (p: PlayerLite) => void;
@@ -596,7 +634,52 @@ function RosterTab({
       </div>
       
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">My Team</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-gray-900">
+            {selectedTeamFilter === 'my-team' ? 'My Team' : 'Team View'}
+          </h2>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                data-testid="button-team-filter"
+              >
+                <Filter className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {selectedTeamFilter === 'my-team' ? 'My Team' : 
+                   allTeams.find(t => t.id === selectedTeamFilter?.toString())?.name || 'Team'}
+                </span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => onTeamFilterChange('my-team')}
+                className={selectedTeamFilter === 'my-team' ? 'bg-gray-100' : ''}
+                data-testid="filter-my-team"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                My Team
+              </DropdownMenuItem>
+              {allTeams.map((teamOption) => (
+                <DropdownMenuItem
+                  key={teamOption.id}
+                  onClick={() => onTeamFilterChange(parseInt(teamOption.id))}
+                  className={selectedTeamFilter === parseInt(teamOption.id) ? 'bg-gray-100' : ''}
+                  data-testid={`filter-team-${teamOption.id}`}
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  {teamOption.name}
+                  {teamOption.ageGroup && (
+                    <span className="text-xs text-gray-500 ml-1">({teamOption.ageGroup})</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-start gap-4">
@@ -630,7 +713,14 @@ function RosterTab({
 
       {/* Roster list */}
       <div className="space-y-2">
-        <h3 className="text-lg font-bold text-gray-900">Roster</h3>
+        <h3 className="text-lg font-bold text-gray-900">
+          Roster
+          {selectedTeamFilter !== 'my-team' && (
+            <span className="text-sm font-normal text-gray-500 ml-2">
+              (Viewing: {allTeams.find(t => t.id === selectedTeamFilter?.toString())?.name})
+            </span>
+          )}
+        </h3>
         {team.roster?.length ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">

@@ -625,22 +625,8 @@ function RosterTab({
     <div className="space-y-6">
       {/* Player Search */}
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Search Players</h3>
-        <PlayerSearch
-          teamId={team?.id}
-          onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
-          placeholder="Search for players across all teams..."
-        />
-      </div>
-      
-      <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">
-            {selectedTeamFilter === 'my-team' ? 
-              (team ? `${team.name} (My Team)` : 'My Team') : 
-              (team ? team.name : 'Team View')
-            }
-          </h2>
+          <h3 className="text-lg font-bold text-gray-900">Search Players</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -679,6 +665,20 @@ function RosterTab({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        <PlayerSearch
+          teamId={team?.id}
+          onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
+          placeholder="Search for players across all teams..."
+        />
+      </div>
+      
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          {selectedTeamFilter === 'my-team' ? 
+            (team ? `${team.name} (My Team)` : 'My Team') : 
+            (team ? team.name : 'Team View')
+          }
+        </h2>
         {/* Team info moved to filter dropdown */}
       </div>
 

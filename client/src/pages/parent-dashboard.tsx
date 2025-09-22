@@ -326,7 +326,7 @@ export default function ParentDashboard() {
               {/* Calendar component - moved below events */}
               <PlayerCalendar 
                 events={parentEvents as any} 
-                currentUser={{...currentUser, email: currentUser.email || ''}}
+                currentUser={{...currentUser, email: currentUser.email || '', firstName: currentUser.firstName || '', lastName: currentUser.lastName || ''}}
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />
@@ -345,7 +345,7 @@ export default function ParentDashboard() {
 
           {/* Event Detail Modal */}
           <EventDetailPanel
-            event={selectedEvent}
+            event={selectedEvent as any}
             userId={currentUser.id}
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}
@@ -416,8 +416,13 @@ function PlayersTab() {
   const [, setLocation] = useLocation();
 
   // Query for comprehensive player data
-  const { data: linkedPlayers = [], isLoading } = useQuery({
+  const { data: linkedPlayers = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/parent/players/comprehensive'],
+    queryFn: async () => {
+      const res = await fetch('/api/parent/players/comprehensive', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
   });
 
   return (

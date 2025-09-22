@@ -636,7 +636,10 @@ function RosterTab({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">
-            {selectedTeamFilter === 'my-team' ? 'My Team' : 'Team View'}
+            {selectedTeamFilter === 'my-team' ? 
+              (team ? `${team.name} (My Team)` : 'My Team') : 
+              (team ? team.name : 'Team View')
+            }
           </h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -647,10 +650,6 @@ function RosterTab({
                 data-testid="button-team-filter"
               >
                 <Filter className="h-4 w-4" />
-                <span className="hidden sm:inline">
-                  {selectedTeamFilter === 'my-team' ? 'My Team' : 
-                   allTeams.find(t => t.id === selectedTeamFilter?.toString())?.name || 'Team'}
-                </span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -680,47 +679,27 @@ function RosterTab({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
-                <Users className="h-8 w-8 text-red-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{team.name}</h3>
-                <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{team.ageGroup}</p>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <UserCheck className="h-4 w-4" /> You are the coach
-                </div>
-              </div>
-              {team.inviteCode ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(team.inviteCode!);
-                    toast({ title: "Invite code copied" });
-                  }}
-                  data-testid="button-copy-invite"
-                >
-                  <Copy className="h-3.5 w-3.5 mr-1" /> Invite
-                </Button>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Team info moved to filter dropdown */}
       </div>
 
       {/* Roster list */}
       <div className="space-y-2">
-        <h3 className="text-lg font-bold text-gray-900">
-          Roster
-          {selectedTeamFilter !== 'my-team' && (
-            <span className="text-sm font-normal text-gray-500 ml-2">
-              (Viewing: {allTeams.find(t => t.id === selectedTeamFilter?.toString())?.name})
-            </span>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">Roster</h3>
+          {team && selectedTeamFilter === 'my-team' && team.inviteCode && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(team.inviteCode!);
+                toast({ title: "Invite code copied" });
+              }}
+              data-testid="button-copy-invite"
+            >
+              <Copy className="h-3.5 w-3.5 mr-1" /> Invite
+            </Button>
           )}
-        </h3>
+        </div>
         {team.roster?.length ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">

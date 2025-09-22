@@ -672,16 +672,6 @@ function RosterTab({
         />
       </div>
       
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          {selectedTeamFilter === 'my-team' ? 
-            (team ? `${team.name} (My Team)` : 'My Team') : 
-            (team ? team.name : 'Team View')
-          }
-        </h2>
-        {/* Team info moved to filter dropdown */}
-      </div>
-
       {/* Roster list */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">

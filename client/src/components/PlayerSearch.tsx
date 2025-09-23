@@ -204,26 +204,45 @@ export default function PlayerSearch({
                         {getTeamName(player.team_id)}
                       </Badge>
                     )}
+                    {player.age && (
+                      <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700">
+                        Age {player.age}
+                      </Badge>
+                    )}
+                    {player.grade && (
+                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                        Grade {player.grade}
+                      </Badge>
+                    )}
                   </div>
 
-                  {/* Privacy indicators */}
                   <div className="flex items-center gap-1 mt-2">
-                    {player.badges_public && (
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
-                        Badges Public
+                    {player.registration_status && (
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          player.registration_status === 'active' ? 'bg-green-50 text-green-700' :
+                          player.registration_status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                          'bg-red-50 text-red-700'
+                        }`}
+                      >
+                        {player.registration_status}
                       </Badge>
                     )}
-                    {player.trophies_public && (
-                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
-                        Trophies Public
-                      </Badge>
-                    )}
-                    {player.skills_public && (
-                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
-                        Skills Public
+                    {player.session && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                        {player.session}
                       </Badge>
                     )}
                   </div>
+
+                  {/* Contact info for coaches */}
+                  {(player.parent_email || player.phone_number) && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {player.parent_email && <div>Parent: {player.parent_email}</div>}
+                      {player.phone_number && <div>Phone: {player.phone_number}</div>}
+                    </div>
+                  )}
                 </div>
 
                 {/* Action indicator */}

@@ -18,9 +18,13 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
   }
   const sql = `
     SELECT p.id, p.first_name, p.last_name, p.team_id, p.profile_image_url,
+           p.date_of_birth, p.phone_number, p.emergency_contact, p.emergency_phone,
+           p.address, p.medical_info, p.allergies, p.jersey_number, p.position,
+           p.school_grade, a.email as account_email, a.registration_status,
            COALESCE(pp.settings, '{}'::jsonb) AS settings
     FROM profiles p
     LEFT JOIN profile_privacy pp ON pp.profile_id = p.id
+    LEFT JOIN accounts a ON a.id = p.account_id
     WHERE ${where}
     ORDER BY p.first_name NULLS LAST, p.last_name NULLS LAST
     LIMIT 50;
@@ -36,12 +40,33 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
       if (level === "team") return canSeeTeamOnly ? value : null;
       return null; // private
     };
+    // Calculate age from date of birth
+    const age = row.date_of_birth ? 
+      new Date().getFullYear() - new Date(row.date_of_birth).getFullYear() : undefined;
+    
     return {
       id: row.id,
       first_name: mask("first_name", row.first_name) ?? "🔒",
       last_name: mask("last_name", row.last_name) ?? "",
       profile_image_url: mask("profile_image_url", row.profile_image_url),
       team_id: row.team_id,
+      age: mask("date_of_birth", age),
+      date_of_birth: mask("date_of_birth", row.date_of_birth),
+      registration_status: row.registration_status,
+      parent_name: undefined, // Not available in current schema
+      parent_email: undefined, // Not available in current schema
+      account_email: mask("email", row.account_email),
+      phone_number: mask("phone_number", row.phone_number),
+      emergency_contact: mask("emergency_contact", row.emergency_contact),
+      emergency_phone: mask("emergency_phone", row.emergency_phone),
+      grade: mask("school_grade", row.school_grade),
+      school_grade: mask("school_grade", row.school_grade),
+      session: undefined, // Could be derived from current program if available
+      position: mask("position", row.position),
+      jersey_number: mask("jersey_number", row.jersey_number),
+      address: mask("address", row.address),
+      medical_info: mask("medical_info", row.medical_info),
+      allergies: mask("allergies", row.allergies),
       badges_public: vis("badges") !== "private",
       trophies_public: vis("trophies") !== "private",
       skills_public: vis("skills") !== "private",
@@ -144,10 +169,34 @@ router.get("/notion-players", isAuthenticated, async (req: any, res) => {
         ok: true, 
         players: players.map(player => ({
           id: player.id,
+          first_name: player.name.split(' ')[0] || '',
+          last_name: player.name.split(' ').slice(1).join(' ') || '',
           fullName: player.name,
-          team: player.team,
+          team_name: player.team,
+          team_id: player.teamSlug ? player.teamSlug : undefined,
+          age: undefined, // Not available in current NotionPlayer type
+          date_of_birth: undefined, // Not available in current NotionPlayer type
+          registration_status: player.status, // Using status field
+          parent_name: undefined, // Not available in current NotionPlayer type
+          parent_email: undefined, // Not available in current NotionPlayer type
+          account_email: undefined, // Not available in current NotionPlayer type
+          phone_number: undefined, // Not available in current NotionPlayer type
+          emergency_contact: undefined, // Not available in current NotionPlayer type
+          emergency_phone: undefined, // Not available in current NotionPlayer type
+          grade: player.grade,
+          school_grade: player.grade,
+          session: player.currentProgram,
+          position: undefined, // Not available in current NotionPlayer type
+          jersey_number: undefined, // Not available in current NotionPlayer type
+          address: undefined, // Not available in current NotionPlayer type
+          medical_info: undefined, // Not available in current NotionPlayer type
+          allergies: undefined, // Not available in current NotionPlayer type
+          profile_image_url: undefined, // Not available in current NotionPlayer type
           currentProgram: player.currentProgram,
           profileUrl: player.profileUrl,
+          badges_public: true,
+          trophies_public: true,
+          skills_public: true,
           displayText: `${player.name}${player.team ? `, ${player.team}` : ''}${player.currentProgram ? ` (${player.currentProgram})` : ''}`
         }))
       });

@@ -14,6 +14,24 @@ interface PlayerSearchResult {
   last_name: string;
   profile_image_url?: string;
   team_id?: number;
+  team_name?: string;
+  age?: number;
+  date_of_birth?: string;
+  registration_status?: string;
+  parent_name?: string;
+  parent_email?: string;
+  account_email?: string;
+  phone_number?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  grade?: string;
+  school_grade?: string;
+  session?: string;
+  position?: string;
+  jersey_number?: number;
+  address?: string;
+  medical_info?: string;
+  allergies?: string;
   badges_public: boolean;
   trophies_public: boolean;
   skills_public: boolean;
@@ -140,31 +158,6 @@ export default function PlayerSearch({
           data-testid="input-player-search"
         />
       </div>
-
-      {/* Team Filter */}
-      {showTeamFilter && teamList.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedTeamFilter === "" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedTeamFilter("")}
-            data-testid="button-team-filter-all"
-          >
-            All Teams
-          </Button>
-          {teamList.map((team: any) => (
-            <Button
-              key={team.id}
-              variant={selectedTeamFilter === team.id.toString() ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedTeamFilter(team.id.toString())}
-              data-testid={`button-team-filter-${team.id}`}
-            >
-              {team.name}
-            </Button>
-          ))}
-        </div>
-      )}
 
       {/* Search Results */}
       <div className="space-y-2">

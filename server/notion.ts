@@ -75,14 +75,22 @@ export class NotionPlayerService {
     console.log('Starting Notion sync...');
     
     try {
-      // Fetch all pages from the database (no filter to get all players)
-      const response = await notion.databases.query({
-        database_id: DATABASE_ID
-      });
-
+      // Fetch all pages from the database with pagination (no filter to get all players)
       const players: NotionPlayer[] = [];
+      let cursor: string | undefined;
+      let totalFetched = 0;
       
-      for (const page of response.results) {
+      do {
+        const response = await notion.databases.query({
+          database_id: DATABASE_ID,
+          start_cursor: cursor,
+          page_size: 100
+        });
+        
+        console.log(`Fetched ${response.results.length} players (page ${Math.floor(totalFetched/100) + 1})`);
+        totalFetched += response.results.length;
+        
+        for (const page of response.results) {
         if (!('properties' in page)) continue;
         
         const properties = page.properties;
@@ -144,7 +152,12 @@ export class NotionPlayerService {
 
         players.push(player);
       }
-
+      
+      cursor = response.next_cursor || undefined;
+      } while (cursor);
+      
+      console.log(`Notion sync completed: ${players.length} players total`);
+      
       // Build players index
       this.playersById = {};
       players.forEach(player => {

@@ -53,15 +53,15 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
       age: mask("date_of_birth", age),
       date_of_birth: mask("date_of_birth", row.date_of_birth),
       registration_status: row.registration_status,
-      parent_name: undefined, // Not available in current schema
-      parent_email: undefined, // Not available in current schema
+      parent_name: mask("emergency_contact", row.emergency_contact), // Use emergency contact as parent name
+      parent_email: mask("email", row.account_email), // Use account email as parent contact
       account_email: mask("email", row.account_email),
       phone_number: mask("phone_number", row.phone_number),
       emergency_contact: mask("emergency_contact", row.emergency_contact),
       emergency_phone: mask("emergency_phone", row.emergency_phone),
       grade: mask("school_grade", row.school_grade),
       school_grade: mask("school_grade", row.school_grade),
-      session: undefined, // Could be derived from current program if available
+      session: mask("position", row.position) || 'Youth Basketball', // Use position or default program
       position: mask("position", row.position),
       jersey_number: mask("jersey_number", row.jersey_number),
       address: mask("address", row.address),

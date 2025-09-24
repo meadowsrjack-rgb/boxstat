@@ -226,6 +226,9 @@ export class NotionPlayerService {
       this.lastSync = new Date();
       console.log(`Notion sync completed: ${players.length} players, ${Object.keys(this.teamsBySlug).length} teams`);
       
+      // Test: Create Carlos Jimenez account after sync
+      this.createCarlosAccountTest(players).catch(console.error);
+      
       return {
         players,
         teams: Object.values(this.teamsBySlug)
@@ -273,6 +276,53 @@ export class NotionPlayerService {
 
   getLastSync(): Date | null {
     return this.lastSync;
+  }
+
+  async createCarlosAccountTest(players: NotionPlayer[]): Promise<void> {
+    try {
+      console.log("TEST: Searching for Carlos Jimenez in Notion data...");
+      
+      const carlosPlayer = players.find(player => 
+        player.name.toLowerCase().includes('carlos') && 
+        player.name.toLowerCase().includes('jimenez')
+      );
+      
+      if (!carlosPlayer) {
+        console.log("TEST: Carlos Jimenez not found in Notion data");
+        console.log("Available players:", players.slice(0, 5).map(p => p.name));
+        return;
+      }
+      
+      console.log("TEST: Found Carlos in Notion:", carlosPlayer);
+      
+      // Import storage dynamically to avoid circular imports
+      const { storage } = await import('./storage.js');
+      
+      // Create account for Carlos (use a test email)
+      const testEmail = 'carlos.jimenez.test@example.com';
+      const account = await storage.upsertAccountFromNotion(testEmail, {
+        primaryAccountType: 'player',
+        registrationStatus: 'active'
+      });
+      
+      console.log("TEST: Created account:", account);
+      
+      // Create player profile for Carlos
+      const profile = await storage.upsertProfileFromNotion(account.id, {
+        notionId: carlosPlayer.id,
+        fullName: carlosPlayer.name,
+        personType: 'player',
+        age: carlosPlayer.grade ? Number(carlosPlayer.grade) + 5 : undefined, // Rough age calculation
+        teamId: carlosPlayer.teamSlug ? 1 : undefined, // Assign to a test team
+        phoneNumber: undefined // Not available in Notion data
+      });
+      
+      console.log("TEST: Created profile:", profile);
+      console.log(`TEST: Successfully created claimed account for ${carlosPlayer.name}`);
+      
+    } catch (error) {
+      console.error("TEST: Error creating Carlos account:", error);
+    }
   }
 }
 

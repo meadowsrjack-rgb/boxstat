@@ -3906,7 +3906,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerClaimRoutes(app);
 
   // Create claimed account for Carlos Jimenez from Notion data (test route)
-  app.post('/api/test/create-carlos-account', isAuthenticated, async (req: any, res) => {
+  app.post('/api/test/create-carlos-account', async (req: any, res) => {
     try {
       console.log("Creating Carlos Jimenez account from Notion data...");
       

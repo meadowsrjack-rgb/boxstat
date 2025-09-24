@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, User, Users } from "lucide-react";
+import { Search, User, Users, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface PlayerSearchResult {
@@ -68,14 +69,25 @@ export default function PlayerSearch({
   showTeamFilter = true 
 }: PlayerSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("");
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>("all");
   
   // Debounce search query to reduce API calls
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Search players
+  // Search players with team filter
+  const searchParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (debouncedQuery) params.set('q', debouncedQuery);
+    if (selectedTeamFilter && selectedTeamFilter !== 'all') params.set('team', selectedTeamFilter);
+    return params.toString();
+  }, [debouncedQuery, selectedTeamFilter]);
+
   const { data: searchResults, isLoading } = useQuery<PlayerSearchResponse | PlayerSearchResult[]>({
-    queryKey: [`/api/search/notion-players?q=${encodeURIComponent(debouncedQuery)}`],
+    queryKey: [`/api/search/notion-players`, searchParams],
+    queryFn: async () => {
+      const response = await fetch(`/api/search/notion-players?${searchParams}`);
+      return response.json();
+    },
     enabled: debouncedQuery.length >= 2,
   });
 
@@ -101,26 +113,21 @@ export default function PlayerSearch({
     return teamsData?.teams ?? [];
   }, [teamsData]);
 
-  // Filter results by team if teamId is provided or team filter is selected
+  // Since we're now filtering server-side, we don't need client-side filtering
+  // But keep the filtering logic for teamId prop compatibility
   const filteredResults = useMemo(() => {
     let results = players;
     
-    // Filter by specific team if teamId is provided
+    // Filter by specific team if teamId prop is provided (overrides dropdown selection)
     if (teamId) {
+      const teamIdString = teamId.toString();
       results = results.filter((player: PlayerSearchResult) => 
-        player.team_id === parseInt(teamId.toString())
-      );
-    }
-    
-    // Filter by selected team filter
-    if (selectedTeamFilter) {
-      results = results.filter((player: PlayerSearchResult) => 
-        player.team_id === parseInt(selectedTeamFilter)
+        player.team_id?.toString() === teamIdString
       );
     }
     
     return results;
-  }, [searchResults, teamId, selectedTeamFilter]);
+  }, [players, teamId]);
 
   const getPlayerInitials = (player: PlayerSearchResult) => {
     return `${player.first_name?.charAt(0) || ''}${player.last_name?.charAt(0) || ''}`.toUpperCase();
@@ -146,17 +153,40 @@ export default function PlayerSearch({
 
   return (
     <div className="w-full space-y-4">
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          type="text"
-          placeholder={placeholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-          data-testid="input-player-search"
-        />
+      {/* Search Input and Team Filter */}
+      <div className="flex gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder={placeholder}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            data-testid="input-player-search"
+          />
+        </div>
+        
+        {showTeamFilter && (
+          <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
+            <SelectTrigger className="w-48" data-testid="select-team-filter">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Filter by team" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all" data-testid="option-all-teams">All Teams</SelectItem>
+              {teamList.map((team) => (
+                <SelectItem 
+                  key={team.id} 
+                  value={team.id} 
+                  data-testid={`option-team-${team.id}`}
+                >
+                  {team.name} ({team.roster_count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Search Results */}

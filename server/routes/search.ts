@@ -80,11 +80,19 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
     const q = (req.query.q as string || "").trim();
     
     try {
+      // Ensure we have data by checking if sync has completed
       const allTeams = notionService.getAllTeams();
+      if (allTeams.length === 0) {
+        // Try to trigger a sync if no teams are available
+        console.log("No teams available, triggering sync...");
+        await notionService.syncFromNotion();
+      }
+      
       console.log(`Searching teams with query: "${q}"`);
       console.log(`Available teams: ${allTeams.map(t => t.name).join(', ')}`);
       
-      const teams = notionService.searchTeams(q);
+      // If no search query, return all teams
+      const teams = q ? notionService.searchTeams(q) : notionService.getAllTeams();
       console.log(`Found ${teams.length} matching teams:`, teams.map(t => t.name));
       
       res.json({ ok: true, teams: teams.map(team => ({
@@ -158,13 +166,28 @@ router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res
 router.get("/notion-players", isAuthenticated, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
+    const team = (req.query.team as string || "").trim();
     
     if (!q || q.length < 2) {
       return res.json({ ok: true, players: [] });
     }
 
     try {
-      const players = notionService.searchPlayers(q);
+      // Ensure we have data by checking if sync has completed
+      const allPlayers = notionService.getAllPlayers();
+      if (allPlayers.length === 0) {
+        // Try to trigger a sync if no players are available
+        console.log("No players available, triggering sync...");
+        await notionService.syncFromNotion();
+      }
+      
+      let players = notionService.searchPlayers(q);
+      
+      // Filter by team if specified
+      if (team && team !== "all") {
+        players = players.filter(player => player.teamSlug === team);
+      }
+      
       res.json({ 
         ok: true, 
         players: players.map(player => ({

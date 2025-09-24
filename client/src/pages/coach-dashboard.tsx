@@ -625,45 +625,8 @@ function RosterTab({
     <div className="space-y-6">
       {/* Player Search */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4">
           <h3 className="text-lg font-bold text-gray-900">Search Players</h3>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                data-testid="button-team-filter"
-              >
-                <Filter className="h-4 w-4" />
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onClick={() => onTeamFilterChange('my-team')}
-                className={selectedTeamFilter === 'my-team' ? 'bg-gray-100' : ''}
-                data-testid="filter-my-team"
-              >
-                <Users className="h-4 w-4 mr-2" />
-                My Team
-              </DropdownMenuItem>
-              {allTeams.map((teamOption) => (
-                <DropdownMenuItem
-                  key={teamOption.id}
-                  onClick={() => onTeamFilterChange(parseInt(teamOption.id))}
-                  className={selectedTeamFilter === parseInt(teamOption.id) ? 'bg-gray-100' : ''}
-                  data-testid={`filter-team-${teamOption.id}`}
-                >
-                  <Trophy className="h-4 w-4 mr-2" />
-                  {teamOption.name}
-                  {teamOption.ageGroup && (
-                    <span className="text-xs text-gray-500 ml-1">({teamOption.ageGroup})</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
         <PlayerSearch
           teamId={team?.id}

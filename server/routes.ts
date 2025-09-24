@@ -3905,5 +3905,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Search & Claim routes
   registerClaimRoutes(app);
 
+  // Create claimed account for Carlos Jimenez from Notion data (test route)
+  app.post('/api/test/create-carlos-account', isAuthenticated, async (req: any, res) => {
+    try {
+      console.log("Creating Carlos Jimenez account from Notion data...");
+      
+      // Search for Carlos in Notion data
+      const allPlayers = notionService.getAllPlayers();
+      const carlosPlayer = allPlayers.find(player => 
+        player.name.toLowerCase().includes('carlos') && 
+        player.name.toLowerCase().includes('jimenez')
+      );
+      
+      if (!carlosPlayer) {
+        console.log("Carlos Jimenez not found in Notion data");
+        return res.status(404).json({ 
+          ok: false, 
+          error: "Carlos Jimenez not found in Notion database" 
+        });
+      }
+      
+      console.log("Found Carlos in Notion:", carlosPlayer);
+      
+      // Create account for Carlos (use a test email)
+      const testEmail = 'carlos.jimenez.test@example.com';
+      const account = await storage.upsertAccountFromNotion(testEmail, {
+        primaryAccountType: 'player',
+        registrationStatus: 'active'
+      });
+      
+      console.log("Created account:", account);
+      
+      // Create player profile for Carlos
+      const profile = await storage.upsertProfileFromNotion(account.id, {
+        notionId: carlosPlayer.id,
+        fullName: carlosPlayer.name,
+        personType: 'player',
+        age: carlosPlayer.grade ? Number(carlosPlayer.grade) + 5 : undefined, // Rough age calculation
+        teamId: carlosPlayer.teamSlug ? 1 : undefined, // Assign to a test team
+        phoneNumber: undefined // Not available in Notion data
+      });
+      
+      console.log("Created profile:", profile);
+      
+      res.json({ 
+        ok: true, 
+        message: `Successfully created claimed account for ${carlosPlayer.name}`,
+        account: account,
+        profile: profile,
+        notionData: carlosPlayer
+      });
+      
+    } catch (error) {
+      console.error("Error creating Carlos account:", error);
+      res.status(500).json({ 
+        ok: false, 
+        error: "Failed to create Carlos account",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   return httpServer;
 }

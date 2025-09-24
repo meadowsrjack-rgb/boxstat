@@ -629,7 +629,6 @@ function RosterTab({
           <h3 className="text-lg font-bold text-gray-900">Search Players</h3>
         </div>
         <PlayerSearch
-          teamId={team?.id}
           onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
           placeholder="Search for players across all teams..."
         />

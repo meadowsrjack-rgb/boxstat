@@ -75,7 +75,7 @@ export default function PlayerSearch({
 
   // Search players
   const { data: searchResults, isLoading } = useQuery<PlayerSearchResponse | PlayerSearchResult[]>({
-    queryKey: [`/api/search/players?q=${encodeURIComponent(debouncedQuery)}`],
+    queryKey: [`/api/search/notion-players?q=${encodeURIComponent(debouncedQuery)}`],
     enabled: debouncedQuery.length >= 2,
   });
 

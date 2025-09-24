@@ -85,7 +85,12 @@ export default function PlayerSearch({
   const { data: searchResults, isLoading } = useQuery<PlayerSearchResponse | PlayerSearchResult[]>({
     queryKey: [`/api/search/notion-players`, searchParams],
     queryFn: async () => {
-      const response = await fetch(`/api/search/notion-players?${searchParams}`);
+      const response = await fetch(`/api/search/notion-players?${searchParams}`, {
+        credentials: "include"
+      });
+      if (!response.ok) {
+        throw new Error(`Search failed: ${response.status}`);
+      }
       return response.json();
     },
     enabled: debouncedQuery.length >= 2,
@@ -94,6 +99,15 @@ export default function PlayerSearch({
   // Get teams for filter
   const { data: teamsData } = useQuery<TeamSearchResponse | TeamResult[]>({
     queryKey: ['/api/search/teams'],
+    queryFn: async () => {
+      const response = await fetch('/api/search/teams', {
+        credentials: "include"
+      });
+      if (!response.ok) {
+        throw new Error(`Teams fetch failed: ${response.status}`);
+      }
+      return response.json();
+    },
     enabled: showTeamFilter,
   });
 
@@ -170,8 +184,7 @@ export default function PlayerSearch({
         {showTeamFilter && (
           <Select value={selectedTeamFilter} onValueChange={setSelectedTeamFilter}>
             <SelectTrigger className="w-48" data-testid="select-team-filter">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by team" />
+              <SelectValue placeholder="All Teams" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" data-testid="option-all-teams">All Teams</SelectItem>

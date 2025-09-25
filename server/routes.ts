@@ -542,25 +542,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           player = notionPlayers.find((p: any) => p.id === playerId);
           
           if (player) {
-            // Transform Notion player data to match expected format
+            // Transform Notion player data to match PlayerCard expected format
             player = {
               id: player.id,
-              firstName: player.name?.split(' ')[0] || '',
-              lastName: player.name?.split(' ').slice(1).join(' ') || '',
+              first_name: player.name?.split(' ')[0] || '',
+              last_name: player.name?.split(' ').slice(1).join(' ') || '',
               full_name: player.name,
-              age: player.age,
-              grade: player.grade,
+              profile_image_url: null,
+              age: player.age?.toString(),
+              schoolGrade: player.grade,
               team: player.team,
+              team_id: null,
+              position: null,
+              jerseyNumber: null,
+              dateOfBirth: null,
+              height: null,
+              city: null,
               parent_name: player.parent_name,
               parent_email: player.parent_email,
               account_email: player.account_email,
               phone_number: player.phone_number,
               registration_status: player.registration_status,
-              profileImageUrl: null,
-              dateOfBirth: null,
-              teamId: null,
-              position: null,
-              jerseyNumber: null,
               session: player.session
             };
           }

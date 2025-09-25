@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { motion } from "framer-motion";
+import UypTrophyRings from "@/components/UypTrophyRings";
 import {
   User,
   Users,
@@ -22,7 +24,9 @@ import {
   Target,
   TrendingUp,
   MessageCircle,
-  X
+  X,
+  Shirt,
+  Gauge
 } from "lucide-react";
 
 interface PlayerCardProps {
@@ -37,8 +41,11 @@ interface PlayerProfile {
   id: string;
   first_name: string;
   last_name: string;
+  full_name?: string;
   profile_image_url?: string;
+  team?: string;
   team_id?: number;
+  team_name?: string;
   jerseyNumber?: number;
   position?: string;
   dateOfBirth?: string;
@@ -46,6 +53,12 @@ interface PlayerProfile {
   age?: string;
   city?: string;
   schoolGrade?: string;
+  parent_name?: string;
+  parent_email?: string;
+  account_email?: string;
+  phone_number?: string;
+  registration_status?: string;
+  session?: string;
 }
 
 interface PlayerStats {
@@ -164,333 +177,415 @@ export default function PlayerCard({
     awardMutation.mutate({ awardId, type });
   };
 
+  // Helper components
+  const ProfileAvatarRing = ({ src, initials, size = 80 }: { src?: string; initials: string; size?: number }) => (
+    <motion.div
+      className="inline-block rounded-full p-[3px] bg-[conic-gradient(at_50%_50%,#fecaca,#fde8e8,#fecaca)] shadow-sm"
+      animate={{ rotate: 360 }}
+      transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+      whileHover={{ scale: 1.03 }}
+      style={{ width: size + 6, height: size + 6 }}
+    >
+      <div className="rounded-full overflow-hidden bg-white ring-4 ring-white shadow-md" style={{ width: size, height: size }}>
+        <Avatar className="w-full h-full">
+          <AvatarImage src={src} alt="Player Avatar" />
+          <AvatarFallback className="text-lg font-bold bg-gray-200">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+    </motion.div>
+  );
+
+  const SkillBar = ({ label, value }: { label: string; value: number }) => (
+    <motion.div className="space-y-2 cursor-pointer p-2 rounded-lg" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
+      <div className="flex justify-between text-sm">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="text-red-600 font-semibold">{value}%</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+        <motion.div
+          className="bg-red-600 h-2.5 rounded-full"
+          initial={{ width: 0 }}
+          whileInView={{ width: `${value}%` }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+      </div>
+    </motion.div>
+  );
+
+  const ringsData = [
+    { count: Array.isArray(badges) ? badges.length : 0, label: "Badges" },
+    { count: Array.isArray(trophies) ? trophies.length : 0, label: "Trophies" },
+    { count: 0, label: "Skills" }, // Placeholder for skills
+  ];
+
   if (!isOpen || !playerId) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="player-profile-description">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <DialogTitle className="text-xl font-bold text-gray-900" data-testid="text-player-header">
-                {playerProfile ? getPlayerHeaderTitle(playerProfile) : 'Player Profile'}
-              </DialogTitle>
-              <div id="player-profile-description" className="sr-only">
-                Player profile information including stats, achievements, and contact details
-              </div>
-              {playerProfile && (() => {
-                const playerAge = computeAge(playerProfile);
-                return (
-                  <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground" data-testid="text-player-meta">
-                    {playerAge && (
-                      <span className="flex items-center gap-1">
-                        🎂 {playerAge} yrs
-                      </span>
-                    )}
-                    {playerProfile.height && (
-                      <span className="flex items-center gap-1">
-                        📏 {playerProfile.height}
-                      </span>
-                    )}
-                    {playerProfile.city && (
-                      <span className="flex items-center gap-1">
-                        📍 {playerProfile.city}
-                      </span>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" aria-describedby="player-profile-description">
+        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+          
+          {/* Close button */}
+          <div className="absolute top-4 right-4 z-10">
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-6 w-6 p-0"
+              className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm hover:bg-white"
               data-testid="button-close-player-card"
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
-        </DialogHeader>
 
-        {profileLoading ? (
-          <div className="space-y-4 animate-pulse">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-gray-200 rounded-full"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-32"></div>
-                <div className="h-3 bg-gray-200 rounded w-24"></div>
+          {profileLoading ? (
+            <div className="space-y-4 animate-pulse p-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-20 h-20 bg-gray-200 rounded-full"></div>
+                <div className="space-y-2">
+                  <div className="h-6 bg-gray-200 rounded w-48"></div>
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-20 bg-gray-200 rounded"></div>
+                ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        ) : playerProfile ? (
-          <div className="space-y-6">
-            {/* Player Header */}
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
-                <AvatarImage 
-                  src={playerProfile.profile_image_url} 
-                  alt={getPlayerFullName(playerProfile)} 
-                />
-                <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
-                  {getPlayerInitials(playerProfile)}
-                </AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1">
-                {playerProfile.team_id && (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 mb-2">
-                    <Users className="h-3 w-3 mr-1" />
-                    Team {playerProfile.team_id}
-                  </Badge>
-                )}
+          ) : playerProfile ? (
+            <div className="min-h-screen">
+              {/* Futuristic Bio Section */}
+              <div className="relative px-6 pt-6">
+                <motion.section
+                  initial={{ y: 24, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                  className="relative rounded-3xl bg-white/70 backdrop-blur-xl overflow-hidden"
+                >
+                  {/* Decorative grid overlay */}
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                    style={{
+                      backgroundImage: "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
+                      backgroundSize: "16px 16px",
+                    }}
+                  />
+
+                  {/* Header */}
+                  <div className="relative px-6 pt-8 pb-5 text-center">
+                    <div id="player-profile-description" className="sr-only">
+                      Player profile information including stats, achievements, and contact details
+                    </div>
+                    
+                    <h1
+                      className="mt-3 text-4xl font-black tracking-tight leading-tight"
+                      style={{
+                        color: "#d82428",
+                        textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                      }}
+                      data-testid="text-player-header"
+                    >
+                      {getPlayerFullName(playerProfile)}
+                    </h1>
+
+                    <div className="mt-1 text-sm font-medium text-gray-700">
+                      {playerProfile.position || "Player"} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
+                      {playerProfile.city && (
+                        <div className="text-xs text-gray-600 mt-1">From {playerProfile.city}</div>
+                      )}
+                    </div>
+
+                    {(playerProfile.team || playerProfile.team_name) && (
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
+                        <Shirt className="h-4 w-4 text-[#d82428]" />
+                        {playerProfile.team || playerProfile.team_name}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info grid */}
+                  <div className="relative px-6 pb-8">
+                    <div className="grid grid-cols-3 gap-3">
+                      <motion.div
+                        initial={{ y: 12, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0, duration: 0.35 }}
+                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
+                            <Ruler className="h-4 w-4" />
+                          </span>
+                          <span>HEIGHT</span>
+                        </div>
+                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                          {playerProfile.height || "N/A"}
+                        </div>
+                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ y: 12, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.05, duration: 0.35 }}
+                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
+                            <Gauge className="h-4 w-4" />
+                          </span>
+                          <span>AGE</span>
+                        </div>
+                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                          {playerProfile.age || computeAge(playerProfile) || "N/A"}
+                        </div>
+                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ y: 12, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.10, duration: 0.35 }}
+                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
+                            <MapPin className="h-4 w-4" />
+                          </span>
+                          <span>FROM</span>
+                        </div>
+                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                          {(playerProfile.city || "N/A").replace(", CA", "").replace(",CA", "")}
+                        </div>
+                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                      </motion.div>
+                    </div>
+                  </div>
+                </motion.section>
               </div>
+
+              {/* Contact & Registration Info */}
+              {(playerProfile.parent_name || playerProfile.parent_email || playerProfile.phone_number || playerProfile.registration_status) && (
+                <div className="px-6 mt-4">
+                  <motion.section
+                    initial={{ y: 12, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.2, duration: 0.4 }}
+                    className="relative rounded-2xl bg-white/70 backdrop-blur-xl overflow-hidden p-6"
+                  >
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Contact & Registration</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {playerProfile.parent_name && (
+                        <div>
+                          <span className="text-gray-600">Parent:</span>
+                          <p className="font-medium">{playerProfile.parent_name}</p>
+                        </div>
+                      )}
+                      {playerProfile.parent_email && (
+                        <div>
+                          <span className="text-gray-600">Parent Email:</span>
+                          <p className="font-medium">{playerProfile.parent_email}</p>
+                        </div>
+                      )}
+                      {playerProfile.phone_number && (
+                        <div>
+                          <span className="text-gray-600">Phone:</span>
+                          <p className="font-medium">{playerProfile.phone_number}</p>
+                        </div>
+                      )}
+                      {playerProfile.registration_status && (
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <Badge 
+                            variant="outline" 
+                            className={`ml-2 ${
+                              playerProfile.registration_status === 'active' ? 'bg-green-50 text-green-700' :
+                              playerProfile.registration_status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                              'bg-red-50 text-red-700'
+                            }`}
+                          >
+                            {playerProfile.registration_status}
+                          </Badge>
+                        </div>
+                      )}
+                      {playerProfile.session && (
+                        <div>
+                          <span className="text-gray-600">Program:</span>
+                          <p className="font-medium">{playerProfile.session}</p>
+                        </div>
+                      )}
+                      {playerProfile.schoolGrade && (
+                        <div>
+                          <span className="text-gray-600">Grade:</span>
+                          <p className="font-medium">{playerProfile.schoolGrade}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.section>
+                </div>
+              )}
 
               {/* Coach Actions */}
               {isCoach && (
-                <div className="flex flex-col gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => setShowAwardDialog(true)}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                    data-testid="button-award-player"
+                <div className="px-6 mt-4">
+                  <motion.section
+                    initial={{ y: 12, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 0.4 }}
+                    className="relative rounded-2xl bg-white/70 backdrop-blur-xl overflow-hidden p-6"
                   >
-                    <Trophy className="h-4 w-4 mr-1" />
-                    Award
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowSkillEvaluation(true)}
-                    data-testid="button-evaluate-skills"
-                  >
-                    <Star className="h-4 w-4 mr-1" />
-                    Evaluate
-                  </Button>
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Coach Actions</h3>
+                    <div className="flex gap-4">
+                      <Button
+                        onClick={() => setShowAwardDialog(true)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                        data-testid="button-award-player"
+                      >
+                        <Trophy className="h-4 w-4 mr-1" />
+                        Award Player
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowSkillEvaluation(true)}
+                        data-testid="button-evaluate-skills"
+                      >
+                        <Star className="h-4 w-4 mr-1" />
+                        Evaluate Skills
+                      </Button>
+                    </div>
+                  </motion.section>
                 </div>
               )}
-            </div>
 
-            {/* Player Details */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {playerProfile.age && (
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <Calendar className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-sm text-gray-600">Age</p>
-                    <p className="font-semibold">{playerProfile.age}</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {playerProfile.height && (
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <Ruler className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-sm text-gray-600">Height</p>
-                    <p className="font-semibold">{playerProfile.height}</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {playerProfile.city && (
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <MapPin className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-sm text-gray-600">Location</p>
-                    <p className="font-semibold">{playerProfile.city}</p>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {playerProfile.schoolGrade && (
-                <Card>
-                  <CardContent className="p-3 text-center">
-                    <TrendingUp className="h-5 w-5 mx-auto mb-1 text-gray-600" />
-                    <p className="text-sm text-gray-600">Grade</p>
-                    <p className="font-semibold">{playerProfile.schoolGrade}</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Achievements Section */}
-            <div className="space-y-4">
-              <Separator />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Badges */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Award className="h-4 w-4 text-blue-500" />
-                      Badges ({Array.isArray(badges) ? badges.length : 0})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Array.isArray(badges) && badges.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {badges.slice(0, 4).map((badge: any) => (
-                          <div key={badge.id} className="flex items-center gap-2 p-2 bg-blue-50 rounded">
-                            <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                              <Award className="h-3 w-3 text-white" />
-                            </div>
-                            <span className="text-xs font-medium truncate">{badge.name}</span>
-                          </div>
-                        ))}
-                        {badges.length > 4 && (
-                          <div className="text-xs text-gray-500 p-2">
-                            +{badges.length - 4} more
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No badges earned yet</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Trophies */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                      Trophies ({Array.isArray(trophies) ? trophies.length : 0})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {Array.isArray(trophies) && trophies.length > 0 ? (
-                      <div className="space-y-2">
-                        {trophies.slice(0, 3).map((trophy: any) => (
-                          <div key={trophy.id} className="flex items-center gap-2 p-2 bg-yellow-50 rounded">
-                            <Trophy className="h-4 w-4 text-yellow-500" />
-                            <div>
-                              <p className="text-xs font-medium">{trophy.trophyName}</p>
-                              {trophy.earnedAt && (
-                                <p className="text-xs text-gray-500">
-                                  {new Date(trophy.earnedAt).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {trophies.length > 3 && (
-                          <div className="text-xs text-gray-500">
-                            +{trophies.length - 3} more
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No trophies earned yet</p>
-                    )}
-                  </CardContent>
-                </Card>
+              {/* Trophies & Badges */}
+              <div className="px-6 mt-4">
+                <motion.div
+                  initial={{ y: 12, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                  className="cursor-pointer"
+                >
+                  <UypTrophyRings data={ringsData} size={109} stroke={8} />
+                </motion.div>
               </div>
-            </div>
 
-            {/* Awards Dialog for Coaches */}
-            {isCoach && showAwardDialog && (
-              <Dialog open={showAwardDialog} onOpenChange={setShowAwardDialog}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Award Player</DialogTitle>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">Available Badges</h4>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                        {Array.isArray(availableAwards) && availableAwards.filter((award: any) => award.type !== 'trophy').map((award: any) => (
-                          <Button
-                            key={award.id}
-                            variant="outline"
-                            onClick={() => handleAwardPlayer(award.id, 'badge')}
-                            disabled={awardMutation.isPending}
-                            className="justify-start h-auto p-3"
-                            data-testid={`button-award-badge-${award.id}`}
-                          >
-                            <Award className="h-4 w-4 mr-2" />
-                            <div className="text-left">
-                              <p className="font-medium">{award.name}</p>
-                              {award.description && (
-                                <p className="text-xs text-gray-500">{award.description}</p>
-                              )}
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium mb-2">Available Trophies</h4>
-                      <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                        {Array.isArray(availableAwards) && availableAwards.filter((award: any) => award.type === 'trophy').map((award: any) => (
-                          <Button
-                            key={award.id}
-                            variant="outline"
-                            onClick={() => handleAwardPlayer(award.id, 'trophy')}
-                            disabled={awardMutation.isPending}
-                            className="justify-start h-auto p-3"
-                            data-testid={`button-award-trophy-${award.id}`}
-                          >
-                            <Trophy className="h-4 w-4 mr-2" />
-                            <div className="text-left">
-                              <p className="font-medium">{award.name}</p>
-                              {award.description && (
-                                <p className="text-xs text-gray-500">{award.description}</p>
-                              )}
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
+              {/* Skills Progress */}
+              <div className="px-6 mt-4 pb-8">
+                <motion.div
+                  initial={{ y: 12, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5, duration: 0.4 }}
+                  className="max-w-[340px] mx-auto space-y-4"
+                >
+                  <SkillBar label="SHOOTING" value={72} />
+                  <SkillBar label="DRIBBLING" value={85} />
+                  <SkillBar label="PASSING" value={68} />
+                </motion.div>
+              </div>
 
-            {/* Skill Evaluation Dialog for Coaches */}
-            {isCoach && showSkillEvaluation && (
-              <Dialog open={showSkillEvaluation} onOpenChange={setShowSkillEvaluation}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Evaluate Player Skills</DialogTitle>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-600">
-                      Skill evaluation feature coming soon. This will allow coaches to rate players 
-                      on various skills and track their development over time.
-                    </p>
+              {/* Awards Dialog for Coaches */}
+              {isCoach && showAwardDialog && (
+                <Dialog open={showAwardDialog} onOpenChange={setShowAwardDialog}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Award Player</DialogTitle>
+                    </DialogHeader>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      {['Ball Handling', 'Shooting', 'Defense', 'Teamwork', 'Hustle', 'Leadership'].map(skill => (
-                        <div key={skill} className="p-3 border rounded-lg">
-                          <p className="font-medium text-sm">{skill}</p>
-                          <div className="flex items-center gap-1 mt-1">
-                            {[1, 2, 3, 4, 5].map(star => (
-                              <Star key={star} className="h-4 w-4 text-gray-300" />
-                            ))}
-                          </div>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium mb-2">Available Badges</h4>
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                          {Array.isArray(availableAwards) && availableAwards.filter((award: any) => award.type !== 'trophy').map((award: any) => (
+                            <Button
+                              key={award.id}
+                              variant="outline"
+                              onClick={() => handleAwardPlayer(award.id, 'badge')}
+                              disabled={awardMutation.isPending}
+                              className="justify-start h-auto p-3"
+                              data-testid={`button-award-badge-${award.id}`}
+                            >
+                              <Award className="h-4 w-4 mr-2" />
+                              <div className="text-left">
+                                <p className="font-medium">{award.name}</p>
+                                {award.description && (
+                                  <p className="text-xs text-gray-500">{award.description}</p>
+                                )}
+                              </div>
+                            </Button>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium mb-2">Available Trophies</h4>
+                        <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+                          {Array.isArray(availableAwards) && availableAwards.filter((award: any) => award.type === 'trophy').map((award: any) => (
+                            <Button
+                              key={award.id}
+                              variant="outline"
+                              onClick={() => handleAwardPlayer(award.id, 'trophy')}
+                              disabled={awardMutation.isPending}
+                              className="justify-start h-auto p-3"
+                              data-testid={`button-award-trophy-${award.id}`}
+                            >
+                              <Trophy className="h-4 w-4 mr-2" />
+                              <div className="text-left">
+                                <p className="font-medium">{award.name}</p>
+                                {award.description && (
+                                  <p className="text-xs text-gray-500">{award.description}</p>
+                                )}
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Player profile not found</p>
-          </div>
-        )}
+                  </DialogContent>
+                </Dialog>
+              )}
+
+              {/* Skill Evaluation Dialog for Coaches */}
+              {isCoach && showSkillEvaluation && (
+                <Dialog open={showSkillEvaluation} onOpenChange={setShowSkillEvaluation}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Evaluate Player Skills</DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Skill evaluation feature coming soon. This will allow coaches to rate players 
+                        on various skills and track their development over time.
+                      </p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        {['Ball Handling', 'Shooting', 'Defense', 'Teamwork', 'Hustle', 'Leadership'].map(skill => (
+                          <div key={skill} className="p-3 border rounded-lg">
+                            <p className="font-medium text-sm">{skill}</p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star key={star} className="h-4 w-4 text-gray-300" />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">Player profile not found</p>
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

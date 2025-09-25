@@ -533,12 +533,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerId = req.params.playerId;
       
       // First try to get from regular profiles table
-      let player = await storage.getProfileById(playerId);
+      let player = await storage.getUser(playerId);
       
       // If not found and ID looks like Notion UUID, try Notion data
       if (!player && playerId.includes('-')) {
         try {
-          const notionPlayers = await notionService.getPlayersFromNotion();
+          const notionPlayers = await notionService.getAllPlayers();
           player = notionPlayers.find((p: any) => p.id === playerId);
           
           if (player) {

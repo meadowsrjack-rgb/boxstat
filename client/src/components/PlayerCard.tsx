@@ -215,11 +215,14 @@ export default function PlayerCard({
     </motion.div>
   );
 
-  const ringsData = [
-    { count: Array.isArray(badges) ? badges.length : 0, label: "Badges" },
-    { count: Array.isArray(trophies) ? trophies.length : 0, label: "Trophies" },
-    { count: 0, label: "Skills" }, // Placeholder for skills
-  ];
+  const ringsData = {
+    trophies:   { earned: Array.isArray(trophies) ? trophies.length : 0, total: 10 },
+    hallOfFame: { earned: 0, total: 8  },
+    superstar:  { earned: 0, total: 12 },
+    allStar:    { earned: 0, total: 20 },
+    starter:    { earned: Array.isArray(badges) ? badges.length : 0, total: 18 },
+    prospect:   { earned: 0, total: 24 },
+  };
 
   if (!isOpen || !playerId) return null;
 

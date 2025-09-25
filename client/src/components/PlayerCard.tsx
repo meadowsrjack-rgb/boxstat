@@ -164,20 +164,20 @@ export default function PlayerCard({
     awardMutation.mutate({ awardId, type });
   };
 
-  // Debug logging
-  console.log('PlayerCard render:', { isOpen, playerId, playerProfile });
-
   if (!isOpen || !playerId) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="player-profile-description">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div className="flex-1">
               <DialogTitle className="text-xl font-bold text-gray-900" data-testid="text-player-header">
                 {playerProfile ? getPlayerHeaderTitle(playerProfile) : 'Player Profile'}
               </DialogTitle>
+              <div id="player-profile-description" className="sr-only">
+                Player profile information including stats, achievements, and contact details
+              </div>
               {playerProfile && (() => {
                 const playerAge = computeAge(playerProfile);
                 return (

@@ -536,6 +536,8 @@ export default function CoachDashboard() {
       />
 
       {/* PlayerCard Modal */}
+      {/* Debug: Show current selectedPlayerId state */}
+      {console.log('Coach Dashboard PlayerCard state:', { selectedPlayerId, isOpen: !!selectedPlayerId })}
       {selectedPlayerId && (
         <PlayerCard
           playerId={selectedPlayerId}

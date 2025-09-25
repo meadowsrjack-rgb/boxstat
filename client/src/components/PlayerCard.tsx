@@ -164,6 +164,9 @@ export default function PlayerCard({
     awardMutation.mutate({ awardId, type });
   };
 
+  // Debug logging
+  console.log('PlayerCard render:', { isOpen, playerId, playerProfile });
+
   if (!isOpen || !playerId) return null;
 
   return (

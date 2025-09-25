@@ -93,7 +93,7 @@ export default function PlayerSearch({
       }
       return response.json();
     },
-    enabled: debouncedQuery.length >= 2,
+    enabled: debouncedQuery.length >= 1, // Allow single character searches
   });
 
   // Get teams for filter
@@ -204,14 +204,14 @@ export default function PlayerSearch({
 
       {/* Search Results */}
       <div className="space-y-2">
-        {isLoading && debouncedQuery.length >= 2 && (
+        {isLoading && debouncedQuery.length >= 1 && (
           <div className="text-center py-4">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
             <p className="text-sm text-gray-500 mt-2">Searching players...</p>
           </div>
         )}
 
-        {!isLoading && debouncedQuery.length >= 2 && filteredResults.length === 0 && (
+        {!isLoading && debouncedQuery.length >= 1 && filteredResults.length === 0 && (
           <div className="text-center py-8">
             <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500">No players found</p>
@@ -219,7 +219,7 @@ export default function PlayerSearch({
           </div>
         )}
 
-        {debouncedQuery.length >= 2 && filteredResults.map((player: PlayerSearchResult) => (
+        {debouncedQuery.length >= 1 && filteredResults.map((player: PlayerSearchResult) => (
           <Card 
             key={player.id} 
             className="cursor-pointer hover:bg-gray-50 transition-colors"

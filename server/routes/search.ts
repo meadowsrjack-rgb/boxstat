@@ -159,17 +159,23 @@ router.get("/notion-players", isAuthenticated, async (req: any, res) => {
     const q = (req.query.q as string || "").trim();
     const team = (req.query.team as string || "").trim();
     
-    if (!q || q.length < 2) {
-      return res.json({ ok: true, players: [] });
-    }
+    console.log(`Notion player search - Query: "${q}", Team: "${team}"`);
+    
+    // Allow empty query to show all players for debugging
+    // if (!q || q.length < 1) {
+    //   return res.json({ ok: true, players: [] });
+    // }
 
     try {
       // Search players (sync runs in background on startup)
-      let players = notionService.searchPlayers(q);
+      let players = q ? notionService.searchPlayers(q) : notionService.getAllPlayers();
+      
+      console.log(`Found ${players.length} players from Notion service`);
       
       // Filter by team if specified
       if (team && team !== "all") {
         players = players.filter(player => player.teamSlug === team);
+        console.log(`After team filter: ${players.length} players`);
       }
       
       res.json({ 

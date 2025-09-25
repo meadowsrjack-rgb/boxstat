@@ -298,14 +298,6 @@ export default function PlayerSearch({
         ))}
       </div>
 
-      {/* Search Instructions */}
-      {searchQuery.length === 0 && (
-        <div className="text-center py-8">
-          <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">Start typing to search players</p>
-          <p className="text-sm text-gray-400">Enter at least 2 characters</p>
-        </div>
-      )}
     </div>
   );
 }

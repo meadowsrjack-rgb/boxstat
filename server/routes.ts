@@ -527,6 +527,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player profile route
+  app.get('/api/players/:playerId/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const playerId = req.params.playerId;
+      
+      // First try to get from regular profiles table
+      let player = await storage.getProfileById(playerId);
+      
+      // If not found and ID looks like Notion UUID, try Notion data
+      if (!player && playerId.includes('-')) {
+        try {
+          const notionPlayers = await notionService.getPlayersFromNotion();
+          player = notionPlayers.find((p: any) => p.id === playerId);
+          
+          if (player) {
+            // Transform Notion player data to match expected format
+            player = {
+              id: player.id,
+              firstName: player.name?.split(' ')[0] || '',
+              lastName: player.name?.split(' ').slice(1).join(' ') || '',
+              full_name: player.name,
+              age: player.age,
+              grade: player.grade,
+              team: player.team,
+              parent_name: player.parent_name,
+              parent_email: player.parent_email,
+              account_email: player.account_email,
+              phone_number: player.phone_number,
+              registration_status: player.registration_status,
+              profileImageUrl: null,
+              dateOfBirth: null,
+              teamId: null,
+              position: null,
+              jerseyNumber: null,
+              session: player.session
+            };
+          }
+        } catch (notionError) {
+          console.error("Error fetching from Notion:", notionError);
+        }
+      }
+      
+      if (!player) {
+        return res.status(404).json({ message: "Player not found" });
+      }
+      
+      res.json(player);
+    } catch (error) {
+      console.error("Error fetching player profile:", error);
+      res.status(500).json({ message: "Failed to fetch player profile" });
+    }
+  });
+
   // Team routes
   app.get('/api/teams/:id', isAuthenticated, async (req: any, res) => {
     try {

@@ -88,13 +88,13 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       
       tempDiv.innerHTML = `
         <!-- Header with Logo and Title -->
-        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 30px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);">
-          <div style="flex: 1; display: flex; justify-content: center;">
-            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 120px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />
-          </div>
-          <div style="flex: 1; text-align: center;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);">
+          <div style="text-align: left;">
             <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">COACH</h1>
             <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">EVALUATION</h1>
+          </div>
+          <div style="display: flex; justify-content: flex-end;">
+            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 360px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />
           </div>
         </div>
         
@@ -126,25 +126,30 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         </div>
         
         <!-- Skills Evaluation Grid -->
-        <div style="margin-bottom: 30px;">
+        <div style="margin-bottom: 20px;">
           <div style="background: linear-gradient(90deg, #1f2937, #374151); color: white; padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
             <h3 style="margin: 0; font-size: 20px; font-weight: bold;">SKILLS EVALUATION</h3>
           </div>
-          <div style="border: 3px solid #1f2937; border-top: none; border-radius: 0 0 12px 12px; padding: 20px; background: white;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 6px;">
+          <div style="border: 3px solid #1f2937; border-top: none; border-radius: 0 0 12px 12px; padding: 15px; background: white;">
+            <table style="width: 100%; border-collapse: separate; border-spacing: 4px;">
               <tr>
                 ${SKILL_CATEGORIES.map((skill, index) => `
-                  <td style="text-align: center; vertical-align: top;">
+                  <td style="text-align: center; vertical-align: top; width: 16.66%;">
                     <div style="
                       background: ${index % 2 === 0 ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #1f2937, #374151)'};
                       color: white; 
-                      padding: 12px 8px; 
-                      font-size: 11px; 
+                      padding: 10px 6px; 
+                      font-size: 10px; 
                       font-weight: bold; 
                       border-radius: 8px 8px 0 0;
                       text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+                      height: 50px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      text-align: center;
                     ">
-                      ${skill.name === 'DEFENSE' ? skill.name + '<br><span style="font-size: 9px;">(if applicable)</span>' : skill.name}
+                      ${skill.name === 'DEFENSE' ? skill.name + '<br><span style="font-size: 8px;">(if applicable)</span>' : skill.name}
                     </div>
                   </td>
                 `).join('')}
@@ -155,12 +160,16 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
                     <div style="
                       border: 3px solid ${index % 2 === 0 ? '#dc2626' : '#1f2937'}; 
                       background: white;
-                      padding: 25px 8px; 
-                      font-size: 24px; 
+                      padding: 20px 6px; 
+                      font-size: 22px; 
                       font-weight: bold; 
                       color: ${index % 2 === 0 ? '#dc2626' : '#1f2937'};
                       border-radius: 0 0 8px 8px;
                       box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+                      height: 60px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
                     ">
                       ${formData.skillScores[skill.name] || 1}
                     </div>
@@ -171,51 +180,41 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
           </div>
         </div>
         
-        <!-- Notes Section -->
-        <div style="margin-bottom: 30px; border: 3px solid #dc2626; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);">
-          <div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 12px 20px;">
-            <h4 style="margin: 0; font-size: 16px; font-weight: bold;">COACH NOTES</h4>
-          </div>
-          <div style="background: white; padding: 20px; min-height: 60px; font-size: 14px; line-height: 1.6; color: #374151;">
-            ${formData.notes || '<em style="color: #9ca3af;">No additional notes provided.</em>'}
-          </div>
-        </div>
-        
         <!-- Guidelines and Roadmap -->
-        <div style="display: flex; gap: 20px;">
+        <div style="display: flex; gap: 15px; margin-top: 15px;">
           <div style="flex: 1; border: 3px solid #1f2937; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(31, 41, 55, 0.1);">
-            <div style="background: linear-gradient(90deg, #1f2937, #374151); color: white; padding: 12px 20px;">
-              <h4 style="margin: 0; font-size: 16px; font-weight: bold;">SCORING GUIDELINES*</h4>
+            <div style="background: linear-gradient(90deg, #1f2937, #374151); color: white; padding: 10px 15px;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: bold;">SCORING GUIDELINES*</h4>
             </div>
-            <div style="background: white; padding: 20px; font-size: 12px;">
-              <div style="margin-bottom: 8px; color: #1f2937;"><strong style="color: #dc2626;">Club = 20 - 30</strong></div>
-              <div style="margin-bottom: 8px; color: #1f2937;"><strong style="color: #dc2626;">FNH = 11 - 19</strong></div>
-              <div style="margin-bottom: 15px; color: #1f2937;"><strong style="color: #dc2626;">Skills = 1 - 10</strong></div>
-              <div style="line-height: 1.4; margin-bottom: 12px; color: #4b5563;">
-                <strong style="color: #1f2937;">Disclaimer:</strong> Players are evaluated by one or more coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that coaches might not have their eye on your player(s) for the full duration of practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
+            <div style="background: white; padding: 15px; font-size: 10px;">
+              <div style="margin-bottom: 6px; color: #1f2937;"><strong style="color: #dc2626;">Club = 20 - 30</strong></div>
+              <div style="margin-bottom: 6px; color: #1f2937;"><strong style="color: #dc2626;">FNH = 11 - 19</strong></div>
+              <div style="margin-bottom: 12px; color: #1f2937;"><strong style="color: #dc2626;">Skills = 1 - 10</strong></div>
+              <div style="line-height: 1.3; margin-bottom: 10px; color: #4b5563;">
+                <strong style="color: #1f2937;">Disclaimer</strong> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
               </div>
-              <div style="line-height: 1.4; color: #6b7280; font-style: italic;">
-                *We will recommend a court based off of these standard guidelines. These are not strict standards to meet certain program requirements.
+              <div style="line-height: 1.3; color: #6b7280; font-style: italic;">
+                *We will recommend a court based off of thse standard guidelines. These are not strict standards to meet certain program requirememts.
               </div>
             </div>
           </div>
           
           <div style="flex: 1; border: 3px solid #dc2626; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);">
-            <div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 12px 20px;">
-              <h4 style="margin: 0; font-size: 16px; font-weight: bold;">GROWTH ROADMAP</h4>
+            <div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 10px 15px;">
+              <h4 style="margin: 0; font-size: 14px; font-weight: bold;">GROWTH ROADMAP</h4>
             </div>
-            <div style="background: white; padding: 20px; font-size: 12px;">
-              <div style="line-height: 1.4; margin-bottom: 20px; color: #374151;">
+            <div style="background: white; padding: 15px; font-size: 10px;">
+              <div style="line-height: 1.3; margin-bottom: 15px; color: #374151;">
                 UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
               </div>
               <div style="
                 text-align: center; 
                 background: linear-gradient(135deg, #dc2626, #b91c1c);
                 color: white; 
-                padding: 15px; 
+                padding: 12px; 
                 border-radius: 8px; 
                 font-weight: bold; 
-                font-size: 13px;
+                font-size: 11px;
                 text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
                 box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
               ">

@@ -358,10 +358,6 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
                 className="w-full"
                 data-testid={`slider-${skill.name.toLowerCase()}`}
               />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>1 - Needs Work</span>
-                <span>5 - Excellent</span>
-              </div>
             </div>
           ))}
         </CardContent>

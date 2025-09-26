@@ -92,29 +92,29 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
           <div style="flex: 2; margin-right: 10px;">
             <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; width: 150px;">Player Name:</td>
-                <td style="padding: 8px; border: 1px solid #000;">${formData.playerName}</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; width: 150px; font-size: 12px;">Player Name:</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.playerName}</td>
               </tr>
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Program Attended:</td>
-                <td style="padding: 8px; border: 1px solid #000;">${formData.programAttended}</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Program Attended:</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.programAttended}</td>
               </tr>
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Program Recommended:</td>
-                <td style="padding: 8px; border: 1px solid #000;">${formData.programRecommended}</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Program Recommended:</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.programRecommended}</td>
               </tr>
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Date:</td>
-                <td style="padding: 8px; border: 1px solid #000;">${formData.evaluationDate ? format(formData.evaluationDate, 'MM/dd/yy') : ''}</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Date:</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.evaluationDate ? format(formData.evaluationDate, 'MM/dd/yy') : ''}</td>
               </tr>
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Evaluator(s):</td>
-                <td style="padding: 8px; border: 1px solid #000;">${formData.evaluator}</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Evaluator(s):</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.evaluator}</td>
               </tr>
             </table>
           </div>
           <div style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #000; background: #f0f0f0;">
-            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 150px; width: auto; object-fit: contain;" />
+            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 300px; width: auto; object-fit: contain;" />
           </div>
         </div>
         
@@ -130,7 +130,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             </tr>
             <tr>
               ${SKILL_CATEGORIES.map(skill => `
-                <td style="padding: 15px 8px; border: 1px solid #000; text-align: center; font-size: 18px; font-weight: bold;">
+                <td style="padding: 15px 8px; border: 1px solid #000; text-align: center; font-size: 12px; font-weight: bold;">
                   ${formData.skillScores[skill.name] || 1}
                 </td>
               `).join('')}
@@ -142,7 +142,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         <div style="margin-bottom: 10px;">
           <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
             <tr>
-              <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Notes:</td>
+              <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Notes:</td>
             </tr>
             <tr>
               <td style="padding: 12px; border: 1px solid #000; min-height: 40px; font-size: 12px;">
@@ -157,19 +157,13 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
           <div style="flex: 1;">
             <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">General Scoring Guidelines*:</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">General Scoring Guidelines*:</td>
               </tr>
               <tr>
-                <td style="padding: 12px; border: 1px solid #000; font-size: 10px; line-height: 1.4;">
+                <td style="padding: 12px; border: 1px solid #000; font-size: 12px; line-height: 1.4;">
                   <div style="margin-bottom: 8px;"><strong>Club = 20 - 30</strong></div>
                   <div style="margin-bottom: 8px;"><strong>FNH = 11 - 19</strong></div>
                   <div style="margin-bottom: 12px;"><strong>Skills = 1 - 10</strong></div>
-                  <div style="margin-bottom: 10px;">
-                    <em>Disclaimer</em> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club-level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
-                  </div>
-                  <div>
-                    *We will recommend a court based off of these standard guidelines. These are not strict standards to meet certain program requirements.
-                  </div>
                 </td>
               </tr>
             </table>
@@ -178,10 +172,10 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
           <div style="flex: 1;">
             <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
               <tr>
-                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Growth Roadmap:</td>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Growth Roadmap:</td>
               </tr>
               <tr>
-                <td style="padding: 12px; border: 1px solid #000; font-size: 10px; line-height: 1.4;">
+                <td style="padding: 12px; border: 1px solid #000; font-size: 12px; line-height: 1.4;">
                   <div style="margin-bottom: 15px;">
                     UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
                   </div>
@@ -192,6 +186,22 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               </tr>
             </table>
           </div>
+        </div>
+        
+        <!-- Disclaimer Section -->
+        <div style="margin-top: 10px;">
+          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+            <tr>
+              <td style="padding: 12px; border: 1px solid #000; font-size: 12px; line-height: 1.4;">
+                <div style="margin-bottom: 10px;">
+                  <em>Disclaimer</em> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
+                </div>
+                <div>
+                  *We will recommend a court based off of these standard guidelines. These are not strict standards to meet certain program requirements.
+                </div>
+              </td>
+            </tr>
+          </table>
         </div>
       `;
       

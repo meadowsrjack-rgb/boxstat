@@ -87,140 +87,110 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       tempDiv.style.fontFamily = 'Arial, sans-serif';
       
       tempDiv.innerHTML = `
-        <!-- Header with Logo and Title -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2px 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);">
-          <div style="text-align: left;">
-            <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">COACH</h1>
-            <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">EVALUATION</h1>
+        <!-- Player Information with Logo -->
+        <div style="display: flex; margin-bottom: 10px;">
+          <div style="flex: 2; margin-right: 10px;">
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; width: 150px;">Player Name:</td>
+                <td style="padding: 8px; border: 1px solid #000;">${formData.playerName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Program Attended:</td>
+                <td style="padding: 8px; border: 1px solid #000;">${formData.programAttended}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Program Recommended:</td>
+                <td style="padding: 8px; border: 1px solid #000;">${formData.programRecommended}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Date:</td>
+                <td style="padding: 8px; border: 1px solid #000;">${formData.evaluationDate ? format(formData.evaluationDate, 'MM/dd/yy') : ''}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Evaluator(s):</td>
+                <td style="padding: 8px; border: 1px solid #000;">${formData.evaluator}</td>
+              </tr>
+            </table>
           </div>
-          <div style="display: flex; justify-content: flex-end;">
-            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 360px; width: auto; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));" />
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #000; background: #f0f0f0;">
+            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 150px; width: auto; object-fit: contain;" />
           </div>
         </div>
         
-        <!-- Player Information Section -->
-        <div style="margin-bottom: 30px; border: 3px solid #dc2626; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);">
-          <div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 12px; text-align: center;">
-            <h3 style="margin: 0; font-size: 18px; font-weight: bold;">PLAYER INFORMATION</h3>
-          </div>
-          <table style="width: 100%; border-collapse: separate; border-spacing: 0; background: white;">
+        <!-- Skills Evaluation -->
+        <div style="margin-bottom: 10px;">
+          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
             <tr>
-              <td style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: bold; width: 35%; color: #1f2937;">Player Name</td>
-              <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #374151; font-weight: 500;">${formData.playerName}</td>
+              ${SKILL_CATEGORIES.map(skill => `
+                <td style="padding: 8px; border: 1px solid #000; text-align: center; background: #dc2626; color: white; font-weight: bold; font-size: 12px;">
+                  ${skill.name}${skill.name === 'DEFENSE' ? '<br>(if applicable)' : ''}
+                </td>
+              `).join('')}
             </tr>
             <tr>
-              <td style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1f2937;">Program Attended</td>
-              <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #374151; font-weight: 500;">${formData.programAttended}</td>
+              ${SKILL_CATEGORIES.map(skill => `
+                <td style="padding: 15px 8px; border: 1px solid #000; text-align: center; font-size: 18px; font-weight: bold;">
+                  ${formData.skillScores[skill.name] || 1}
+                </td>
+              `).join('')}
+            </tr>
+          </table>
+        </div>
+        
+        <!-- Notes -->
+        <div style="margin-bottom: 10px;">
+          <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+            <tr>
+              <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Notes:</td>
             </tr>
             <tr>
-              <td style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #1f2937;">Program Recommended</td>
-              <td style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; color: #374151; font-weight: 500;">${formData.programRecommended}</td>
-            </tr>
-            <tr>
-              <td style="padding: 15px 20px; background: #f8fafc; font-weight: bold; color: #1f2937;">Prepared By</td>
-              <td style="padding: 15px 20px; color: #374151; font-weight: 500; position: relative;">${formData.evaluator}
-                <span style="position: absolute; right: 20px; color: #dc2626; font-weight: bold;">${formData.evaluationDate ? format(formData.evaluationDate, 'MMM dd, yyyy') : ''}</span>
+              <td style="padding: 12px; border: 1px solid #000; min-height: 40px; font-size: 12px;">
+                ${formData.notes || ''}
               </td>
             </tr>
           </table>
         </div>
         
-        <!-- Skills Evaluation Grid -->
-        <div style="margin-bottom: 20px;">
-          <div style="background: linear-gradient(90deg, #1f2937, #374151); color: white; padding: 15px; text-align: center; border-radius: 12px 12px 0 0;">
-            <h3 style="margin: 0; font-size: 20px; font-weight: bold;">SKILLS EVALUATION</h3>
-          </div>
-          <div style="border: 3px solid #1f2937; border-top: none; border-radius: 0 0 12px 12px; padding: 15px; background: white;">
-            <table style="width: 100%; border-collapse: separate; border-spacing: 4px;">
+        <!-- Guidelines and Roadmap -->
+        <div style="display: flex; gap: 10px;">
+          <div style="flex: 1;">
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
               <tr>
-                ${SKILL_CATEGORIES.map((skill, index) => `
-                  <td style="text-align: center; vertical-align: top; width: 16.66%;">
-                    <div style="
-                      background: ${index % 2 === 0 ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #1f2937, #374151)'};
-                      color: white; 
-                      padding: 10px 6px; 
-                      font-size: 10px; 
-                      font-weight: bold; 
-                      border-radius: 8px 8px 0 0;
-                      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-                      height: 50px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      text-align: center;
-                    ">
-                      ${skill.name === 'DEFENSE' ? skill.name + '<br><span style="font-size: 8px;">(if applicable)</span>' : skill.name}
-                    </div>
-                  </td>
-                `).join('')}
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">General Scoring Guidelines*:</td>
               </tr>
               <tr>
-                ${SKILL_CATEGORIES.map((skill, index) => `
-                  <td style="text-align: center;">
-                    <div style="
-                      border: 3px solid ${index % 2 === 0 ? '#dc2626' : '#1f2937'}; 
-                      background: white;
-                      padding: 20px 6px; 
-                      font-size: 22px; 
-                      font-weight: bold; 
-                      color: ${index % 2 === 0 ? '#dc2626' : '#1f2937'};
-                      border-radius: 0 0 8px 8px;
-                      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-                      height: 60px;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                    ">
-                      ${formData.skillScores[skill.name] || 1}
-                    </div>
-                  </td>
-                `).join('')}
+                <td style="padding: 12px; border: 1px solid #000; font-size: 10px; line-height: 1.4;">
+                  <div style="margin-bottom: 8px;"><strong>Club = 20 - 30</strong></div>
+                  <div style="margin-bottom: 8px;"><strong>FNH = 11 - 19</strong></div>
+                  <div style="margin-bottom: 12px;"><strong>Skills = 1 - 10</strong></div>
+                  <div style="margin-bottom: 10px;">
+                    <em>Disclaimer</em> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club-level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
+                  </div>
+                  <div>
+                    *We will recommend a court based off of these standard guidelines. These are not strict standards to meet certain program requirements.
+                  </div>
+                </td>
               </tr>
             </table>
           </div>
-        </div>
-        
-        <!-- Guidelines and Roadmap -->
-        <div style="display: flex; gap: 15px; margin-top: 15px;">
-          <div style="flex: 1; border: 3px solid #1f2937; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(31, 41, 55, 0.1);">
-            <div style="background: linear-gradient(90deg, #1f2937, #374151); color: white; padding: 10px 15px;">
-              <h4 style="margin: 0; font-size: 14px; font-weight: bold;">SCORING GUIDELINES*</h4>
-            </div>
-            <div style="background: white; padding: 15px; font-size: 10px;">
-              <div style="margin-bottom: 6px; color: #1f2937;"><strong style="color: #dc2626;">Club = 20 - 30</strong></div>
-              <div style="margin-bottom: 6px; color: #1f2937;"><strong style="color: #dc2626;">FNH = 11 - 19</strong></div>
-              <div style="margin-bottom: 12px; color: #1f2937;"><strong style="color: #dc2626;">Skills = 1 - 10</strong></div>
-              <div style="line-height: 1.3; margin-bottom: 10px; color: #4b5563;">
-                <strong style="color: #1f2937;">Disclaimer</strong> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
-              </div>
-              <div style="line-height: 1.3; color: #6b7280; font-style: italic;">
-                *We will recommend a court based off of thse standard guidelines. These are not strict standards to meet certain program requirememts.
-              </div>
-            </div>
-          </div>
           
-          <div style="flex: 1; border: 3px solid #dc2626; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.1);">
-            <div style="background: linear-gradient(90deg, #dc2626, #b91c1c); color: white; padding: 10px 15px;">
-              <h4 style="margin: 0; font-size: 14px; font-weight: bold;">GROWTH ROADMAP</h4>
-            </div>
-            <div style="background: white; padding: 15px; font-size: 10px;">
-              <div style="line-height: 1.3; margin-bottom: 15px; color: #374151;">
-                UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
-              </div>
-              <div style="
-                text-align: center; 
-                background: linear-gradient(135deg, #dc2626, #b91c1c);
-                color: white; 
-                padding: 12px; 
-                border-radius: 8px; 
-                font-weight: bold; 
-                font-size: 11px;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-                box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
-              ">
-                Rookies ➤ Skills Academy ➤ FNH ➤ Club ➤ High School
-              </div>
-            </div>
+          <div style="flex: 1;">
+            <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
+              <tr>
+                <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold;">Growth Roadmap:</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px; border: 1px solid #000; font-size: 10px; line-height: 1.4;">
+                  <div style="margin-bottom: 15px;">
+                    UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
+                  </div>
+                  <div style="text-align: center; font-style: italic; color: #dc2626; font-weight: bold;">
+                    <em>Rookies >> Skills Academy >> FNH >> Club >> High School</em>
+                  </div>
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
       `;

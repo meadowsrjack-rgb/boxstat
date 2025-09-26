@@ -178,8 +178,7 @@ export default function PlayerCard({
     mutationFn: async (data: AwardFormValues & { playerId: string }) => {
       return await apiRequest('/api/coach/award', {
         method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' },
+        data: data,
       });
     },
     onSuccess: () => {
@@ -207,7 +206,7 @@ export default function PlayerCard({
     mutationFn: async (data: SkillEvaluationValues & { playerId: number }) => {
       return await apiRequest('/api/coach/evaluations', {
         method: 'POST',
-        body: JSON.stringify({
+        data: {
           playerId: data.playerId,
           quarter: data.quarter,
           year: new Date().getFullYear(),
@@ -221,8 +220,7 @@ export default function PlayerCard({
             coachability: data.coachability,
           },
           notes: data.notes,
-        }),
-        headers: { 'Content-Type': 'application/json' },
+        },
       });
     },
     onSuccess: () => {
@@ -273,8 +271,10 @@ export default function PlayerCard({
   };
 
   const onEvaluationSubmit = (data: SkillEvaluationValues) => {
-    if (!playerProfile) return;
-    skillEvaluationMutation.mutate({ ...data, playerId: parseInt(playerProfile.id) });
+    if (!playerProfile?.id) return;
+    const playerIdNum = parseInt(playerProfile.id);
+    if (isNaN(playerIdNum)) return;
+    skillEvaluationMutation.mutate({ ...data, playerId: playerIdNum });
   };
 
   // Helper components
@@ -718,7 +718,7 @@ export default function PlayerCard({
                                       min={1}
                                       max={5}
                                       step={1}
-                                      value={[field.value]}
+                                      value={[field.value || 3]}
                                       onValueChange={(value) => field.onChange(value[0])}
                                       className="w-full"
                                       data-testid={`slider-${skill.name}`}

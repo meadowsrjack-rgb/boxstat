@@ -88,7 +88,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       
       tempDiv.innerHTML = `
         <!-- Header with Logo and Title -->
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2px 20px; border-radius: 15px; box-shadow: 0 8px 25px rgba(220, 38, 38, 0.2);">
           <div style="text-align: left;">
             <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">COACH</h1>
             <h1 style="color: white; font-size: 32px; font-weight: bold; margin: 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">EVALUATION</h1>

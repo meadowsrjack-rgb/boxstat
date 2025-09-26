@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import uyplogoUrl from "@assets/UYP Logo nback.png";
 
 // Program options
 const PROGRAMS = [
@@ -104,11 +105,8 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               <strong>Evaluator(s):</strong> ${formData.evaluator}
             </div>
           </div>
-          <div style="width: 150px; height: 100px; margin-left: 20px; display: flex; align-items: center; justify-content: center; border: 2px solid #000; border-radius: 50%; background-color: #dc2626; color: white;">
-            <div style="text-align: center; font-weight: bold;">
-              <div style="font-size: 14px;">UP YOUR</div>
-              <div style="font-size: 16px;">PERFORMANCE</div>
-            </div>
+          <div style="width: 150px; height: 100px; margin-left: 20px; display: flex; align-items: center; justify-content: center;">
+            <img src="${uyplogoUrl}" alt="UYP Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           </div>
         </div>
         

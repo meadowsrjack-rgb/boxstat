@@ -1,18 +1,164 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Link, useParams } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Users, GraduationCap, Calendar, Tag, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { ArrowLeft, User, Users, GraduationCap, Calendar, Tag, ExternalLink, Trophy, Award, Target } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 import type { NotionPlayer } from '@shared/schema';
+
+// Form schemas
+const awardFormSchema = z.object({
+  category: z.enum(['trophy', 'badge']),
+  awardName: z.string().min(1, 'Award name is required'),
+  awardDescription: z.string().optional(),
+  badgeId: z.number().optional(),
+});
+
+const skillEvaluationSchema = z.object({
+  quarter: z.enum(['Q1', 'Q2', 'Q3', 'Q4']),
+  shooting: z.number().min(1).max(5),
+  dribbling: z.number().min(1).max(5),
+  passing: z.number().min(1).max(5),
+  defense: z.number().min(1).max(5),
+  rebounding: z.number().min(1).max(5),
+  athleticAbility: z.number().min(1).max(5),
+  coachability: z.number().min(1).max(5),
+  notes: z.string().optional(),
+});
+
+type AwardFormValues = z.infer<typeof awardFormSchema>;
+type SkillEvaluationValues = z.infer<typeof skillEvaluationSchema>;
 
 export default function PlayerDetailPage() {
   const { id } = useParams();
+  const { toast } = useToast();
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showEvaluationModal, setShowEvaluationModal] = useState(false);
 
   const { data: player, isLoading, error } = useQuery<NotionPlayer>({
     queryKey: [`/api/players/${id}`],
     enabled: !!id,
   });
+
+  // Get current user to check if they're a coach
+  const { data: currentUser } = useQuery({
+    queryKey: ['/api/auth/user'],
+  });
+
+  // Award player mutation
+  const awardPlayerMutation = useMutation({
+    mutationFn: async (data: AwardFormValues & { playerId: string }) => {
+      return await apiRequest('/api/coach/award', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Award granted!",
+        description: "The player has been awarded successfully.",
+      });
+      setShowAwardModal(false);
+      // Optionally refetch player data to show updated awards
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to award player",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Skill evaluation mutation
+  const skillEvaluationMutation = useMutation({
+    mutationFn: async (data: SkillEvaluationValues & { playerId: number }) => {
+      return await apiRequest('/api/coach/evaluations', {
+        method: 'POST',
+        body: JSON.stringify({
+          playerId: data.playerId,
+          quarter: data.quarter,
+          year: new Date().getFullYear(),
+          scores: {
+            shooting: data.shooting,
+            dribbling: data.dribbling,
+            passing: data.passing,
+            defense: data.defense,
+            rebounding: data.rebounding,
+            athleticAbility: data.athleticAbility,
+            coachability: data.coachability,
+          },
+          notes: data.notes,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Evaluation saved!",
+        description: "Player skills evaluation has been saved successfully.",
+      });
+      setShowEvaluationModal(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save evaluation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Form setup
+  const awardForm = useForm<AwardFormValues>({
+    resolver: zodResolver(awardFormSchema),
+    defaultValues: {
+      category: 'trophy',
+      awardName: '',
+      awardDescription: '',
+    },
+  });
+
+  const evaluationForm = useForm<SkillEvaluationValues>({
+    resolver: zodResolver(skillEvaluationSchema),
+    defaultValues: {
+      quarter: 'Q1',
+      shooting: 3,
+      dribbling: 3,
+      passing: 3,
+      defense: 3,
+      rebounding: 3,
+      athleticAbility: 3,
+      coachability: 3,
+      notes: '',
+    },
+  });
+
+  // Submit handlers
+  const onAwardSubmit = (data: AwardFormValues) => {
+    if (!player) return;
+    awardPlayerMutation.mutate({ ...data, playerId: player.id.toString() });
+  };
+
+  const onEvaluationSubmit = (data: SkillEvaluationValues) => {
+    if (!player) return;
+    skillEvaluationMutation.mutate({ ...data, playerId: player.id });
+  };
+
+  const isCoach = currentUser?.userType === 'coach' || currentUser?.userType === 'admin';
 
   if (isLoading) {
     return (
@@ -201,7 +347,7 @@ export default function PlayerDetailPage() {
           {/* Action Buttons */}
           <Card className="mt-6 border-red-200 dark:border-red-700">
             <CardContent className="pt-6">
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center space-x-4 mb-4">
                 {player.team && (
                   <Link href={`/teams/${player.teamSlug}`}>
                     <a>
@@ -220,6 +366,200 @@ export default function PlayerDetailPage() {
                   </a>
                 </Link>
               </div>
+              
+              {/* Coach Actions */}
+              {isCoach && (
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center">Coach Actions</h3>
+                  <div className="flex justify-center space-x-4">
+                    {/* Award Player Modal */}
+                    <Dialog open={showAwardModal} onOpenChange={setShowAwardModal}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-yellow-600 hover:bg-yellow-700" data-testid="button-award-player">
+                          <Trophy className="h-4 w-4 mr-2" />
+                          Award Player
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Award Player: {player.name}</DialogTitle>
+                        </DialogHeader>
+                        <Form {...awardForm}>
+                          <form onSubmit={awardForm.handleSubmit(onAwardSubmit)} className="space-y-4">
+                            <FormField
+                              control={awardForm.control}
+                              name="category"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Award Type</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-award-type">
+                                        <SelectValue placeholder="Select award type" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="trophy">Trophy</SelectItem>
+                                      <SelectItem value="badge">Badge</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={awardForm.control}
+                              name="awardName"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Award Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., MVP, Best Effort, Team Spirit" {...field} data-testid="input-award-name" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={awardForm.control}
+                              name="awardDescription"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Description (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="Why is this player receiving this award?" {...field} data-testid="textarea-award-description" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <div className="flex justify-end space-x-2">
+                              <Button type="button" variant="outline" onClick={() => setShowAwardModal(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit" disabled={awardPlayerMutation.isPending} data-testid="button-submit-award">
+                                {awardPlayerMutation.isPending ? 'Awarding...' : 'Award Player'}
+                              </Button>
+                            </div>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Skill Evaluation Modal */}
+                    <Dialog open={showEvaluationModal} onOpenChange={setShowEvaluationModal}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-blue-600 hover:bg-blue-700" data-testid="button-evaluate-skills">
+                          <Target className="h-4 w-4 mr-2" />
+                          Evaluate Skills
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Skill Evaluation: {player.name}</DialogTitle>
+                        </DialogHeader>
+                        <Form {...evaluationForm}>
+                          <form onSubmit={evaluationForm.handleSubmit(onEvaluationSubmit)} className="space-y-4">
+                            <FormField
+                              control={evaluationForm.control}
+                              name="quarter"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Quarter</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-quarter">
+                                        <SelectValue placeholder="Select quarter" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Q1">Q1</SelectItem>
+                                      <SelectItem value="Q2">Q2</SelectItem>
+                                      <SelectItem value="Q3">Q3</SelectItem>
+                                      <SelectItem value="Q4">Q4</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {[
+                                { name: 'shooting', label: 'Shooting' },
+                                { name: 'dribbling', label: 'Dribbling' },
+                                { name: 'passing', label: 'Passing' },
+                                { name: 'defense', label: 'Defense' },
+                                { name: 'rebounding', label: 'Rebounding' },
+                                { name: 'athleticAbility', label: 'Athletic Ability' },
+                                { name: 'coachability', label: 'Coachability' },
+                              ].map((skill) => (
+                                <FormField
+                                  key={skill.name}
+                                  control={evaluationForm.control}
+                                  name={skill.name as keyof SkillEvaluationValues}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="flex justify-between">
+                                        <span>{skill.label}</span>
+                                        <span className="text-sm font-normal">{field.value}/5</span>
+                                      </FormLabel>
+                                      <FormControl>
+                                        <Slider
+                                          min={1}
+                                          max={5}
+                                          step={1}
+                                          value={[field.value]}
+                                          onValueChange={(value) => field.onChange(value[0])}
+                                          className="w-full"
+                                          data-testid={`slider-${skill.name}`}
+                                        />
+                                      </FormControl>
+                                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Developing</span>
+                                        <span>Excellent</span>
+                                      </div>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                            </div>
+                            
+                            <FormField
+                              control={evaluationForm.control}
+                              name="notes"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Notes (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Textarea 
+                                      placeholder="Additional observations, areas for improvement, or specific feedback..."
+                                      className="min-h-[100px]"
+                                      {...field} 
+                                      data-testid="textarea-evaluation-notes" 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <div className="flex justify-end space-x-2">
+                              <Button type="button" variant="outline" onClick={() => setShowEvaluationModal(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit" disabled={skillEvaluationMutation.isPending} data-testid="button-submit-evaluation">
+                                {skillEvaluationMutation.isPending ? 'Saving...' : 'Save Evaluation'}
+                              </Button>
+                            </div>
+                          </form>
+                        </Form>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

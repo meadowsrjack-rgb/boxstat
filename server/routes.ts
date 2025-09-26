@@ -1601,9 +1601,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { playerId, awardId, category } = req.body;
       
       if (category === 'badge') {
-        await storage.awardBadge(playerId, awardId, userId);
+        await storage.awardBadge(playerId, awardId);
       } else if (category === 'trophy') {
-        await storage.awardTrophy(playerId, awardId, userId);
+        const { awardName, awardDescription } = req.body;
+        await storage.awardTrophy(playerId, awardName, awardDescription);
       }
 
       res.json({ success: true });

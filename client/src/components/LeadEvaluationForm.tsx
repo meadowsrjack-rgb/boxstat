@@ -113,11 +113,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         <div style="display: flex; margin-bottom: 25px; gap: 4px;">
           ${SKILL_CATEGORIES.map(skill => `
             <div style="flex: 1; border: 1px solid #e5e7eb; text-align: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);">
-              <div style="background-color: ${skill.name === 'DRIBBLING' ? '#dc2626' : 
-                                            skill.name === 'SHOOTING' ? '#ea580c' :
-                                            skill.name === 'PASSING' ? '#d97706' :
-                                            skill.name === 'CATCHING' ? '#059669' :
-                                            skill.name === 'COACHABILITY' ? '#2563eb' : '#7c3aed'}; 
+              <div style="background-color: #dc2626; 
                            color: white; padding: 12px; font-weight: bold; font-size: 14px;">
                 ${skill.name}${skill.name === 'DEFENSE' ? ' (if applicable)' : ''}
               </div>

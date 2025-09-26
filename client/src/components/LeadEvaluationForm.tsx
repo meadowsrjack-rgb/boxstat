@@ -273,132 +273,130 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Player Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Player Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="playerName">Player Name *</Label>
-              <Input
-                id="playerName"
-                value={formData.playerName}
-                onChange={(e) => setFormData(prev => ({ ...prev, playerName: e.target.value }))}
-                placeholder="Enter player's full name"
-                data-testid="input-player-name"
-              />
-            </div>
+      {/* Player Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Player Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="playerName">Player Name *</Label>
+            <Input
+              id="playerName"
+              value={formData.playerName}
+              onChange={(e) => setFormData(prev => ({ ...prev, playerName: e.target.value }))}
+              placeholder="Enter player's full name"
+              data-testid="input-player-name"
+            />
+          </div>
 
-            <div>
-              <Label htmlFor="programAttended">Program Attended *</Label>
-              <Select 
-                value={formData.programAttended} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, programAttended: value }))}
-              >
-                <SelectTrigger data-testid="select-program-attended">
-                  <SelectValue placeholder="Select program attended" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAMS.map(program => (
-                    <SelectItem key={program} value={program}>{program}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="programAttended">Program Attended *</Label>
+            <Select 
+              value={formData.programAttended} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, programAttended: value }))}
+            >
+              <SelectTrigger data-testid="select-program-attended">
+                <SelectValue placeholder="Select program attended" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROGRAMS.map(program => (
+                  <SelectItem key={program} value={program}>{program}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label htmlFor="programRecommended">Program Recommended *</Label>
-              <Select 
-                value={formData.programRecommended} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, programRecommended: value }))}
-              >
-                <SelectTrigger data-testid="select-program-recommended">
-                  <SelectValue placeholder="Select recommended program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAMS.map(program => (
-                    <SelectItem key={program} value={program}>{program}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="programRecommended">Program Recommended *</Label>
+            <Select 
+              value={formData.programRecommended} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, programRecommended: value }))}
+            >
+              <SelectTrigger data-testid="select-program-recommended">
+                <SelectValue placeholder="Select recommended program" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROGRAMS.map(program => (
+                  <SelectItem key={program} value={program}>{program}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label>Evaluation Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn("w-full justify-start text-left font-normal", 
-                      !formData.evaluationDate && "text-muted-foreground")}
-                    data-testid="button-date-picker"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.evaluationDate ? format(formData.evaluationDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.evaluationDate || undefined}
-                    onSelect={(date) => setFormData(prev => ({ ...prev, evaluationDate: date || null }))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div>
-              <Label htmlFor="evaluator">Evaluator(s)</Label>
-              <Input
-                id="evaluator"
-                value={formData.evaluator}
-                onChange={(e) => setFormData(prev => ({ ...prev, evaluator: e.target.value }))}
-                placeholder="Coach name"
-                data-testid="input-evaluator"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Skill Evaluations */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Skill Evaluations</CardTitle>
-            <p className="text-sm text-gray-600">Rate each skill from 1 (needs work) to 5 (excellent)</p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {SKILL_CATEGORIES.map(skill => (
-              <div key={skill.name} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="font-medium">{skill.name}</Label>
-                  <span className="text-sm font-semibold text-red-600">
-                    {formData.skillScores[skill.name] || 3}
-                  </span>
-                </div>
-                <Slider
-                  value={[formData.skillScores[skill.name] || 3]}
-                  onValueChange={(value) => handleSkillScoreChange(skill.name, value)}
-                  max={5}
-                  min={1}
-                  step={1}
-                  className="w-full"
-                  data-testid={`slider-${skill.name.toLowerCase()}`}
+          <div>
+            <Label>Evaluation Date *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", 
+                    !formData.evaluationDate && "text-muted-foreground")}
+                  data-testid="button-date-picker"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.evaluationDate ? format(formData.evaluationDate, "PPP") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={formData.evaluationDate || undefined}
+                  onSelect={(date) => setFormData(prev => ({ ...prev, evaluationDate: date || null }))}
+                  initialFocus
                 />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>1 - Needs Work</span>
-                  <span>5 - Excellent</span>
-                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <Label htmlFor="evaluator">Evaluator(s)</Label>
+            <Input
+              id="evaluator"
+              value={formData.evaluator}
+              onChange={(e) => setFormData(prev => ({ ...prev, evaluator: e.target.value }))}
+              placeholder="Coach name"
+              data-testid="input-evaluator"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Skill Evaluations */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Skill Evaluations</CardTitle>
+          <p className="text-sm text-gray-600">Rate each skill from 1 (needs work) to 5 (excellent)</p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {SKILL_CATEGORIES.map(skill => (
+            <div key={skill.name} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="font-medium">{skill.name}</Label>
+                <span className="text-sm font-semibold text-red-600">
+                  {formData.skillScores[skill.name] || 3}
+                </span>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+              <Slider
+                value={[formData.skillScores[skill.name] || 3]}
+                onValueChange={(value) => handleSkillScoreChange(skill.name, value)}
+                max={5}
+                min={1}
+                step={1}
+                className="w-full"
+                data-testid={`slider-${skill.name.toLowerCase()}`}
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>1 - Needs Work</span>
+                <span>5 - Excellent</span>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       {/* Notes Section */}
       <Card>

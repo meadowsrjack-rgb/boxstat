@@ -55,7 +55,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
     programAttended: "",
     programRecommended: "",
     evaluationDate: new Date(),
-    evaluator: user?.email?.split('@')[0] || "Coach",
+    evaluator: (user as any)?.email?.split('@')[0] || "Coach",
     skillScores: SKILL_CATEGORIES.reduce((acc, skill) => ({ ...acc, [skill.name]: 3 }), {}),
     notes: ""
   });

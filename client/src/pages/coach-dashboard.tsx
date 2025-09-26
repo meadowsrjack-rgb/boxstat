@@ -41,6 +41,7 @@ import { format, isSameDay, isAfter, startOfDay } from "date-fns";
 import PlayerSearch from "@/components/PlayerSearch";
 import PlayerCard from "@/components/PlayerCard";
 import TeamChat from "@/components/TeamChat";
+import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 
 /* =================== Types =================== */
 
@@ -156,6 +157,9 @@ export default function CoachDashboard() {
 
   // Scores state for the selected player
   const [scores, setScores] = useState<EvalScores>({});
+  
+  // HR Tab - Lead Evaluation Form state
+  const [showLeadEvaluation, setShowLeadEvaluation] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("coachDashboardTab", activeTab);
@@ -496,7 +500,12 @@ export default function CoachDashboard() {
           )}
 
           {activeTab === "hr" && (
-            <HRTab docs={hrDocs} announcements={hrAnnouncements} />
+            <HRTab 
+              docs={hrDocs} 
+              announcements={hrAnnouncements} 
+              showLeadEvaluation={showLeadEvaluation}
+              setShowLeadEvaluation={setShowLeadEvaluation}
+            />
           )}
 
           {/* Event Detail Modal */}
@@ -1213,10 +1222,36 @@ function PayTab({ pay, onOpenPortal }: { pay?: CoachPaySummary; onOpenPortal: ()
 }
 
 /* ---------- HR Tab ---------- */
-function HRTab({ docs, announcements }: { docs: Array<{ id: string | number; title: string; url: string }>; announcements: Array<{ id: string | number; title: string; body: string; createdAt: string }> }) {
+function HRTab({ 
+  docs, 
+  announcements, 
+  showLeadEvaluation, 
+  setShowLeadEvaluation 
+}: { 
+  docs: Array<{ id: string | number; title: string; url: string }>; 
+  announcements: Array<{ id: string | number; title: string; body: string; createdAt: string }>;
+  showLeadEvaluation: boolean;
+  setShowLeadEvaluation: (show: boolean) => void;
+}) {
+  
+  // If showing lead evaluation form, render it instead of default HR content
+  if (showLeadEvaluation) {
+    return <LeadEvaluationForm onClose={() => setShowLeadEvaluation(false)} />;
+  }
+
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-900">HR & Training</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">HR & Training</h2>
+        <Button 
+          onClick={() => setShowLeadEvaluation(true)}
+          className="bg-red-600 hover:bg-red-700"
+          data-testid="button-lead-evaluation"
+        >
+          <Users className="h-4 w-4 mr-2" />
+          New Lead Evaluation
+        </Button>
+      </div>
 
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">

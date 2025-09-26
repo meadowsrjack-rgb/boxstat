@@ -296,6 +296,21 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     enabled: !!currentUser.id,
   });
 
+  // Current skill evaluations
+  const { data: currentSkills } = useQuery<any>({
+    queryKey: ["/api/coach/evaluations"],
+    queryFn: async () => {
+      const currentYear = new Date().getFullYear();
+      const currentQuarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
+      const res = await fetch(`/api/coach/evaluations?playerId=${currentUser.id}&quarter=${currentQuarter}&year=${currentYear}`, { 
+        credentials: "include" 
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!currentUser.id,
+  });
+
   // Check-ins (client derives tasks from events; server stores submissions)
   const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
     queryKey: ["/api/checkins", currentUser.id],
@@ -684,16 +699,28 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     }));
   };
 
-  // Build rings data for UypTrophyRings - force test values since backend awards are all 0
+  // Build rings data for UypTrophyRings using real awards data
   const ringsData = useMemo(() => {
     console.log('Awards Summary:', awardsSummary); // Debug log
+    if (!awardsSummary) {
+      return {
+        trophies:   { earned: 0, total: 10 },
+        hallOfFame: { earned: 0, total: 8  },
+        superstar:  { earned: 0, total: 12 },
+        allStar:    { earned: 0, total: 20 },
+        starter:    { earned: 0, total: 18 },
+        prospect:   { earned: 0, total: 24 },
+      };
+    }
+    
+    // Use the actual award counts from the API
     return {
-      trophies:   { earned: 3, total: 10 },
-      hallOfFame: { earned: 2, total: 8  },
-      superstar:  { earned: 5, total: 12 },
-      allStar:    { earned: 8, total: 20 },
-      starter:    { earned: 12, total: 18 },
-      prospect:   { earned: 18, total: 24 },
+      trophies:   { earned: awardsSummary.trophyCount || 0, total: 20 },
+      hallOfFame: { earned: awardsSummary.hofBadgesCount || 0, total: 8  },
+      superstar:  { earned: awardsSummary.superstarBadgesCount || 0, total: 12 },
+      allStar:    { earned: awardsSummary.allStarBadgesCount || 0, total: 20 },
+      starter:    { earned: awardsSummary.starterBadgesCount || 0, total: 18 },
+      prospect:   { earned: awardsSummary.rookieBadgesCount || 0, total: 24 },
     };
   }, [awardsSummary]);
 
@@ -1211,9 +1238,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               {/* Skills section wrapper - aligned with trophy grid */}
               <div className="px-2">
                 <div className="max-w-[340px] mx-auto space-y-4">
-                  <SkillBar label="SHOOTING"  value={0} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="DRIBBLING" value={0} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="PASSING"   value={0} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="SHOOTING"  value={currentSkills?.shooting ? (currentSkills.shooting / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="DRIBBLING" value={currentSkills?.dribbling ? (currentSkills.dribbling / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="PASSING"   value={currentSkills?.passing ? (currentSkills.passing / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
                 </div>
               </div>
             </div>

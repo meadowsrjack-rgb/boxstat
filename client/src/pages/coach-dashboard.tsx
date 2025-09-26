@@ -135,7 +135,7 @@ export default function CoachDashboard() {
   
   // Enhanced calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
 
 
@@ -349,7 +349,7 @@ export default function CoachDashboard() {
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
-            <ProfileAvatarRing src={currentUser.profileImageUrl} initials={initials} size={88} />
+            <ProfileAvatarRing src={currentUser.profileImageUrl || undefined} initials={initials} size={88} />
           </div>
           <div className="text-sm text-gray-600">
             Coach <span className="font-semibold text-gray-900">{currentUser.firstName}</span>
@@ -380,7 +380,12 @@ export default function CoachDashboard() {
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event as Event);
+                          const normalizedEvent: Event = {
+                            ...event as any,
+                            startTime: event.startTime instanceof Date ? event.startTime.toISOString() : event.startTime,
+                            endTime: event.endTime instanceof Date ? event.endTime.toISOString() : event.endTime
+                          };
+                          setSelectedEvent(normalizedEvent);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`event-item-${event.id}`}
@@ -414,7 +419,12 @@ export default function CoachDashboard() {
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event as Event);
+                          const normalizedEvent: Event = {
+                            ...event as any,
+                            startTime: event.startTime instanceof Date ? event.startTime.toISOString() : event.startTime,
+                            endTime: event.endTime instanceof Date ? event.endTime.toISOString() : event.endTime
+                          };
+                          setSelectedEvent(normalizedEvent);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`upcoming-event-item-${event.id}`}
@@ -441,7 +451,12 @@ export default function CoachDashboard() {
               {/* Calendar component - moved below events */}
               <PlayerCalendar 
                 events={coachEvents as any} 
-                currentUser={{ ...currentUser, email: currentUser.email || "" }}
+                currentUser={{ 
+                  id: currentUser.id,
+                  email: currentUser.email || "",
+                  firstName: currentUser.firstName || undefined,
+                  lastName: currentUser.lastName || undefined
+                }}
                 selectedDate={selectedDate}
                 onDateSelect={setSelectedDate}
               />
@@ -1121,10 +1136,10 @@ function PlayerProfileModal({
                     <div className="text-gray-900">{(player as any).youthClubTeam || "No club team"}</div>
                   </div>
 
-                  {player.email && (
+                  {(player as any).email && (
                     <div>
                       <label className="text-sm font-medium text-gray-600">Email</label>
-                      <div className="text-gray-900">{player.email}</div>
+                      <div className="text-gray-900">{(player as any).email}</div>
                     </div>
                   )}
 

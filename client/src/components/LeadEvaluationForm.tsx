@@ -87,77 +87,78 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       tempDiv.style.fontFamily = 'Arial, sans-serif';
       
       tempDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px;">
-          <div style="flex: 1;">
-            <div style="border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 8px; border-radius: 8px; background-color: #f9fafb; font-size: 14px;">
-              <strong style="color: #1f2937;">Player Name:</strong> <span style="color: #374151;">${formData.playerName}</span>
-            </div>
-            <div style="border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 8px; border-radius: 8px; background-color: #f9fafb; font-size: 14px;">
-              <strong style="color: #1f2937;">Program Attended:</strong> <span style="color: #374151;">${formData.programAttended}</span>
-            </div>
-            <div style="border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 8px; border-radius: 8px; background-color: #f9fafb; font-size: 14px;">
-              <strong style="color: #1f2937;">Program Recommended:</strong> <span style="color: #374151;">${formData.programRecommended}</span>
-            </div>
-            <div style="border: 1px solid #e5e7eb; padding: 12px; margin-bottom: 8px; border-radius: 8px; background-color: #f9fafb; font-size: 14px;">
-              <strong style="color: #1f2937;">Date:</strong> <span style="color: #374151;">${formData.evaluationDate ? format(formData.evaluationDate, 'MM/dd/yy') : ''}</span>
-            </div>
-            <div style="border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; background-color: #f9fafb; font-size: 14px;">
-              <strong style="color: #1f2937;">Evaluator(s):</strong> <span style="color: #374151;">${formData.evaluator}</span>
-            </div>
-          </div>
-          <div style="width: 600px; height: 420px; margin-left: 30px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-            <img src="${uyplogoUrl}" alt="UYP Logo" style="max-width: 90%; max-height: 90%; object-fit: contain;" />
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="font-size: 24px; font-weight: bold; margin: 0;">Coach</h1>
+          <h1 style="font-size: 24px; font-weight: bold; margin: 0;">Evaluation</h1>
+        </div>
+        
+        <table style="width: 100%; margin-bottom: 20px; border-collapse: separate; border-spacing: 0;">
+          <tr>
+            <td style="padding: 8px 10px; border: 1px solid #000; font-weight: bold; width: 35%;">Player Name</td>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-left: none; width: 65%;">${formData.playerName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-top: none; font-weight: bold;">Program Attended</td>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-left: none; border-top: none;">${formData.programAttended}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-top: none; font-weight: bold;">Program Recommended</td>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-left: none; border-top: none;">${formData.programRecommended}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-top: none; font-weight: bold;">Prepared By</td>
+            <td style="padding: 8px 10px; border: 1px solid #000; border-left: none; border-top: none; position: relative;">${formData.evaluator}
+              <span style="position: absolute; right: 10px;">${formData.evaluationDate ? format(formData.evaluationDate, 'MMM dd, yyyy') : ''}</span>
+            </td>
+          </tr>
+        </table>
+        
+        <div style="margin-bottom: 30px; margin-top: 40px;">
+          <table style="width: 100%; border-collapse: separate; border-spacing: 8px;">
+            <tr>
+              ${SKILL_CATEGORIES.map(skill => `
+                <td style="text-align: center; vertical-align: top;">
+                  <div style="border: 1px solid #000; padding: 10px 5px; font-size: 10px; font-weight: bold;">${skill.name === 'DEFENSE' ? skill.name + '<br>(if applicable)' : skill.name}</div>
+                </td>
+              `).join('')}
+            </tr>
+            <tr>
+              ${SKILL_CATEGORIES.map(skill => `
+                <td style="text-align: center;">
+                  <div style="border: 1px solid #000; padding: 20px 5px; font-size: 18px; font-weight: bold;">${formData.skillScores[skill.name] || 1}</div>
+                </td>
+              `).join('')}
+            </tr>
+          </table>
+        </div>
+        
+        <div style="margin-bottom: 30px;">
+          <strong style="font-size: 14px;">Notes:</strong>
+          <div style="border: 1px solid #000; padding: 10px; margin-top: 5px; min-height: 50px; font-size: 12px;">
+            ${formData.notes || ''}
           </div>
         </div>
         
-        <div style="display: flex; margin-bottom: 25px; gap: 4px;">
-          ${SKILL_CATEGORIES.map(skill => `
-            <div style="flex: 1; border: 1px solid #e5e7eb; text-align: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);">
-              <div style="background-color: ${skill.name === 'DRIBBLING' ? '#dc2626' : 
-                                            skill.name === 'SHOOTING' ? '#ea580c' :
-                                            skill.name === 'PASSING' ? '#d97706' :
-                                            skill.name === 'CATCHING' ? '#059669' :
-                                            skill.name === 'COACHABILITY' ? '#2563eb' : '#7c3aed'}; 
-                           color: white; padding: 12px; font-weight: bold; font-size: 14px;">
-                ${skill.name}${skill.name === 'DEFENSE' ? ' (if applicable)' : ''}
-              </div>
-              <div style="padding: 20px; font-size: 24px; font-weight: bold; color: #1f2937; background-color: #ffffff;">
-                ${formData.skillScores[skill.name] || 3}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        
-        <div style="border: 1px solid #e5e7eb; padding: 15px; margin-bottom: 25px; border-radius: 8px; background-color: #f9fafb;">
-          <strong style="color: #1f2937; font-size: 14px;">Notes:</strong><br>
-          <div style="margin-top: 8px; color: #374151; font-size: 14px; line-height: 1.6;">
-            ${formData.notes || 'No additional notes provided.'}
-          </div>
-        </div>
-        
-        <div style="display: flex; gap: 20px;">
+        <div style="display: flex; gap: 20px; font-size: 10px;">
           <div style="flex: 1;">
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #f9fafb;">
-              <div style="font-weight: bold; color: #dc2626; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #dc2626; padding-bottom: 5px;">General Scoring Guidelines*:</div>
-              <div style="margin-bottom: 8px; color: #1f2937; font-size: 14px;"><strong>Club = 20 - 30</strong></div>
-              <div style="margin-bottom: 8px; color: #1f2937; font-size: 14px;"><strong>FNH = 11 - 19</strong></div>
-              <div style="margin-bottom: 15px; color: #1f2937; font-size: 14px;"><strong>Skills = 1 - 10</strong></div>
-              <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
-                <strong>Disclaimer:</strong> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club-level. As good foundations, and 1 as needs more work. Please keep in mind that coaches might not have highlighted some or most of all these assessments, especially for new players. We provide this assessment solely for that player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of all these needs. We strongly recommend to assist that player's needs to focus towards their basketball development journey.
-              </div>
-              <br>
-              <div style="color: #6b7280; font-size: 12px; line-height: 1.5;">
-                "We will recommend a court based off of these standard guidelines. These are not standards to meet certain program requirements."
-              </div>
+            <div style="font-weight: bold; margin-bottom: 10px;">General Scoring Guidelines*:</div>
+            <div style="margin-bottom: 5px;"><strong>Club = 20 - 30</strong></div>
+            <div style="margin-bottom: 5px;"><strong>FNH = 11 - 19</strong></div>
+            <div style="margin-bottom: 15px;"><strong>Skills = 1 - 10</strong></div>
+            <div style="line-height: 1.3; margin-bottom: 10px;">
+              <strong>Disclaimer</strong> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
+            </div>
+            <div style="line-height: 1.3;">
+              *We will recommend a court based off of thse standard guidelines. These are not strict standards to meet certain program requirememts.
             </div>
           </div>
           <div style="flex: 1;">
-            <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #f9fafb;">
-              <div style="font-weight: bold; color: #dc2626; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #dc2626; padding-bottom: 5px;">Growth Roadmap:</div>
-              <div style="margin-bottom: 15px; color: #374151; font-size: 14px; line-height: 1.6;">UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and overall skill level, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:</div>
-              <div style="text-align: center; font-weight: bold; color: #dc2626; font-size: 14px; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dc2626;">
-                Rookies >> Skills Academy >> FNH >> Club >> High School
-              </div>
+            <div style="font-weight: bold; margin-bottom: 10px;">Growth Roadmap:</div>
+            <div style="line-height: 1.3; margin-bottom: 15px;">
+              UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
+            </div>
+            <div style="text-align: center; font-style: italic; font-weight: bold;">
+              Rookies >> Skills Academy >> FNH >> Club >> High School
             </div>
           </div>
         </div>
@@ -184,11 +185,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
       // Download the PDF
-      const nameParts = formData.playerName.trim().split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      const playerNameFormatted = lastName && firstName ? `${lastName}, ${firstName}` : formData.playerName;
-      const fileName = `Coach Evaluation - ${formData.playerName} {${playerNameFormatted}}.pdf`;
+      const fileName = `Coach Evaluation - ${formData.playerName}.pdf`;
       pdf.save(fileName);
       
     } catch (error) {

@@ -1211,9 +1211,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               {/* Skills section wrapper - aligned with trophy grid */}
               <div className="px-2">
                 <div className="max-w-[340px] mx-auto space-y-4">
-                  <SkillBar label="SHOOTING"  value={72} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="DRIBBLING" value={85} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="PASSING"   value={68} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="SHOOTING"  value={0} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="DRIBBLING" value={0} onClick={() => setLocation("/skills")} />
+                  <SkillBar label="PASSING"   value={0} onClick={() => setLocation("/skills")} />
                 </div>
               </div>
             </div>

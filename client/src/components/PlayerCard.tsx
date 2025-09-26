@@ -484,9 +484,9 @@ export default function PlayerCard({
                   transition={{ delay: 0.5, duration: 0.4 }}
                   className="max-w-[340px] mx-auto space-y-4"
                 >
-                  <SkillBar label="SHOOTING" value={72} />
-                  <SkillBar label="DRIBBLING" value={85} />
-                  <SkillBar label="PASSING" value={68} />
+                  <SkillBar label="SHOOTING" value={0} />
+                  <SkillBar label="DRIBBLING" value={0} />
+                  <SkillBar label="PASSING" value={0} />
                 </motion.div>
               </div>
 

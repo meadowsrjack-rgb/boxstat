@@ -194,7 +194,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <tr>
               <td style="padding: 12px; border: 1px solid #000; font-size: 12px; line-height: 1.4;">
                 <div style="margin-bottom: 10px;">
-                  <em>Disclaimer</em> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
+                  <strong>Disclaimer*</strong> Players are evaluated by one or more of the coaches present on the court from a scale from 1-5; 5 being club level, 3 as good foundations, and 1 as developing. Please keep in mind that the coaches might not have their eye on your player(s) for the full duration of the practice, and the skills focused on during practice might not have highlighted some or most of these evaluated skills. We provide this free assessment solely for you and your player to get a better grasp of what they need to focus towards their basketball development journey.
                 </div>
                 <div>
                   *We will recommend a court based off of these standard guidelines. These are not strict standards to meet certain program requirements.

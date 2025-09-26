@@ -280,7 +280,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             Player Information
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="playerName">Player Name *</Label>
             <Input

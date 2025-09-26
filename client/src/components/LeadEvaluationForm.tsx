@@ -184,11 +184,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
       // Download the PDF
-      const nameParts = formData.playerName.trim().split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      const playerNameFormatted = lastName && firstName ? `${lastName}, ${firstName}` : formData.playerName;
-      const fileName = `Coach Evaluation - ${formData.playerName} {${playerNameFormatted}}.pdf`;
+      const fileName = `Coach Evaluation - ${formData.playerName}.pdf`;
       pdf.save(fileName);
       
     } catch (error) {

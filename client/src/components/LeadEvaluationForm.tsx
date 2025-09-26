@@ -151,8 +151,16 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #f9fafb;">
               <div style="font-weight: bold; color: #dc2626; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #dc2626; padding-bottom: 5px;">Growth Roadmap:</div>
               <div style="margin-bottom: 15px; color: #374151; font-size: 14px; line-height: 1.6;">UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and overall skill level, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:</div>
-              <div style="text-align: center; font-weight: bold; color: #dc2626; font-size: 14px; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dc2626;">
-                Rookies >> Skills Academy >> FNH >> Club >> High School
+              <div style="text-align: center; font-weight: bold; color: #dc2626; font-size: 14px; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dc2626; line-height: 2;">
+                Rookies<br>
+                >><br>
+                Skills Academy<br>
+                >><br>
+                FNH<br>
+                >><br>
+                Club<br>
+                >><br>
+                High School
               </div>
             </div>
           </div>

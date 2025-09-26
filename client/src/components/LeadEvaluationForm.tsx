@@ -105,7 +105,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               <strong style="color: #1f2937;">Evaluator(s):</strong> <span style="color: #374151;">${formData.evaluator}</span>
             </div>
           </div>
-          <div style="width: 200px; height: 140px; margin-left: 30px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <div style="width: 600px; height: 420px; margin-left: 30px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <img src="${uyplogoUrl}" alt="UYP Logo" style="max-width: 90%; max-height: 90%; object-fit: contain;" />
           </div>
         </div>

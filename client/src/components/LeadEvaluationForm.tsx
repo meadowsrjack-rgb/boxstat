@@ -105,7 +105,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               <strong style="color: #1f2937;">Evaluator(s):</strong> <span style="color: #374151;">${formData.evaluator}</span>
             </div>
           </div>
-          <div style="width: 800px; height: 560px; margin-left: 30px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+          <div style="width: 200px; height: 140px; margin-left: 30px; display: flex; align-items: center; justify-content: center; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
             <img src="${uyplogoUrl}" alt="UYP Logo" style="max-width: 90%; max-height: 90%; object-fit: contain;" />
           </div>
         </div>
@@ -113,7 +113,11 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
         <div style="display: flex; margin-bottom: 25px; gap: 4px;">
           ${SKILL_CATEGORIES.map(skill => `
             <div style="flex: 1; border: 1px solid #e5e7eb; text-align: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);">
-              <div style="background-color: #dc2626; 
+              <div style="background-color: ${skill.name === 'DRIBBLING' ? '#dc2626' : 
+                                            skill.name === 'SHOOTING' ? '#ea580c' :
+                                            skill.name === 'PASSING' ? '#d97706' :
+                                            skill.name === 'CATCHING' ? '#059669' :
+                                            skill.name === 'COACHABILITY' ? '#2563eb' : '#7c3aed'}; 
                            color: white; padding: 12px; font-weight: bold; font-size: 14px;">
                 ${skill.name}${skill.name === 'DEFENSE' ? ' (if applicable)' : ''}
               </div>
@@ -151,16 +155,8 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <div style="border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; background-color: #f9fafb;">
               <div style="font-weight: bold; color: #dc2626; margin-bottom: 15px; font-size: 16px; border-bottom: 2px solid #dc2626; padding-bottom: 5px;">Growth Roadmap:</div>
               <div style="margin-bottom: 15px; color: #374151; font-size: 14px; line-height: 1.6;">UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and overall skill level, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:</div>
-              <div style="text-align: center; font-weight: bold; color: #dc2626; font-size: 14px; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dc2626; line-height: 2;">
-                Rookies<br>
-                >><br>
-                Skills Academy<br>
-                >><br>
-                FNH<br>
-                >><br>
-                Club<br>
-                >><br>
-                High School
+              <div style="text-align: center; font-weight: bold; color: #dc2626; font-size: 14px; background-color: #ffffff; padding: 12px; border-radius: 6px; border: 1px solid #dc2626;">
+                Rookies >> Skills Academy >> FNH >> Club >> High School
               </div>
             </div>
           </div>
@@ -188,7 +184,11 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
       // Download the PDF
-      const fileName = `Coach Evaluation - ${formData.playerName}.pdf`;
+      const nameParts = formData.playerName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      const playerNameFormatted = lastName && firstName ? `${lastName}, ${firstName}` : formData.playerName;
+      const fileName = `Coach Evaluation - ${formData.playerName} {${playerNameFormatted}}.pdf`;
       pdf.save(fileName);
       
     } catch (error) {

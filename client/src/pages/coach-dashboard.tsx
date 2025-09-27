@@ -254,6 +254,11 @@ export default function CoachDashboard() {
     },
     onSuccess: () => {
       toast({ title: "Award given" });
+      // Invalidate cache for the awarded player's badges and trophies
+      if (selectedPlayer) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/badges`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/trophies`] });
+      }
       setAwardsOpen(false);
       setSelectedPlayer(null);
     },

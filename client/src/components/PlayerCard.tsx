@@ -164,8 +164,9 @@ export default function PlayerCard({
     onSuccess: () => {
       toast({ title: "Award granted!", description: "The player has been awarded successfully." });
       setShowAwardDialog(false);
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/badges`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/trophies`] });
+      // Use selectedPlayer.id for cache invalidation, not playerId
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer?.id}/badges`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer?.id}/trophies`] });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to award player", variant: "destructive" });

@@ -129,8 +129,7 @@ export function registerClaimRoutes(app: Express): void {
         }
         
         // Production mode: Send actual email
-        // TODO: Send actual email in production
-        // await emailService.sendClaimEmail(normalizedEmail, claimLink, account.primaryAccountType);
+        await emailService.sendClaimEmail(normalizedEmail, claimLink, account.primaryAccountType);
         
         res.json({
           success: true,

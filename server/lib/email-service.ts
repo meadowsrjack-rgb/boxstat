@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Resend } from 'resend';
 
 // Email configuration schema
 const emailConfigSchema = z.object({
@@ -75,17 +76,10 @@ class ConsoleEmailService implements EmailService {
 
 // Resend email service
 class ResendEmailService implements EmailService {
-  private resend: any;
+  private resend: Resend;
 
   constructor(apiKey: string) {
-    // Dynamically import Resend if available
-    try {
-      const { Resend } = require('resend');
-      this.resend = new Resend(apiKey);
-    } catch (error) {
-      console.error('Resend package not found. Install with: npm install resend');
-      throw new Error('Resend not available');
-    }
+    this.resend = new Resend(apiKey);
   }
 
   async sendVerificationCode(to: string, code: string, playerName: string): Promise<void> {

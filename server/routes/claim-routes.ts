@@ -285,6 +285,69 @@ export function registerClaimRoutes(app: Express): void {
       res.status(500).json({ message: 'Failed to sync accounts from Notion' });
     }
   });
+
+  // ========== ADMIN: GENERATE CLAIM LINK (BYPASS EMAIL) ==========
+  app.post('/api/admin/generate-claim-link', async (req, res) => {
+    try {
+      // TODO: Add admin role check (for now, anyone can use this in dev)
+      const { email } = requestAccountClaimSchema.parse(req.body);
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Find or sync the account
+      let account = await storage.getAccountByEmail(normalizedEmail);
+      
+      if (!account) {
+        console.log(`Account not found for ${normalizedEmail}, running Notion sync...`);
+        try {
+          await notionAccountSync.syncAccountsFromNotion();
+          account = await storage.getAccountByEmail(normalizedEmail);
+        } catch (syncError) {
+          console.error('Notion sync failed during admin claim link generation:', syncError);
+        }
+      }
+      
+      if (!account) {
+        return res.status(404).json({ 
+          message: 'No account found for this email address.',
+          email: normalizedEmail
+        });
+      }
+
+      // Generate magic link token and expiry
+      const magicLinkToken = nanoid(32);
+      const magicLinkExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      // Update account with magic link token
+      await storage.updateAccount(account.id, {
+        magicLinkToken,
+        magicLinkExpires
+      });
+
+      // Generate the claim link
+      const baseUrl = process.env.REPL_URL || 'http://localhost:5000';
+      const claimLink = `${baseUrl}/claim-verify?token=${magicLinkToken}`;
+      
+      console.log(`\n🎫 ADMIN CLAIM LINK GENERATED for ${normalizedEmail}`);
+      console.log(`Link: ${claimLink}`);
+      console.log(`Expires: ${magicLinkExpires.toLocaleString()}\n`);
+
+      res.json({
+        success: true,
+        claimLink,
+        email: normalizedEmail,
+        accountType: account.primaryAccountType,
+        expiresAt: magicLinkExpires.toISOString(),
+        expiresIn: '30 minutes'
+      });
+
+    } catch (error) {
+      console.error('Error generating admin claim link:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid email format', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to generate claim link' });
+    }
+  });
   
   // ========== SEARCH PLAYERS ==========
   app.get('/api/players/search', isAuthenticated, async (req: any, res) => {

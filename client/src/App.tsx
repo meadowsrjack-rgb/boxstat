@@ -41,6 +41,7 @@ import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
 import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
+import SelectProfileType from "@/pages/select-profile-type";
 import PaymentsTab from "@/pages/payments";
 import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
@@ -268,6 +269,8 @@ function Router() {
       <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/payments" component={RegistrationStatus} />
       <Route path="/no-profiles" component={NoProfiles} />
+      {/* New profile selection flow */}
+      <Route path="/select-profile-type" component={SelectProfileType} />
       {/* Legacy routes for compatibility during transition */}
       <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />

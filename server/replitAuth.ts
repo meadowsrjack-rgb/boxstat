@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { isCoachEmail } from "./coaches";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -58,18 +59,51 @@ async function upsertUser(
   claims: any,
 ) {
   console.log("Upserting user with claims:", claims);
+  
+  const email = claims["email"];
+  const isCoach = isCoachEmail(email);
+  
   const userData = {
     id: claims["sub"],
-    email: claims["email"],
+    email: email,
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    userType: "parent" as const, // Default to parent, can be changed later in account setup
+    userType: isCoach ? "coach" as const : "parent" as const,
     profileCompleted: false, // Will be set to true after checking if profiles exist
   };
+  
   console.log("User data to upsert:", userData);
+  console.log(`Email ${email} identified as ${isCoach ? 'COACH' : 'PARENT/PLAYER'}`);
+  
   await storage.upsertUser(userData);
   console.log("User upserted successfully");
+  
+  // For coaches, auto-create their profile if they don't have one
+  if (isCoach) {
+    try {
+      const existingProfiles = await storage.getAccountProfiles(userData.id);
+      if (existingProfiles.length === 0) {
+        console.log("Auto-creating coach profile for", email);
+        const profileId = `coach-profile-${userData.id}-${Date.now()}`;
+        await storage.createProfile({
+          id: profileId,
+          accountId: userData.id,
+          profileType: "coach",
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          profileImageUrl: userData.profileImageUrl,
+          profileCompleted: true,
+          isActive: true
+        });
+        // Update user as profile completed
+        await storage.updateUser(userData.id, { profileCompleted: true });
+        console.log("Coach profile auto-created successfully");
+      }
+    } catch (error) {
+      console.error("Error auto-creating coach profile:", error);
+    }
+  }
 }
 
 export async function setupAuth(app: Express) {
@@ -114,10 +148,38 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successRedirect: "/profile-selection", // Redirect to profile selection after login
-      failureRedirect: "/api/login",
+  app.get("/api/callback", async (req, res, next) => {
+    passport.authenticate(`replitauth:${req.hostname}`, async (err: any, user: any) => {
+      if (err || !user) {
+        return res.redirect("/api/login");
+      }
+      
+      req.logIn(user, async (loginErr) => {
+        if (loginErr) {
+          return next(loginErr);
+        }
+        
+        try {
+          const userId = user.claims?.sub;
+          const email = user.claims?.email;
+          
+          if (!userId || !email) {
+            return res.redirect("/profile-selection");
+          }
+          
+          // Check if this is a coach account
+          if (isCoachEmail(email)) {
+            // Coaches go directly to coach dashboard
+            return res.redirect("/coach-dashboard");
+          }
+          
+          // Non-coaches go to profile type selection
+          return res.redirect("/select-profile-type");
+        } catch (error) {
+          console.error("Error in callback redirect logic:", error);
+          return res.redirect("/profile-selection");
+        }
+      });
     })(req, res, next);
   });
 

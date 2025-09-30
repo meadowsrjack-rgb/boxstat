@@ -2397,7 +2397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Email is required" });
       }
       
-      const { fetchNotionPeople } = await import('./lib/notion-adapter.js');
+      const { fetchNotionPeople, fetchNotionTeams } = await import('./lib/notion-adapter.js');
       const allPeople = await fetchNotionPeople();
       
       // Find all Notion records matching this email
@@ -2409,7 +2409,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ found: false, message: "No account found in our system with this email" });
       }
       
-      // Return the Notion data for claiming
+      // Fetch teams and create mapping from Notion team ID to database team ID
+      const notionTeams = await fetchNotionTeams();
+      const teamIdMap = new Map<string, number>();
+      const { claimRepo } = await import('./lib/claim-repository.js');
+      
+      for (const notionTeam of notionTeams) {
+        // Find the database team by Notion ID
+        const dbTeam = await claimRepo.getTeamByNotionId(notionTeam.notionId);
+        if (dbTeam) {
+          teamIdMap.set(notionTeam.notionId, dbTeam.id);
+        }
+      }
+      
+      // Return the Notion data for claiming with mapped team IDs
       res.json({ 
         found: true, 
         records: matchingRecords.map(record => ({
@@ -2420,7 +2433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           age: record.age,
           jerseyNumber: record.jerseyNumber,
           phoneNumber: record.phoneNumber,
-          teamRelationId: record.teamRelationId,
+          teamId: record.teamRelationId ? teamIdMap.get(record.teamRelationId) : undefined,
           photoUrl: record.photoUrl
         }))
       });

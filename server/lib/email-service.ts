@@ -26,6 +26,7 @@ export function generateVerificationCode(): string {
 // Email service interface
 export interface EmailService {
   sendVerificationCode(to: string, code: string, playerName: string): Promise<void>;
+  sendClaimEmail(to: string, claimLink: string, accountType: string): Promise<void>;
 }
 
 // Console email service (for development/testing)
@@ -44,6 +45,26 @@ class ConsoleEmailService implements EmailService {
     console.log(`  🏀 CODE: ${code}`);
     console.log('');
     console.log(`This code will expire in 10 minutes.`);
+    console.log(`If you didn't request this, you can safely ignore this email.`);
+    console.log('');
+    console.log(`Thanks,`);
+    console.log(`UYP Basketball Team`);
+    console.log('='.repeat(50));
+  }
+
+  async sendClaimEmail(to: string, claimLink: string, accountType: string): Promise<void> {
+    console.log('📧 [EMAIL SERVICE - CONSOLE]');
+    console.log('='.repeat(50));
+    console.log(`To: ${to}`);
+    console.log(`Subject: Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - UYP Basketball`);
+    console.log('');
+    console.log(`Welcome to UYP Basketball!`);
+    console.log('');
+    console.log(`Click the link below to claim your ${accountType} account:`);
+    console.log('');
+    console.log(`  🏀 ${claimLink}`);
+    console.log('');
+    console.log(`This link will expire in 30 minutes.`);
     console.log(`If you didn't request this, you can safely ignore this email.`);
     console.log('');
     console.log(`Thanks,`);
@@ -128,6 +149,71 @@ UYP Basketball Team
       throw new Error('Failed to send verification email');
     }
   }
+
+  async sendClaimEmail(to: string, claimLink: string, accountType: string): Promise<void> {
+    try {
+      const { data, error } = await this.resend.emails.send({
+        from: emailConfig.from,
+        to: [to],
+        subject: `Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - UYP Basketball`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">UYP Basketball - Claim Your Account</h2>
+            
+            <p>Welcome to UYP Basketball!</p>
+            
+            <p>You've been added to the UYP Basketball app as a <strong>${accountType}</strong>. Click the button below to claim your account and get started:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${claimLink}" style="background-color: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Claim My Account</a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              Or copy and paste this link into your browser:<br>
+              <a href="${claimLink}" style="color: #dc2626; word-break: break-all;">${claimLink}</a>
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              This link will expire in 30 minutes.<br>
+              If you didn't expect this email, you can safely ignore it.
+            </p>
+            
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
+            
+            <p style="color: #6b7280; font-size: 12px;">
+              Thanks,<br>
+              UYP Basketball Team
+            </p>
+          </div>
+        `,
+        text: `
+UYP Basketball - Claim Your Account
+
+Welcome to UYP Basketball!
+
+You've been added to the UYP Basketball app as a ${accountType}. Click the link below to claim your account and get started:
+
+${claimLink}
+
+This link will expire in 30 minutes.
+If you didn't expect this email, you can safely ignore it.
+
+Thanks,
+UYP Basketball Team
+        `.trim(),
+      });
+
+      if (error) {
+        console.error('Resend error:', error);
+        throw new Error('Failed to send claim email');
+      }
+
+      console.log(`✅ Claim email sent to ${to} via Resend`);
+    } catch (error) {
+      console.error('Error sending claim email via Resend:', error);
+      throw new Error('Failed to send claim email');
+    }
+  }
 }
 
 // SendGrid email service (placeholder - can be implemented if needed)
@@ -137,6 +223,10 @@ class SendGridEmailService implements EmailService {
   }
 
   async sendVerificationCode(to: string, code: string, playerName: string): Promise<void> {
+    throw new Error('SendGrid email service not implemented yet');
+  }
+
+  async sendClaimEmail(to: string, claimLink: string, accountType: string): Promise<void> {
     throw new Error('SendGrid email service not implemented yet');
   }
 }

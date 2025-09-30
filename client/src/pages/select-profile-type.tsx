@@ -1,9 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, User } from "lucide-react";
 import logo from "@assets/UYP Logo nback_1752703900579.png";
@@ -13,54 +10,12 @@ const UYP_RED = "#d82428";
 export default function SelectProfileType() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
   const [selectedType, setSelectedType] = useState<"parent" | "player" | null>(null);
-
-  const createProfileMutation = useMutation({
-    mutationFn: async (profileType: "parent" | "player") => {
-      const response = await fetch("/api/profiles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          profileType,
-          firstName: (user as any)?.firstName || "",
-          lastName: (user as any)?.lastName || "",
-          profileImageUrl: (user as any)?.profileImageUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create profile");
-      }
-
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Redirect based on profile type
-      if (data.profileType === "player") {
-        setLocation("/player-dashboard");
-      } else {
-        setLocation("/parent-dashboard");
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create profile",
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleSelectType = (type: "parent" | "player") => {
     setSelectedType(type);
-    createProfileMutation.mutate(type);
+    // Redirect to profile creation form with the selected type
+    setLocation(`/create-profile?type=${type}`);
   };
 
   return (
@@ -81,10 +36,9 @@ export default function SelectProfileType() {
         {/* Selection Cards */}
         <div className="space-y-4">
           <Card
-            onClick={() => !createProfileMutation.isPending && handleSelectType("parent")}
+            onClick={() => handleSelectType("parent")}
             className={`cursor-pointer bg-white/5 border-white/10 hover:bg-white/[0.07] transition
-              ${selectedType === "parent" ? "ring-2 ring-white/50" : ""}
-              ${createProfileMutation.isPending ? "opacity-50 cursor-not-allowed" : ""}`}
+              ${selectedType === "parent" ? "ring-2 ring-white/50" : ""}`}
             data-testid="card-parent-type"
           >
             <CardContent className="p-6">
@@ -106,10 +60,9 @@ export default function SelectProfileType() {
           </Card>
 
           <Card
-            onClick={() => !createProfileMutation.isPending && handleSelectType("player")}
+            onClick={() => handleSelectType("player")}
             className={`cursor-pointer bg-white/5 border-white/10 hover:bg-white/[0.07] transition
-              ${selectedType === "player" ? "ring-2 ring-white/50" : ""}
-              ${createProfileMutation.isPending ? "opacity-50 cursor-not-allowed" : ""}`}
+              ${selectedType === "player" ? "ring-2 ring-white/50" : ""}`}
             data-testid="card-player-type"
           >
             <CardContent className="p-6">
@@ -129,15 +82,6 @@ export default function SelectProfileType() {
             </CardContent>
           </Card>
         </div>
-
-        {createProfileMutation.isPending && (
-          <div className="text-center mt-6">
-            <div className="inline-flex items-center gap-2 text-white/70">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Creating your profile...</span>
-            </div>
-          </div>
-        )}
 
         <div className="mt-8 text-center text-sm text-white/50">
           <p>Your profile will be automatically synced with our system if you're using a registered email.</p>

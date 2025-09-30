@@ -2385,6 +2385,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notion account claiming endpoint
+  app.get('/api/notion/claim-data', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = req.query.email || req.user.claims.email;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const { fetchNotionPeople } = await import('./lib/notion-adapter.js');
+      const allPeople = await fetchNotionPeople();
+      
+      // Find all Notion records matching this email
+      const matchingRecords = allPeople.filter(person => 
+        person.email?.toLowerCase() === email.toLowerCase()
+      );
+      
+      if (matchingRecords.length === 0) {
+        return res.json({ found: false, message: "No account found in our system with this email" });
+      }
+      
+      // Return the Notion data for claiming
+      res.json({ 
+        found: true, 
+        records: matchingRecords.map(record => ({
+          fullName: record.fullName,
+          email: record.email,
+          personType: record.personType,
+          dob: record.dob,
+          age: record.age,
+          jerseyNumber: record.jerseyNumber,
+          phoneNumber: record.phoneNumber,
+          teamRelationId: record.teamRelationId,
+          photoUrl: record.photoUrl
+        }))
+      });
+    } catch (error) {
+      console.error("Error looking up Notion data:", error);
+      res.status(500).json({ message: "Failed to look up account data" });
+    }
+  });
+
   // Child Profile Management Routes
   app.get('/api/child-profiles/:parentId', isAuthenticated, async (req: any, res) => {
     try {

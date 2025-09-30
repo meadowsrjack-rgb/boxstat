@@ -796,7 +796,98 @@ function SecuritySection() {
 
 function ConnectionsSection() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState<boolean>(true);
+  const [linkEmail, setLinkEmail] = useState(user?.email || "");
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  // Check if user has linked account
+  const { data: linkedAccountStatus } = useQuery({
+    queryKey: ["/api/auth/user"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/user", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch user");
+      return res.json() as Promise<UserType>;
+    }
+  });
+
+  const isLinked = !!linkedAccountStatus?.linkedAccountId;
+
+  // Link account mutation
+  const linkAccountMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch("/api/settings/link-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email })
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to link account");
+      }
+      
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Account Linked!",
+        description: `Successfully linked to ${data.account.email}. ${data.profiles.length} profile(s) loaded.`
+      });
+      setShowLinkDialog(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Link Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Unlink account mutation
+  const unlinkAccountMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/settings/unlink-account", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to unlink account");
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Account Unlinked",
+        description: "Your account has been unlinked successfully."
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Unlink Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleLinkAccount = () => {
+    if (!linkEmail || !linkEmail.trim()) {
+      toast({ title: "Email Required", description: "Please enter your email address", variant: "destructive" });
+      return;
+    }
+    linkAccountMutation.mutate(linkEmail);
+  };
 
   const connect = async () => {
     try {
@@ -818,10 +909,47 @@ function ConnectionsSection() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader icon={LinkIcon} title="Connections" subtitle="Connect calendars and other services." />
+      <SectionHeader icon={LinkIcon} title="Connections" subtitle="Link your program account and connect calendars." />
 
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
+          {/* Program Account Linking */}
+          <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
+                <Users className="h-5 w-5" style={{ color: BRAND }} />
+              </div>
+              <div>
+                <div className="text-sm font-medium">UYP Basketball Account</div>
+                <div className="text-xs text-gray-500">
+                  {isLinked ? "Linked - Profile data synced" : "Not linked - Link to access your program data"}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {isLinked ? (
+                <Button 
+                  variant="ghost" 
+                  onClick={() => unlinkAccountMutation.mutate()}
+                  disabled={unlinkAccountMutation.isPending}
+                  data-testid="button-unlink-account"
+                >
+                  {unlinkAccountMutation.isPending ? "Unlinking..." : "Unlink"}
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setShowLinkDialog(true)}
+                  data-testid="button-link-account"
+                >
+                  Link Account
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Google Calendar Connection */}
           <div className="flex items-center justify-between rounded-lg p-3 hover:bg-gray-50">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-red-50 flex items-center justify-center">
@@ -857,6 +985,50 @@ function ConnectionsSection() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Link Account Dialog */}
+      <Dialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Your Program Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Enter your email to link your account and automatically load your profile information from the program database.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email Address</label>
+              <Input
+                type="email"
+                placeholder="your@email.com"
+                value={linkEmail}
+                onChange={(e) => setLinkEmail(e.target.value)}
+                disabled={linkAccountMutation.isPending}
+                data-testid="input-link-email"
+              />
+              <p className="text-xs text-gray-500">
+                This must be the email you used when registering for the program.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowLinkDialog(false)}
+              disabled={linkAccountMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleLinkAccount}
+              disabled={linkAccountMutation.isPending}
+              data-testid="button-confirm-link"
+            >
+              {linkAccountMutation.isPending ? "Linking..." : "Link Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

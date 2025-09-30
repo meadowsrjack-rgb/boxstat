@@ -19,8 +19,9 @@ import calendarRoutes from "./routes/calendar";
 import searchRoutes from "./routes/search";
 import notionRoutes from "./routes/notion";
 import privacyRoutes from "./routes/privacy";
-import claimsRoutes from "./routes/claims";
-import registerClaimRoutes from "./routes/claim-routes";
+// REMOVED: Claim routes moved to settings-based account linking
+// import claimsRoutes from "./routes/claims";
+// import registerClaimRoutes from "./routes/claim-routes";
 import { notionAccountSync } from "./services/notionAccountSync";
 
 import multer from "multer";
@@ -4090,10 +4091,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/search', searchRoutes);
   app.use('/api/notion', notionRoutes);
   app.use('/api/privacy', privacyRoutes);
-  app.use('/api/claims', claimsRoutes);
+  // REMOVED: Claim routes moved to settings-based account linking
+  // app.use('/api/claims', claimsRoutes);
 
-  // Register Search & Claim routes
-  registerClaimRoutes(app);
+  // REMOVED: Claim routes moved to settings-based account linking
+  // registerClaimRoutes(app);
 
   return httpServer;
 }

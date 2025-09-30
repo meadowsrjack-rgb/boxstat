@@ -59,10 +59,15 @@ export default function ClaimVerify() {
           description: `Welcome to UYP Basketball, ${data.account.email}!`,
         });
 
-        // Redirect to login after a short delay to complete the auth flow
+        // In development mode with autoLogin, redirect to profile selection
+        // Otherwise redirect to login to complete the auth flow
         setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 3000);
+          if (data.autoLogin && data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+          } else {
+            window.location.href = "/api/login";
+          }
+        }, 2000);
 
       } catch (error: any) {
         console.error("Claim verification failed:", error);
@@ -157,7 +162,7 @@ export default function ClaimVerify() {
               )}
 
               <div className="text-center text-sm text-gray-600">
-                <p>Redirecting you to complete login in 3 seconds...</p>
+                <p>Redirecting you in 2 seconds...</p>
               </div>
             </div>
           )}

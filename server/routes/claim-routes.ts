@@ -154,7 +154,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== VERIFY MAGIC LINK TOKEN ==========
-  app.get('/api/auth/verify-claim/:token', async (req, res) => {
+  app.get('/api/auth/verify-claim/:token', async (req: any, res) => {
     try {
       const { token } = req.params;
       
@@ -182,22 +182,71 @@ export function registerClaimRoutes(app: Express): void {
       // Clear the magic link token (single use)
       await storage.clearMagicLinkToken(account.id);
 
-      res.json({
-        success: true,
-        account: {
-          id: account.id,
-          email: account.email,
-          primaryAccountType: account.primaryAccountType,
-          registrationStatus: account.registrationStatus
-        },
-        profiles: profiles.map(p => ({
-          id: p.id,
-          profileType: p.profileType,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          profileImageUrl: p.profileImageUrl
-        }))
-      });
+      // In development mode, automatically log the user in
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🎯 Development mode: Auto-logging in ${account.email}`);
+        
+        // Create a mock user session similar to Replit Auth
+        const user = {
+          claims: {
+            sub: account.id,
+            email: account.email,
+            first_name: profiles.length > 0 ? profiles[0].firstName : '',
+            last_name: profiles.length > 0 ? profiles[0].lastName : '',
+            profile_image_url: profiles.length > 0 ? profiles[0].profileImageUrl : null,
+          },
+          access_token: 'dev-token',
+          refresh_token: 'dev-refresh-token',
+          expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 1 week from now
+        };
+
+        // Log the user in using passport
+        req.login(user, (err: any) => {
+          if (err) {
+            console.error('Failed to create session:', err);
+            return res.status(500).json({ message: 'Failed to create session' });
+          }
+
+          console.log(`✅ Session created for ${account.email}`);
+          
+          res.json({
+            success: true,
+            autoLogin: true,
+            redirectUrl: '/profile-selection',
+            account: {
+              id: account.id,
+              email: account.email,
+              primaryAccountType: account.primaryAccountType,
+              registrationStatus: account.registrationStatus
+            },
+            profiles: profiles.map(p => ({
+              id: p.id,
+              profileType: p.profileType,
+              firstName: p.firstName,
+              lastName: p.lastName,
+              profileImageUrl: p.profileImageUrl
+            }))
+          });
+        });
+      } else {
+        // Production mode: Just return account data, user will need to go through OAuth
+        res.json({
+          success: true,
+          account: {
+            id: account.id,
+            email: account.email,
+            primaryAccountType: account.primaryAccountType,
+            registrationStatus: account.registrationStatus
+          },
+          profiles: profiles.map(p => ({
+            id: p.id,
+            profileType: p.profileType,
+            firstName: p.firstName,
+            lastName: p.lastName,
+            profileImageUrl: p.profileImageUrl
+          }))
+        });
+      }
 
     } catch (error) {
       console.error('Error verifying claim token:', error);

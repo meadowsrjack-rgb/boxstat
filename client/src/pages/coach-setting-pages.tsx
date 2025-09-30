@@ -1244,6 +1244,43 @@ export function CoachSecurityPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Session Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Session Management</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="text-md font-medium">Log Out</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Sign out of your account on this device</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="text-red-600 hover:text-red-800 border-red-300 hover:bg-red-50"
+                  onClick={() => window.location.href = "/api/logout"}
+                  data-testid="button-logout"
+                >
+                  Log Out
+                </Button>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="text-md font-medium">Sign Out All Devices</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">This will sign you out of all devices except this one</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="text-orange-600 hover:text-orange-800 border-orange-300 hover:bg-orange-50"
+                  data-testid="button-signout-all"
+                >
+                  Sign Out All
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

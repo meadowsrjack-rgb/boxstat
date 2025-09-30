@@ -287,11 +287,20 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== ADMIN: GENERATE CLAIM LINK (BYPASS EMAIL) ==========
-  app.post('/api/admin/generate-claim-link', async (req, res) => {
+  app.post('/api/admin/generate-claim-link', isAuthenticated, async (req: any, res) => {
     try {
-      // TODO: Add admin role check (for now, anyone can use this in dev)
+      // TODO: Add admin role check - for now, requires authentication
+      // In production, should check if req.user has admin privileges
       const { email } = requestAccountClaimSchema.parse(req.body);
       const normalizedEmail = email.toLowerCase().trim();
+
+      // Rate limiting to prevent abuse
+      const rateLimitKey = `admin-claim:${req.user.claims.sub}:${normalizedEmail}`;
+      if (!checkRateLimit(rateLimitKey)) {
+        return res.status(429).json({ 
+          message: 'Too many claim link requests. Please wait 5 minutes before trying again.' 
+        });
+      }
 
       // Find or sync the account
       let account = await storage.getAccountByEmail(normalizedEmail);
@@ -327,7 +336,10 @@ export function registerClaimRoutes(app: Express): void {
       const baseUrl = process.env.REPL_URL || 'http://localhost:5000';
       const claimLink = `${baseUrl}/claim-verify?token=${magicLinkToken}`;
       
-      console.log(`\n🎫 ADMIN CLAIM LINK GENERATED for ${normalizedEmail}`);
+      // Audit logging
+      console.log(`\n🎫 ADMIN CLAIM LINK GENERATED`);
+      console.log(`Requested by: ${req.user.claims.email || req.user.claims.sub}`);
+      console.log(`Target account: ${normalizedEmail} (${account.primaryAccountType})`);
       console.log(`Link: ${claimLink}`);
       console.log(`Expires: ${magicLinkExpires.toLocaleString()}\n`);
 

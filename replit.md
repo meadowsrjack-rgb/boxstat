@@ -31,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: Comprehensive schema supporting users, teams, events, payments, etc.
 
 ### Key Features & Design Decisions
+- **Authentication Flow**: Post-login account linking system with automatic coach detection. Users authenticate via Replit Auth, and the system automatically detects coaches by email domain (@upyourperformance.org or @upyourperformance.com). Coach profiles are auto-created and users are directed to coach dashboard. Non-coach users are presented with a simple profile type selection (parent or player) before being directed to their respective dashboards.
 - **User Management**: Single Parent account with linked child profiles (data objects, not independent users). Implements a Dual Mode System (Parent Mode with full access, Player Mode with restricted child access) secured by a 4-digit PIN.
 - **QR Code Check-in**: Secure gym entry and attendance tracking at Momentous Sports Center using static QR codes per player.
 - **Team Management**: Age-grouped teams with coaches and player rosters, supporting real-time chat and player performance tracking.

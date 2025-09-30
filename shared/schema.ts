@@ -80,6 +80,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   userType: varchar("user_type", { enum: ["parent", "player", "admin", "coach"] }).notNull(),
+  linkedAccountId: varchar("linked_account_id").references(() => accounts.id).unique(), // Links Replit user to program account
   dateOfBirth: date("date_of_birth"),
   phoneNumber: varchar("phone_number"),
   emergencyContact: varchar("emergency_contact"),

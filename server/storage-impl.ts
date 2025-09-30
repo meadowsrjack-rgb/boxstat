@@ -146,6 +146,12 @@ export interface IStorage {
   upsertUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<User>): Promise<User>;
   updateUserProfile(id: string, data: Partial<User>): Promise<User>;
+  
+  // Account linking operations
+  linkUserAccount(userId: string, accountId: string): Promise<User>;
+  unlinkUserAccount(userId: string): Promise<User>;
+  getUserByLinkedAccount(accountId: string): Promise<User | undefined>;
+  isAccountLinked(accountId: string): Promise<boolean>;
 
   
   // Family operations (legacy)
@@ -533,6 +539,41 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Account linking operations
+  async linkUserAccount(userId: string, accountId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ linkedAccountId: accountId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async unlinkUserAccount(userId: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ linkedAccountId: null, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getUserByLinkedAccount(accountId: string): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.linkedAccountId, accountId));
+    return user;
+  }
+
+  async isAccountLinked(accountId: string): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(users)
+      .where(eq(users.linkedAccountId, accountId));
+    return !!result;
+  }
+
   async updateUserSportsEngineInfo(userId: string, sportsEngineCustomerId: string, sportsEngineSubscriptionId: string): Promise<User> {
     const [user] = await db
       .update(users)
@@ -681,6 +722,7 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Alice',
           lastName: 'Johnson',
           userType: 'player' as const,
+          linkedAccountId: null,
           teamId: 1,
           jerseyNumber: 7,
           position: 'Guard',
@@ -713,6 +755,7 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Bob',
           lastName: 'Smith',
           userType: 'player' as const,
+          linkedAccountId: null,
           teamId: 1,
           jerseyNumber: 12,
           position: 'Forward',
@@ -749,6 +792,7 @@ export class DatabaseStorage implements IStorage {
           firstName: 'Charlie',
           lastName: 'Brown',
           userType: 'player' as const,
+          linkedAccountId: null,
           teamId: 2,
           jerseyNumber: 23,
           position: 'Center',

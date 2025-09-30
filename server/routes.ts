@@ -21,6 +21,7 @@ import notionRoutes from "./routes/notion";
 import privacyRoutes from "./routes/privacy";
 import claimsRoutes from "./routes/claims";
 import registerClaimRoutes from "./routes/claim-routes";
+import { notionAccountSync } from "./services/notionAccountSync";
 
 import multer from "multer";
 import path from "path";
@@ -144,6 +145,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching profiles:", error);
       res.status(500).json({ message: "Failed to fetch profiles" });
+    }
+  });
+
+  // Link user account to Notion data (settings page)
+  app.post('/api/settings/link-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userEmail = req.user.claims.email;
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+      const normalizedUserEmail = userEmail?.toLowerCase().trim();
+
+      // SECURITY: Require that the email being linked matches the authenticated user's email
+      if (normalizedEmail !== normalizedUserEmail) {
+        console.warn(`Link attempt rejected: User ${userId} (${normalizedUserEmail}) tried to link different email ${normalizedEmail}`);
+        return res.status(403).json({ 
+          message: 'You can only link your own email address. The email must match your login email.' 
+        });
+      }
+
+      // Check if user already has a linked account
+      const user = await storage.getUser(userId);
+      if (user?.linkedAccountId) {
+        return res.status(400).json({ 
+          message: 'Your account is already linked. Please unlink first before linking to a different account.' 
+        });
+      }
+
+      // First, try to find existing account without syncing
+      let account = await storage.getAccountByEmail(normalizedEmail);
+      
+      // Only sync from Notion if account not found locally
+      if (!account) {
+        console.log(`Account not found locally for ${normalizedEmail}, syncing from Notion...`);
+        try {
+          await notionAccountSync.syncAccountsFromNotion();
+          account = await storage.getAccountByEmail(normalizedEmail);
+        } catch (syncError) {
+          console.error('Notion sync failed:', syncError);
+          return res.status(503).json({ 
+            message: 'Unable to verify account with program database. Please try again later.' 
+          });
+        }
+      }
+      
+      if (!account) {
+        return res.status(404).json({ 
+          message: 'No matching account found in the program database. Please contact support if you believe this is an error.',
+          email: normalizedEmail
+        });
+      }
+
+      // Check if account is already linked to another user
+      const isLinked = await storage.isAccountLinked(account.id);
+      if (isLinked) {
+        return res.status(409).json({ 
+          message: 'This account is already linked to another user. Please contact support for assistance.' 
+        });
+      }
+
+      // Link user to account
+      try {
+        await storage.linkUserAccount(userId, account.id);
+      } catch (linkError: any) {
+        // Handle unique constraint violation
+        if (linkError.code === '23505' || linkError.message?.includes('unique')) {
+          return res.status(409).json({ 
+            message: 'This account is already linked. Please refresh the page.' 
+          });
+        }
+        throw linkError;
+      }
+
+      // Get profiles for the linked account
+      const profiles = await storage.getAccountProfiles(account.id);
+
+      // Update user profile completion status
+      await storage.updateUser(userId, {
+        profileCompleted: profiles.length > 0
+      });
+
+      console.log(`Successfully linked user ${userId} to account ${account.id} (${normalizedEmail})`);
+
+      res.json({
+        success: true,
+        message: 'Account linked successfully',
+        account: {
+          id: account.id,
+          email: account.email,
+          primaryAccountType: account.primaryAccountType
+        },
+        profiles: profiles.map(p => ({
+          id: p.id,
+          profileType: p.profileType,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          profileImageUrl: p.profileImageUrl
+        }))
+      });
+    } catch (error) {
+      console.error('Error linking account:', error);
+      res.status(500).json({ message: 'Failed to link account. Please try again later.' });
+    }
+  });
+
+  // Unlink user account (admin/support function)
+  app.post('/api/settings/unlink-account', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+
+      // Check if user has a linked account
+      const user = await storage.getUser(userId);
+      if (!user?.linkedAccountId) {
+        return res.status(400).json({ message: 'No linked account found' });
+      }
+
+      // Unlink account
+      await storage.unlinkUserAccount(userId);
+
+      console.log(`Successfully unlinked user ${userId} from account ${user.linkedAccountId}`);
+
+      res.json({
+        success: true,
+        message: 'Account unlinked successfully'
+      });
+    } catch (error) {
+      console.error('Error unlinking account:', error);
+      res.status(500).json({ message: 'Failed to unlink account. Please try again later.' });
     }
   });
 

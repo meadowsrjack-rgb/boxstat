@@ -2351,12 +2351,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile(profileData);
       console.log("Profile created successfully:", profile);
       
-      // Update user's profileCompleted status after creating first profile
+      // Update user's profileCompleted status and basic info after creating first profile
       await storage.updateUser(userId, { 
         profileCompleted: true,
-        userType: profile.profileType as "parent" | "player" | "admin" | "coach"
+        userType: profile.profileType as "parent" | "player" | "admin" | "coach",
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+        profileImageUrl: req.body.profileImageUrl || undefined
       });
-      console.log("User profileCompleted status updated to true");
+      console.log("User profileCompleted status and profile info updated");
       
       res.json(profile);
     } catch (error) {

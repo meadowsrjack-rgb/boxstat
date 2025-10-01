@@ -1,17 +1,24 @@
 import CheckInButton, { UypEvent } from '@/components/CheckInButton';
 import QrScannerModal from '@/components/QrScannerModal';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, Clock, Users, X } from 'lucide-react';
+import { MapPin, Calendar, Clock, Users, X, Check, CheckCircle2 } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useToast } from '@/hooks/use-toast';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 
 type EventDetailPanelProps = {
   event: UypEvent | null;
   userId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+};
+
+const MS = {
+  HOUR: 1000 * 60 * 60,
 };
 
 export default function EventDetailPanel({ 
@@ -21,8 +28,59 @@ export default function EventDetailPanel({
   onOpenChange 
 }: EventDetailPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
+  const { toast } = useToast();
+  const RSVP_OPEN_HOURS = 72; // 3 days before event
+  const RSVP_CLOSE_HOURS = 24; // 1 day before event
 
   if (!event) return null;
+
+  // Check if we're in RSVP window
+  const isRsvpWindow = useMemo(() => {
+    const now = Date.now();
+    const eventTime = new Date(event.startTime).getTime();
+    return now >= eventTime - RSVP_OPEN_HOURS * MS.HOUR && now <= eventTime - RSVP_CLOSE_HOURS * MS.HOUR;
+  }, [event.startTime]);
+
+  // Fetch RSVP status
+  const { data: rsvps = [] } = useQuery<any[]>({
+    queryKey: ['/api/rsvps', userId],
+    enabled: open,
+  });
+
+  const hasRsvp = useMemo(() => {
+    return rsvps.some(r => r.eventId?.toString() === event.id?.toString() && r.userId === userId);
+  }, [rsvps, event.id, userId]);
+
+  // RSVP mutation
+  const { mutate: confirmRsvp, isPending: isRsvpPending } = useMutation({
+    mutationFn: () => apiRequest('/api/rsvps', 'POST', {
+      eventId: event.id,
+      userId,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvps'] });
+      toast({ title: "RSVP Confirmed", description: "Thank you for your RSVP. Be sure to check in on arrival." });
+    },
+    onError: () => {
+      toast({ title: "RSVP Failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  // Remove RSVP mutation
+  const { mutate: removeRsvp, isPending: isRemovePending } = useMutation({
+    mutationFn: () => {
+      const rsvp = rsvps.find(r => r.eventId?.toString() === event.id?.toString() && r.userId === userId);
+      if (!rsvp) throw new Error('No RSVP found');
+      return apiRequest(`/api/rsvps/${rsvp.id}`, 'DELETE');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvps'] });
+      toast({ title: "RSVP Removed", description: "Your RSVP has been cancelled." });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove RSVP", description: "Please try again.", variant: "destructive" });
+    },
+  });
 
   const handleCheckedIn = () => {
     // Refresh or update UI as needed
@@ -116,6 +174,50 @@ export default function EventDetailPanel({
               {(event as any).description && (
                 <div className="text-sm text-gray-600">
                   <p>{(event as any).description}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* RSVP Section */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3">RSVP</h4>
+              {hasRsvp ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 bg-green-50 text-green-700 rounded-lg" data-testid="rsvp-confirmed">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="font-medium">You've RSVP'd for this event</span>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    onClick={() => removeRsvp()}
+                    disabled={isRemovePending}
+                    data-testid="button-remove-rsvp"
+                    className="w-full"
+                  >
+                    {isRemovePending ? 'Removing...' : 'Cancel RSVP'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {isRsvpWindow ? (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        Let us know if you're planning to attend this event.
+                      </p>
+                      <Button 
+                        onClick={() => confirmRsvp()}
+                        disabled={isRsvpPending}
+                        data-testid="button-confirm-rsvp"
+                        className="w-full"
+                      >
+                        {isRsvpPending ? 'Confirming...' : 'RSVP - I\'m Going'}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-500" data-testid="rsvp-window-closed">
+                      RSVP is available 3 days to 1 day before the event.
+                    </p>
+                  )}
                 </div>
               )}
             </div>

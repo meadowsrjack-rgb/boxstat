@@ -19,6 +19,7 @@ type EventDetailPanelProps = {
 
 const MS = {
   HOUR: 1000 * 60 * 60,
+  MINUTE: 1000 * 60,
 };
 
 export default function EventDetailPanel({ 

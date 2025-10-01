@@ -35,7 +35,6 @@ const profileSchema = z.object({
   dateOfBirth: z.string().optional(),
   jerseyNumber: z.string().optional(),
   teamId: z.number().optional(),
-  age: z.string().optional(),
   height: z.string().optional(),
   city: z.string().optional(),
   position: z.string().optional(),
@@ -71,7 +70,6 @@ export default function CreateProfile() {
       dateOfBirth: "",
       jerseyNumber: "",
       teamId: undefined,
-      age: "",
       height: "",
       city: "",
       position: "",
@@ -115,7 +113,6 @@ export default function CreateProfile() {
         form.setValue("phoneNumber", matchingRecord.phoneNumber || "");
         form.setValue("dateOfBirth", matchingRecord.dob || "");
         form.setValue("jerseyNumber", matchingRecord.jerseyNumber || "");
-        form.setValue("age", matchingRecord.age?.toString() || "");
         
         // Set teamId if available
         if (matchingRecord.teamId) {
@@ -152,6 +149,19 @@ export default function CreateProfile() {
         ? parseInt(data.jerseyNumber, 10) 
         : undefined;
 
+      // Calculate age from date of birth
+      let calculatedAge: string | undefined = undefined;
+      if (data.dateOfBirth) {
+        const birthDate = new Date(data.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        calculatedAge = age.toString();
+      }
+
       const response = await fetch("/api/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,7 +174,7 @@ export default function CreateProfile() {
           dateOfBirth: data.dateOfBirth,
           jerseyNumber: jerseyNum,
           teamId: data.teamId,
-          age: data.age,
+          age: calculatedAge,
           height: data.height,
           city: data.city,
           position: data.position,
@@ -398,40 +408,38 @@ export default function CreateProfile() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="age"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-white">Age (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="Age"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                                data-testid="input-age"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
+                    <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="height"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white">Height (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="e.g., 5'9&quot;"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                                data-testid="input-height"
-                              />
-                            </FormControl>
+                            <Select
+                              value={field.value || ""}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-height">
+                                  <SelectValue placeholder="Select height" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[200px]">
+                                {(() => {
+                                  const heights = [];
+                                  for (let feet = 3; feet <= 7; feet++) {
+                                    for (let inches = 0; inches < 12; inches++) {
+                                      heights.push(`${feet}'${inches}"`);
+                                    }
+                                  }
+                                  return heights.map((height) => (
+                                    <SelectItem key={height} value={height}>
+                                      {height}
+                                    </SelectItem>
+                                  ));
+                                })()}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

@@ -4,6 +4,8 @@ import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
+import EventDetailPanel from "@/components/EventDetailPanel";
+import { useAuth } from "@/hooks/useAuth";
 
 // Expected event shape coming from Google Calendar adapter
 type UypEvent = {
@@ -12,10 +14,14 @@ type UypEvent = {
   startTime: string; // ISO
   endTime?: string;
   eventType?: "Practice" | "Skills" | "Game" | "Other" | string;
+  location: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export default function SchedulePage() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   
   // Fetch events from API
   const { data: events = [], isLoading } = useQuery<UypEvent[]>({
@@ -27,6 +33,8 @@ export default function SchedulePage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<UypEvent | null>(null);
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
   
   // Touch/swipe handling
   const touchStartX = useRef<number | null>(null);
@@ -187,7 +195,12 @@ export default function SchedulePage() {
               eventsForSelectedDate.map(event => (
                 <div 
                   key={event.id} 
-                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg"
+                  className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg cursor-pointer hover:bg-red-100 transition"
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setEventDetailOpen(true);
+                  }}
+                  data-testid={`event-item-${event.id}`}
                 >
                   <div className="text-xs text-gray-600 font-medium">
                     {formatEventTime(event.startTime)}
@@ -257,6 +270,16 @@ export default function SchedulePage() {
           </div>
         </div>
       </div>
+
+      {/* Event Detail Panel */}
+      {user && (
+        <EventDetailPanel
+          event={selectedEvent}
+          userId={(user as any).id}
+          open={eventDetailOpen}
+          onOpenChange={setEventDetailOpen}
+        />
+      )}
     </div>
   );
 }

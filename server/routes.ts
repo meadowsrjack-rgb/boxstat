@@ -2351,15 +2351,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile(profileData);
       console.log("Profile created successfully:", profile);
       
-      // Update user's profileCompleted status and basic info after creating first profile
+      // Get team name if teamId was provided
+      let teamName = undefined;
+      if (req.body.teamId) {
+        try {
+          const team = await storage.getTeam(req.body.teamId);
+          teamName = team?.name;
+        } catch (e) {
+          console.error("Error fetching team name:", e);
+        }
+      }
+      
+      // Update user's profileCompleted status and ALL profile fields
       await storage.updateUser(userId, { 
         profileCompleted: true,
         userType: profile.profileType as "parent" | "player" | "admin" | "coach",
         firstName: req.body.firstName,
         lastName: req.body.lastName,
-        profileImageUrl: req.body.profileImageUrl || undefined
+        profileImageUrl: req.body.profileImageUrl || undefined,
+        phoneNumber: req.body.phoneNumber || undefined,
+        dateOfBirth: req.body.dateOfBirth || undefined,
+        jerseyNumber: req.body.jerseyNumber ? parseInt(req.body.jerseyNumber) : undefined,
+        teamId: req.body.teamId || undefined,
+        teamName: teamName,
+        age: req.body.age || undefined,
+        height: req.body.height || undefined,
+        city: req.body.city || undefined,
+        position: req.body.position || undefined,
       });
-      console.log("User profileCompleted status and profile info updated");
+      console.log("User profile fully updated with all fields");
       
       res.json(profile);
     } catch (error) {

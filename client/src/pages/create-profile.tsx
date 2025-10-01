@@ -35,6 +35,10 @@ const profileSchema = z.object({
   dateOfBirth: z.string().optional(),
   jerseyNumber: z.string().optional(),
   teamId: z.number().optional(),
+  age: z.string().optional(),
+  height: z.string().optional(),
+  city: z.string().optional(),
+  position: z.string().optional(),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -67,6 +71,10 @@ export default function CreateProfile() {
       dateOfBirth: "",
       jerseyNumber: "",
       teamId: undefined,
+      age: "",
+      height: "",
+      city: "",
+      position: "",
     }
   });
 
@@ -107,6 +115,7 @@ export default function CreateProfile() {
         form.setValue("phoneNumber", matchingRecord.phoneNumber || "");
         form.setValue("dateOfBirth", matchingRecord.dob || "");
         form.setValue("jerseyNumber", matchingRecord.jerseyNumber || "");
+        form.setValue("age", matchingRecord.age?.toString() || "");
         
         // Set teamId if available
         if (matchingRecord.teamId) {
@@ -155,6 +164,10 @@ export default function CreateProfile() {
           dateOfBirth: data.dateOfBirth,
           jerseyNumber: jerseyNum,
           teamId: data.teamId,
+          age: data.age,
+          height: data.height,
+          city: data.city,
+          position: data.position,
           profileImageUrl: claimData?.photoUrl || (user as any)?.profileImageUrl,
         }),
       });
@@ -345,24 +358,104 @@ export default function CreateProfile() {
 
                 {profileType === "player" && (
                   <>
-                    <FormField
-                      control={form.control}
-                      name="jerseyNumber"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Jersey Number (Optional)</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="Enter jersey number"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                              data-testid="input-jersey"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="jerseyNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Jersey Number (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Enter jersey number"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                                data-testid="input-jersey"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="position"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Position (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="e.g., PG, SG, SF"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                                data-testid="input-position"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="age"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Age (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="Age"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                                data-testid="input-age"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="height"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">Height (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="e.g., 5'9&quot;"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                                data-testid="input-height"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="city"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-white">City (Optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="City"
+                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                                data-testid="input-city"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <FormField
                       control={form.control}

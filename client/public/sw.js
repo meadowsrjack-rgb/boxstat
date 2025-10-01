@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uyp-basketball-v1';
+const CACHE_NAME = 'uyp-basketball-v2';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -19,15 +19,35 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event
+// Fetch event - Network first for JS files, cache first for others
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-  );
+  // Network-first strategy for JavaScript files to avoid stale code
+  if (event.request.url.includes('.js') || event.request.url.includes('.css')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Clone the response
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          return response;
+        })
+        .catch(() => {
+          // If network fails, try cache
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Cache-first strategy for other resources
+    event.respondWith(
+      caches.match(event.request)
+        .then((response) => {
+          return response || fetch(event.request);
+        })
+    );
+  }
 });
 
 // Activate event

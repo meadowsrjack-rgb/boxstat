@@ -14,9 +14,18 @@ const calendar = google.calendar({
   auth: GOOGLE_CALENDAR_API_KEY
 });
 
+// Geocoding availability flag
+let geocodingAvailable = true;
+let geocodingCheckDone = false;
+
 // Geocoding function to convert address to coordinates
 export async function geocodeLocation(address: string): Promise<{ lat: number; lng: number } | null> {
   if (!address || address === 'TBD') {
+    return null;
+  }
+
+  // Skip geocoding if we've already determined it's not available
+  if (!geocodingAvailable) {
     return null;
   }
 
@@ -29,17 +38,27 @@ export async function geocodeLocation(address: string): Promise<{ lat: number; l
     
     if (data.status === 'OK' && data.results && data.results.length > 0) {
       const location = data.results[0].geometry.location;
-      console.log(`Geocoded "${address}" to coordinates: ${location.lat}, ${location.lng}`);
       return {
         lat: location.lat,
         lng: location.lng
       };
+    } else if (data.status === 'REQUEST_DENIED') {
+      // Disable geocoding if API access is denied
+      if (!geocodingCheckDone) {
+        console.warn('Google Maps Geocoding API is not enabled. Event location coordinates will not be available. To enable geocoding, add a Google Maps API key with Geocoding API enabled.');
+        geocodingCheckDone = true;
+      }
+      geocodingAvailable = false;
+      return null;
     } else {
-      console.log(`Geocoding failed for "${address}": ${data.status}`);
       return null;
     }
   } catch (error) {
-    console.error(`Error geocoding location "${address}":`, error);
+    if (!geocodingCheckDone) {
+      console.error('Error accessing geocoding service:', error);
+      geocodingCheckDone = true;
+    }
+    geocodingAvailable = false;
     return null;
   }
 }

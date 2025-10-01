@@ -1,0 +1,362 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=VG2GhG6354Yd' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=VG2GhG6354Yd' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=35f58522:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+App.tsx:119 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/', …}
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:175 User data for profile check: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+App.tsx:176 Profile completed status: true
+App.tsx:177 IsAuthenticated: true
+App.tsx:178 IsLoading: false
+App.tsx:183 User authenticated, directing to main app with pre-created profiles
+App.tsx:185 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:704 Awards Summary: undefined
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:175 User data for profile check: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+App.tsx:176 Profile completed status: true
+App.tsx:177 IsAuthenticated: true
+App.tsx:178 IsLoading: false
+App.tsx:183 User authenticated, directing to main app with pre-created profiles
+App.tsx:185 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:704 Awards Summary: undefined
+player-dashboard.tsx:406 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ player-dashboard.tsx:406
+safelyCallDestroy @ chunk-RPCDYKBN.js?v=35f58522:16748
+commitHookEffectListUnmount @ chunk-RPCDYKBN.js?v=35f58522:16875
+commitPassiveUnmountInsideDeletedTreeOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18283
+commitPassiveUnmountEffectsInsideOfDeletedTree_begin @ chunk-RPCDYKBN.js?v=35f58522:18245
+commitPassiveUnmountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18181
+commitPassiveUnmountEffects @ chunk-RPCDYKBN.js?v=35f58522:18169
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19489
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19416
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=35f58522:555
+flush @ @tanstack_react-query.js?v=35f58522:569
+batch @ @tanstack_react-query.js?v=35f58522:587
+dispatch_fn @ @tanstack_react-query.js?v=35f58522:996
+setData @ @tanstack_react-query.js?v=35f58522:696
+onSuccess @ @tanstack_react-query.js?v=35f58522:897
+resolve @ @tanstack_react-query.js?v=35f58522:456
+Promise.then
+run @ @tanstack_react-query.js?v=35f58522:498
+start @ @tanstack_react-query.js?v=35f58522:536
+fetch @ @tanstack_react-query.js?v=35f58522:926
+executeFetch_fn @ @tanstack_react-query.js?v=35f58522:2211
+onSubscribe @ @tanstack_react-query.js?v=35f58522:1898
+subscribe @ @tanstack_react-query.js?v=35f58522:24
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=35f58522:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=35f58522:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=35f58522:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19432
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=35f58522:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18718
+workLoop @ chunk-RPCDYKBN.js?v=35f58522:197
+flushWork @ chunk-RPCDYKBN.js?v=35f58522:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=35f58522:384
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:406 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ player-dashboard.tsx:406
+safelyCallDestroy @ chunk-RPCDYKBN.js?v=35f58522:16748
+commitHookEffectListUnmount @ chunk-RPCDYKBN.js?v=35f58522:16875
+commitPassiveUnmountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18232
+commitPassiveUnmountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18213
+commitPassiveUnmountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18204
+commitPassiveUnmountEffects @ chunk-RPCDYKBN.js?v=35f58522:18169
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19489
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19416
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=35f58522:555
+flush @ @tanstack_react-query.js?v=35f58522:569
+batch @ @tanstack_react-query.js?v=35f58522:587
+dispatch_fn @ @tanstack_react-query.js?v=35f58522:996
+setData @ @tanstack_react-query.js?v=35f58522:696
+onSuccess @ @tanstack_react-query.js?v=35f58522:897
+resolve @ @tanstack_react-query.js?v=35f58522:456
+Promise.then
+run @ @tanstack_react-query.js?v=35f58522:498
+start @ @tanstack_react-query.js?v=35f58522:536
+fetch @ @tanstack_react-query.js?v=35f58522:926
+executeFetch_fn @ @tanstack_react-query.js?v=35f58522:2211
+onSubscribe @ @tanstack_react-query.js?v=35f58522:1898
+subscribe @ @tanstack_react-query.js?v=35f58522:24
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=35f58522:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=35f58522:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=35f58522:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19416
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=35f58522:555
+flush @ @tanstack_react-query.js?v=35f58522:569
+batch @ @tanstack_react-query.js?v=35f58522:587
+dispatch_fn @ @tanstack_react-query.js?v=35f58522:996
+setData @ @tanstack_react-query.js?v=35f58522:696
+onSuccess @ @tanstack_react-query.js?v=35f58522:897
+resolve @ @tanstack_react-query.js?v=35f58522:456
+Promise.then
+run @ @tanstack_react-query.js?v=35f58522:498
+start @ @tanstack_react-query.js?v=35f58522:536
+fetch @ @tanstack_react-query.js?v=35f58522:926
+executeFetch_fn @ @tanstack_react-query.js?v=35f58522:2211
+onSubscribe @ @tanstack_react-query.js?v=35f58522:1898
+subscribe @ @tanstack_react-query.js?v=35f58522:24
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=35f58522:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=35f58522:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=35f58522:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19432
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=35f58522:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18718
+workLoop @ chunk-RPCDYKBN.js?v=35f58522:197
+flushWork @ chunk-RPCDYKBN.js?v=35f58522:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=35f58522:384
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:305  GET https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/coach/evaluations?playerId=46118363&quarter=Q3&year=2025 403 (Forbidden)
+queryFn @ player-dashboard.tsx:305
+fetchFn @ @tanstack_react-query.js?v=35f58522:840
+run @ @tanstack_react-query.js?v=35f58522:494
+start @ @tanstack_react-query.js?v=35f58522:536
+fetch @ @tanstack_react-query.js?v=35f58522:926
+executeFetch_fn @ @tanstack_react-query.js?v=35f58522:2211
+onSubscribe @ @tanstack_react-query.js?v=35f58522:1898
+subscribe @ @tanstack_react-query.js?v=35f58522:24
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=35f58522:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=35f58522:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=35f58522:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19416
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=35f58522:555
+flush @ @tanstack_react-query.js?v=35f58522:569
+batch @ @tanstack_react-query.js?v=35f58522:587
+dispatch_fn @ @tanstack_react-query.js?v=35f58522:996
+setData @ @tanstack_react-query.js?v=35f58522:696
+onSuccess @ @tanstack_react-query.js?v=35f58522:897
+resolve @ @tanstack_react-query.js?v=35f58522:456
+Promise.then
+run @ @tanstack_react-query.js?v=35f58522:498
+start @ @tanstack_react-query.js?v=35f58522:536
+fetch @ @tanstack_react-query.js?v=35f58522:926
+executeFetch_fn @ @tanstack_react-query.js?v=35f58522:2211
+onSubscribe @ @tanstack_react-query.js?v=35f58522:1898
+subscribe @ @tanstack_react-query.js?v=35f58522:24
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=35f58522:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=35f58522:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=35f58522:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=35f58522:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=35f58522:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=35f58522:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19432
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=35f58522:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18718
+workLoop @ chunk-RPCDYKBN.js?v=35f58522:197
+flushWork @ chunk-RPCDYKBN.js?v=35f58522:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=35f58522:384
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+player-dashboard.tsx:704 Awards Summary: {rookieBadgesCount: 0, starterBadgesCount: 0, allStarBadgesCount: 0, superstarBadgesCount: 0, hofBadgesCount: 0, …}
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+QrScannerModal.tsx:129 Uncaught ReferenceError: DialogHeader is not defined
+    at QrScannerModal (QrScannerModal.tsx:129:10)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=35f58522:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=35f58522:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=35f58522:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=35f58522:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=35f58522:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=35f58522:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=35f58522:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=35f58522:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=35f58522:19137:13)
+QrScannerModal @ QrScannerModal.tsx:129
+renderWithHooks @ chunk-RPCDYKBN.js?v=35f58522:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=35f58522:14926
+beginWork @ chunk-RPCDYKBN.js?v=35f58522:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=35f58522:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=35f58522:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=35f58522:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=35f58522:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=35f58522:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=35f58522:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=35f58522:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+useAuth.ts:14 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Joe', lastName: 'Bloggs', profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+QrScannerModal.tsx:129 Uncaught ReferenceError: DialogHeader is not defined
+    at QrScannerModal (QrScannerModal.tsx:129:10)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=35f58522:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=35f58522:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=35f58522:15914:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=35f58522:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=35f58522:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=35f58522:3733:39)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=35f58522:19765:15)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=35f58522:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=35f58522:19137:13)
+QrScannerModal @ QrScannerModal.tsx:129
+renderWithHooks @ chunk-RPCDYKBN.js?v=35f58522:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=35f58522:14926
+beginWork @ chunk-RPCDYKBN.js?v=35f58522:15914
+callCallback2 @ chunk-RPCDYKBN.js?v=35f58522:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=35f58522:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=35f58522:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=35f58522:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=35f58522:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=35f58522:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=35f58522:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=35f58522:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+chunk-RPCDYKBN.js?v=35f58522:14032 The above error occurred in the <QrScannerModal> component:
+
+    at QrScannerModal (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/components/QrScannerModal.tsx:27:3)
+    at EventDetailPanel (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/components/EventDetailPanel.tsx?t=1759281608526:34:3)
+    at div
+    at main
+    at div
+    at PlayerDashboard (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/pages/player-dashboard.tsx?t=1759281608526:104:43)
+    at component
+    at Route (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=35f58522:323:16)
+    at Switch (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=35f58522:379:17)
+    at Router (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/src/App.tsx?t=1759281608526&v=THbXzqS1hDlngX8gTxDVn:128:48)
+    at QueryClientProvider (https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=35f58522:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=35f58522:14032
+update.callback @ chunk-RPCDYKBN.js?v=35f58522:14052
+callCallback @ chunk-RPCDYKBN.js?v=35f58522:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=35f58522:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=35f58522:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=35f58522:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=35f58522:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=35f58522:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=35f58522:19353
+commitRoot @ chunk-RPCDYKBN.js?v=35f58522:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627
+chunk-RPCDYKBN.js?v=35f58522:9129 Uncaught ReferenceError: DialogHeader is not defined
+    at QrScannerModal (QrScannerModal.tsx:129:10)
+    at renderWithHooks (chunk-RPCDYKBN.js?v=35f58522:11548:26)
+    at mountIndeterminateComponent (chunk-RPCDYKBN.js?v=35f58522:14926:21)
+    at beginWork (chunk-RPCDYKBN.js?v=35f58522:15914:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=35f58522:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=35f58522:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=35f58522:19137:13)
+    at renderRootSync (chunk-RPCDYKBN.js?v=35f58522:19116:15)
+    at recoverFromConcurrentError (chunk-RPCDYKBN.js?v=35f58522:18736:28)
+    at performSyncWorkOnRoot (chunk-RPCDYKBN.js?v=35f58522:18879:28)
+QrScannerModal @ QrScannerModal.tsx:129
+renderWithHooks @ chunk-RPCDYKBN.js?v=35f58522:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=35f58522:14926
+beginWork @ chunk-RPCDYKBN.js?v=35f58522:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=35f58522:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=35f58522:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=35f58522:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=35f58522:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=35f58522:18736
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=35f58522:18879
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=35f58522:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:18627

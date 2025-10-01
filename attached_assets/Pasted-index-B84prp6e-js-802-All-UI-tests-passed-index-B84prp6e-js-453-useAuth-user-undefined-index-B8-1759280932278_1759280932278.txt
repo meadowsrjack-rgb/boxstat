@@ -1,0 +1,192 @@
+index-B84prp6e.js:802 All UI tests passed
+index-B84prp6e.js:453 useAuth - user: undefined
+index-B84prp6e.js:453 useAuth - isLoading: true
+index-B84prp6e.js:453 useAuth - isAuthenticated: false
+index-B84prp6e.js:808 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://uyp-basketball-meadowsrjack.replit.app/', …}
+index-B84prp6e.js:808 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://uyp-basketball-meadowsrjack.replit.app/', …}
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:808 User data for profile check: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:808 Profile completed status: true
+index-B84prp6e.js:808 IsAuthenticated: true
+index-B84prp6e.js:808 IsLoading: false
+index-B84prp6e.js:808 User authenticated, directing to main app with pre-created profiles
+index-B84prp6e.js:808 User has completed profile setup, proceeding to dashboard
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: undefined
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:808 User data for profile check: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:808 Profile completed status: true
+index-B84prp6e.js:808 IsAuthenticated: true
+index-B84prp6e.js:808 IsLoading: false
+index-B84prp6e.js:808 User authenticated, directing to main app with pre-created profiles
+index-B84prp6e.js:808 User has completed profile setup, proceeding to dashboard
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: undefined
+index-B84prp6e.js:510 WebSocket connection to 'wss://uyp-basketball-meadowsrjack.replit.app/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ index-B84prp6e.js:510
+fj @ index-B84prp6e.js:40
+Fg @ index-B84prp6e.js:40
+Hh @ index-B84prp6e.js:40
+az @ index-B84prp6e.js:40
+wd @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+(anonymous) @ index-B84prp6e.js:40
+setTimeout
+a @ index-B84prp6e.js:48
+o @ index-B84prp6e.js:48
+batch @ index-B84prp6e.js:48
+Il @ index-B84prp6e.js:48
+setData @ index-B84prp6e.js:48
+onSuccess @ index-B84prp6e.js:48
+u @ index-B84prp6e.js:48
+Promise.then
+x @ index-B84prp6e.js:48
+start @ index-B84prp6e.js:48
+fetch @ index-B84prp6e.js:48
+og @ index-B84prp6e.js:48
+onSubscribe @ index-B84prp6e.js:48
+subscribe @ index-B84prp6e.js:48
+(anonymous) @ index-B84prp6e.js:48
+FU @ index-B84prp6e.js:38
+Uw @ index-B84prp6e.js:40
+Hh @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+az @ index-B84prp6e.js:40
+wd @ index-B84prp6e.js:40
+lI @ index-B84prp6e.js:40
+S @ index-B84prp6e.js:25
+U @ index-B84prp6e.js:25
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: {rookieBadgesCount: 0, starterBadgesCount: 0, allStarBadgesCount: 0, superstarBadgesCount: 0, hofBadgesCount: 0, …}
+index-B84prp6e.js:510  GET https://uyp-basketball-meadowsrjack.replit.app/api/coach/evaluations?playerId=46118363&quarter=Q3&year=2025 403 (Forbidden)
+queryFn @ index-B84prp6e.js:510
+i @ index-B84prp6e.js:48
+x @ index-B84prp6e.js:48
+start @ index-B84prp6e.js:48
+fetch @ index-B84prp6e.js:48
+og @ index-B84prp6e.js:48
+onSubscribe @ index-B84prp6e.js:48
+subscribe @ index-B84prp6e.js:48
+(anonymous) @ index-B84prp6e.js:48
+FU @ index-B84prp6e.js:38
+Uw @ index-B84prp6e.js:40
+Hh @ index-B84prp6e.js:40
+az @ index-B84prp6e.js:40
+wd @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+(anonymous) @ index-B84prp6e.js:40
+setTimeout
+a @ index-B84prp6e.js:48
+o @ index-B84prp6e.js:48
+batch @ index-B84prp6e.js:48
+Il @ index-B84prp6e.js:48
+setData @ index-B84prp6e.js:48
+onSuccess @ index-B84prp6e.js:48
+u @ index-B84prp6e.js:48
+Promise.then
+x @ index-B84prp6e.js:48
+start @ index-B84prp6e.js:48
+fetch @ index-B84prp6e.js:48
+og @ index-B84prp6e.js:48
+onSubscribe @ index-B84prp6e.js:48
+subscribe @ index-B84prp6e.js:48
+(anonymous) @ index-B84prp6e.js:48
+FU @ index-B84prp6e.js:38
+Uw @ index-B84prp6e.js:40
+Hh @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+az @ index-B84prp6e.js:40
+wd @ index-B84prp6e.js:40
+lI @ index-B84prp6e.js:40
+S @ index-B84prp6e.js:25
+U @ index-B84prp6e.js:25
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: {id: '46118363', email: 'jackoozgames@gmail.com', firstName: 'Bro', lastName: 'Play', profileImageUrl: null, …}
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:40 ReferenceError: DialogHeader is not defined
+    at rne (index-B84prp6e.js:510:3528)
+    at JB (index-B84prp6e.js:38:17018)
+    at fI (index-B84prp6e.js:40:44058)
+    at dI (index-B84prp6e.js:40:39790)
+    at nz (index-B84prp6e.js:40:39718)
+    at _v (index-B84prp6e.js:40:39570)
+    at vj (index-B84prp6e.js:40:35934)
+    at w_ (index-B84prp6e.js:40:36738)
+    at RA (index-B84prp6e.js:38:3279)
+    at index-B84prp6e.js:40:34263
+lj @ index-B84prp6e.js:40
+r.callback @ index-B84prp6e.js:40
+r_ @ index-B84prp6e.js:38
+x_ @ index-B84prp6e.js:40
+oI @ index-B84prp6e.js:40
+ez @ index-B84prp6e.js:40
+az @ index-B84prp6e.js:40
+wd @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+(anonymous) @ index-B84prp6e.js:40
+index-B84prp6e.js:510 Uncaught ReferenceError: DialogHeader is not defined
+    at rne (index-B84prp6e.js:510:3528)
+    at JB (index-B84prp6e.js:38:17018)
+    at fI (index-B84prp6e.js:40:44058)
+    at dI (index-B84prp6e.js:40:39790)
+    at nz (index-B84prp6e.js:40:39718)
+    at _v (index-B84prp6e.js:40:39570)
+    at vj (index-B84prp6e.js:40:35934)
+    at w_ (index-B84prp6e.js:40:36738)
+    at RA (index-B84prp6e.js:38:3279)
+    at index-B84prp6e.js:40:34263
+rne @ index-B84prp6e.js:510
+JB @ index-B84prp6e.js:38
+fI @ index-B84prp6e.js:40
+dI @ index-B84prp6e.js:40
+nz @ index-B84prp6e.js:40
+_v @ index-B84prp6e.js:40
+vj @ index-B84prp6e.js:40
+w_ @ index-B84prp6e.js:40
+RA @ index-B84prp6e.js:38
+(anonymous) @ index-B84prp6e.js:40

@@ -1,0 +1,83 @@
+index-B84prp6e.js:802 All UI tests passed
+index-B84prp6e.js:453 useAuth - user: undefined
+index-B84prp6e.js:453 useAuth - isLoading: true
+index-B84prp6e.js:453 useAuth - isAuthenticated: false
+index-B84prp6e.js:808 SW registered:  ServiceWorkerRegistration
+index-B84prp6e.js:808 SW registered:  ServiceWorkerRegistration
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:808 User data for profile check: Object
+index-B84prp6e.js:808 Profile completed status: true
+index-B84prp6e.js:808 IsAuthenticated: true
+index-B84prp6e.js:808 IsLoading: false
+index-B84prp6e.js:808 User authenticated, directing to main app with pre-created profiles
+index-B84prp6e.js:808 User has completed profile setup, proceeding to dashboard
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: undefined
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:808 User data for profile check: Object
+index-B84prp6e.js:808 Profile completed status: true
+index-B84prp6e.js:808 IsAuthenticated: true
+index-B84prp6e.js:808 IsLoading: false
+index-B84prp6e.js:808 User authenticated, directing to main app with pre-created profiles
+index-B84prp6e.js:808 User has completed profile setup, proceeding to dashboard
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: undefined
+index-B84prp6e.js:510 WebSocket connection to 'wss://uyp-basketball-meadowsrjack.replit.app/ws' failed: WebSocket is closed before the connection is established.
+(anonymous) @ index-B84prp6e.js:510
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:510 Awards Summary: Object
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:453 useAuth - user: Object
+index-B84prp6e.js:453 useAuth - isLoading: false
+index-B84prp6e.js:453 useAuth - isAuthenticated: true
+index-B84prp6e.js:40 ReferenceError: DialogHeader is not defined
+    at rne (index-B84prp6e.js:510:3528)
+    at JB (index-B84prp6e.js:38:17018)
+    at fI (index-B84prp6e.js:40:44058)
+    at dI (index-B84prp6e.js:40:39790)
+    at nz (index-B84prp6e.js:40:39718)
+    at _v (index-B84prp6e.js:40:39570)
+    at vj (index-B84prp6e.js:40:35934)
+    at w_ (index-B84prp6e.js:40:36738)
+    at RA (index-B84prp6e.js:38:3279)
+    at index-B84prp6e.js:40:34263
+lj @ index-B84prp6e.js:40
+index-B84prp6e.js:38 Uncaught ReferenceError: DialogHeader is not defined
+    at rne (index-B84prp6e.js:510:3528)
+    at JB (index-B84prp6e.js:38:17018)
+    at fI (index-B84prp6e.js:40:44058)
+    at dI (index-B84prp6e.js:40:39790)
+    at nz (index-B84prp6e.js:40:39718)
+    at _v (index-B84prp6e.js:40:39570)
+    at vj (index-B84prp6e.js:40:35934)
+    at w_ (index-B84prp6e.js:40:36738)
+    at RA (index-B84prp6e.js:38:3279)
+    at index-B84prp6e.js:40:34263
+api/coach/evaluations?playerId=46118363&quarter=Q3&year=2025:1  Failed to load resource: the server responded with a status of 403 ()

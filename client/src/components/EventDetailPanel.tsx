@@ -32,31 +32,34 @@ export default function EventDetailPanel({
   const RSVP_OPEN_HOURS = 72; // 3 days before event
   const RSVP_CLOSE_HOURS = 24; // 1 day before event
 
-  if (!event) return null;
-
   // Check if we're in RSVP window
   const isRsvpWindow = useMemo(() => {
+    if (!event) return false;
     const now = Date.now();
     const eventTime = new Date(event.startTime).getTime();
     return now >= eventTime - RSVP_OPEN_HOURS * MS.HOUR && now <= eventTime - RSVP_CLOSE_HOURS * MS.HOUR;
-  }, [event.startTime]);
+  }, [event?.startTime]);
 
   // Fetch RSVP status
   const { data: rsvps = [] } = useQuery<any[]>({
     queryKey: ['/api/rsvps', userId],
-    enabled: open,
+    enabled: open && !!event,
   });
 
   const hasRsvp = useMemo(() => {
+    if (!event) return false;
     return rsvps.some(r => r.eventId?.toString() === event.id?.toString() && r.userId === userId);
-  }, [rsvps, event.id, userId]);
+  }, [rsvps, event?.id, userId]);
 
   // RSVP mutation
   const { mutate: confirmRsvp, isPending: isRsvpPending } = useMutation({
-    mutationFn: () => apiRequest('/api/rsvps', 'POST', {
-      eventId: event.id,
-      userId,
-    }),
+    mutationFn: () => {
+      if (!event) throw new Error('No event');
+      return apiRequest('/api/rsvps', 'POST', {
+        eventId: event.id,
+        userId,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rsvps'] });
       toast({ title: "RSVP Confirmed", description: "Thank you for your RSVP. Be sure to check in on arrival." });
@@ -69,6 +72,7 @@ export default function EventDetailPanel({
   // Remove RSVP mutation
   const { mutate: removeRsvp, isPending: isRemovePending } = useMutation({
     mutationFn: () => {
+      if (!event) throw new Error('No event');
       const rsvp = rsvps.find(r => r.eventId?.toString() === event.id?.toString() && r.userId === userId);
       if (!rsvp) throw new Error('No RSVP found');
       return apiRequest(`/api/rsvps/${rsvp.id}`, 'DELETE');
@@ -81,6 +85,8 @@ export default function EventDetailPanel({
       toast({ title: "Failed to remove RSVP", description: "Please try again.", variant: "destructive" });
     },
   });
+
+  if (!event) return null;
 
   const handleCheckedIn = () => {
     // Refresh or update UI as needed

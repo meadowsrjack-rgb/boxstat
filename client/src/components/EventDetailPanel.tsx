@@ -2,7 +2,7 @@ import CheckInButton, { UypEvent } from '@/components/CheckInButton';
 import QrScannerModal from '@/components/QrScannerModal';
 import { useState, useMemo } from 'react';
 import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, Clock, Users, X, Check, CheckCircle2 } from 'lucide-react';
@@ -131,7 +131,7 @@ export default function EventDetailPanel({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg" data-testid="event-detail-modal">
-          <DialogHeader>
+          <div className="flex flex-col space-y-1.5 text-center sm:text-left">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <DialogTitle className="text-xl font-semibold pr-8">
@@ -155,7 +155,7 @@ export default function EventDetailPanel({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-          </DialogHeader>
+          </div>
           
           <div className="space-y-6">
             {/* Event Details */}

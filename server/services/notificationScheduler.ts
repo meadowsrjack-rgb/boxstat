@@ -8,22 +8,23 @@ export class NotificationScheduler {
   start() {
     console.log('Starting notification scheduler...');
     
+    // DISABLED: storage.getUpcomingEvents not implemented yet
     // Check for upcoming events every 15 minutes
-    const eventReminderJob = cron.schedule('*/15 * * * *', async () => {
-      await this.processEventReminders();
-    }, {
-      scheduled: false
-    });
+    // const eventReminderJob = cron.schedule('*/15 * * * *', async () => {
+    //   await this.processEventReminders();
+    // }, {
+    //   scheduled: false
+    // });
 
     // Check for check-in availability every 5 minutes  
-    const checkinAvailableJob = cron.schedule('*/5 * * * *', async () => {
-      await this.processCheckInAvailability();
-    }, {
-      scheduled: false
-    });
+    // const checkinAvailableJob = cron.schedule('*/5 * * * *', async () => {
+    //   await this.processCheckInAvailability();
+    // }, {
+    //   scheduled: false
+    // });
 
-    this.jobs.set('eventReminders', eventReminderJob);
-    this.jobs.set('checkinAvailable', checkinAvailableJob);
+    // this.jobs.set('eventReminders', eventReminderJob);
+    // this.jobs.set('checkinAvailable', checkinAvailableJob);
 
     // Start all jobs
     this.jobs.forEach((job, name) => {

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -107,6 +107,7 @@ function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
 
 function Router() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   
   // Check if user needs profile setup
   const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
@@ -191,7 +192,27 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
-        // Redirect to profile selection for all users
+        const userType = (user as any)?.userType;
+        const profileCompleted = (user as any)?.profileCompleted;
+        
+        // If user has a completed profile, redirect to their dashboard
+        if (profileCompleted) {
+          if (userType === "coach") {
+            setLocation("/coach-dashboard");
+            return null;
+          } else if (userType === "player") {
+            setLocation("/player-dashboard");
+            return null;
+          } else if (userType === "parent") {
+            setLocation("/parent-dashboard");
+            return null;
+          } else if (userType === "admin") {
+            setLocation("/admin-dashboard");
+            return null;
+          }
+        }
+        
+        // Otherwise, show profile selection
         return <ProfileSelection />;
       }} />
       <Route path="/dashboard" component={() => {

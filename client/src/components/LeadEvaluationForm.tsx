@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, FileDown, Users, ClipboardCheck } from "lucide-react";
+import { CalendarIcon, FileDown, Users, ClipboardCheck, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -62,6 +62,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
   });
 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const handleSkillScoreChange = (skillName: string, value: number[]) => {
     setFormData(prev => ({
@@ -73,9 +74,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
     }));
   };
 
-  const generatePDF = async () => {
-    setIsGeneratingPDF(true);
-    
+  const generatePDFBlob = async (): Promise<{ blob: Blob; fileName: string } | null> => {
     try {
       // Create a temporary div with the evaluation template
       const tempDiv = document.createElement('div');
@@ -225,14 +224,69 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
       
-      // Download the PDF
+      // Get PDF as blob
+      const blob = pdf.output('blob');
       const fileName = `Coach Evaluation - ${formData.playerName}.pdf`;
-      pdf.save(fileName);
       
+      return { blob, fileName };
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      return null;
+    }
+  };
+
+  const generatePDF = async () => {
+    setIsGeneratingPDF(true);
+    
+    try {
+      const result = await generatePDFBlob();
+      if (result) {
+        const { blob, fileName } = result;
+        // Create a download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
     } finally {
       setIsGeneratingPDF(false);
+    }
+  };
+
+  const sharePDF = async () => {
+    if (!navigator.share) {
+      alert('Sharing is not supported on this device. Please use the Export PDF button instead.');
+      return;
+    }
+
+    setIsSharing(true);
+    
+    try {
+      const result = await generatePDFBlob();
+      if (!result) {
+        alert('Failed to generate PDF');
+        return;
+      }
+
+      const { blob, fileName } = result;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      await navigator.share({
+        files: [file],
+        title: 'Coach Evaluation',
+        text: `Coach evaluation for ${formData.playerName}`
+      });
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('Error sharing PDF:', error);
+        alert('Failed to share PDF. Please try downloading instead.');
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -391,6 +445,16 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-3">
+        <Button
+          onClick={sharePDF}
+          disabled={!isFormValid || isSharing}
+          variant="outline"
+          className="border-red-600 text-red-600 hover:bg-red-50"
+          data-testid="button-share-pdf"
+        >
+          <Share2 className="h-4 w-4 mr-2" />
+          {isSharing ? "Preparing..." : "Share"}
+        </Button>
         <Button
           onClick={generatePDF}
           disabled={!isFormValid || isGeneratingPDF}

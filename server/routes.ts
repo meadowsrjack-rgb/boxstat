@@ -3204,40 +3204,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // First check if this user has an account (for GHL integration)
+      // First check if this user has an account
       const account = await storage.getAccount(userId);
       if (account) {
-        // Get profile relationships for this account
+        // Get ALL profiles for this account
         const profiles = await storage.getAccountProfiles(account.id);
-        const parentProfile = profiles.find(p => p.profileType === 'parent');
         
-        if (parentProfile) {
-          const relationships = await storage.getProfileRelationships(account.id);
-          const players = [];
-          
-          for (const rel of relationships) {
-            const playerProfile = await storage.getProfile(rel.playerProfileId);
-            if (playerProfile) {
-              players.push({
-                id: playerProfile.id,
-                firstName: playerProfile.firstName || '',
-                lastName: playerProfile.lastName || '',
-                teamName: playerProfile.teamId || null,
-                profileImageUrl: playerProfile.profileImageUrl || null,
-                relationship: rel.relationship,
-                schoolGrade: playerProfile.schoolGrade,
-                position: playerProfile.position,
-                jerseyNumber: playerProfile.jerseyNumber,
-                nextEvent: null // TODO: Add next event logic if needed
-              });
-            }
-          }
-          
-          return res.json(players);
-        }
+        // Filter for player profiles and transform to expected format
+        const playerProfiles = profiles.filter(p => p.profileType === 'player');
+        
+        const players = playerProfiles.map(playerProfile => ({
+          id: playerProfile.id,
+          firstName: playerProfile.firstName || '',
+          lastName: playerProfile.lastName || '',
+          teamName: playerProfile.teamId || null,
+          profileImageUrl: playerProfile.profileImageUrl || null,
+          relationship: 'child', // Default relationship for profiles in same account
+          schoolGrade: playerProfile.schoolGrade,
+          position: playerProfile.position,
+          jerseyNumber: playerProfile.jerseyNumber,
+          dateOfBirth: playerProfile.dateOfBirth,
+          nextEvent: null // TODO: Add next event logic if needed
+        }));
+        
+        return res.json(players);
       }
       
-      // Fallback to original family members logic for non-GHL users
+      // Fallback to original family members logic for legacy users
       const familyMembers = await storage.getFamilyMembers(userId);
       
       // Transform to match expected format
@@ -3262,104 +3255,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       
-      // First check if this user has an account (for GHL integration)
+      // First check if this user has an account
       const account = await storage.getAccount(userId);
       if (account) {
-        // Get profile relationships for this account
+        // Get ALL profiles for this account
         const profiles = await storage.getAccountProfiles(account.id);
-        const parentProfile = profiles.find(p => p.profileType === 'parent');
         
-        if (parentProfile) {
-          const relationships = await storage.getProfileRelationships(account.id);
-          const players = [];
+        // Filter for player profiles
+        const playerProfiles = profiles.filter(p => p.profileType === 'player');
+        const players = [];
+        
+        for (const playerProfile of playerProfiles) {
+          // Get comprehensive data for each player
           
-          for (const rel of relationships) {
-            if (!rel.playerProfileId) continue; // Skip if no player profile ID
-            
-            const playerProfile = await storage.getProfile(rel.playerProfileId);
-            if (playerProfile && playerProfile.profileType === 'player') {
-              // Get comprehensive data for each player
-              
-              // Team information
-              let team = null;
-              if (playerProfile.teamId) {
-                team = await storage.getTeam(playerProfile.teamId);
-              }
-              
-              // Age calculation
-              let age = null;
-              if (playerProfile.dateOfBirth) {
-                const today = new Date();
-                const birthDate = new Date(playerProfile.dateOfBirth);
-                age = today.getFullYear() - birthDate.getFullYear();
-                const monthDiff = today.getMonth() - birthDate.getMonth();
-                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                  age--;
-                }
-              }
-              
-              // Get trophies and badges counts
-              const [userTrophies, userBadges] = await Promise.all([
-                storage.getUserTrophies(rel.playerProfileId),
-                storage.getUserBadges(rel.playerProfileId)
-              ]);
-              
-              // Get last check-in
-              const attendances = await storage.getUserAttendances(rel.playerProfileId);
-              let lastCheckin = null;
-              if (attendances.length > 0) {
-                // Sort by most recent
-                const sortedAttendances = attendances.sort((a, b) => 
-                  new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
-                );
-                const lastAttendance = sortedAttendances[0];
-                
-                // Get event details for location
-                let location = 'Unknown location';
-                if (lastAttendance.eventId) {
-                  const event = await storage.getEvent(lastAttendance.eventId);
-                  if (event) {
-                    location = event.location;
-                  }
-                }
-                
-                lastCheckin = {
-                  checkedInAt: lastAttendance.checkedInAt,
-                  location: location
-                };
-              }
-              
-              // Registration status from account
-              const registrationStatus = account.registrationStatus || 'pending';
-              
-              // Calculate skill rating (for now, use a placeholder)
-              // TODO: Implement proper skill rating calculation
-              const skillRating = '--'; // This should be calculated from player stats/evaluations
-              
-              players.push({
-                id: playerProfile.id,
-                firstName: playerProfile.firstName || '',
-                lastName: playerProfile.lastName || '',
-                team: team ? { name: team.name, id: team.id } : null,
-                age: age,
-                jerseyNumber: playerProfile.jerseyNumber,
-                position: playerProfile.position,
-                skillRating: skillRating,
-                trophyCount: userTrophies.length,
-                badgeCount: userBadges.length,
-                lastCheckin: lastCheckin,
-                registrationStatus: registrationStatus,
-                profileImageUrl: playerProfile.profileImageUrl || null,
-                relationship: rel.relationship
-              });
+          // Team information
+          let team = null;
+          if (playerProfile.teamId) {
+            team = await storage.getTeam(playerProfile.teamId);
+          }
+          
+          // Age calculation
+          let age = null;
+          if (playerProfile.dateOfBirth) {
+            const today = new Date();
+            const birthDate = new Date(playerProfile.dateOfBirth);
+            age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
             }
           }
           
-          return res.json(players);
+          // Get trophies and badges counts
+          const [userTrophies, userBadges] = await Promise.all([
+            storage.getUserTrophies(playerProfile.id),
+            storage.getUserBadges(playerProfile.id)
+          ]);
+          
+          // Get last check-in
+          const attendances = await storage.getUserAttendances(playerProfile.id);
+          let lastCheckin = null;
+          if (attendances.length > 0) {
+            // Sort by most recent
+            const sortedAttendances = attendances.sort((a, b) => 
+              new Date(b.checkedInAt).getTime() - new Date(a.checkedInAt).getTime()
+            );
+            const lastAttendance = sortedAttendances[0];
+            
+            // Get event details for location
+            let location = 'Unknown location';
+            if (lastAttendance.eventId) {
+              const event = await storage.getEvent(lastAttendance.eventId);
+              if (event) {
+                location = event.location;
+              }
+            }
+            
+            lastCheckin = {
+              checkedInAt: lastAttendance.checkedInAt,
+              location: location
+            };
+          }
+          
+          // Registration status from account
+          const registrationStatus = account.registrationStatus || 'pending';
+          
+          // Calculate skill rating (for now, use a placeholder)
+          // TODO: Implement proper skill rating calculation
+          const skillRating = '--'; // This should be calculated from player stats/evaluations
+          
+          players.push({
+            id: playerProfile.id,
+            firstName: playerProfile.firstName || '',
+            lastName: playerProfile.lastName || '',
+            team: team ? { name: team.name, id: team.id } : null,
+            age: age,
+            jerseyNumber: playerProfile.jerseyNumber,
+            position: playerProfile.position,
+            skillRating: skillRating,
+            trophyCount: userTrophies.length,
+            badgeCount: userBadges.length,
+            lastCheckin: lastCheckin,
+            registrationStatus: registrationStatus,
+            profileImageUrl: playerProfile.profileImageUrl || null,
+            relationship: 'child' // Default relationship for profiles in same account
+          });
         }
+        
+        return res.json(players);
       }
       
-      // Fallback for non-GHL users - return empty array for now
+      // Fallback for legacy users - return empty array for now
       res.json([]);
     } catch (error) {
       console.error('Error fetching comprehensive parent players:', error);

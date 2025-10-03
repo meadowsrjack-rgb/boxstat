@@ -38,6 +38,7 @@ Preferred communication style: Simple, everyday language.
 - **Event & Scheduling**: Handles various event types, integrated with Google Calendar for automatic hourly sync (upyourperformance@gmail.com). Features advanced event parsing, interactive filtering, and an enhanced calendar UI with color-coded events and a modern sliding drawer for details.
 - **Payment Integration**: Uses SportsEngine for secure payment processing (league fees, uniforms, tournaments) with transaction tracking and quick pay options.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities for offline functionality. Player dashboard includes skills progress, interactive trophy/badge counters (32% larger total for better visibility with clickable navigation to trophies-badges page), and profile photo upload. Coach dashboard is coach-focused with QR code scanner for player check-ins and team management features. Player Mode hides pricing and payment options, showing only purchased content. Schedule navigation uses calendar icons for intuitive recognition.
+- **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for dribbling, shooting, passing, catching, coachability, and defense. Evaluations can be exported as PDF or shared directly via the Web Share API to messaging apps (Telegram, WhatsApp, etc.) on mobile devices.
 
 ## External Dependencies
 

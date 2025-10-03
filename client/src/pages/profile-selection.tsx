@@ -88,7 +88,7 @@ export default function ProfileSelection() {
     },
   });
 
-  const handleCreateProfile = () => setLocation("/create-profile");
+  const handleCreateProfile = () => setLocation("/select-profile-type");
   
   const handleSelectProfile = async (id: string) => {
     // First, try to verify passcode using the current user's ID (this will succeed if no passcode is set)

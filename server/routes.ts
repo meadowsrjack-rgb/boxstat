@@ -2337,8 +2337,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const qrCodeData = `UYP-${Date.now()}-${userId}`;
       
-      const profileData = {
+      // Convert empty strings to null for optional fields
+      const cleanedBody = {
         ...req.body,
+        phoneNumber: req.body.phoneNumber || null,
+        dateOfBirth: req.body.dateOfBirth || null,
+        jerseyNumber: req.body.jerseyNumber || undefined,
+        teamId: req.body.teamId || undefined,
+        height: req.body.height || null,
+        city: req.body.city || null,
+        position: req.body.position || null,
+        profileImageUrl: req.body.profileImageUrl || null,
+      };
+      
+      const profileData = {
+        ...cleanedBody,
         id: profileId,
         accountId: userId,
         qrCodeData: qrCodeData,

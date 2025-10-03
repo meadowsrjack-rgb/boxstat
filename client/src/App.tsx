@@ -47,6 +47,13 @@ import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import { useQuery } from "@tanstack/react-query";
+
+type Profile = {
+  id: string;
+  profileType: "parent" | "player" | "coach";
+  firstName: string;
+  lastName: string;
+};
 import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
 
@@ -192,28 +199,32 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/" component={() => {
-        const userType = (user as any)?.userType;
-        const profileCompleted = (user as any)?.profileCompleted;
+        // Check if user has existing profiles
+        const userId = (user as any)?.id;
+        const { data: profiles, isLoading: profilesLoading } = useQuery<Profile[]>({
+          queryKey: [`/api/profiles/${userId}`],
+          enabled: !!userId,
+        });
         
-        // If user has a completed profile, redirect to their dashboard
-        if (profileCompleted) {
-          if (userType === "coach") {
-            setLocation("/coach-dashboard");
-            return null;
-          } else if (userType === "player") {
-            setLocation("/player-dashboard");
-            return null;
-          } else if (userType === "parent") {
-            setLocation("/parent-dashboard");
-            return null;
-          } else if (userType === "admin") {
-            setLocation("/admin-dashboard");
-            return null;
-          }
+        if (profilesLoading) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
+              <div className="text-white text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                <p>Loading your profiles...</p>
+              </div>
+            </div>
+          );
         }
         
-        // Otherwise, show profile selection
-        return <ProfileSelection />;
+        // If user has profiles, show profile selection page
+        if (profiles && profiles.length > 0) {
+          return <ProfileSelection />;
+        }
+        
+        // If user has no profiles, redirect to create profile
+        setLocation("/create-profile");
+        return null;
       }} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {

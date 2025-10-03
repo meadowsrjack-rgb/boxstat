@@ -1,0 +1,133 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=SYtmeWJ705qW' failed: 
+setupWebSocket @ client:536
+(anonymous) @ client:531
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=SYtmeWJ705qW' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+setupWebSocket @ client:536
+fallback @ client:509
+(anonymous) @ client:555
+chunk-RPCDYKBN.js?v=35f58522:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration
+App.tsx:120 SW registered:  ServiceWorkerRegistration
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:176 User data for profile check: Object
+App.tsx:177 Profile completed status: false
+App.tsx:178 IsAuthenticated: true
+App.tsx:179 IsLoading: false
+App.tsx:184 User authenticated, directing to main app with pre-created profiles
+App.tsx:186 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:176 User data for profile check: Object
+App.tsx:177 Profile completed status: false
+App.tsx:178 IsAuthenticated: true
+App.tsx:179 IsLoading: false
+App.tsx:184 User authenticated, directing to main app with pre-created profiles
+App.tsx:186 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:165  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 500 (Internal Server Error)
+mutationFn @ create-profile.tsx:165
+fn @ @tanstack_react-query.js?v=35f58522:1189
+run @ @tanstack_react-query.js?v=35f58522:494
+start @ @tanstack_react-query.js?v=35f58522:536
+execute @ @tanstack_react-query.js?v=35f58522:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=35f58522:2630
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3295
+onSubmit @ create-profile.tsx:218
+(anonymous) @ chunk-4BFJKWC4.js?v=35f58522:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=35f58522:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=35f58522:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=35f58522:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=35f58522:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=35f58522:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=35f58522:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=35f58522:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=35f58522:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=35f58522:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=35f58522:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=35f58522:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=35f58522:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=35f58522:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=35f58522:5449
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:165  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 500 (Internal Server Error)
+mutationFn @ create-profile.tsx:165
+fn @ @tanstack_react-query.js?v=35f58522:1189
+run @ @tanstack_react-query.js?v=35f58522:494
+(anonymous) @ @tanstack_react-query.js?v=35f58522:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=35f58522:515
+Promise.catch
+run @ @tanstack_react-query.js?v=35f58522:498
+start @ @tanstack_react-query.js?v=35f58522:536
+execute @ @tanstack_react-query.js?v=35f58522:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=35f58522:2630
+(anonymous) @ @tanstack_react-query.js?v=35f58522:3295
+onSubmit @ create-profile.tsx:218
+(anonymous) @ chunk-4BFJKWC4.js?v=35f58522:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=35f58522:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=35f58522:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=35f58522:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=35f58522:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=35f58522:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=35f58522:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=35f58522:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=35f58522:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=35f58522:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=35f58522:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=35f58522:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=35f58522:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=35f58522:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=35f58522:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=35f58522:5449
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: null, …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true

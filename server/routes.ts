@@ -2340,13 +2340,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert empty strings to null for optional fields
       const cleanedBody = {
         ...req.body,
-        phoneNumber: req.body.phoneNumber || null,
-        dateOfBirth: req.body.dateOfBirth || null,
-        jerseyNumber: req.body.jerseyNumber || undefined,
+        phoneNumber: req.body.phoneNumber && req.body.phoneNumber.trim() !== '' ? req.body.phoneNumber : null,
+        dateOfBirth: req.body.dateOfBirth && req.body.dateOfBirth.trim() !== '' ? req.body.dateOfBirth : null,
+        jerseyNumber: req.body.jerseyNumber && req.body.jerseyNumber.toString().trim() !== '' ? parseInt(req.body.jerseyNumber) : undefined,
         teamId: req.body.teamId || undefined,
-        height: req.body.height || null,
-        city: req.body.city || null,
-        position: req.body.position || null,
+        height: req.body.height && req.body.height.trim() !== '' ? req.body.height : null,
+        city: req.body.city && req.body.city.trim() !== '' ? req.body.city : null,
+        position: req.body.position && req.body.position.trim() !== '' ? req.body.position : null,
         profileImageUrl: req.body.profileImageUrl || null,
       };
       

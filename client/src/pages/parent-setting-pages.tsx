@@ -2368,10 +2368,44 @@ export function ParentDevicesPage() {
 export function ParentDangerPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  // Get current parent profile
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['/api/profiles/me'],
+    enabled: !!(user as any)?.id
+  });
+  
+  const currentProfile = (profiles as any[]).find((p: any) => p.profileType === 'parent');
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentProfile?.id) throw new Error("No profile found");
+      const response = await apiRequest(`/api/profiles/${currentProfile.id}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Profile Deleted", 
+        description: "Your parent profile has been deleted successfully."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      setLocation("/profile-selection");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Delete Profile", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
 
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
@@ -2438,6 +2472,41 @@ export function ParentDangerPage() {
             </CardHeader>
             <CardContent className="text-red-800 dark:text-red-200 text-sm">
               The actions in this section are permanent and cannot be undone. Please proceed with extreme caution.
+            </CardContent>
+          </Card>
+
+          {/* Profile Deletion */}
+          <Card className="border-red-300">
+            <CardHeader>
+              <CardTitle className="text-red-700 dark:text-red-300">Delete Parent Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                <p>Delete only your parent profile while keeping your account and other profiles (like player profiles):</p>
+                <ul className="list-disc list-inside ml-4 space-y-1">
+                  <li>This parent profile will be permanently removed</li>
+                  <li>Your account and other profiles will remain active</li>
+                  <li>You can create a new parent profile anytime</li>
+                  <li>Your children's player profiles are not affected</li>
+                </ul>
+                <p className="font-medium text-amber-600 dark:text-amber-400">
+                  This will delete only this parent profile, not your entire account.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this parent profile? This action cannot be undone.")) {
+                    deleteProfileMutation.mutate();
+                  }
+                }}
+                variant="destructive"
+                disabled={deleteProfileMutation.isPending || !currentProfile}
+                data-testid="button-delete-parent-profile"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteProfileMutation.isPending ? "Deleting..." : "Delete Parent Profile"}
+              </Button>
             </CardContent>
           </Card>
 

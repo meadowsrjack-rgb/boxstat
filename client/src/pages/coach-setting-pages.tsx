@@ -2014,13 +2014,123 @@ export function CoachLegalPage() {
 }
 
 export function CoachDangerPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  // Get current coach profile
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['/api/profiles/me'],
+    enabled: !!(user as any)?.id
+  });
+  
+  const currentProfile = (profiles as any[]).find((p: any) => p.profileType === 'coach');
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentProfile?.id) throw new Error("No profile found");
+      const response = await apiRequest(`/api/profiles/${currentProfile.id}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Profile Deleted", 
+        description: "Your coach profile has been deleted successfully."
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      setLocation("/profile-selection");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Delete Profile", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
+
   return (
-    <SettingPage 
-      title="Account Actions"
-      description="Delete account and danger zone"
-      backPath="/coach-settings"
-      userType="coach"
-      category="danger"
-    />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/coach-settings")}
+              className="text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-settings"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Settings
+            </Button>
+            <div className="flex-1">
+              <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
+                Danger Zone
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400" data-testid="page-description">
+                Irreversible profile actions
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Warning */}
+          <Card className="border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800">
+            <CardHeader>
+              <CardTitle className="text-red-800 dark:text-red-200 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Warning
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-red-800 dark:text-red-200 text-sm">
+              The actions in this section are permanent and cannot be undone. Please proceed with extreme caution.
+            </CardContent>
+          </Card>
+
+          {/* Profile Deletion */}
+          <Card className="border-red-300">
+            <CardHeader>
+              <CardTitle className="text-red-700 dark:text-red-300">Delete Coach Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                <p>Delete only your coach profile while keeping your account and other profiles:</p>
+                <ul className="list-disc list-inside ml-4 space-y-1">
+                  <li>This coach profile will be permanently removed</li>
+                  <li>Your team rosters and player evaluations will be reassigned</li>
+                  <li>Your coaching history and statistics will be archived</li>
+                  <li>Your account and other profiles will remain active</li>
+                  <li>You can create a new coach profile anytime</li>
+                </ul>
+                <p className="font-medium text-amber-600 dark:text-amber-400">
+                  This will delete only this coach profile, not your entire account.
+                </p>
+              </div>
+
+              <Button
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this coach profile? This action cannot be undone.")) {
+                    deleteProfileMutation.mutate();
+                  }
+                }}
+                variant="destructive"
+                disabled={deleteProfileMutation.isPending || !currentProfile}
+                data-testid="button-delete-coach-profile"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteProfileMutation.isPending ? "Deleting..." : "Delete Coach Profile"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

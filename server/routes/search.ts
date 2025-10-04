@@ -11,7 +11,7 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
   const viewerTeams = await getViewerTeamIds(accountId);
 
   const params: any[] = [];
-  let where = "p.profile_type='player'";
+  let where = "p.profile_type='player' AND p.verified=TRUE";
   if (q) {
     params.push(`%${q}%`);
     where += ` AND (LOWER(p.first_name||' '||p.last_name) LIKE LOWER($${params.length}))`;

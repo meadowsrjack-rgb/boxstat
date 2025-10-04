@@ -34,7 +34,7 @@ const profileSchema = z.object({
   phoneNumber: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   jerseyNumber: z.string().min(1, "Jersey number is required"),
-  teamId: z.number({ required_error: "Team is required" }),
+  teamId: z.string().min(1, "Team is required"),
   height: z.string().min(1, "Height is required"),
   city: z.string().min(1, "City is required"),
   position: z.string().min(1, "Position is required"),
@@ -70,7 +70,7 @@ export default function CreateProfile() {
       phoneNumber: "",
       dateOfBirth: "",
       jerseyNumber: "",
-      teamId: undefined,
+      teamId: "",
       height: "",
       city: "",
       position: "",
@@ -118,7 +118,7 @@ export default function CreateProfile() {
         
         // Set teamId if available
         if (matchingRecord.teamId) {
-          form.setValue("teamId", Number(matchingRecord.teamId));
+          form.setValue("teamId", matchingRecord.teamId);
         }
         
         toast({
@@ -405,15 +405,24 @@ export default function CreateProfile() {
                         name="position"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Position (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="e.g., PG, SG, SF"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                                data-testid="input-position"
-                              />
-                            </FormControl>
+                            <FormLabel className="text-white">Position</FormLabel>
+                            <Select
+                              value={field.value || ""}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-position">
+                                  <SelectValue placeholder="Select position" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="PG">PG - Point Guard</SelectItem>
+                                <SelectItem value="SG">SG - Shooting Guard</SelectItem>
+                                <SelectItem value="SF">SF - Small Forward</SelectItem>
+                                <SelectItem value="PF">PF - Power Forward</SelectItem>
+                                <SelectItem value="C">C - Center</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -482,23 +491,33 @@ export default function CreateProfile() {
                       name="teamId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-white">Team (Optional)</FormLabel>
+                          <FormLabel className="text-white">Team</FormLabel>
                           <Select
-                            value={field.value?.toString() || ""}
-                            onValueChange={(value) => {
-                              const numValue = parseInt(value, 10);
-                              field.onChange(isNaN(numValue) ? undefined : numValue);
-                            }}
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
                           >
                             <FormControl>
                               <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-team">
                                 <SelectValue placeholder="Select your team" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {teams.map((team) => (
-                                <SelectItem key={team.id} value={team.id.toString()}>
-                                  {team.name} {team.ageGroup && `(${team.ageGroup})`}
+                            <SelectContent className="max-h-[300px]">
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">FNHTL</div>
+                              {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team, idx) => (
+                                <SelectItem key={`fnhtl-${idx}`} value={`fnhtl-${team.toLowerCase()}`}>
+                                  {team}
+                                </SelectItem>
+                              ))}
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
+                              {['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team, idx) => (
+                                <SelectItem key={`youth-${idx}`} value={`youth-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                                  {team}
+                                </SelectItem>
+                              ))}
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
+                              {['HS Elite', 'HS Red', 'HS Black', 'HS White'].map((team, idx) => (
+                                <SelectItem key={`hs-${idx}`} value={`hs-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                                  {team}
                                 </SelectItem>
                               ))}
                             </SelectContent>

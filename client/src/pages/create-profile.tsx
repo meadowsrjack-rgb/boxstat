@@ -32,12 +32,12 @@ const profileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  jerseyNumber: z.string().optional(),
-  teamId: z.number().optional(),
-  height: z.string().optional(),
-  city: z.string().optional(),
-  position: z.string().optional(),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  jerseyNumber: z.string().min(1, "Jersey number is required"),
+  teamId: z.number({ required_error: "Team is required" }),
+  height: z.string().min(1, "Height is required"),
+  city: z.string().min(1, "City is required"),
+  position: z.string().min(1, "Position is required"),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;

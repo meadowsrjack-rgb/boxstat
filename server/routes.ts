@@ -2421,6 +2421,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/profiles/:profileId', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = req.params.profileId;
+      const userId = req.user.claims.sub;
+      
+      // Get the profile to verify ownership
+      const profile = await storage.getProfile(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      // Verify the profile belongs to the authenticated user
+      if (profile.accountId !== userId) {
+        return res.status(403).json({ message: "Access denied: You can only delete your own profiles" });
+      }
+      
+      // Delete the profile
+      await storage.deleteProfile(profileId);
+      
+      // Invalidate any active sessions for this profile
+      // (Optional: add session cleanup logic here if needed)
+      
+      res.json({ success: true, message: "Profile deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting profile:", error);
+      res.status(500).json({ message: "Failed to delete profile" });
+    }
+  });
+
   // Notion account claiming endpoint
   app.get('/api/notion/claim-data', isAuthenticated, async (req: any, res) => {
     try {

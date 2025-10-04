@@ -59,7 +59,7 @@ export const profiles = pgTable("profiles", {
   address: text("address"),
   medicalInfo: text("medical_info"),
   allergies: text("allergies"),
-  teamId: integer("team_id"),
+  teamId: varchar("team_id"),
   jerseyNumber: integer("jersey_number"),
   position: varchar("position"),
   schoolGrade: varchar("school_grade"),

@@ -377,15 +377,24 @@ export default function CreateProfile() {
                         name="jerseyNumber"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Jersey Number (Optional)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder="Enter jersey number"
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                                data-testid="input-jersey"
-                              />
-                            </FormControl>
+                            <FormLabel className="text-white">Jersey Number</FormLabel>
+                            <Select
+                              value={field.value || ""}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-jersey">
+                                  <SelectValue placeholder="Select number" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-[200px]">
+                                {Array.from({ length: 99 }, (_, i) => i + 1).map((num) => (
+                                  <SelectItem key={num} value={num.toString()}>
+                                    {num}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

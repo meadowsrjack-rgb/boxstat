@@ -14,7 +14,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, User, Upload, Camera, LogOut, Users, Mail, Key, Smartphone, MapPin, Globe, Shield, FileText, Clock, Eye, AlertTriangle, Trash2 } from "lucide-react";
 
-const POSITION_OPTIONS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"];
+const POSITION_OPTIONS = [
+  { value: "PG", label: "PG - Point Guard" },
+  { value: "SG", label: "SG - Shooting Guard" },
+  { value: "SF", label: "SF - Small Forward" },
+  { value: "PF", label: "PF - Power Forward" },
+  { value: "C", label: "C - Center" }
+];
 const HEIGHT_OPTIONS = [
   "4'4\"", "4'5\"", "4'6\"", "4'7\"", "4'8\"", "4'9\"", "4'10\"", "4'11\"",
   "5'0\"", "5'1\"", "5'2\"", "5'3\"", "5'4\"", "5'5\"", "5'6\"", "5'7\"", "5'8\"", "5'9\"", "5'10\"", "5'11\"",
@@ -50,6 +56,7 @@ export function PlayerProfilePage() {
     emergencyPhone: (user as any)?.emergencyPhone || "",
     medicalInfo: (user as any)?.medicalInfo || "",
     allergies: (user as any)?.allergies || "",
+    teamId: (user as any)?.teamId || "",
   });
 
   const mutation = useMutation({
@@ -86,6 +93,7 @@ export function PlayerProfilePage() {
         emergencyPhone: updatedUser.emergencyPhone || "",
         medicalInfo: updatedUser.medicalInfo || "",
         allergies: updatedUser.allergies || "",
+        teamId: updatedUser.teamId || "",
       });
       
       // Invalidate queries to refresh all user data across the app
@@ -240,14 +248,31 @@ export function PlayerProfilePage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
-                <Input
-                  value={(teamData as any)?.name || "No team assigned"}
-                  disabled
-                  className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  placeholder="Team will be assigned when you join"
-                  data-testid="input-team"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">Team is set when you request to join a team</p>
+                <Select value={profile.teamId || ""} onValueChange={(value) => setProfile(p => ({ ...p, teamId: value }))}>
+                  <SelectTrigger data-testid="select-team">
+                    <SelectValue placeholder="Select your team" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">FNHTL</div>
+                    {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team, idx) => (
+                      <SelectItem key={`fnhtl-${idx}`} value={`fnhtl-${team.toLowerCase()}`}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
+                    {['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team, idx) => (
+                      <SelectItem key={`youth-${idx}`} value={`youth-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
+                    {['HS Elite', 'HS Red', 'HS Black', 'HS White'].map((team, idx) => (
+                      <SelectItem key={`hs-${idx}`} value={`hs-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,7 +284,7 @@ export function PlayerProfilePage() {
                     </SelectTrigger>
                     <SelectContent>
                       {POSITION_OPTIONS.map((position) => (
-                        <SelectItem key={position} value={position}>{position}</SelectItem>
+                        <SelectItem key={position.value} value={position.value}>{position.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

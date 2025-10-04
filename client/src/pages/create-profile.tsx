@@ -355,7 +355,7 @@ export default function CreateProfile() {
                   name="dateOfBirth"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Date of Birth (Optional)</FormLabel>
+                      <FormLabel className="text-white">Date of Birth</FormLabel>
                       <FormControl>
                         <Input
                           {...field}

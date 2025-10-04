@@ -2366,17 +2366,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile(profileData);
       console.log("Profile created successfully:", profile);
       
-      // Get team name if teamId was provided
-      let teamName = undefined;
-      if (req.body.teamId) {
-        try {
-          const team = await storage.getTeam(req.body.teamId);
-          teamName = team?.name;
-        } catch (e) {
-          console.error("Error fetching team name:", e);
-        }
-      }
-      
       // Update user's profileCompleted status and ALL profile fields
       await storage.updateUser(userId, { 
         profileCompleted: true,
@@ -2388,7 +2377,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateOfBirth: req.body.dateOfBirth || undefined,
         jerseyNumber: req.body.jerseyNumber ? parseInt(req.body.jerseyNumber) : undefined,
         teamId: req.body.teamId || undefined,
-        teamName: teamName,
         age: req.body.age || undefined,
         height: req.body.height || undefined,
         city: req.body.city || undefined,

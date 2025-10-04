@@ -65,6 +65,7 @@ export const profiles = pgTable("profiles", {
   schoolGrade: varchar("school_grade"),
   parentalConsent: boolean("parental_consent").default(false),
   profileCompleted: boolean("profile_completed").default(false),
+  verified: boolean("verified").default(false), // Player profiles must be verified via Notion before being public/searchable
   qrCodeData: varchar("qr_code_data"), // Unique QR code for check-in
   passcode: varchar("passcode", { length: 4 }), // 4-digit PIN for profile switching
   isActive: boolean("is_active").default(true),

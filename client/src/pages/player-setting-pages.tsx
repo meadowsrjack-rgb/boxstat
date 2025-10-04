@@ -5,13 +5,14 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, User, Upload, Camera, LogOut, Users, Mail, Key, Smartphone, MapPin, Globe, Shield, FileText, Clock, Eye } from "lucide-react";
+import { ArrowLeft, User, Upload, Camera, LogOut, Users, Mail, Key, Smartphone, MapPin, Globe, Shield, FileText, Clock, Eye, AlertTriangle, Trash2 } from "lucide-react";
 
 const POSITION_OPTIONS = ["Point Guard", "Shooting Guard", "Small Forward", "Power Forward", "Center"];
 const HEIGHT_OPTIONS = [

@@ -5,13 +5,14 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle } from "lucide-react";
+import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import SettingPage from "./setting-page";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];

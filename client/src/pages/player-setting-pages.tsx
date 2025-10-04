@@ -696,10 +696,52 @@ export function PlayerNotificationsPage() {
 export function PlayerSecurityPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
+
+  // Get current player profile
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['/api/profiles/me'],
+    enabled: !!(user as any)?.id
+  });
+  
+  const currentProfile = (profiles as any[]).find((p: any) => p.profileType === 'player');
+
+  const deleteProfileMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentProfile?.id) throw new Error("No profile found");
+      const response = await apiRequest(`/api/profiles/${currentProfile.id}`, {
+        method: "DELETE",
+      });
+      return response;
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Profile Deleted", 
+        description: "Your player profile has been deleted successfully."
+      });
+      // Invalidate both query keys to ensure profile selection page updates
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
+      setLocation("/profile-selection");
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to Delete Profile", 
+        description: error?.message || "Please try again later.",
+        variant: "destructive" 
+      });
+    },
+  });
 
   const handleSwitchProfile = () => {
     setLocation('/profile-selection');
+  };
+
+  const handleDeleteProfile = () => {
+    if (confirm("Are you sure you want to delete this player profile? This action cannot be undone and you will lose all your trophies and achievements.")) {
+      deleteProfileMutation.mutate();
+    }
   };
 
   const handleLogout = async () => {
@@ -788,6 +830,21 @@ export function PlayerSecurityPage() {
               <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>
+              <ActionRow 
+                icon={Trash2} 
+                title="Delete Player Profile" 
+                description="Permanently delete this player profile and all associated data"
+                action={
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleDeleteProfile} 
+                    disabled={deleteProfileMutation.isPending || !currentProfile}
+                    data-testid="button-delete-player-profile"
+                  >
+                    {deleteProfileMutation.isPending ? "Deleting..." : "Delete Profile"}
+                  </Button>
+                } 
+              />
               <ActionRow 
                 icon={LogOut} 
                 title="Log Out" 

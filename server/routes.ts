@@ -2357,7 +2357,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCodeData: qrCodeData,
         profileCompleted: false,
         isActive: true,
-        verified: req.body.profileType === 'player' ? false : true, // Player profiles start unverified until linked with Notion
+        // Use verified from request if provided (from Notion claim), otherwise false for players, true for others
+        verified: req.body.verified !== undefined ? req.body.verified : (req.body.profileType === 'player' ? false : true),
       };
       
       console.log("Profile data to create:", profileData);

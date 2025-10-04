@@ -55,6 +55,7 @@ export default function CreateProfile() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimEmail, setClaimEmail] = useState((user as any)?.email || "");
   const [claimData, setClaimData] = useState<any>(null);
+  const [isVerified, setIsVerified] = useState(false); // Track if profile was verified via Notion
 
   // Fetch teams for selector
   const { data: teams = [] } = useQuery<Array<{ id: number; name: string; ageGroup: string }>>({
@@ -101,6 +102,7 @@ export default function CreateProfile() {
         ) || data.records[0];
         
         setClaimData(matchingRecord);
+        setIsVerified(true); // Mark as verified since email was found in Notion database
         
         // Parse first and last name from fullName
         const nameParts = matchingRecord.fullName.split(' ');
@@ -179,6 +181,7 @@ export default function CreateProfile() {
           city: data.city,
           position: data.position,
           profileImageUrl: claimData?.photoUrl || (user as any)?.profileImageUrl,
+          verified: isVerified, // Pass verification status from Notion claim
         }),
       });
 

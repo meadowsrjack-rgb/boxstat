@@ -2395,7 +2395,9 @@ export function ParentDangerPage() {
         title: "Profile Deleted", 
         description: "Your parent profile has been deleted successfully."
       });
+      // Invalidate both query keys to ensure profile selection page updates
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       setLocation("/profile-selection");
     },
     onError: (error: any) => {

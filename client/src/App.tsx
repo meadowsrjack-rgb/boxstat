@@ -64,7 +64,8 @@ import {
   PlayerNotificationsPage, 
   PlayerSecurityPage, 
   PlayerDevicesPage, 
-  PlayerLegalPage 
+  PlayerLegalPage,
+  PlayerDangerPage 
 } from "@/pages/player-setting-pages";
 
 import { 
@@ -265,6 +266,7 @@ function Router() {
       <Route path="/player-settings/security" component={PlayerSecurityPage} />
       <Route path="/player-settings/devices" component={PlayerDevicesPage} />
       <Route path="/player-settings/legal" component={PlayerLegalPage} />
+      <Route path="/player-settings/danger" component={PlayerDangerPage} />
       
       {/* Individual Coach Setting Pages */}
       <Route path="/coach-settings/profile" component={CoachProfilePage} />

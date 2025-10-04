@@ -164,7 +164,7 @@ export async function setupAuth(app: Express) {
           const email = user.claims?.email;
           
           if (!userId || !email) {
-            return res.redirect("/profile-selection");
+            return res.redirect("/");
           }
           
           // Check if this is a coach account
@@ -173,11 +173,19 @@ export async function setupAuth(app: Express) {
             return res.redirect("/coach-dashboard");
           }
           
-          // Non-coaches go to profile type selection
+          // For non-coaches, check if they have existing profiles
+          const existingProfiles = await storage.getAccountProfiles(userId);
+          
+          if (existingProfiles && existingProfiles.length > 0) {
+            // User has profiles, send them to profile selection
+            return res.redirect("/");
+          }
+          
+          // No profiles, send to profile type selection
           return res.redirect("/select-profile-type");
         } catch (error) {
           console.error("Error in callback redirect logic:", error);
-          return res.redirect("/profile-selection");
+          return res.redirect("/");
         }
       });
     })(req, res, next);

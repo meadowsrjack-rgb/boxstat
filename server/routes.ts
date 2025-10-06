@@ -1682,13 +1682,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { coachId } = req.params;
       const { teamIds } = req.body; // Array of team IDs
+      const currentUserId = req.user.claims.sub;
       
       // Verify the user is authorized (either the coach themselves or an admin)
-      if (req.user.claims.sub !== coachId) {
-        const user = await storage.getUser(req.user.claims.sub);
-        if (user?.userType !== 'admin') {
-          return res.status(403).json({ message: "Access denied" });
+      if (currentUserId !== coachId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied. You can only manage your own team assignments." });
         }
+      }
+
+      // Verify the target user is actually a coach
+      const targetUser = await storage.getUser(coachId);
+      if (!targetUser || targetUser.userType !== 'coach') {
+        return res.status(400).json({ message: "Target user is not a coach" });
       }
 
       // Remove existing team assignments
@@ -1713,12 +1720,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/coaches/:coachId/teams/:teamId', isAuthenticated, async (req: any, res) => {
     try {
       const { coachId, teamId } = req.params;
+      const currentUserId = req.user.claims.sub;
       
-      // Verify the user is authorized
-      if (req.user.claims.sub !== coachId) {
-        const user = await storage.getUser(req.user.claims.sub);
-        if (user?.userType !== 'admin') {
-          return res.status(403).json({ message: "Access denied" });
+      // Verify the user is authorized (either the coach themselves or an admin)
+      if (currentUserId !== coachId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied. You can only manage your own team assignments." });
         }
       }
 
@@ -1738,6 +1746,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {
     try {
       const { coachId } = req.params;
+      const currentUserId = req.user.claims.sub;
+      
+      // Verify the user is authorized (either the coach themselves or an admin)
+      if (currentUserId !== coachId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied. You can only view your own team assignments." });
+        }
+      }
       
       const assignments = await storage.db
         .select({
@@ -1758,6 +1775,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/coaches/:coachId/players', isAuthenticated, async (req: any, res) => {
     try {
       const { coachId } = req.params;
+      const currentUserId = req.user.claims.sub;
+      
+      // Verify the user is authorized (either the coach themselves or an admin)
+      if (currentUserId !== coachId) {
+        const currentUser = await storage.getUser(currentUserId);
+        if (!currentUser || currentUser.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied. You can only view players from your own assigned teams." });
+        }
+      }
       
       // Get all team IDs assigned to this coach
       const teamAssignments = await storage.db

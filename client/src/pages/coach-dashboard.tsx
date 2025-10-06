@@ -35,6 +35,7 @@ import {
   Award,
   Filter,
   ChevronDown,
+  MessageCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -466,6 +467,7 @@ export default function CoachDashboard() {
             <RosterTab
               team={(selectedTeamFilter === 'my-team' ? coachTeam : filteredTeam) || undefined}
               roster={combinedRoster}
+              assignedTeams={assignedTeams}
               messages={teamMessages}
               allTeams={allTeams}
               selectedTeamFilter={selectedTeamFilter}
@@ -612,6 +614,7 @@ function ProfileAvatarRing({ src, initials, size = 80 }: { src?: string; initial
 function RosterTab({
   team,
   roster,
+  assignedTeams,
   messages,
   allTeams,
   selectedTeamFilter,
@@ -624,6 +627,7 @@ function RosterTab({
 }: {
   team?: CoachTeam | null;
   roster: any[];
+  assignedTeams: Array<{id: number; name: string; ageGroup: string}>;
   messages: any[];
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
@@ -721,10 +725,39 @@ function RosterTab({
       {/* Team Chat */}
       <div>
         <h3 className="text-lg font-bold text-gray-900 mb-2">Team Chat</h3>
-        {team?.id ? (
-          <TeamChat teamId={team.id} />
+        {selectedTeamFilter === 'my-team' ? (
+          assignedTeams.length > 0 ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Select a team from the filter above to view its chat.
+                </p>
+                <div className="grid gap-2">
+                  {assignedTeams.map((team) => (
+                    <Button
+                      key={team.id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onTeamFilterChange(team.id)}
+                      className="justify-start"
+                      data-testid={`button-team-chat-${team.id}`}
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      {team.name} ({team.ageGroup})
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="text-sm text-gray-500">No teams assigned yet.</div>
+          )
         ) : (
-          <div className="text-sm text-gray-500">No team chat available.</div>
+          selectedTeamFilter && typeof selectedTeamFilter === 'number' ? (
+            <TeamChat teamId={selectedTeamFilter} />
+          ) : (
+            <div className="text-sm text-gray-500">No team chat available.</div>
+          )
         )}
       </div>
     </div>

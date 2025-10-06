@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera, Users } from "lucide-react";
 import SettingPage from "./setting-page";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
@@ -47,6 +48,56 @@ export function CoachProfilePage() {
     playingExperience: (user as any)?.playingExperience || "",
     philosophy: (user as any)?.philosophy || "",
   });
+
+  // Team assignment state
+  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
+
+  // Fetch all teams
+  const { data: allTeams = [] } = useQuery({
+    queryKey: ['/api/teams'],
+  });
+
+  // Fetch coach's assigned teams
+  const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery({
+    queryKey: [`/api/coaches/${(user as any)?.id}/teams`],
+    enabled: !!(user as any)?.id,
+  });
+
+  // Update selected teams when assigned teams are loaded
+  useEffect(() => {
+    if (assignedTeams && assignedTeams.length > 0) {
+      setSelectedTeamIds(assignedTeams.map((team: any) => team.id));
+    }
+  }, [assignedTeams]);
+
+  // Team assignment mutation
+  const teamAssignmentMutation = useMutation({
+    mutationFn: async (teamIds: number[]) => {
+      return apiRequest(`/api/coaches/${(user as any)?.id}/teams`, {
+        method: 'POST',
+        body: JSON.stringify({ teamIds }),
+      });
+    },
+    onSuccess: () => {
+      refetchAssignedTeams();
+      toast({ title: "Success", description: "Team assignments updated successfully!" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update team assignments", variant: "destructive" });
+    },
+  });
+
+  const handleTeamToggle = (teamId: number) => {
+    setSelectedTeamIds(prev => 
+      prev.includes(teamId)
+        ? prev.filter(id => id !== teamId)
+        : [...prev, teamId]
+    );
+  };
+
+  const handleSaveTeams = () => {
+    teamAssignmentMutation.mutate(selectedTeamIds);
+  };
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -364,6 +415,49 @@ export function CoachProfilePage() {
                   rows={4}
                   data-testid="textarea-philosophy"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Team Assignments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Assignments
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Select which teams you coach. You'll be able to view rosters and access team chats for your assigned teams.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {allTeams.map((team: any) => (
+                  <div key={team.id} className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <Checkbox
+                      id={`team-${team.id}`}
+                      checked={selectedTeamIds.includes(team.id)}
+                      onCheckedChange={() => handleTeamToggle(team.id)}
+                      data-testid={`checkbox-team-${team.id}`}
+                    />
+                    <label
+                      htmlFor={`team-${team.id}`}
+                      className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {team.name} ({team.ageGroup})
+                    </label>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={handleSaveTeams} 
+                  disabled={teamAssignmentMutation.isPending}
+                  variant="outline"
+                  data-testid="button-save-teams"
+                >
+                  {teamAssignmentMutation.isPending ? "Saving..." : "Save Team Assignments"}
+                </Button>
               </div>
             </CardContent>
           </Card>

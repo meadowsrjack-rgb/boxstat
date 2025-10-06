@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams } from "@shared/schema";
-import { eq, count, and } from "drizzle-orm";
+import { eq, count, and, inArray } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
@@ -1751,6 +1751,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching coach teams:", error);
       res.status(500).json({ message: "Failed to fetch coach teams" });
+    }
+  });
+
+  // Get all players from coach's assigned teams
+  app.get('/api/coaches/:coachId/players', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId } = req.params;
+      
+      // Get all team IDs assigned to this coach
+      const teamAssignments = await storage.db
+        .select({ teamId: coachTeams.teamId })
+        .from(coachTeams)
+        .where(eq(coachTeams.coachId, coachId));
+      
+      if (teamAssignments.length === 0) {
+        return res.json([]);
+      }
+      
+      const teamIds = teamAssignments.map(t => t.teamId);
+      
+      // Get all players from these teams
+      const playersData = await storage.db
+        .select({
+          user: users,
+          profile: profiles,
+        })
+        .from(profiles)
+        .innerJoin(users, eq(profiles.userId, users.id))
+        .where(and(
+          eq(profiles.userType, 'player'),
+          inArray(profiles.teamId, teamIds.map(String))
+        ));
+      
+      const players = playersData.map(({ user, profile }) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        profileImageUrl: user.profileImageUrl,
+        position: profile.position,
+        jerseyNumber: profile.jerseyNumber,
+        teamId: profile.teamId,
+      }));
+      
+      res.json(players);
+    } catch (error) {
+      console.error("Error fetching coach players:", error);
+      res.status(500).json({ message: "Failed to fetch coach players" });
     }
   });
 

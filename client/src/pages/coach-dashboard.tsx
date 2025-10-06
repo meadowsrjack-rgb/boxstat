@@ -144,7 +144,18 @@ export default function CoachDashboard() {
     },
   });
 
-  // Query for all teams (for filter dropdown)
+  // Query for coach's assigned teams
+  const { data: assignedTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup: string}>>({
+    queryKey: [`/api/coaches/${currentUser?.id}/teams`],
+    enabled: !!currentUser?.id,
+    queryFn: async () => {
+      const res = await fetch(`/api/coaches/${currentUser?.id}/teams`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Query for all teams (for filter dropdown - used for universal team search)
   const { data: allTeams = [] } = useQuery<Array<{id: string; name: string; ageGroup?: string}>>({
     queryKey: ["/api/search/teams"],
     queryFn: async () => {
@@ -165,6 +176,28 @@ export default function CoachDashboard() {
       return res.json();
     },
   });
+
+  // Query for all players from coach's assigned teams
+  const { data: assignedPlayers = [] } = useQuery({
+    queryKey: [`/api/coaches/${currentUser?.id}/players`],
+    enabled: !!currentUser?.id,
+    queryFn: async () => {
+      const res = await fetch(`/api/coaches/${currentUser?.id}/players`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Compute combined roster based on filter
+  const combinedRoster = useMemo(() => {
+    if (selectedTeamFilter !== 'my-team') {
+      // Show filtered team roster
+      return filteredTeam?.roster || [];
+    }
+    
+    // Show roster from all assigned teams
+    return assignedPlayers;
+  }, [assignedPlayers, filteredTeam, selectedTeamFilter]);
 
   const { data: teamMessages = [] } = useQuery<any[]>({
     queryKey: ["/api/teams", coachTeam?.id, "messages"],
@@ -432,6 +465,7 @@ export default function CoachDashboard() {
           {activeTab === "roster" && (
             <RosterTab
               team={(selectedTeamFilter === 'my-team' ? coachTeam : filteredTeam) || undefined}
+              roster={combinedRoster}
               messages={teamMessages}
               allTeams={allTeams}
               selectedTeamFilter={selectedTeamFilter}
@@ -577,6 +611,7 @@ function ProfileAvatarRing({ src, initials, size = 80 }: { src?: string; initial
 /* ---------- Roster Tab (with Evaluate/Reward buttons inline) ---------- */
 function RosterTab({
   team,
+  roster,
   messages,
   allTeams,
   selectedTeamFilter,
@@ -588,6 +623,7 @@ function RosterTab({
   setSelectedPlayerId,
 }: {
   team?: CoachTeam | null;
+  roster: any[];
   messages: any[];
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
@@ -602,14 +638,6 @@ function RosterTab({
   const currentUser = user as UserType;
   const [msg, setMsg] = useState("");
   const { toast } = useToast();
-
-  if (!team) {
-    return (
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-6 text-center text-sm text-gray-500">No team assigned yet.</CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -642,11 +670,11 @@ function RosterTab({
             </Button>
           )}
         </div>
-        {team.roster?.length ? (
+        {roster?.length ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
               <div className="max-h-72 overflow-y-auto">
-                {team.roster.map((p) => (
+                {roster.map((p) => (
                   <div key={p.id} className="p-4 border-b border-gray-100 last:border-b-0 flex items-center justify-between" data-testid={`player-${p.id}`}>
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar className="h-8 w-8">

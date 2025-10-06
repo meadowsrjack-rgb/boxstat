@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, User as UserIcon, Lock } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -16,6 +17,10 @@ type Profile = {
   firstName: string;
   lastName: string;
   profileImageUrl?: string;
+  position?: string | null;
+  jerseyNumber?: string | null;
+  teamId?: string | null;
+  schoolGrade?: string | null;
 };
 
 const UYP_RED = "#d82428";
@@ -30,16 +35,16 @@ export default function ProfileSelection() {
   const [passcode, setPasscode] = useState("");
 
   const { data: profiles = [], isLoading } = useQuery<Profile[]>({
-    queryKey: [`/api/profiles/${user?.id}`],
+    queryKey: ['/api/profiles/me'],
     enabled: !!user?.id,
   });
 
   const verifyPasscodeMutation = useMutation({
     mutationFn: async ({ profileId, passcode }: { profileId: string; passcode: string }) => {
-      return await apiRequest(`/api/users/${user?.id}/verify-passcode`, {
+      if (!user?.id) throw new Error("User not authenticated");
+      return await apiRequest(`/api/users/${user.id}/verify-passcode`, {
         method: "POST",
-        body: JSON.stringify({ passcode }),
-        headers: { "Content-Type": "application/json" },
+        data: { passcode },
       });
     },
     onSuccess: (data: any, variables) => {
@@ -94,11 +99,12 @@ export default function ProfileSelection() {
     // First, try to verify passcode using the current user's ID (this will succeed if no passcode is set)
     setSelectedProfileId(id);
     
+    if (!user?.id) return;
+    
     try {
-      const verificationResult = await apiRequest(`/api/users/${user?.id}/verify-passcode`, {
+      const verificationResult = await apiRequest(`/api/users/${user.id}/verify-passcode`, {
         method: "POST",
-        body: JSON.stringify({ passcode: "" }),
-        headers: { "Content-Type": "application/json" },
+        data: { passcode: "" },
       });
       
       if (verificationResult.verified) {
@@ -220,6 +226,39 @@ export default function ProfileSelection() {
                         <div className="text-[16px] font-semibold leading-none tracking-wide">
                           {p.firstName}
                         </div>
+                        
+                        {/* Player metadata tags */}
+                        {p.profileType === "player" && (
+                          <div className="flex flex-wrap justify-center gap-1 mt-2">
+                            {p.jerseyNumber && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
+                                data-testid={`badge-jersey-${p.id}`}
+                              >
+                                #{p.jerseyNumber}
+                              </Badge>
+                            )}
+                            {p.position && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
+                                data-testid={`badge-position-${p.id}`}
+                              >
+                                {p.position}
+                              </Badge>
+                            )}
+                            {p.teamId && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
+                                data-testid={`badge-team-${p.id}`}
+                              >
+                                {formatTeamName(p.teamId)}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </button>
                   </div>
@@ -322,4 +361,17 @@ function getEmojiAvatar(type: Profile["profileType"]) {
     default:
       return "👤";
   }
+}
+
+function formatTeamName(teamId: string): string {
+  // Convert team ID like "fnhtl-dragons" to "FNHTL Dragons"
+  return teamId
+    .split('-')
+    .map((word, index) => {
+      // First word (age group) should be uppercase
+      if (index === 0) return word.toUpperCase();
+      // Rest of words should be capitalized
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
 }

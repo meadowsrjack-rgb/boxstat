@@ -102,6 +102,7 @@ export function PlayerProfilePage() {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/team`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/awards`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/events`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
       toast({ 
         title: "Profile Updated", 

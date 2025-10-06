@@ -387,6 +387,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedUser = await storage.updateUserProfile(userId, req.body);
+      
+      // Also update all profiles with the same account ID to keep them in sync
+      // This ensures profile selection page shows updated names
+      const profiles = await storage.getAccountProfiles(userId);
+      
+      // Find the profile that matches the current user's profile type
+      const currentProfile = profiles.find(p => p.profileType === updatedUser.userType);
+      
+      if (currentProfile) {
+        // Update the matching profile with the same data
+        await storage.updateProfile(currentProfile.id, {
+          firstName: req.body.firstName || currentProfile.firstName,
+          lastName: req.body.lastName || currentProfile.lastName,
+          profileImageUrl: req.body.profileImageUrl || currentProfile.profileImageUrl,
+          phoneNumber: req.body.phoneNumber !== undefined ? req.body.phoneNumber : currentProfile.phoneNumber,
+          dateOfBirth: req.body.dateOfBirth !== undefined ? req.body.dateOfBirth : currentProfile.dateOfBirth,
+          emergencyContact: req.body.emergencyContact !== undefined ? req.body.emergencyContact : currentProfile.emergencyContact,
+          emergencyPhone: req.body.emergencyPhone !== undefined ? req.body.emergencyPhone : currentProfile.emergencyPhone,
+          address: req.body.address || req.body.city || currentProfile.address,
+          medicalInfo: req.body.medicalInfo !== undefined ? req.body.medicalInfo : currentProfile.medicalInfo,
+          allergies: req.body.allergies !== undefined ? req.body.allergies : currentProfile.allergies,
+          schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : currentProfile.schoolGrade,
+          position: req.body.position !== undefined ? req.body.position : currentProfile.position,
+          jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : currentProfile.jerseyNumber,
+        });
+      }
+      
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user profile:", error);

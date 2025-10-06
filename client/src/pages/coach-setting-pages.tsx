@@ -49,13 +49,15 @@ export function CoachProfilePage() {
     philosophy: (user as any)?.philosophy || "",
   });
 
-  // Team assignment state
-  const [selectedTeamIds, setSelectedTeamIds] = useState<number[]>([]);
+  // Hardcoded teams list (same as player profile creation)
+  const TEAMS = [
+    { category: 'FNHTL', teams: ['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'] },
+    { category: 'Youth Club', teams: ['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'] },
+    { category: 'High School', teams: ['HS Elite', 'HS Red', 'HS Black', 'HS White'] }
+  ];
 
-  // Fetch all teams
-  const { data: allTeams = [] } = useQuery({
-    queryKey: ['/api/teams'],
-  });
+  // Team assignment state
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   // Fetch coach's assigned teams
   const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery({
@@ -66,37 +68,35 @@ export function CoachProfilePage() {
   // Update selected teams when assigned teams are loaded
   useEffect(() => {
     if (assignedTeams && assignedTeams.length > 0) {
-      setSelectedTeamIds(assignedTeams.map((team: any) => team.id));
+      setSelectedTeams(assignedTeams.map((team: any) => team.name || team.teamId));
     }
   }, [assignedTeams]);
 
-  // Team assignment mutation
+  // Team assignment mutation with auto-save
   const teamAssignmentMutation = useMutation({
-    mutationFn: async (teamIds: number[]) => {
+    mutationFn: async (teamNames: string[]) => {
       return apiRequest(`/api/coaches/${(user as any)?.id}/teams`, {
         method: 'POST',
-        body: JSON.stringify({ teamIds }),
+        body: JSON.stringify({ teamNames }),
       });
     },
     onSuccess: () => {
       refetchAssignedTeams();
-      toast({ title: "Success", description: "Team assignments updated successfully!" });
+      toast({ title: "Success", description: "Team assignments updated!" });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update team assignments", variant: "destructive" });
     },
   });
 
-  const handleTeamToggle = (teamId: number) => {
-    setSelectedTeamIds(prev => 
-      prev.includes(teamId)
-        ? prev.filter(id => id !== teamId)
-        : [...prev, teamId]
-    );
-  };
-
-  const handleSaveTeams = () => {
-    teamAssignmentMutation.mutate(selectedTeamIds);
+  const handleTeamToggle = (teamName: string) => {
+    const newSelectedTeams = selectedTeams.includes(teamName)
+      ? selectedTeams.filter(name => name !== teamName)
+      : [...selectedTeams, teamName];
+    
+    setSelectedTeams(newSelectedTeams);
+    // Auto-save on change
+    teamAssignmentMutation.mutate(newSelectedTeams);
   };
 
   // Profile picture upload state
@@ -187,18 +187,23 @@ export function CoachProfilePage() {
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
       toast({ 
-        title: "Profile Updated", 
-        description: "Your coaching profile has been successfully updated."
+        title: "Saved", 
+        description: "Your changes have been saved."
       });
     },
     onError: (error: any) => {
       toast({ 
-        title: "Failed to Update Profile", 
-        description: error?.message || "Please try again later.",
+        title: "Failed to Save", 
+        description: error?.message || "Please try again.",
         variant: "destructive" 
       });
     },
   });
+
+  // Auto-save on field blur
+  const handleFieldBlur = () => {
+    mutation.mutate(profile);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -279,6 +284,7 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.firstName}
                     onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter first name"
                     data-testid="input-first-name"
                   />
@@ -288,6 +294,7 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.lastName}
                     onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter last name"
                     data-testid="input-last-name"
                   />
@@ -303,6 +310,7 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.email}
                     onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter email address"
                     type="email"
                     data-testid="input-email"
@@ -316,6 +324,7 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.phoneNumber}
                     onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter phone number"
                     data-testid="input-phone"
                   />
@@ -330,6 +339,7 @@ export function CoachProfilePage() {
                 <Input
                   value={profile.city}
                   onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Enter your city"
                   data-testid="input-city"
                 />
@@ -349,7 +359,7 @@ export function CoachProfilePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Years of Experience</label>
-                  <Select value={profile.yearsExperience} onValueChange={(value) => setProfile(p => ({ ...p, yearsExperience: value }))}>
+                  <Select value={profile.yearsExperience} onValueChange={(value) => { setProfile(p => ({ ...p, yearsExperience: value })); handleFieldBlur(); }}>
                     <SelectTrigger data-testid="select-years-experience">
                       <SelectValue placeholder="Select experience level" />
                     </SelectTrigger>
@@ -365,6 +375,7 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.certifications}
                     onChange={(e) => setProfile(p => ({ ...p, certifications: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter certifications (comma separated)"
                     data-testid="input-certifications"
                   />
@@ -377,6 +388,7 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.bio}
                   onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Tell players and parents about your coaching background and approach"
                   rows={4}
                   data-testid="textarea-bio"
@@ -389,6 +401,7 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.previousTeams}
                   onChange={(e) => setProfile(p => ({ ...p, previousTeams: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="List previous teams or organizations you've coached"
                   rows={3}
                   data-testid="textarea-previous-teams"
@@ -400,6 +413,7 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.playingExperience}
                   onChange={(e) => setProfile(p => ({ ...p, playingExperience: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Describe your playing background"
                   rows={3}
                   data-testid="textarea-playing-experience"
@@ -411,6 +425,7 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.philosophy}
                   onChange={(e) => setProfile(p => ({ ...p, philosophy: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Share your coaching philosophy and what's important to you"
                   rows={4}
                   data-testid="textarea-philosophy"
@@ -429,50 +444,37 @@ export function CoachProfilePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Select which teams you coach. You'll be able to view rosters and access team chats for your assigned teams.
+                Select which teams you coach. Changes are saved automatically.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {allTeams.map((team: any) => (
-                  <div key={team.id} className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                    <Checkbox
-                      id={`team-${team.id}`}
-                      checked={selectedTeamIds.includes(team.id)}
-                      onCheckedChange={() => handleTeamToggle(team.id)}
-                      data-testid={`checkbox-team-${team.id}`}
-                    />
-                    <label
-                      htmlFor={`team-${team.id}`}
-                      className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {team.name} ({team.ageGroup})
-                    </label>
+              <div className="space-y-4">
+                {TEAMS.map(({ category, teams }) => (
+                  <div key={category}>
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                      {category}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {teams.map((teamName) => (
+                        <div key={teamName} className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                          <Checkbox
+                            id={`team-${teamName}`}
+                            checked={selectedTeams.includes(teamName)}
+                            onCheckedChange={() => handleTeamToggle(teamName)}
+                            data-testid={`checkbox-team-${teamName.toLowerCase().replace(/\s+/g, '-')}`}
+                          />
+                          <label
+                            htmlFor={`team-${teamName}`}
+                            className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {teamName}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="flex justify-end pt-4">
-                <Button 
-                  onClick={handleSaveTeams} 
-                  disabled={teamAssignmentMutation.isPending}
-                  variant="outline"
-                  data-testid="button-save-teams"
-                >
-                  {teamAssignmentMutation.isPending ? "Saving..." : "Save Team Assignments"}
-                </Button>
-              </div>
             </CardContent>
           </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end pt-6">
-            <Button 
-              onClick={() => mutation.mutate(profile)} 
-              disabled={mutation.isPending}
-              className="px-8"
-              data-testid="button-save-profile"
-            >
-              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

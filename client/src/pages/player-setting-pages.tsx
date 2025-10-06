@@ -213,7 +213,7 @@ export function PlayerProfilePage() {
                   <AvatarImage 
                     src={previewUrl || (user as any)?.profileImageUrl} 
                     alt="Profile"
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                   <AvatarFallback className="text-2xl font-bold bg-gray-300 dark:bg-gray-600">
                     {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase()}

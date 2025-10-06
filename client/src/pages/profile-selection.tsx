@@ -227,38 +227,17 @@ export default function ProfileSelection() {
                           {p.firstName}
                         </div>
                         
-                        {/* Player metadata tags */}
-                        {p.profileType === "player" && (
-                          <div className="flex flex-wrap justify-center gap-1 mt-2">
-                            {p.jerseyNumber && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
-                                data-testid={`badge-jersey-${p.id}`}
-                              >
-                                #{p.jerseyNumber}
-                              </Badge>
-                            )}
-                            {p.position && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
-                                data-testid={`badge-position-${p.id}`}
-                              >
-                                {p.position}
-                              </Badge>
-                            )}
-                            {p.teamId && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-[10px] px-1.5 py-0 h-4 bg-white/10 border-white/30 text-white"
-                                data-testid={`badge-team-${p.id}`}
-                              >
-                                {formatTeamName(p.teamId)}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
+                        {/* Profile type tag */}
+                        <div className="flex justify-center mt-2">
+                          <Badge 
+                            variant="outline" 
+                            className="text-[10px] px-2 py-0.5 h-5"
+                            style={badgeStyle(p.profileType)}
+                            data-testid={`badge-type-${p.id}`}
+                          >
+                            {labelFor(p.profileType)}
+                          </Badge>
+                        </div>
                       </div>
                     </button>
                   </div>

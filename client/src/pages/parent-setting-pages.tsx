@@ -169,13 +169,13 @@ export function ParentProfilePage() {
             <CardContent className="space-y-4">
               {/* Profile Picture */}
               <div className="flex flex-col items-center py-4 border-b border-gray-200 dark:border-gray-700 mb-4">
-                <Avatar className="h-24 w-24 mb-4">
+                <Avatar className="h-16 w-16 mb-4">
                   <AvatarImage 
                     src={previewUrl || (user as any)?.profileImageUrl} 
                     alt="Profile"
                     className="object-cover w-full h-full"
                   />
-                  <AvatarFallback className="text-2xl font-bold bg-gray-300 dark:bg-gray-600">
+                  <AvatarFallback className="text-sm font-bold bg-gray-300 dark:bg-gray-600">
                     {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>

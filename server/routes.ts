@@ -602,6 +602,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ profileImageUrl: base64Image })
         .where(eq(users.id, userId));
 
+      // Also update the corresponding profile to keep them in sync
+      const user = await storage.getUser(userId);
+      if (user) {
+        const profiles = await storage.getAccountProfiles(userId);
+        const currentProfile = profiles.find(p => p.profileType === user.userType);
+        
+        if (currentProfile) {
+          await storage.updateProfile(currentProfile.id, {
+            profileImageUrl: base64Image
+          });
+        }
+      }
+
       res.json({ 
         message: 'Profile photo updated successfully',
         profileImageUrl: base64Image

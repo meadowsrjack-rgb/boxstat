@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera } from "lucide-react";
 import SettingPage from "./setting-page";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
@@ -46,6 +47,56 @@ export function CoachProfilePage() {
     playingExperience: (user as any)?.playingExperience || "",
     philosophy: (user as any)?.philosophy || "",
   });
+
+  // Profile picture upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('photo', file);
+      const response = await fetch('/api/upload-profile-photo', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!response.ok) throw new Error('Upload failed');
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Profile photo updated successfully!" });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
+      setSelectedFile(null);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+      }
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload photo. Please try again.", variant: "destructive" });
+    }
+  });
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "Error", description: "File size must be less than 5MB", variant: "destructive" });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
+        return;
+      }
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      uploadMutation.mutate(file);
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
@@ -82,6 +133,7 @@ export function CoachProfilePage() {
       
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
       toast({ 
         title: "Profile Updated", 
@@ -135,6 +187,40 @@ export function CoachProfilePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Profile Picture */}
+              <div className="flex flex-col items-center py-4 border-b border-gray-200 dark:border-gray-700 mb-4">
+                <Avatar className="h-24 w-24 mb-4">
+                  <AvatarImage 
+                    src={previewUrl || (user as any)?.profileImageUrl} 
+                    alt="Profile" 
+                  />
+                  <AvatarFallback className="text-2xl font-bold bg-gray-300 dark:bg-gray-600">
+                    {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadMutation.isPending}
+                    data-testid="button-upload-profile-photo"
+                  >
+                    <Camera className="h-4 w-4 mr-2" />
+                    {uploadMutation.isPending ? "Uploading..." : "Change Photo"}
+                  </Button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  data-testid="input-profile-photo"
+                />
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>

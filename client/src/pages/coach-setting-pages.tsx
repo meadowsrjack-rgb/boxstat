@@ -60,7 +60,7 @@ export function CoachProfilePage() {
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
 
   // Fetch coach's assigned teams
-  const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery({
+  const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery<any[]>({
     queryKey: [`/api/coaches/${(user as any)?.id}/teams`],
     enabled: !!(user as any)?.id,
   });
@@ -77,7 +77,7 @@ export function CoachProfilePage() {
     mutationFn: async (teamNames: string[]) => {
       return apiRequest(`/api/coaches/${(user as any)?.id}/teams`, {
         method: 'POST',
-        body: JSON.stringify({ teamNames }),
+        data: { teamNames },
       });
     },
     onSuccess: () => {

@@ -160,6 +160,16 @@ export const teams = pgTable("teams", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Coach-Team junction table for many-to-many relationship
+export const coachTeams = pgTable("coach_teams", {
+  id: serial("id").primaryKey(),
+  coachId: varchar("coach_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  assignedAt: timestamp("assigned_at").defaultNow(),
+}, (table) => ({
+  uniqueCoachTeam: unique().on(table.coachId, table.teamId),
+}));
+
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
@@ -672,6 +682,12 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
   announcements: many(announcements),
   messages: many(messages),
   teamMessages: many(teamMessages),
+  coachTeams: many(coachTeams),
+}));
+
+export const coachTeamsRelations = relations(coachTeams, ({ one }) => ({
+  coach: one(users, { fields: [coachTeams.coachId], references: [users.id] }),
+  team: one(teams, { fields: [coachTeams.teamId], references: [teams.id] }),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -807,6 +823,7 @@ export const insertProfileRelationshipSchema = createInsertSchema(profileRelatio
 // Legacy insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
+export const insertCoachTeamSchema = createInsertSchema(coachTeams).omit({ id: true, assignedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
 export const insertAttendanceSchema = createInsertSchema(attendances).omit({ id: true, checkedInAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, createdAt: true });

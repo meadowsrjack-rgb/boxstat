@@ -539,18 +539,23 @@ export function CoachCoachingPage() {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
       
       toast({ 
-        title: "Coaching Info Updated", 
-        description: "Your coaching information has been successfully updated."
+        title: "Saved", 
+        description: "Your changes have been saved."
       });
     },
     onError: (error: any) => {
       toast({ 
-        title: "Failed to Update Coaching Info", 
-        description: error?.message || "Please try again later.",
+        title: "Failed to Save", 
+        description: error?.message || "Please try again.",
         variant: "destructive" 
       });
     },
   });
+
+  // Auto-save on field blur
+  const handleFieldBlur = () => {
+    mutation.mutate(coaching);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -592,6 +597,7 @@ export function CoachCoachingPage() {
                 <Input
                   value={coaching.specialties}
                   onChange={(e) => setCoaching(p => ({ ...p, specialties: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Enter specialties (comma separated)"
                   data-testid="input-specialties"
                 />
@@ -604,6 +610,7 @@ export function CoachCoachingPage() {
                   <Input
                     value={coaching.coachingLicense}
                     onChange={(e) => setCoaching(p => ({ ...p, coachingLicense: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="License number or type"
                     data-testid="input-license"
                   />
@@ -613,6 +620,7 @@ export function CoachCoachingPage() {
                   <Input
                     value={coaching.ageGroups}
                     onChange={(e) => setCoaching(p => ({ ...p, ageGroups: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Enter age groups (comma separated)"
                     data-testid="input-age-groups"
                   />
@@ -622,7 +630,7 @@ export function CoachCoachingPage() {
               
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching Style</label>
-                <Select value={coaching.coachingStyle} onValueChange={(value) => setCoaching(p => ({ ...p, coachingStyle: value }))}>
+                <Select value={coaching.coachingStyle} onValueChange={(value) => { setCoaching(p => ({ ...p, coachingStyle: value })); handleFieldBlur(); }}>
                   <SelectTrigger data-testid="select-coaching-style">
                     <SelectValue placeholder="Select your coaching style" />
                   </SelectTrigger>
@@ -647,6 +655,7 @@ export function CoachCoachingPage() {
                 <Textarea
                   value={coaching.availability}
                   onChange={(e) => setCoaching(p => ({ ...p, availability: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Describe your general availability (days, times, etc.)"
                   rows={3}
                   data-testid="textarea-availability"
@@ -659,6 +668,7 @@ export function CoachCoachingPage() {
                   <Input
                     value={coaching.emergencyContact}
                     onChange={(e) => setCoaching(p => ({ ...p, emergencyContact: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Emergency contact person"
                     data-testid="input-emergency-contact"
                   />
@@ -668,6 +678,7 @@ export function CoachCoachingPage() {
                   <Input
                     value={coaching.emergencyPhone}
                     onChange={(e) => setCoaching(p => ({ ...p, emergencyPhone: e.target.value }))}
+                    onBlur={handleFieldBlur}
                     placeholder="Emergency contact phone"
                     data-testid="input-emergency-phone"
                   />
@@ -687,6 +698,7 @@ export function CoachCoachingPage() {
                 <Input
                   value={coaching.medicalCertifications}
                   onChange={(e) => setCoaching(p => ({ ...p, medicalCertifications: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="First Aid, CPR, etc. (comma separated)"
                   data-testid="input-medical-certs"
                 />
@@ -697,24 +709,13 @@ export function CoachCoachingPage() {
                 <Input
                   value={coaching.languages}
                   onChange={(e) => setCoaching(p => ({ ...p, languages: e.target.value }))}
+                  onBlur={handleFieldBlur}
                   placeholder="Languages (comma separated)"
                   data-testid="input-languages"
                 />
               </div>
             </CardContent>
           </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end pt-6">
-            <Button 
-              onClick={() => mutation.mutate(coaching)} 
-              disabled={mutation.isPending}
-              className="px-8"
-              data-testid="button-save-coaching"
-            >
-              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

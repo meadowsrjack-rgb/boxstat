@@ -6,8 +6,8 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases } from "@shared/schema";
-import { eq, count } from "drizzle-orm";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams } from "@shared/schema";
+import { eq, count, and } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
@@ -1674,6 +1674,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching coach events:", error);
       res.status(500).json({ message: "Failed to fetch coach events" });
+    }
+  });
+
+  // Coach-Team management routes
+  app.post('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId } = req.params;
+      const { teamIds } = req.body; // Array of team IDs
+      
+      // Verify the user is authorized (either the coach themselves or an admin)
+      if (req.user.claims.sub !== coachId) {
+        const user = await storage.getUser(req.user.claims.sub);
+        if (user?.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      // Remove existing team assignments
+      await storage.db.delete(coachTeams).where(eq(coachTeams.coachId, coachId));
+
+      // Add new team assignments
+      if (teamIds && teamIds.length > 0) {
+        const assignments = teamIds.map((teamId: number) => ({
+          coachId,
+          teamId
+        }));
+        await storage.db.insert(coachTeams).values(assignments);
+      }
+
+      res.json({ success: true, message: 'Teams assigned successfully' });
+    } catch (error) {
+      console.error("Error assigning coach teams:", error);
+      res.status(500).json({ message: "Failed to assign teams" });
+    }
+  });
+
+  app.delete('/api/coaches/:coachId/teams/:teamId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId, teamId } = req.params;
+      
+      // Verify the user is authorized
+      if (req.user.claims.sub !== coachId) {
+        const user = await storage.getUser(req.user.claims.sub);
+        if (user?.userType !== 'admin') {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      await storage.db.delete(coachTeams)
+        .where(and(
+          eq(coachTeams.coachId, coachId),
+          eq(coachTeams.teamId, parseInt(teamId))
+        ));
+
+      res.json({ success: true, message: 'Team removed successfully' });
+    } catch (error) {
+      console.error("Error removing coach team:", error);
+      res.status(500).json({ message: "Failed to remove team" });
+    }
+  });
+
+  app.get('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId } = req.params;
+      
+      const assignments = await storage.db
+        .select({
+          team: teams,
+        })
+        .from(coachTeams)
+        .innerJoin(teams, eq(coachTeams.teamId, teams.id))
+        .where(eq(coachTeams.coachId, coachId));
+
+      res.json(assignments.map(a => a.team));
+    } catch (error) {
+      console.error("Error fetching coach teams:", error);
+      res.status(500).json({ message: "Failed to fetch coach teams" });
     }
   });
 

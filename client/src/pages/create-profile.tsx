@@ -164,6 +164,7 @@ export default function CreateProfile() {
         calculatedAge = age.toString();
       }
 
+      // Create profile without team assignment
       const response = await fetch("/api/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -175,7 +176,7 @@ export default function CreateProfile() {
           phoneNumber: data.phoneNumber,
           dateOfBirth: data.dateOfBirth,
           jerseyNumber: jerseyNum,
-          teamId: data.teamId,
+          // teamId removed - will be set via join request
           age: calculatedAge,
           height: data.height,
           city: data.city,
@@ -190,15 +191,47 @@ export default function CreateProfile() {
         throw new Error(errorData.message || "Failed to create profile");
       }
 
-      return response.json();
+      const profileData = await response.json();
+
+      // If player selected a team, create join request
+      if (profileType === "player" && data.teamId) {
+        // Find team by name to get team ID
+        const teamsResponse = await fetch("/api/teams", { credentials: "include" });
+        if (teamsResponse.ok) {
+          const teams = await teamsResponse.json();
+          const selectedTeam = teams.find((t: any) => t.name === data.teamId);
+          
+          if (selectedTeam) {
+            const joinResponse = await fetch(`/api/teams/${selectedTeam.id}/join-requests`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ profileId: profileData.id })
+            });
+            
+            if (!joinResponse.ok) {
+              console.error("Failed to create join request");
+            } else {
+              profileData.joinRequestPending = true;
+              profileData.requestedTeamName = data.teamId;
+            }
+          }
+        }
+      }
+
+      return profileData;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
+      const description = data.joinRequestPending 
+        ? `Your profile has been created! Your request to join ${data.requestedTeamName} is pending coach approval.`
+        : "Your profile has been successfully created.";
+      
       toast({
         title: "Profile Created!",
-        description: "Your profile has been successfully created.",
+        description,
       });
 
       // Redirect based on profile type

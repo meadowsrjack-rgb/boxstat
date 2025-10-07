@@ -112,11 +112,15 @@ export function PlayerProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      // Send both city and address fields to ensure compatibility
+      const previousTeam = (user as any)?.teamName || (user as any)?.teamId;
+      const teamChanged = data.teamId && data.teamId !== previousTeam;
+      
+      // Send profile update without teamId (will be set via join request)
       const updateData = {
         ...data,
         address: data.city,
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+        teamId: undefined, // Remove teamId from profile update
       };
       
       const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
@@ -126,7 +130,32 @@ export function PlayerProfilePage() {
         body: JSON.stringify(updateData),
       });
       if (!response.ok) throw new Error("Failed to update profile");
-      return response.json();
+      const updatedUser = await response.json();
+      
+      // If team changed, create join request
+      if (teamChanged) {
+        const teamsResponse = await fetch("/api/teams", { credentials: "include" });
+        if (teamsResponse.ok) {
+          const teams = await teamsResponse.json();
+          const selectedTeam = teams.find((t: any) => t.name === data.teamId);
+          
+          if (selectedTeam) {
+            const joinResponse = await fetch(`/api/teams/${selectedTeam.id}/join-requests`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({})
+            });
+            
+            if (joinResponse.ok) {
+              updatedUser.joinRequestPending = true;
+              updatedUser.requestedTeamName = data.teamId;
+            }
+          }
+        }
+      }
+      
+      return updatedUser;
     },
     onSuccess: (updatedUser) => {
       // Update local profile state with server response
@@ -155,9 +184,13 @@ export function PlayerProfilePage() {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/events`] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
+      const description = updatedUser.joinRequestPending
+        ? `Profile updated! Your request to join ${updatedUser.requestedTeamName} is pending coach approval.`
+        : "Your player profile has been successfully updated.";
+      
       toast({ 
         title: "Profile Updated", 
-        description: "Your player profile has been successfully updated."
+        description
       });
     },
     onError: (error: any) => {

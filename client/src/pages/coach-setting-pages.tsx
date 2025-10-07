@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera, Users, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react";
 import SettingPage from "./setting-page";
 import TeamRoster from "@/components/TeamRoster";
+import PlayerCard from "@/components/PlayerCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
@@ -65,6 +66,15 @@ export function CoachProfilePage() {
   const [selectedTeamView, setSelectedTeamView] = useState<string>("");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isRosterOpen, setIsRosterOpen] = useState(false);
+  
+  // Player card state
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [isPlayerCardOpen, setIsPlayerCardOpen] = useState(false);
+
+  const handlePlayerClick = (playerId: string) => {
+    setSelectedPlayerId(playerId);
+    setIsPlayerCardOpen(true);
+  };
 
   // Fetch coach's assigned teams
   const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery<any[]>({
@@ -619,7 +629,7 @@ export function CoachProfilePage() {
                         </Button>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="mt-3">
-                        <TeamRoster teamId={selectedTeamId} />
+                        <TeamRoster teamId={selectedTeamId} onPlayerClick={handlePlayerClick} />
                       </CollapsibleContent>
                     </Collapsible>
                   </div>
@@ -629,6 +639,20 @@ export function CoachProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Player Card Dialog */}
+      {selectedPlayerId && (
+        <PlayerCard
+          playerId={selectedPlayerId}
+          isOpen={isPlayerCardOpen}
+          onClose={() => {
+            setIsPlayerCardOpen(false);
+            setSelectedPlayerId(null);
+          }}
+          isCoach={true}
+          currentUserId={(user as any)?.id}
+        />
+      )}
     </div>
   );
 }

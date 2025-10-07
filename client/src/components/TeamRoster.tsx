@@ -21,9 +21,10 @@ interface TeamData {
 
 interface TeamRosterProps {
   teamId: number;
+  onPlayerClick?: (playerId: string) => void;
 }
 
-export default function TeamRoster({ teamId }: TeamRosterProps) {
+export default function TeamRoster({ teamId, onPlayerClick }: TeamRosterProps) {
   const { data: team, isLoading, error } = useQuery<TeamData>({
     queryKey: ['/api/teams', teamId],
   });
@@ -121,7 +122,12 @@ export default function TeamRoster({ teamId }: TeamRosterProps) {
           
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {team.players.map((player) => (
-              <Card key={player.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={player.id} 
+                className={`hover:shadow-md transition-shadow ${onPlayerClick ? 'cursor-pointer' : ''}`}
+                onClick={() => onPlayerClick?.(player.id)}
+                data-testid={`player-card-${player.id}`}
+              >
                 <CardContent className="pt-4">
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">

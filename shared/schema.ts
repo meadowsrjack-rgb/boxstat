@@ -170,6 +170,24 @@ export const coachTeams = pgTable("coach_teams", {
   uniqueCoachTeam: unique().on(table.coachId, table.teamId),
 }));
 
+// Team join requests table - players request to join teams, coaches approve/reject
+export const teamJoinRequests = pgTable("team_join_requests", {
+  id: serial("id").primaryKey(),
+  playerId: varchar("player_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  playerProfileId: varchar("player_profile_id").references(() => profiles.id, { onDelete: "cascade" }),
+  teamId: integer("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  teamName: varchar("team_name").notNull(),
+  coachId: varchar("coach_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: varchar("status", { enum: ["pending", "approved", "rejected"] }).notNull().default("pending"),
+  requestedAt: timestamp("requested_at").defaultNow(),
+  decidedAt: timestamp("decided_at"),
+  decidedBy: varchar("decided_by").references(() => users.id),
+}, (table) => [
+  index("idx_team_join_requests_coach").on(table.coachId),
+  index("idx_team_join_requests_status").on(table.status),
+  index("idx_team_join_requests_player").on(table.playerId),
+]);
+
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
   title: varchar("title").notNull(),
@@ -492,7 +510,10 @@ export const notifications = pgTable("notifications", {
       "skills_evaluation", 
       "improvement_recommendation", 
       "payment_due", 
-      "team_message"
+      "team_message",
+      "team_join_request",
+      "team_join_approved",
+      "team_join_rejected"
     ] 
   }).notNull(),
   title: varchar("title").notNull(),
@@ -690,6 +711,13 @@ export const coachTeamsRelations = relations(coachTeams, ({ one }) => ({
   team: one(teams, { fields: [coachTeams.teamId], references: [teams.id] }),
 }));
 
+export const teamJoinRequestsRelations = relations(teamJoinRequests, ({ one }) => ({
+  player: one(users, { fields: [teamJoinRequests.playerId], references: [users.id] }),
+  playerProfile: one(profiles, { fields: [teamJoinRequests.playerProfileId], references: [profiles.id] }),
+  team: one(teams, { fields: [teamJoinRequests.teamId], references: [teams.id] }),
+  coach: one(users, { fields: [teamJoinRequests.coachId], references: [users.id] }),
+}));
+
 export const eventsRelations = relations(events, ({ one, many }) => ({
   team: one(teams, { fields: [events.teamId], references: [teams.id] }),
   attendances: many(attendances),
@@ -824,6 +852,7 @@ export const insertProfileRelationshipSchema = createInsertSchema(profileRelatio
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTeamSchema = createInsertSchema(teams).omit({ id: true, createdAt: true });
 export const insertCoachTeamSchema = createInsertSchema(coachTeams).omit({ id: true, assignedAt: true });
+export const insertTeamJoinRequestSchema = createInsertSchema(teamJoinRequests).omit({ id: true, requestedAt: true, decidedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true });
 export const insertAttendanceSchema = createInsertSchema(attendances).omit({ id: true, checkedInAt: true });
 export const insertBadgeSchema = createInsertSchema(badges).omit({ id: true, createdAt: true });
@@ -873,6 +902,7 @@ export type InsertProfileRelationship = z.infer<typeof insertProfileRelationship
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type Team = typeof teams.$inferSelect;
+export type TeamJoinRequest = typeof teamJoinRequests.$inferSelect;
 export type Event = typeof events.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
 export type Badge = typeof badges.$inferSelect;
@@ -902,6 +932,7 @@ export type InsertCheckIn = z.infer<typeof insertAttendanceSchema>;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type InsertTeamJoinRequest = z.infer<typeof insertTeamJoinRequestSchema>;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;

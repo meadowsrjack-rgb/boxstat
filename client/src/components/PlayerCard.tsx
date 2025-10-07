@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
@@ -124,6 +125,12 @@ export default function PlayerCard({
     enabled: isCoach && showAwardDialog,
   });
 
+  // Get all teams for team assignment
+  const { data: allTeams = [] } = useQuery<{ id: number; name: string; ageGroup: string }[]>({
+    queryKey: ['/api/teams'],
+    enabled: isCoach && isOpen,
+  });
+
   const getPlayerInitials = (profile: PlayerProfile) => {
     return `${profile.first_name?.charAt(0) || ''}${profile.last_name?.charAt(0) || ''}`.toUpperCase();
   };
@@ -188,6 +195,26 @@ export default function PlayerCard({
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to save evaluation", variant: "destructive" });
+    },
+  });
+
+  // Team assignment mutation
+  const updateTeamMutation = useMutation({
+    mutationFn: async (teamName: string) => {
+      if (!playerId) throw new Error("No player selected");
+      return await apiRequest(`/api/users/${playerId}/profile`, {
+        method: 'PUT',
+        data: { teamId: teamName }, // API expects teamId as team name
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Team updated!", description: "Player's team has been updated successfully." });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
+      // Invalidate all team queries so rosters update automatically
+      queryClient.invalidateQueries({ queryKey: ['/api/teams'], exact: false });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update team", variant: "destructive" });
     },
   });
 
@@ -482,23 +509,48 @@ export default function PlayerCard({
                     className="relative rounded-2xl bg-white/70 backdrop-blur-xl overflow-hidden p-6"
                   >
                     <h3 className="text-lg font-bold text-gray-900 mb-4">Coach Actions</h3>
-                    <div className="flex gap-4">
-                      <Button
-                        onClick={handleAwardPlayer}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                        data-testid="button-award-player"
-                      >
-                        <Trophy className="h-4 w-4 mr-1" />
-                        Award Player
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleEvaluatePlayer}
-                        data-testid="button-evaluate-skills"
-                      >
-                        <Star className="h-4 w-4 mr-1" />
-                        Evaluate Skills
-                      </Button>
+                    <div className="space-y-4">
+                      <div className="flex gap-4">
+                        <Button
+                          onClick={handleAwardPlayer}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                          data-testid="button-award-player"
+                        >
+                          <Trophy className="h-4 w-4 mr-1" />
+                          Award Player
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleEvaluatePlayer}
+                          data-testid="button-evaluate-skills"
+                        >
+                          <Star className="h-4 w-4 mr-1" />
+                          Evaluate Skills
+                        </Button>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            Change Team
+                          </label>
+                          <Select
+                            value={playerProfile?.team_name || playerProfile?.team || ""}
+                            onValueChange={(value) => updateTeamMutation.mutate(value)}
+                            disabled={updateTeamMutation.isPending}
+                          >
+                            <SelectTrigger className="w-full" data-testid="select-player-team">
+                              <SelectValue placeholder="Select team..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {allTeams.map((team) => (
+                                <SelectItem key={team.id} value={team.name} data-testid={`team-option-${team.id}`}>
+                                  {team.name} ({team.ageGroup})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                     </div>
                   </motion.section>
                 </div>

@@ -1950,44 +1950,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Target user is not a coach" });
       }
 
-      // Remove existing team assignments
-      await storage.db.delete(coachTeams).where(eq(coachTeams.coachId, coachId));
-
-      // Add new team assignments based on team names
+      // Process team names and assign teams
       if (teamNames && teamNames.length > 0) {
         const teamIds: number[] = [];
         
         // Find or create teams by name
         for (const teamName of teamNames) {
           // Check if team exists
-          const [existingTeam] = await storage.db
-            .select()
-            .from(teams)
-            .where(eq(teams.name, teamName))
-            .limit(1);
+          const allTeams = await storage.getAllTeams();
+          const existingTeam = allTeams.find(t => t.name === teamName);
           
           if (existingTeam) {
             teamIds.push(existingTeam.id);
           } else {
             // Create the team if it doesn't exist
-            const [newTeam] = await storage.db
-              .insert(teams)
-              .values({
-                name: teamName,
-                ageGroup: 'Various', // Default age group
-                color: '#DC2626', // UYP red color
-              })
-              .returning();
+            const newTeam = await storage.createTeam({
+              name: teamName,
+              ageGroup: 'Various', // Default age group
+              color: '#DC2626', // UYP red color
+            });
             teamIds.push(newTeam.id);
           }
         }
 
-        // Create coach-team assignments
-        const assignments = teamIds.map((teamId: number) => ({
-          coachId,
-          teamId
-        }));
-        await storage.db.insert(coachTeams).values(assignments);
+        // Assign teams to coach using storage method
+        await storage.assignCoachTeams(coachId, teamIds);
+      } else {
+        // If no teams provided, remove all assignments
+        await storage.removeCoachTeams(coachId);
       }
 
       res.json({ success: true, message: 'Teams assigned successfully' });
@@ -2036,15 +2026,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const assignments = await storage.db
-        .select({
-          team: teams,
-        })
-        .from(coachTeams)
-        .innerJoin(teams, eq(coachTeams.teamId, teams.id))
-        .where(eq(coachTeams.coachId, coachId));
-
-      res.json(assignments.map(a => a.team));
+      const coachTeamsList = await storage.getCoachTeams(coachId);
+      res.json(coachTeamsList);
     } catch (error) {
       console.error("Error fetching coach teams:", error);
       res.status(500).json({ message: "Failed to fetch coach teams" });

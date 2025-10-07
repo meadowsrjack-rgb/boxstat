@@ -9,6 +9,7 @@ import {
   // Legacy tables
   users,
   teams,
+  coachTeams,
   teamJoinRequests,
   events,
   attendances,
@@ -171,6 +172,11 @@ export interface IStorage {
   getUserTeam(userId: string): Promise<Team | undefined>;
   createTeam(team: InsertTeam): Promise<Team>;
   getTeamPlayers(teamId: number): Promise<User[]>;
+  
+  // Coach team assignment operations
+  assignCoachTeams(coachId: string, teamIds: number[]): Promise<void>;
+  removeCoachTeams(coachId: string): Promise<void>;
+  getCoachTeams(coachId: string): Promise<Team[]>;
   
   // Team join request operations
   createTeamJoinRequest(request: InsertTeamJoinRequest): Promise<TeamJoinRequest>;
@@ -834,6 +840,43 @@ export class DatabaseStorage implements IStorage {
       ];
     }
     return await db.select().from(users).where(eq(users.teamId, teamId));
+  }
+
+  // Coach team assignment operations
+  async assignCoachTeams(coachId: string, teamIds: number[]): Promise<void> {
+    // First, remove existing team assignments
+    await this.removeCoachTeams(coachId);
+    
+    // Then add new team assignments
+    if (teamIds.length > 0) {
+      const assignments = teamIds.map(teamId => ({
+        coachId,
+        teamId
+      }));
+      await db.insert(coachTeams).values(assignments);
+    }
+  }
+
+  async removeCoachTeams(coachId: string): Promise<void> {
+    await db.delete(coachTeams).where(eq(coachTeams.coachId, coachId));
+  }
+
+  async getCoachTeams(coachId: string): Promise<Team[]> {
+    const assignments = await db
+      .select()
+      .from(coachTeams)
+      .where(eq(coachTeams.coachId, coachId));
+    
+    if (assignments.length === 0) return [];
+    
+    const teamIds = assignments.map(a => a.teamId);
+    const coachTeamsList = await db
+      .select()
+      .from(teams)
+      .where(sql`${teams.id} IN ${sql.raw(`(${teamIds.join(',')})`)}`)
+      .orderBy(asc(teams.ageGroup), asc(teams.name));
+    
+    return coachTeamsList;
   }
 
   // Team join request operations

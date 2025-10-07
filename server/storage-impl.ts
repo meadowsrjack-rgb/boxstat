@@ -864,34 +864,63 @@ export class DatabaseStorage implements IStorage {
   }
 
   async approveJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {
-    const [updated] = await db
-      .update(teamJoinRequests)
-      .set({
-        status: 'approved',
-        decidedAt: new Date(),
-        decidedBy
-      })
-      .where(eq(teamJoinRequests.id, id))
-      .returning();
-    
-    // Update user's team assignment
-    const request = await this.getJoinRequest(id);
-    if (request) {
-      await db
+    // Use transaction to ensure atomic approval and prevent race conditions
+    return await db.transaction(async (tx) => {
+      // Lock the join request for update to prevent concurrent approvals
+      const [request] = await tx
+        .select()
+        .from(teamJoinRequests)
+        .where(eq(teamJoinRequests.id, id))
+        .for('update');
+      
+      if (!request) {
+        throw new Error("Join request not found");
+      }
+      
+      // Re-check status is still pending (idempotency)
+      if (request.status !== 'pending') {
+        throw new Error(`Request already ${request.status}`);
+      }
+      
+      // Re-check player doesn't have a different team (conflict detection)
+      // Lock the player row to prevent concurrent team assignments
+      const [player] = await tx
+        .select()
+        .from(users)
+        .where(eq(users.id, request.playerId))
+        .for('update');
+      
+      if (player?.teamId && player.teamId !== request.teamId) {
+        throw new Error("Player is already assigned to another team");
+      }
+      
+      // Update join request status
+      const [updated] = await tx
+        .update(teamJoinRequests)
+        .set({
+          status: 'approved',
+          decidedAt: new Date(),
+          decidedBy
+        })
+        .where(eq(teamJoinRequests.id, id))
+        .returning();
+      
+      // Update user's team assignment
+      await tx
         .update(users)
         .set({ teamId: request.teamId, teamName: request.teamName })
         .where(eq(users.id, request.playerId));
       
       // Also update profile if profileId exists
       if (request.playerProfileId) {
-        await db
+        await tx
           .update(profiles)
           .set({ teamId: request.teamName })
           .where(eq(profiles.id, request.playerProfileId));
       }
-    }
-    
-    return updated;
+      
+      return updated;
+    });
   }
 
   async rejectJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {

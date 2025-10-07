@@ -944,10 +944,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Validation schemas for join request approval
+  const joinRequestIdSchema = z.object({
+    id: z.string().transform((val) => {
+      const num = Number(val);
+      if (!Number.isInteger(num) || num <= 0) {
+        throw new Error("Invalid request ID");
+      }
+      return num;
+    })
+  });
+
+  const joinRequestActionSchema = z.object({
+    action: z.enum(['approve', 'reject'])
+  });
+
   app.patch('/api/join-requests/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const requestId = parseInt(req.params.id);
-      const { action } = req.body; // 'approve' or 'reject'
+      // Validate request ID with zod
+      const paramsResult = joinRequestIdSchema.safeParse(req.params);
+      if (!paramsResult.success) {
+        return res.status(400).json({ message: "Invalid request ID" });
+      }
+      const { id: requestId } = paramsResult.data;
+      
+      // Validate action with zod
+      const bodyResult = joinRequestActionSchema.safeParse(req.body);
+      if (!bodyResult.success) {
+        return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'" });
+      }
+      const { action } = bodyResult.data;
+      
       const userId = req.user.claims.sub;
       
       const joinRequest = await storage.getJoinRequest(requestId);
@@ -960,20 +987,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Unauthorized" });
       }
       
+      // Check if request is already processed
+      if (joinRequest.status !== 'pending') {
+        return res.status(400).json({ message: `Request already ${joinRequest.status}` });
+      }
+      
       let updatedRequest;
       let notificationType: 'team_join_approved' | 'team_join_rejected';
       let notificationMessage: string;
       
       if (action === 'approve') {
+        // Check if player already has a team
+        const player = await storage.getUser(joinRequest.playerId);
+        if (player?.teamId && player.teamId !== joinRequest.teamId) {
+          return res.status(409).json({ 
+            message: "Player is already assigned to another team. Please ask them to leave their current team first." 
+          });
+        }
+        
         updatedRequest = await storage.approveJoinRequest(requestId, userId);
         notificationType = 'team_join_approved';
         notificationMessage = `Your request to join ${joinRequest.teamName} has been approved!`;
-      } else if (action === 'reject') {
+      } else {
         updatedRequest = await storage.rejectJoinRequest(requestId, userId);
         notificationType = 'team_join_rejected';
         notificationMessage = `Your request to join ${joinRequest.teamName} has been declined.`;
-      } else {
-        return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'" });
       }
       
       // Send notification to player
@@ -990,6 +1028,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedRequest);
     } catch (error) {
       console.error("Error updating join request:", error);
+      
+      // Map storage layer errors to appropriate HTTP status codes
+      const errorMessage = (error as Error).message || "Failed to update join request";
+      
+      // Conflict errors (409) - includes all transaction-level conflicts
+      if (errorMessage.includes("already assigned to another team") ||
+          errorMessage.toLowerCase().includes("already approved") ||
+          errorMessage.toLowerCase().includes("already rejected") ||
+          errorMessage.toLowerCase().includes("request already")) {
+        return res.status(409).json({ message: errorMessage });
+      }
+      
+      // Not found errors (404)
+      if (errorMessage.toLowerCase().includes("not found")) {
+        return res.status(404).json({ message: errorMessage });
+      }
+      
+      // Default to 500 for unexpected errors
       res.status(500).json({ message: "Failed to update join request" });
     }
   });

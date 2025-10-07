@@ -716,12 +716,26 @@ function RosterTab({
       });
     },
     onSuccess: () => {
+      // Invalidate both join requests and notifications to keep UI in sync
       queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser?.id}/notifications`] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({ title: "Success", description: "Player added to team!" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to approve request", variant: "destructive" });
+    onError: async (error: any) => {
+      // Extract error message from response body
+      let message = "Failed to approve request";
+      try {
+        if (error instanceof Response) {
+          const body = await error.json();
+          message = body.message || message;
+        } else if (error?.message) {
+          message = error.message;
+        }
+      } catch (e) {
+        // If JSON parsing fails, use default message
+      }
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 
@@ -734,11 +748,25 @@ function RosterTab({
       });
     },
     onSuccess: () => {
+      // Invalidate both join requests and notifications to keep UI in sync
       queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser?.id}/notifications`] });
       toast({ title: "Request rejected" });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to reject request", variant: "destructive" });
+    onError: async (error: any) => {
+      // Extract error message from response body
+      let message = "Failed to reject request";
+      try {
+        if (error instanceof Response) {
+          const body = await error.json();
+          message = body.message || message;
+        } else if (error?.message) {
+          message = error.message;
+        }
+      } catch (e) {
+        // If JSON parsing fails, use default message
+      }
+      toast({ title: "Error", description: message, variant: "destructive" });
     },
   });
 

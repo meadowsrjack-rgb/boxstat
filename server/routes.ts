@@ -386,7 +386,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
       
-      const updatedUser = await storage.updateUserProfile(userId, req.body);
+      // Handle team assignment if teamId is provided
+      let teamDbId: string | undefined = undefined;
+      let teamNumericId: number | undefined = undefined;
+      if (req.body.teamId && req.body.teamId.trim() !== '') {
+        const teamName = req.body.teamId; // This is the team name from the frontend
+        
+        // Check if team exists
+        const [existingTeam] = await storage.db
+          .select()
+          .from(teams)
+          .where(eq(teams.name, teamName))
+          .limit(1);
+        
+        if (existingTeam) {
+          teamDbId = existingTeam.id.toString();
+          teamNumericId = existingTeam.id;
+        } else {
+          // Create the team if it doesn't exist
+          const [newTeam] = await storage.db
+            .insert(teams)
+            .values({
+              name: teamName,
+              ageGroup: 'Various', // Default age group
+              color: '#DC2626', // UYP red color
+            })
+            .returning();
+          teamDbId = newTeam.id.toString();
+          teamNumericId = newTeam.id;
+        }
+      }
+      
+      // Update user profile with team data
+      const updateData = {
+        ...req.body,
+        teamId: teamNumericId, // Numeric ID for users table
+        teamName: req.body.teamId, // Team name for users table teamName field
+      };
+      
+      const updatedUser = await storage.updateUserProfile(userId, updateData);
       
       // Also update all profiles with the same account ID to keep them in sync
       // This ensures profile selection page shows updated names
@@ -411,6 +449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : currentProfile.schoolGrade,
           position: req.body.position !== undefined ? req.body.position : currentProfile.position,
           jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : currentProfile.jerseyNumber,
+          teamId: teamDbId || currentProfile.teamId, // Store team ID in profiles table
         });
       }
       
@@ -2555,13 +2594,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const qrCodeData = `UYP-${Date.now()}-${userId}`;
       
+      // Handle team assignment - find or create team by name
+      let teamDbId: string | undefined = undefined;
+      if (req.body.teamId && req.body.teamId.trim() !== '') {
+        const teamName = req.body.teamId; // This is actually the team name from the frontend
+        
+        // Check if team exists
+        const [existingTeam] = await storage.db
+          .select()
+          .from(teams)
+          .where(eq(teams.name, teamName))
+          .limit(1);
+        
+        if (existingTeam) {
+          teamDbId = existingTeam.id.toString();
+        } else {
+          // Create the team if it doesn't exist
+          const [newTeam] = await storage.db
+            .insert(teams)
+            .values({
+              name: teamName,
+              ageGroup: 'Various', // Default age group
+              color: '#DC2626', // UYP red color
+            })
+            .returning();
+          teamDbId = newTeam.id.toString();
+        }
+      }
+      
       // Convert empty strings to null for optional fields
       const cleanedBody = {
         ...req.body,
         phoneNumber: req.body.phoneNumber && req.body.phoneNumber.trim() !== '' ? req.body.phoneNumber : null,
         dateOfBirth: req.body.dateOfBirth && req.body.dateOfBirth.trim() !== '' ? req.body.dateOfBirth : null,
         jerseyNumber: req.body.jerseyNumber && req.body.jerseyNumber.toString().trim() !== '' ? parseInt(req.body.jerseyNumber) : undefined,
-        teamId: req.body.teamId || undefined,
+        teamId: teamDbId, // Store the actual team ID
         height: req.body.height && req.body.height.trim() !== '' ? req.body.height : null,
         city: req.body.city && req.body.city.trim() !== '' ? req.body.city : null,
         position: req.body.position && req.body.position.trim() !== '' ? req.body.position : null,
@@ -2594,7 +2661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phoneNumber: req.body.phoneNumber || undefined,
         dateOfBirth: req.body.dateOfBirth || undefined,
         jerseyNumber: req.body.jerseyNumber ? parseInt(req.body.jerseyNumber) : undefined,
-        teamId: req.body.teamId || undefined,
+        teamId: teamDbId ? parseInt(teamDbId) : undefined, // Store numeric team ID in users table
+        teamName: req.body.teamId || undefined, // Store team name in teamName field
         age: req.body.age || undefined,
         height: req.body.height || undefined,
         city: req.body.city || undefined,

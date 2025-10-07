@@ -586,64 +586,6 @@ export function CoachCoachingPage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Coaching Specialties */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Coaching Specialties & Expertise</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Areas of Expertise</label>
-                <Input
-                  value={coaching.specialties}
-                  onChange={(e) => setCoaching(p => ({ ...p, specialties: e.target.value }))}
-                  onBlur={handleFieldBlur}
-                  placeholder="Enter specialties (comma separated)"
-                  data-testid="input-specialties"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">e.g., Defense, Shooting, Ball Handling, Mental Training</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching License</label>
-                  <Input
-                    value={coaching.coachingLicense}
-                    onChange={(e) => setCoaching(p => ({ ...p, coachingLicense: e.target.value }))}
-                    onBlur={handleFieldBlur}
-                    placeholder="License number or type"
-                    data-testid="input-license"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preferred Age Groups</label>
-                  <Input
-                    value={coaching.ageGroups}
-                    onChange={(e) => setCoaching(p => ({ ...p, ageGroups: e.target.value }))}
-                    onBlur={handleFieldBlur}
-                    placeholder="Enter age groups (comma separated)"
-                    data-testid="input-age-groups"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400">e.g., U12, U14, U16</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coaching Style</label>
-                <Select value={coaching.coachingStyle} onValueChange={(value) => { setCoaching(p => ({ ...p, coachingStyle: value })); handleFieldBlur(); }}>
-                  <SelectTrigger data-testid="select-coaching-style">
-                    <SelectValue placeholder="Select your coaching style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COACHING_STYLES.map((style) => (
-                      <SelectItem key={style} value={style}>{style}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Availability & Contact */}
           <Card>
             <CardHeader>

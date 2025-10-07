@@ -1537,6 +1537,17 @@ function TeamBlock() {
     enabled: !!currentUser.id,
   });
   
+  // Fetch team roster
+  const { data: teamPlayers = [] } = useQuery<any[]>({
+    queryKey: ["/api/team-players", userTeam?.id],
+    enabled: !!userTeam?.id,
+  });
+  
+  // Fetch coach information
+  const { data: coachInfo } = useQuery<any>({
+    queryKey: ["/api/users", userTeam?.coachId],
+    enabled: !!userTeam?.coachId,
+  });
 
   return (
     <div className="space-y-6" data-testid="team-block">
@@ -1553,14 +1564,12 @@ function TeamBlock() {
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{userTeam.name}</h3>
                   <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{userTeam.ageGroup}</p>
-                  <div className="space-y-1 text-sm text-gray-500">
-                    {userTeam.coachId && (
-                      <div className="flex items-center space-x-2">
-                        <UserCheck className="h-4 w-4" />
-                        <span>Coach</span>
-                      </div>
-                    )}
-                  </div>
+                  {coachInfo && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <UserCheck className="h-4 w-4" />
+                      <span data-testid="text-coach-name">Coach: {coachInfo.firstName} {coachInfo.lastName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -1569,6 +1578,45 @@ function TeamBlock() {
           <div className="text-sm text-gray-500 mb-4" data-testid="text-no-team">No team assigned yet. Search for teams below!</div>
         )}
       </div>
+      
+      {/* Team Roster Section */}
+      {userTeam && teamPlayers.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-roster">Team Roster</h3>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-0">
+              <div className="max-h-64 overflow-y-auto">
+                {teamPlayers.map((player: any) => (
+                  <div 
+                    key={player.id} 
+                    className="p-3 border-b border-gray-100 last:border-b-0 flex items-center justify-between hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedPlayerId(player.id)}
+                    data-testid={`player-roster-${player.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={player.profileImageUrl} />
+                        <AvatarFallback className="text-xs bg-red-100 text-red-600">
+                          {player.firstName?.[0]}{player.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-gray-900" data-testid={`text-player-name-${player.id}`}>
+                          {player.firstName} {player.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {player.position || "Player"}
+                          {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Player Search Section */}
       <div>

@@ -1681,7 +1681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {
     try {
       const { coachId } = req.params;
-      const { teamIds } = req.body; // Array of team IDs
+      const { teamNames } = req.body; // Array of team names
       const currentUserId = req.user.claims.sub;
       
       // Verify the user is authorized (either the coach themselves or an admin)
@@ -1701,8 +1701,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove existing team assignments
       await storage.db.delete(coachTeams).where(eq(coachTeams.coachId, coachId));
 
-      // Add new team assignments
-      if (teamIds && teamIds.length > 0) {
+      // Add new team assignments based on team names
+      if (teamNames && teamNames.length > 0) {
+        const teamIds: number[] = [];
+        
+        // Find or create teams by name
+        for (const teamName of teamNames) {
+          // Check if team exists
+          const [existingTeam] = await storage.db
+            .select()
+            .from(teams)
+            .where(eq(teams.name, teamName))
+            .limit(1);
+          
+          if (existingTeam) {
+            teamIds.push(existingTeam.id);
+          } else {
+            // Create the team if it doesn't exist
+            const [newTeam] = await storage.db
+              .insert(teams)
+              .values({
+                name: teamName,
+                ageGroup: 'Various', // Default age group
+                color: '#DC2626', // UYP red color
+              })
+              .returning();
+            teamIds.push(newTeam.id);
+          }
+        }
+
+        // Create coach-team assignments
         const assignments = teamIds.map((teamId: number) => ({
           coachId,
           teamId

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailPanel from "@/components/EventDetailPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { User as UserType, Event } from "@shared/schema";
@@ -36,6 +37,8 @@ import {
   Filter,
   ChevronDown,
   MessageCircle,
+  Check,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -642,9 +645,111 @@ function RosterTab({
   const currentUser = user as UserType;
   const [msg, setMsg] = useState("");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Fetch pending join requests for the coach
+  const { data: joinRequests = [] } = useQuery<any[]>({
+    queryKey: [`/api/coaches/${currentUser?.id}/join-requests`],
+    enabled: !!currentUser?.id,
+  });
+
+  // Approve join request mutation
+  const approveMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      return apiRequest(`/api/join-requests/${requestId}`, {
+        method: "PATCH",
+        data: { action: "approve" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Success", description: "Player added to team!" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to approve request", variant: "destructive" });
+    },
+  });
+
+  // Reject join request mutation
+  const rejectMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      return apiRequest(`/api/join-requests/${requestId}`, {
+        method: "PATCH",
+        data: { action: "reject" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
+      toast({ title: "Request rejected" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to reject request", variant: "destructive" });
+    },
+  });
 
   return (
     <div className="space-y-6">
+      {/* Join Requests Panel */}
+      {joinRequests.length > 0 && (
+        <div>
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Join Requests</h3>
+            <p className="text-sm text-gray-500">Players requesting to join your team</p>
+          </div>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-0">
+              <div className="divide-y divide-gray-100">
+                {joinRequests.map((request: any) => (
+                  <div key={request.id} className="p-4 flex items-center justify-between" data-testid={`join-request-${request.id}`}>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={request.player?.profileImageUrl} />
+                        <AvatarFallback className="text-sm">
+                          {request.player?.firstName?.[0]}{request.player?.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {request.player?.firstName} {request.player?.lastName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Requesting: {request.team?.name}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => approveMutation.mutate(request.id)}
+                        disabled={approveMutation.isPending || rejectMutation.isPending}
+                        data-testid={`button-approve-${request.id}`}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 border-red-600 hover:bg-red-50"
+                        onClick={() => rejectMutation.mutate(request.id)}
+                        disabled={approveMutation.isPending || rejectMutation.isPending}
+                        data-testid={`button-reject-${request.id}`}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Player Search */}
       <div>
         <div className="mb-4">

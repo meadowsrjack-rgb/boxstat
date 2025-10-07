@@ -897,6 +897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'team_join_request',
         title: 'New Team Join Request',
         message: `${user.firstName} ${user.lastName} wants to join ${team.name}`,
+        actionUrl: '/coach-dashboard',
         data: { joinRequestId: joinRequest.id, playerId: userId, teamId: teamId },
         priority: 'normal'
       });

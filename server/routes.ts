@@ -891,14 +891,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         decidedBy: null
       });
       
-      // Create notification for coach
-      await storage.createNotification({
+      // Create notification for coach using NotificationService for push support
+      await notificationService.createNotification({
         userId: coachId,
         type: 'team_join_request',
         title: 'New Team Join Request',
         message: `${user.firstName} ${user.lastName} wants to join ${team.name}`,
         data: { joinRequestId: joinRequest.id, playerId: userId, teamId: teamId },
-        isRead: false,
         priority: 'normal'
       });
       

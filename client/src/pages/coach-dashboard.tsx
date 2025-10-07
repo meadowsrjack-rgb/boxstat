@@ -324,15 +324,69 @@ export default function CoachDashboard() {
     }
   }, [coachEvents, selectedDate]);
 
+  // Fetch notifications for the coach
+  const { data: notifications = [] } = useQuery<any[]>({
+    queryKey: [`/api/users/${currentUser?.id}/notifications`],
+    enabled: !!currentUser?.id,
+  });
+
+  // Filter for unread join request notifications
+  const unreadJoinRequests = notifications.filter(
+    (n: any) => n.type === "team_join_request" && !n.isRead
+  );
+
+  // Mark notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: number) => {
+      return apiRequest(`/api/notifications/${notificationId}/read`, {
+        method: "PATCH",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser?.id}/notifications`] });
+    },
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Bar */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100" aria-label="Notifications" data-testid="button-notifications">
-              <Bell className="h-6 w-6" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100 relative" aria-label="Notifications" data-testid="button-notifications">
+                  <Bell className="h-6 w-6" />
+                  {unreadJoinRequests.length > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs" data-testid="notification-badge">
+                      {unreadJoinRequests.length}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                {unreadJoinRequests.length > 0 ? (
+                  <div className="max-h-96 overflow-y-auto">
+                    {unreadJoinRequests.map((notification: any) => (
+                      <DropdownMenuItem
+                        key={notification.id}
+                        className="flex flex-col items-start p-3 cursor-pointer"
+                        onClick={() => {
+                          markAsReadMutation.mutate(notification.id);
+                          setActiveTab("roster");
+                        }}
+                        data-testid={`notification-${notification.id}`}
+                      >
+                        <div className="font-medium text-sm">{notification.title}</div>
+                        <div className="text-xs text-gray-500 mt-1">{notification.message}</div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-sm text-gray-500 text-center">No new notifications</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="icon"

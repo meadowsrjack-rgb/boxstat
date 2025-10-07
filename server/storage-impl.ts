@@ -9,6 +9,7 @@ import {
   // Legacy tables
   users,
   teams,
+  teamJoinRequests,
   events,
   attendances,
   badges,
@@ -87,6 +88,8 @@ import {
   type InsertAnnouncementAcknowledgment,
   type InsertPlayerTask,
   type InsertPlayerPoints,
+  type TeamJoinRequest,
+  type InsertTeamJoinRequest,
   // New insert schemas
   insertAccountSchema,
   insertProfileSchema,
@@ -168,6 +171,14 @@ export interface IStorage {
   getUserTeam(userId: string): Promise<Team | undefined>;
   createTeam(team: InsertTeam): Promise<Team>;
   getTeamPlayers(teamId: number): Promise<User[]>;
+  
+  // Team join request operations
+  createTeamJoinRequest(request: InsertTeamJoinRequest): Promise<TeamJoinRequest>;
+  getCoachJoinRequests(coachId: string): Promise<TeamJoinRequest[]>;
+  getJoinRequest(id: number): Promise<TeamJoinRequest | undefined>;
+  approveJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest>;
+  rejectJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest>;
+  getPendingPlayerJoinRequest(playerId: string): Promise<TeamJoinRequest | undefined>;
   
   // Event operations
   getAllEvents(): Promise<Event[]>;
@@ -823,6 +834,93 @@ export class DatabaseStorage implements IStorage {
       ];
     }
     return await db.select().from(users).where(eq(users.teamId, teamId));
+  }
+
+  // Team join request operations
+  async createTeamJoinRequest(request: InsertTeamJoinRequest): Promise<TeamJoinRequest> {
+    const [newRequest] = await db.insert(teamJoinRequests).values(request).returning();
+    return newRequest;
+  }
+
+  async getCoachJoinRequests(coachId: string): Promise<TeamJoinRequest[]> {
+    return await db
+      .select()
+      .from(teamJoinRequests)
+      .where(
+        and(
+          eq(teamJoinRequests.coachId, coachId),
+          eq(teamJoinRequests.status, 'pending')
+        )
+      )
+      .orderBy(desc(teamJoinRequests.requestedAt));
+  }
+
+  async getJoinRequest(id: number): Promise<TeamJoinRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(teamJoinRequests)
+      .where(eq(teamJoinRequests.id, id));
+    return request;
+  }
+
+  async approveJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {
+    const [updated] = await db
+      .update(teamJoinRequests)
+      .set({
+        status: 'approved',
+        decidedAt: new Date(),
+        decidedBy
+      })
+      .where(eq(teamJoinRequests.id, id))
+      .returning();
+    
+    // Update user's team assignment
+    const request = await this.getJoinRequest(id);
+    if (request) {
+      await db
+        .update(users)
+        .set({ teamId: request.teamId, teamName: request.teamName })
+        .where(eq(users.id, request.playerId));
+      
+      // Also update profile if profileId exists
+      if (request.playerProfileId) {
+        await db
+          .update(profiles)
+          .set({ teamId: request.teamName })
+          .where(eq(profiles.id, request.playerProfileId));
+      }
+    }
+    
+    return updated;
+  }
+
+  async rejectJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {
+    const [updated] = await db
+      .update(teamJoinRequests)
+      .set({
+        status: 'rejected',
+        decidedAt: new Date(),
+        decidedBy
+      })
+      .where(eq(teamJoinRequests.id, id))
+      .returning();
+    
+    return updated;
+  }
+
+  async getPendingPlayerJoinRequest(playerId: string): Promise<TeamJoinRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(teamJoinRequests)
+      .where(
+        and(
+          eq(teamJoinRequests.playerId, playerId),
+          eq(teamJoinRequests.status, 'pending')
+        )
+      )
+      .orderBy(desc(teamJoinRequests.requestedAt))
+      .limit(1);
+    return request;
   }
 
   // Event operations

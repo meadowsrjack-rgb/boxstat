@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera, Users } from "lucide-react";
+import { ArrowLeft, User, Award, Phone, Mail, MapPin, Calendar, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Trash2, Camera, Users, MessageCircle, Send, ChevronDown, ChevronUp } from "lucide-react";
 import SettingPage from "./setting-page";
+import TeamRoster from "@/components/TeamRoster";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
 const COACHING_CERTIFICATIONS = [
@@ -58,6 +60,11 @@ export function CoachProfilePage() {
 
   // Team assignment state
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  
+  // Team view state for dropdown
+  const [selectedTeamView, setSelectedTeamView] = useState<string>("");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isRosterOpen, setIsRosterOpen] = useState(false);
 
   // Fetch coach's assigned teams
   const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery<any[]>({
@@ -71,6 +78,46 @@ export function CoachProfilePage() {
       setSelectedTeams(assignedTeams.map((team: any) => team.name || team.teamId));
     }
   }, [assignedTeams]);
+
+  // Get selected team ID from assignedTeams
+  const selectedTeamData = assignedTeams.find((team: any) => team.name === selectedTeamView);
+  const selectedTeamId = selectedTeamData?.id;
+
+  // Fetch team messages for selected team
+  const { data: teamMessages = [] } = useQuery<any[]>({
+    queryKey: [`/api/announcements/team/${selectedTeamId}`],
+    enabled: !!selectedTeamId,
+  });
+
+  // Chat state
+  const [messageContent, setMessageContent] = useState("");
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async (messageData: any) => {
+      const response = await apiRequest("POST", "/api/announcements", messageData);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Message sent!", description: "Your message has been sent to the team." });
+      setMessageContent("");
+      queryClient.invalidateQueries({ queryKey: [`/api/announcements/team/${selectedTeamId}`] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  const handleSendMessage = () => {
+    if (!messageContent.trim() || !selectedTeamId) return;
+    
+    sendMessageMutation.mutate({
+      title: messageContent.slice(0, 50) + "...",
+      content: messageContent,
+      priority: "medium",
+      teamId: selectedTeamId,
+    });
+  };
 
   // Team assignment mutation with auto-save
   const teamAssignmentMutation = useMutation({
@@ -475,6 +522,111 @@ export function CoachProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Team View - Chat & Roster */}
+          {assignedTeams.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Team Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Select a team to manage
+                  </label>
+                  <Select value={selectedTeamView} onValueChange={(value) => {
+                    setSelectedTeamView(value);
+                    setIsChatOpen(false);
+                    setIsRosterOpen(false);
+                  }}>
+                    <SelectTrigger data-testid="select-team-view">
+                      <SelectValue placeholder="Choose a team..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignedTeams.map((team: any) => (
+                        <SelectItem key={team.id} value={team.name}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedTeamView && selectedTeamId && (
+                  <div className="space-y-3 mt-4">
+                    {/* Team Chat Collapsible */}
+                    <Collapsible open={isChatOpen} onOpenChange={setIsChatOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between" data-testid="button-toggle-chat">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            <span>Team Chat</span>
+                          </div>
+                          {isChatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3 space-y-3">
+                        {/* Message Input */}
+                        <div className="flex gap-2">
+                          <Textarea
+                            value={messageContent}
+                            onChange={(e) => setMessageContent(e.target.value)}
+                            placeholder="Type your message to the team..."
+                            rows={2}
+                            className="flex-1"
+                            data-testid="textarea-team-message"
+                          />
+                          <Button 
+                            onClick={handleSendMessage}
+                            disabled={!messageContent.trim() || sendMessageMutation.isPending}
+                            size="icon"
+                            data-testid="button-send-message"
+                          >
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* Recent Messages */}
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {teamMessages.length === 0 ? (
+                            <p className="text-sm text-gray-500 text-center py-4">No messages yet</p>
+                          ) : (
+                            teamMessages.slice(0, 5).map((msg: any) => (
+                              <div key={msg.id} className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                <p className="text-sm text-gray-800 dark:text-gray-200">{msg.content}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(msg.createdAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    {/* Team Roster Collapsible */}
+                    <Collapsible open={isRosterOpen} onOpenChange={setIsRosterOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between" data-testid="button-toggle-roster">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            <span>Team Roster</span>
+                          </div>
+                          {isRosterOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3">
+                        <TeamRoster teamId={selectedTeamId} />
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

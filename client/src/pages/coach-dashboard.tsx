@@ -713,13 +713,25 @@ function RosterTab({
   });
 
   // Fetch pending join requests for the selected team
-  const { data: teamJoinRequests = [] } = useQuery<any[]>({
+  const { data: teamJoinRequests = [], error: joinRequestsError, isError: joinRequestsHasError } = useQuery<any[]>({
     queryKey: ["/api/teams", selectedTeamId, "join-requests"],
     enabled: !!selectedTeamId,
     queryFn: async () => {
       const res = await fetch(`/api/teams/${selectedTeamId}/join-requests`, { credentials: "include" });
-      if (!res.ok) return [];
+      if (res.status === 401) {
+        throw new Error("Session expired. Please refresh the page.");
+      }
+      if (!res.ok) {
+        throw new Error("Failed to load join requests");
+      }
       return res.json();
+    },
+    retry: (failureCount, error: any) => {
+      // Don't retry on auth errors
+      if (error?.message?.includes("Session expired")) {
+        return false;
+      }
+      return failureCount < 2;
     },
   });
 
@@ -830,6 +842,28 @@ function RosterTab({
         <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
         <p className="text-sm text-gray-500">{selectedTeam?.ageGroup}</p>
       </div>
+
+      {/* Join Requests Error Banner */}
+      {joinRequestsHasError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="join-requests-error">
+          <div className="flex items-start gap-2">
+            <X className="h-5 w-5 text-red-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-red-800">Failed to load join requests</p>
+              <p className="text-xs text-red-600 mt-1">{(joinRequestsError as Error)?.message || "An error occurred"}</p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 text-red-600 border-red-300 hover:bg-red-50"
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] })}
+                data-testid="button-retry-join-requests"
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Roster */}
       <div className="space-y-2">

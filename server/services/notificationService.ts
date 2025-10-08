@@ -260,24 +260,40 @@ export class NotificationService {
     limit?: number;
     offset?: number;
     unreadOnly?: boolean;
+    profileId?: string | null;
   } = {}): Promise<Notification[]> {
     try {
-      const { limit = 20, offset = 0, unreadOnly = false } = options;
+      const { limit = 20, offset = 0, unreadOnly = false, profileId } = options;
+      
+      // Build where conditions
+      const conditions = [eq(notifications.userId, userId)];
       
       if (unreadOnly) {
-        return await db.select()
+        conditions.push(eq(notifications.isRead, false));
+      }
+      
+      // If profileId is provided, show only profile-specific AND user-general notifications
+      // Profile-specific: notifications.profileId = profileId
+      // User-general: notifications.profileId IS NULL
+      if (profileId) {
+        // Using OR condition via sql
+        const query = db.select()
           .from(notifications)
           .where(and(
             eq(notifications.userId, userId),
-            eq(notifications.isRead, false)
+            unreadOnly ? eq(notifications.isRead, false) : sql`true`,
+            sql`(${notifications.profileId} = ${profileId} OR ${notifications.profileId} IS NULL)`
           ))
           .orderBy(desc(notifications.createdAt))
           .limit(limit)
           .offset(offset);
+          
+        return await query;
       } else {
+        // No profile filter - show all user notifications
         return await db.select()
           .from(notifications)
-          .where(eq(notifications.userId, userId))
+          .where(and(...conditions))
           .orderBy(desc(notifications.createdAt))
           .limit(limit)
           .offset(offset);
@@ -316,15 +332,28 @@ export class NotificationService {
     }
   }
 
-  async getUnreadCount(userId: string): Promise<number> {
+  async getUnreadCount(userId: string, profileId?: string | null): Promise<number> {
     try {
-      const [result] = await db.select({ count: sql<number>`COUNT(*)` })
-        .from(notifications)
-        .where(and(
-          eq(notifications.userId, userId),
-          eq(notifications.isRead, false)
-        ));
-      return result?.count || 0;
+      if (profileId) {
+        // Count profile-specific AND user-general unread notifications
+        const [result] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(notifications)
+          .where(and(
+            eq(notifications.userId, userId),
+            eq(notifications.isRead, false),
+            sql`(${notifications.profileId} = ${profileId} OR ${notifications.profileId} IS NULL)`
+          ));
+        return result?.count || 0;
+      } else {
+        // Count all unread notifications for user
+        const [result] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(notifications)
+          .where(and(
+            eq(notifications.userId, userId),
+            eq(notifications.isRead, false)
+          ));
+        return result?.count || 0;
+      }
     } catch (error) {
       console.error('Error getting unread count:', error);
       return 0;

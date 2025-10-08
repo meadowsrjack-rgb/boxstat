@@ -86,11 +86,13 @@ export function setupNotificationRoutes(app: Express) {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const unreadOnly = req.query.unreadOnly === 'true';
+      const profileId = req.query.profileId as string | undefined;
 
       const notifications = await notificationService.getUserNotifications(userId, {
         limit,
         offset,
-        unreadOnly
+        unreadOnly,
+        profileId
       });
 
       res.json(notifications);
@@ -104,7 +106,8 @@ export function setupNotificationRoutes(app: Express) {
   app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const count = await notificationService.getUnreadCount(userId);
+      const profileId = req.query.profileId as string | undefined;
+      const count = await notificationService.getUnreadCount(userId, profileId);
       res.json({ count });
     } catch (error) {
       console.error('Error getting unread count:', error);

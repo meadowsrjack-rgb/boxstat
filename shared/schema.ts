@@ -499,6 +499,7 @@ export const approvals = pgTable("approvals", {
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  profileId: varchar("profile_id").references(() => profiles.id), // Optional: target specific profile
   type: varchar("type", { 
     enum: [
       "event_rsvp_available", 
@@ -833,6 +834,7 @@ export const approvalsRelations = relations(approvals, ({ one }) => ({
 // Notification relations
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
+  profile: one(profiles, { fields: [notifications.profileId], references: [profiles.id] }),
 }));
 
 export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({

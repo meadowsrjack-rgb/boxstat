@@ -880,6 +880,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Get coach's coach profile to target notification correctly
+      const coachProfiles = await db.select()
+        .from(profiles)
+        .where(eq(profiles.accountId, coachId));
+      const coachProfile = coachProfiles.find(p => p.profileType === 'coach');
+      
       // Create join request
       const joinRequest = await storage.createTeamJoinRequest({
         playerId: userId,
@@ -892,8 +898,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create notification for coach using NotificationService for push support
+      // Target the coach's coach profile specifically
       await notificationService.createNotification({
         userId: coachId,
+        profileId: coachProfile?.id || null,
         type: 'team_join_request',
         title: 'New Team Join Request',
         message: `${user.firstName} ${user.lastName} wants to join ${team.name}`,
@@ -1015,14 +1023,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notificationMessage = `Your request to join ${joinRequest.teamName} has been declined.`;
       }
       
-      // Send notification to player
-      await storage.createNotification({
+      // Send notification to player's profile
+      // Get player's player profile to target notification correctly
+      const playerProfiles = await db.select()
+        .from(profiles)
+        .where(eq(profiles.accountId, joinRequest.playerId));
+      const playerProfile = playerProfiles.find(p => p.profileType === 'player') || 
+                           playerProfiles.find(p => p.id === joinRequest.playerProfileId);
+      
+      await notificationService.createNotification({
         userId: joinRequest.playerId,
+        profileId: playerProfile?.id || null,
         type: notificationType,
         title: action === 'approve' ? 'Join Request Approved' : 'Join Request Declined',
         message: notificationMessage,
+        actionUrl: action === 'approve' ? '/player-dashboard' : undefined,
         data: { joinRequestId: requestId, teamId: joinRequest.teamId },
-        isRead: false,
         priority: 'high'
       });
       

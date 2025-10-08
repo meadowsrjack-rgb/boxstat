@@ -81,17 +81,33 @@ export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Get current profile based on route
+  const { data: profiles } = useQuery({
+    queryKey: ['/api/profiles/me'],
+  });
+  
+  // Determine current profile based on URL path
+  const currentPath = window.location.pathname;
+  const currentProfileType = currentPath.includes('/coach') ? 'coach' 
+                           : currentPath.includes('/player') ? 'player' 
+                           : currentPath.includes('/parent') ? 'parent' 
+                           : null;
+  
+  const currentProfile = profiles?.find((p: any) => p.profileType === currentProfileType);
+  const profileId = currentProfile?.id;
 
   // Get unread count
   const { data: unreadData } = useQuery({
-    queryKey: ['/api/notifications/unread-count'],
+    queryKey: ['/api/notifications/unread-count', { profileId }],
+    queryFn: () => apiRequest(`/api/notifications/unread-count${profileId ? `?profileId=${profileId}` : ''}`),
     refetchInterval: 30000, // Check every 30 seconds
   });
 
   // Get notifications
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ['/api/notifications'],
-    queryFn: () => apiRequest('/api/notifications?limit=20'),
+    queryKey: ['/api/notifications', { profileId }],
+    queryFn: () => apiRequest(`/api/notifications?limit=20${profileId ? `&profileId=${profileId}` : ''}`),
     enabled: isOpen,
   });
 

@@ -8,7 +8,8 @@ This is a cross-platform mobile application for the UYP Basketball youth league,
 - **Fixed join request display in coach dashboard**: Join requests were silently failing to display when authentication errors occurred. Now properly throws errors with user-friendly error banner and retry button. Includes smart retry logic that prevents infinite loops on auth failures.
 - **Fixed team selection during profile creation**: Team dropdown values were slugified (e.g., "youth-youth-girls-black") but backend expected actual team names ("Youth Girls Black"). Updated select values to use actual team names, ensuring join requests are created successfully when players select teams during profile creation.
 - **Fixed team selection in player settings**: Similar issue where team select values didn't match backend expectations. Now using consistent team name format across all team selection UIs.
-- **Fixed team change blocking when pending request exists**: Players can now change their team selection even when they have a pending join request. The system automatically cancels the old request and creates a new one when switching teams. Prevents duplicate requests to the same team.
+- **Fixed team change blocking when pending request exists**: Players can now change their team selection even when they have a pending join request. The system automatically cancels the old request (marks as rejected) and creates a new one when switching teams. Prevents duplicate requests to the same team.
+- **Fixed profile creation field labels**: Removed "(Optional)" labels from Height and City fields since they are required fields. Only Phone Number remains marked as optional.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

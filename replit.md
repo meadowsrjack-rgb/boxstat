@@ -3,6 +3,12 @@
 ## Overview
 This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
 
+## Recent Changes
+### Bug Fixes (October 8, 2025)
+- **Fixed join request display in coach dashboard**: Join requests were silently failing to display when authentication errors occurred. Now properly throws errors with user-friendly error banner and retry button. Includes smart retry logic that prevents infinite loops on auth failures.
+- **Fixed team selection during profile creation**: Team dropdown values were slugified (e.g., "youth-youth-girls-black") but backend expected actual team names ("Youth Girls Black"). Updated select values to use actual team names, ensuring join requests are created successfully when players select teams during profile creation.
+- **Fixed team selection in player settings**: Similar issue where team select values didn't match backend expectations. Now using consistent team name format across all team selection UIs.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

@@ -301,10 +301,15 @@ export default function PlayerCard({
   const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
 
   const OverallSkillBar = ({ value }: { value: number }) => (
-    <motion.div className="space-y-2 cursor-pointer p-3 rounded-lg" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
+    <motion.div 
+      className="space-y-2 cursor-pointer p-3 rounded-lg bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100" 
+      whileHover={{ scale: 1.01 }} 
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+      data-testid="overall-skills-bar"
+    >
       <div className="flex justify-between text-sm">
-        <span className="font-semibold text-gray-800">Overall Skills Assessment</span>
-        <span className="text-red-600 font-bold">{value}%</span>
+        <span className="font-semibold text-gray-800" data-testid="text-skills-label">Overall Skills Assessment</span>
+        <span className="text-red-600 font-bold" data-testid="text-skills-percentage">{value}%</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
         <motion.div
@@ -313,6 +318,7 @@ export default function PlayerCard({
           whileInView={{ width: `${value}%` }}
           viewport={{ once: true, amount: 0.4 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
+          data-testid="progress-bar-fill"
         />
       </div>
     </motion.div>

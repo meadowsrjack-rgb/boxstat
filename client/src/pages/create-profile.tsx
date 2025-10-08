@@ -537,19 +537,19 @@ export default function CreateProfile() {
                             <SelectContent className="max-h-[300px]">
                               <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">FNHTL</div>
                               {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team, idx) => (
-                                <SelectItem key={`fnhtl-${idx}`} value={`fnhtl-${team.toLowerCase()}`}>
+                                <SelectItem key={`fnhtl-${idx}`} value={team}>
                                   {team}
                                 </SelectItem>
                               ))}
                               <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
                               {['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team, idx) => (
-                                <SelectItem key={`youth-${idx}`} value={`youth-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                                <SelectItem key={`youth-${idx}`} value={team}>
                                   {team}
                                 </SelectItem>
                               ))}
                               <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
                               {['HS Elite', 'HS Red', 'HS Black', 'HS White'].map((team, idx) => (
-                                <SelectItem key={`hs-${idx}`} value={`hs-${team.toLowerCase().replace(/\s+/g, '-')}`}>
+                                <SelectItem key={`hs-${idx}`} value={team}>
                                   {team}
                                 </SelectItem>
                               ))}

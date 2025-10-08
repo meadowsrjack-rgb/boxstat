@@ -39,7 +39,7 @@ export function PlayerProfilePage() {
 
   // Fetch current team data to display (read-only)
   const { data: teamData } = useQuery({
-    queryKey: [`/api/users/${(user as any)?.id}/team`],
+    queryKey: ["/api/users", (user as any)?.id, "team"],
     enabled: !!(user as any)?.id
   });
 
@@ -179,10 +179,12 @@ export function PlayerProfilePage() {
       // Invalidate queries to refresh all user data across the app
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/team`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/awards`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}/events`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "team"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "awards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "tasks"] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
       
       const description = updatedUser.joinRequestPending
         ? `Profile updated! Your request to join ${updatedUser.requestedTeamName} is pending coach approval.`

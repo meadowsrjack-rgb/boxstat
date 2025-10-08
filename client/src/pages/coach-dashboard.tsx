@@ -667,7 +667,7 @@ function ProfileAvatarRing({ src, initials, size = 80 }: { src?: string; initial
   );
 }
 
-/* ---------- Roster Tab (with Evaluate/Reward buttons inline) ---------- */
+/* ---------- Roster Tab (Team-focused with roster + chat) ---------- */
 function RosterTab({
   team,
   roster,
@@ -697,202 +697,188 @@ function RosterTab({
 }) {
   const { user } = useAuth();
   const currentUser = user as UserType;
-  const [msg, setMsg] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
 
-  // Fetch pending join requests for the coach
-  const { data: joinRequests = [] } = useQuery<any[]>({
-    queryKey: [`/api/coaches/${currentUser?.id}/join-requests`],
-    enabled: !!currentUser?.id,
+  // Fetch roster for selected team
+  const { data: teamRoster = [] } = useQuery<any[]>({
+    queryKey: ["/api/teams", selectedTeamId, "players"],
+    enabled: !!selectedTeamId,
+    queryFn: async () => {
+      const res = await fetch(`/api/teams/${selectedTeamId}/players`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Fetch pending join requests for the selected team
+  const { data: teamJoinRequests = [] } = useQuery<any[]>({
+    queryKey: ["/api/teams", selectedTeamId, "join-requests"],
+    enabled: !!selectedTeamId,
+    queryFn: async () => {
+      const res = await fetch(`/api/teams/${selectedTeamId}/join-requests`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
   });
 
   // Approve join request mutation
   const approveMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      return apiRequest(`/api/join-requests/${requestId}`, {
+      const res = await fetch(`/api/teams/join-requests/${requestId}`, {
         method: "PATCH",
-        data: { action: "approve" },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "approve" }),
       });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to approve request");
+      }
+      return res.json();
     },
     onSuccess: () => {
-      // Invalidate both join requests and notifications to keep UI in sync
-      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser?.id}/notifications`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/players`] });
       toast({ title: "Success", description: "Player added to team!" });
     },
-    onError: async (error: any) => {
-      // Extract error message from response body
-      let message = "Failed to approve request";
-      try {
-        if (error instanceof Response) {
-          const body = await error.json();
-          message = body.message || message;
-        } else if (error?.message) {
-          message = error.message;
-        }
-      } catch (e) {
-        // If JSON parsing fails, use default message
-      }
-      toast({ title: "Error", description: message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
   // Reject join request mutation
   const rejectMutation = useMutation({
     mutationFn: async (requestId: number) => {
-      return apiRequest(`/api/join-requests/${requestId}`, {
+      const res = await fetch(`/api/teams/join-requests/${requestId}`, {
         method: "PATCH",
-        data: { action: "reject" },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "reject" }),
       });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to reject request");
+      }
+      return res.json();
     },
     onSuccess: () => {
-      // Invalidate both join requests and notifications to keep UI in sync
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] });
       queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${currentUser?.id}/notifications`] });
-      toast({ title: "Request rejected" });
+      toast({ title: "Request declined" });
     },
-    onError: async (error: any) => {
-      // Extract error message from response body
-      let message = "Failed to reject request";
-      try {
-        if (error instanceof Response) {
-          const body = await error.json();
-          message = body.message || message;
-        } else if (error?.message) {
-          message = error.message;
-        }
-      } catch (e) {
-        // If JSON parsing fails, use default message
-      }
-      toast({ title: "Error", description: message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
+  // Show team list if no team is selected
+  if (!selectedTeamId) {
+    return (
+      <div className="space-y-4">
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
+          <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
+        </div>
+        {assignedTeams.length > 0 ? (
+          <div className="grid gap-3">
+            {assignedTeams.map((team) => (
+              <Card 
+                key={team.id} 
+                className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setSelectedTeamId(team.id)}
+                data-testid={`team-card-${team.id}`}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-gray-900">{team.name}</div>
+                    <div className="text-sm text-gray-500">{team.ageGroup}</div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No teams assigned yet.</div>
+        )}
+      </div>
+    );
+  }
+
+  // Show selected team details
+  const selectedTeam = assignedTeams.find(t => t.id === selectedTeamId);
+
   return (
     <div className="space-y-6">
-      {/* Join Requests Panel */}
-      {joinRequests.length > 0 && (
-        <div>
-          <div className="mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Join Requests</h3>
-            <p className="text-sm text-gray-500">Players requesting to join your team</p>
-          </div>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-0">
-              <div className="divide-y divide-gray-100">
-                {joinRequests.map((request: any) => (
-                  <div key={request.id} className="p-4 flex items-center justify-between" data-testid={`join-request-${request.id}`}>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={request.player?.profileImageUrl} />
-                        <AvatarFallback className="text-sm">
-                          {request.player?.firstName?.[0]}{request.player?.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {request.player?.firstName} {request.player?.lastName}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Requesting: {request.team?.name}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                        onClick={() => approveMutation.mutate(request.id)}
-                        disabled={approveMutation.isPending || rejectMutation.isPending}
-                        data-testid={`button-approve-${request.id}`}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 border-red-600 hover:bg-red-50"
-                        onClick={() => rejectMutation.mutate(request.id)}
-                        disabled={approveMutation.isPending || rejectMutation.isPending}
-                        data-testid={`button-reject-${request.id}`}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Player Search */}
+      {/* Team Header */}
       <div>
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Search Players</h3>
-        </div>
-        <PlayerSearch
-          onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
-          placeholder="Search for players across all teams..."
-        />
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedTeamId(null)}
+          className="mb-2 text-gray-600 hover:text-gray-900"
+          data-testid="button-back-to-teams"
+        >
+          <ChevronRight className="h-4 w-4 mr-1 rotate-180" />
+          Back to Teams
+        </Button>
+        <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
+        <p className="text-sm text-gray-500">{selectedTeam?.ageGroup}</p>
       </div>
-      
-      {/* Roster list */}
+
+      {/* Roster */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">Roster</h3>
-          {team && selectedTeamFilter === 'my-team' && team.inviteCode && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(team.inviteCode!);
-                toast({ title: "Invite code copied" });
-              }}
-              data-testid="button-copy-invite"
-            >
-              <Copy className="h-3.5 w-3.5 mr-1" /> Invite
-            </Button>
-          )}
-        </div>
-        {roster?.length ? (
+        <h4 className="font-semibold text-gray-900">Team Roster</h4>
+        {teamRoster.length > 0 ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
-              <div className="max-h-72 overflow-y-auto">
-                {roster.map((p) => (
-                  <div key={p.id} className="p-4 border-b border-gray-100 last:border-b-0 flex items-center justify-between" data-testid={`player-${p.id}`}>
+              <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+                {teamRoster.map((p) => (
+                  <div 
+                    key={p.id} 
+                    className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors" 
+                    data-testid={`player-${p.id}`}
+                    onClick={() => setSelectedPlayerId(p.id)}
+                  >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-10 w-10">
                         <AvatarImage src={p.profileImageUrl} />
                         <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
                       </Avatar>
                       <div className="truncate">
-                        <div className="font-medium text-gray-900 truncate" data-testid={`text-player-name-${p.id}`}>{p.firstName} {p.lastName}</div>
-                        <div className="text-xs text-gray-500">{p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}</div>
+                        <div className="font-medium text-gray-900 truncate" data-testid={`text-player-name-${p.id}`}>
+                          {p.firstName} {p.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      {/* Evaluate (quarterly) */}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEvaluate(p as any)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEvaluate(p as any);
+                        }}
                         className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         data-testid={`button-evaluate-${p.id}`}
                       >
                         <Gauge className="h-4 w-4" />
                       </Button>
-                      {/* Reward (trophy/badge) */}
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onReward(p as any)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReward(p as any);
+                        }}
                         className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
                         data-testid={`button-reward-${p.id}`}
                       >
@@ -901,51 +887,73 @@ function RosterTab({
                     </div>
                   </div>
                 ))}
+                
+                {/* Pending Join Requests at bottom - grayed out */}
+                {teamJoinRequests.length > 0 && (
+                  <>
+                    <div className="px-4 py-2 bg-gray-50 border-t-2 border-gray-200">
+                      <span className="text-xs font-semibold text-gray-600 uppercase">Pending Requests</span>
+                    </div>
+                    {teamJoinRequests.map((request: any) => (
+                      <div 
+                        key={request.id} 
+                        className="p-4 flex items-center justify-between bg-gray-50 opacity-70" 
+                        data-testid={`join-request-${request.id}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 grayscale">
+                            <AvatarImage src={request.player?.profileImageUrl} />
+                            <AvatarFallback className="text-xs">
+                              {request.player?.firstName?.[0]}{request.player?.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-600">
+                              {request.player?.firstName} {request.player?.lastName}
+                            </div>
+                            <div className="text-xs text-gray-500">Pending approval</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-600 border-green-600 hover:bg-green-50"
+                            onClick={() => approveMutation.mutate(request.id)}
+                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                            data-testid={`button-accept-${request.id}`}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Accept
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 border-red-600 hover:bg-red-50"
+                            onClick={() => rejectMutation.mutate(request.id)}
+                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                            data-testid={`button-decline-${request.id}`}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Decline
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
         ) : (
-          <div className="text-sm text-gray-500">No players yet.</div>
+          <div className="text-sm text-gray-500">No players in this team yet.</div>
         )}
       </div>
 
       {/* Team Chat */}
       <div>
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Team Chat</h3>
-        {selectedTeamFilter === 'my-team' ? (
-          assignedTeams.length > 0 ? (
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Select a team from the filter above to view its chat.
-                </p>
-                <div className="grid gap-2">
-                  {assignedTeams.map((team) => (
-                    <Button
-                      key={team.id}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onTeamFilterChange(team.id)}
-                      className="justify-start"
-                      data-testid={`button-team-chat-${team.id}`}
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      {team.name} ({team.ageGroup})
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-sm text-gray-500">No teams assigned yet.</div>
-          )
-        ) : (
-          selectedTeamFilter && typeof selectedTeamFilter === 'number' ? (
-            <TeamChat teamId={selectedTeamFilter} />
-          ) : (
-            <div className="text-sm text-gray-500">No team chat available.</div>
-          )
-        )}
+        <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
+        <TeamChat teamId={selectedTeamId} />
       </div>
     </div>
   );

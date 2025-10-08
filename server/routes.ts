@@ -6,8 +6,8 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams } from "@shared/schema";
-import { eq, count, and, inArray } from "drizzle-orm";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests } from "@shared/schema";
+import { eq, count, and, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
@@ -950,6 +950,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching join requests:", error);
       res.status(500).json({ message: "Failed to fetch join requests" });
+    }
+  });
+
+  app.get('/api/teams/:teamId/join-requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const userId = req.user.claims.sub;
+      
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: "Invalid team ID" });
+      }
+      
+      // Check if the coach is assigned to this team
+      const coachTeamsList = await db.select()
+        .from(coachTeams)
+        .where(eq(coachTeams.coachId, userId));
+      
+      const isAuthorized = coachTeamsList.some(ct => ct.teamId === teamId);
+      
+      if (!isAuthorized) {
+        return res.status(403).json({ message: "Access denied: You are not assigned to this team" });
+      }
+      
+      // Get all pending join requests for this team
+      const allRequests = await db.select()
+        .from(teamJoinRequests)
+        .where(and(
+          eq(teamJoinRequests.teamId, teamId),
+          eq(teamJoinRequests.status, 'pending')
+        ))
+        .orderBy(desc(teamJoinRequests.requestedAt));
+      
+      // Enrich with player info
+      const enrichedRequests = await Promise.all(
+        allRequests.map(async (request) => {
+          const player = await storage.getUser(request.playerId);
+          return {
+            ...request,
+            player: player ? {
+              id: player.id,
+              firstName: player.firstName,
+              lastName: player.lastName,
+              profileImageUrl: player.profileImageUrl,
+              position: player.position,
+              jerseyNumber: player.jerseyNumber
+            } : null
+          };
+        })
+      );
+      
+      res.json(enrichedRequests);
+    } catch (error) {
+      console.error("Error fetching team join requests:", error);
+      res.status(500).json({ message: "Failed to fetch team join requests" });
     }
   });
 

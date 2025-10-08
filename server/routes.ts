@@ -915,7 +915,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check for existing pending request
       const existingRequest = await storage.getPendingPlayerJoinRequest(userId);
       if (existingRequest) {
-        return res.status(400).json({ message: "You already have a pending join request" });
+        // If it's the same team, reject duplicate request
+        if (existingRequest.teamId === teamId) {
+          return res.status(400).json({ message: "You already have a pending join request for this team" });
+        }
+        
+        // If it's a different team, cancel the old request and allow the new one
+        await db.update(teamJoinRequests)
+          .set({ status: 'cancelled', decidedAt: new Date() })
+          .where(eq(teamJoinRequests.id, existingRequest.id));
       }
       
       // Get user profile

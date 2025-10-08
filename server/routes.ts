@@ -861,6 +861,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get team roster with Notion players (includes players without app accounts)
+  app.get('/api/teams/:id/roster-with-notion', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.id);
+      
+      // Get team from database
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Get Notion team data using team name
+      const notionTeam = notionService.getAllTeams().find(
+        t => t.name.toLowerCase() === team.name.toLowerCase()
+      );
+      
+      if (!notionTeam) {
+        // No Notion data, return only app players
+        const appPlayers = await storage.getTeamPlayers(teamId);
+        const rosterData = appPlayers.map(player => ({
+          notionId: null,
+          name: `${player.firstName} ${player.lastName}`,
+          position: player.position,
+          jerseyNumber: player.jerseyNumber,
+          hasAppAccount: true,
+          appAccountId: player.id,
+          profileImageUrl: player.profileImageUrl,
+          firstName: player.firstName,
+          lastName: player.lastName,
+        }));
+        return res.json(rosterData);
+      }
+      
+      // Get app players for this team
+      const appPlayers = await storage.getTeamPlayers(teamId);
+      
+      // Create a map of app players by name for quick lookup
+      const appPlayersByName = new Map();
+      appPlayers.forEach(player => {
+        const fullName = `${player.firstName} ${player.lastName}`.toLowerCase().trim();
+        appPlayersByName.set(fullName, player);
+      });
+      
+      // Combine Notion players with app account data
+      const combinedRoster = notionTeam.roster.map(notionPlayer => {
+        const normalizedName = notionPlayer.name.toLowerCase().trim();
+        const appPlayer = appPlayersByName.get(normalizedName);
+        
+        if (appPlayer) {
+          // Player has an app account
+          return {
+            notionId: notionPlayer.id,
+            name: notionPlayer.name,
+            position: appPlayer.position,
+            jerseyNumber: appPlayer.jerseyNumber,
+            hasAppAccount: true,
+            appAccountId: appPlayer.id,
+            profileImageUrl: appPlayer.profileImageUrl,
+            firstName: appPlayer.firstName,
+            lastName: appPlayer.lastName,
+            grade: notionPlayer.grade,
+            status: notionPlayer.status,
+          };
+        } else {
+          // Player does NOT have an app account
+          const nameParts = notionPlayer.name.split(' ');
+          const firstName = nameParts.slice(0, -1).join(' ') || notionPlayer.name;
+          const lastName = nameParts[nameParts.length - 1] || '';
+          
+          return {
+            notionId: notionPlayer.id,
+            name: notionPlayer.name,
+            position: null,
+            jerseyNumber: null,
+            hasAppAccount: false,
+            appAccountId: null,
+            profileImageUrl: null,
+            firstName,
+            lastName,
+            grade: notionPlayer.grade,
+            status: notionPlayer.status,
+          };
+        }
+      });
+      
+      res.json(combinedRoster);
+    } catch (error) {
+      console.error("Error fetching team roster with Notion:", error);
+      res.status(500).json({ message: "Failed to fetch roster" });
+    }
+  });
+
+  // Manually add player to team (only for players with app accounts)
+  app.post('/api/teams/:teamId/add-player', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const { playerId } = req.body;
+      const coachId = req.user.claims.sub;
+      
+      // Verify coach has access to this team
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Check if coach is assigned to this team
+      const isCoachOfTeam = team.coachId === coachId || 
+        (await db.select().from(coachTeams)
+          .where(and(eq(coachTeams.coachId, coachId), eq(coachTeams.teamId, teamId)))
+          .limit(1)).length > 0;
+      
+      if (!isCoachOfTeam) {
+        return res.status(403).json({ message: "You are not authorized to manage this team" });
+      }
+      
+      // Update player's team
+      await db.update(users)
+        .set({ 
+          teamId: teamId,
+          teamName: team.name,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, playerId));
+      
+      res.json({ message: "Player added to team successfully" });
+    } catch (error) {
+      console.error("Error adding player to team:", error);
+      res.status(500).json({ message: "Failed to add player to team" });
+    }
+  });
+
+  // Manually remove player from team (only for players with app accounts)
+  app.post('/api/teams/:teamId/remove-player', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      const { playerId } = req.body;
+      const coachId = req.user.claims.sub;
+      
+      // Verify coach has access to this team
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      
+      // Check if coach is assigned to this team
+      const isCoachOfTeam = team.coachId === coachId || 
+        (await db.select().from(coachTeams)
+          .where(and(eq(coachTeams.coachId, coachId), eq(coachTeams.teamId, teamId)))
+          .limit(1)).length > 0;
+      
+      if (!isCoachOfTeam) {
+        return res.status(403).json({ message: "You are not authorized to manage this team" });
+      }
+      
+      // Remove player from team (set teamId to null)
+      await db.update(users)
+        .set({ 
+          teamId: null,
+          teamName: null,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, playerId));
+      
+      res.json({ message: "Player removed from team successfully" });
+    } catch (error) {
+      console.error("Error removing player from team:", error);
+      res.status(500).json({ message: "Failed to remove player from team" });
+    }
+  });
+
   app.get('/api/teams/:id/events', isAuthenticated, async (req: any, res) => {
     try {
       const events = await storage.getTeamEvents(parseInt(req.params.id));

@@ -39,6 +39,8 @@ import {
   MessageCircle,
   Check,
   X,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -700,13 +702,15 @@ function RosterTab({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
+  const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
 
-  // Fetch roster for selected team
+  // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
-    queryKey: ["/api/teams", selectedTeamId, "players"],
+    queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"],
     enabled: !!selectedTeamId,
     queryFn: async () => {
-      const res = await fetch(`/api/teams/${selectedTeamId}/players`, { credentials: "include" });
+      const res = await fetch(`/api/teams/${selectedTeamId}/roster-with-notion`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -751,7 +755,7 @@ function RosterTab({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
@@ -787,6 +791,72 @@ function RosterTab({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  // Add player to team mutation
+  const addPlayerMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/teams/${selectedTeamId}/add-player`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to add player");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      setAddPlayerDialogOpen(false);
+      toast({ title: "Success", description: "Player added to team!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Remove player from team mutation
+  const removePlayerMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/teams/${selectedTeamId}/remove-player`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to remove player");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Success", description: "Player removed from team" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Fetch all players (for add player dialog)
+  const fetchAvailablePlayers = async () => {
+    try {
+      const res = await fetch('/api/players/all', { credentials: "include" });
+      if (!res.ok) return;
+      const allPlayers = await res.json();
+      // Filter out players already on this team
+      const rosterPlayerIds = new Set(teamRoster.filter((p: any) => p.hasAppAccount).map((p: any) => p.appAccountId));
+      const available = allPlayers.filter((p: any) => !rosterPlayerIds.has(p.id) && p.userType === 'player');
+      setAvailablePlayers(available);
+    } catch (error) {
+      console.error("Error fetching available players:", error);
+    }
+  };
 
   // Show team list if no team is selected
   if (!selectedTeamId) {
@@ -867,60 +937,117 @@ function RosterTab({
 
       {/* Roster */}
       <div className="space-y-2">
-        <h4 className="font-semibold text-gray-900">Team Roster</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-semibold text-gray-900">Team Roster</h4>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              fetchAvailablePlayers();
+              setAddPlayerDialogOpen(true);
+            }}
+            className="text-green-600 border-green-600 hover:bg-green-50"
+            data-testid="button-add-player"
+          >
+            <UserPlus className="h-4 w-4 mr-1" />
+            Add Player
+          </Button>
+        </div>
         {teamRoster.length > 0 ? (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
               <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
-                {teamRoster.map((p) => (
-                  <div 
-                    key={p.id} 
-                    className="p-4 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors" 
-                    data-testid={`player-${p.id}`}
-                    onClick={() => setSelectedPlayerId(p.id)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={p.profileImageUrl} />
-                        <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <div className="truncate">
-                        <div className="font-medium text-gray-900 truncate" data-testid={`text-player-name-${p.id}`}>
-                          {p.firstName} {p.lastName}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}
+                {teamRoster.map((p) => {
+                  const hasAccount = p.hasAppAccount;
+                  const playerId = p.appAccountId || p.notionId;
+                  
+                  return (
+                    <div 
+                      key={playerId} 
+                      className={`p-4 flex items-center justify-between transition-colors ${
+                        hasAccount 
+                          ? "hover:bg-gray-50 cursor-pointer" 
+                          : "bg-gray-50 opacity-60 cursor-default"
+                      }`}
+                      data-testid={`player-${playerId}`}
+                      onClick={() => hasAccount && setSelectedPlayerId(p.appAccountId)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className={`h-10 w-10 ${!hasAccount ? "grayscale" : ""}`}>
+                          <AvatarImage src={p.profileImageUrl} />
+                          <AvatarFallback className="text-xs">{p.firstName?.[0]}{p.lastName?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="truncate">
+                          <div className={`font-medium truncate flex items-center gap-2 ${
+                            hasAccount ? "text-gray-900" : "text-gray-500"
+                          }`} data-testid={`text-player-name-${playerId}`}>
+                            {p.name}
+                            {!hasAccount && (
+                              <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+                                No Account
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {p.position || "Player"}{p.jerseyNumber != null ? ` • #${p.jerseyNumber}` : ""}
+                            {p.grade && ` • Grade ${p.grade}`}
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (hasAccount) onEvaluate(p as any);
+                          }}
+                          disabled={!hasAccount}
+                          className={hasAccount 
+                            ? "text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                            : "text-gray-400 cursor-not-allowed"
+                          }
+                          data-testid={`button-evaluate-${playerId}`}
+                        >
+                          <Gauge className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (hasAccount) onReward(p as any);
+                          }}
+                          disabled={!hasAccount}
+                          className={hasAccount 
+                            ? "text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50" 
+                            : "text-gray-400 cursor-not-allowed"
+                          }
+                          data-testid={`button-reward-${playerId}`}
+                        >
+                          <Trophy className="h-4 w-4" />
+                        </Button>
+                        {hasAccount && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Remove ${p.name} from this team?`)) {
+                                removePlayerMutation.mutate(p.appAccountId);
+                              }
+                            }}
+                            disabled={removePlayerMutation.isPending}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            data-testid={`button-remove-${playerId}`}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEvaluate(p as any);
-                        }}
-                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        data-testid={`button-evaluate-${p.id}`}
-                      >
-                        <Gauge className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onReward(p as any);
-                        }}
-                        className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
-                        data-testid={`button-reward-${p.id}`}
-                      >
-                        <Trophy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 
                 {/* Pending Join Requests at bottom - grayed out */}
                 {teamJoinRequests.length > 0 && (
@@ -989,6 +1116,52 @@ function RosterTab({
         <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
         <TeamChat teamId={selectedTeamId} />
       </div>
+
+      {/* Add Player Dialog */}
+      <Dialog open={addPlayerDialogOpen} onOpenChange={setAddPlayerDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Player to Team</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {availablePlayers.length > 0 ? (
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {availablePlayers.map((player) => (
+                  <div
+                    key={player.id}
+                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer flex items-center justify-between"
+                    onClick={() => addPlayerMutation.mutate(player.id)}
+                    data-testid={`available-player-${player.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={player.profileImageUrl} />
+                        <AvatarFallback className="text-xs">
+                          {player.firstName?.[0]}{player.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {player.firstName} {player.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {player.position || "Player"}
+                          {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <UserPlus className="h-4 w-4 text-green-600" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-sm text-gray-500">
+                No available players to add
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

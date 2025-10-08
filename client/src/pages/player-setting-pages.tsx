@@ -37,6 +37,14 @@ export function PlayerProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  // Get current player profile for profileId
+  const { data: profiles = [], isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['/api/profiles/me'],
+    enabled: !!(user as any)?.id
+  });
+  
+  const currentProfile = (profiles as any[]).find((p: any) => p.profileType === 'player');
+
   // Fetch current team data to display (read-only)
   const { data: teamData } = useQuery({
     queryKey: ["/api/users", (user as any)?.id, "team"],
@@ -143,11 +151,16 @@ export function PlayerProfilePage() {
           const selectedTeam = teams.find((t: any) => t.name === data.teamId);
           
           if (selectedTeam) {
+            // Ensure we have a valid profileId before creating join request
+            if (!currentProfile?.id) {
+              throw new Error("Unable to create join request. Profile information is not available. Please try again.");
+            }
+            
             const joinResponse = await fetch(`/api/teams/${selectedTeam.id}/join-requests`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
-              body: JSON.stringify({})
+              body: JSON.stringify({ profileId: currentProfile.id })
             });
             
             if (joinResponse.ok) {
@@ -504,11 +517,11 @@ export function PlayerProfilePage() {
           <div className="flex justify-end pt-6">
             <Button 
               onClick={() => mutation.mutate(profile)} 
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || isLoadingProfile}
               className="px-8"
               data-testid="button-save-profile"
             >
-              {mutation.isPending ? "Saving Changes..." : "Save Changes"}
+              {mutation.isPending ? "Saving Changes..." : isLoadingProfile ? "Loading Profile..." : "Save Changes"}
             </Button>
           </div>
         </div>

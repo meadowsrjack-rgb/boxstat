@@ -133,6 +133,9 @@ export function PlayerProfilePage() {
       const updatedUser = await response.json();
       
       // If team changed, create join request
+      let joinRequestCreated = false;
+      let requestedTeamName = "";
+      
       if (teamChanged) {
         const teamsResponse = await fetch("/api/teams", { credentials: "include" });
         if (teamsResponse.ok) {
@@ -148,14 +151,21 @@ export function PlayerProfilePage() {
             });
             
             if (joinResponse.ok) {
-              updatedUser.joinRequestPending = true;
-              updatedUser.requestedTeamName = data.teamId;
+              joinRequestCreated = true;
+              requestedTeamName = data.teamId;
+            } else {
+              const errorData = await joinResponse.json();
+              throw new Error(errorData.message || "Failed to create team join request");
             }
           }
         }
       }
       
-      return updatedUser;
+      return { 
+        ...updatedUser, 
+        joinRequestPending: joinRequestCreated, 
+        requestedTeamName 
+      };
     },
     onSuccess: (updatedUser) => {
       // Update local profile state with server response

@@ -4,6 +4,12 @@
 This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
 
 ## Recent Changes
+### Coach Roster Management Enhancement (October 8, 2025)
+- **Complete Notion roster display**: Coach dashboards now display ALL players from the Notion database for their teams, not just those with app accounts. Players without app accounts are shown with visual indicators (grayed out, "No Account" badge).
+- **Disabled actions for unregistered players**: Players without app accounts cannot receive awards, evaluations, or have their player cards viewed. Evaluate and Reward buttons are disabled and grayed out for these players.
+- **Manual roster management**: Coaches can now manually add or remove players from their team rosters using "Add Player" and "Remove" buttons. Add player shows a dialog with all available app players not currently on the team.
+- **Name-based player matching**: The system matches Notion players with app accounts by comparing full names (firstName + lastName), enabling proper account linking and status indication.
+
 ### Bug Fixes (October 8, 2025)
 - **Fixed join request display in coach dashboard**: Join requests were silently failing to display when authentication errors occurred. Now properly throws errors with user-friendly error banner and retry button. Includes smart retry logic that prevents infinite loops on auth failures.
 - **Fixed team selection during profile creation**: Team dropdown values were slugified (e.g., "youth-youth-girls-black") but backend expected actual team names ("Youth Girls Black"). Updated select values to use actual team names, ensuring join requests are created successfully when players select teams during profile creation.

@@ -6,7 +6,7 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles, accounts } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -58,6 +58,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Notification routes
   setupNotificationRoutes(app);
+
+  // Development-only test login endpoint (bypasses OAuth)
+  if (process.env.NODE_ENV === 'development') {
+    app.post('/api/auth/test-login', async (req: any, res) => {
+      try {
+        const { accountId } = req.body;
+        const testAccountId = accountId || 'test-account-001';
+        
+        // Get account from database
+        const [account] = await db.select().from(accounts).where(eq(accounts.id, testAccountId)).limit(1);
+        
+        if (!account) {
+          return res.status(404).json({ message: "Test account not found" });
+        }
+        
+        // Create fake session for testing
+        req.session.user = {
+          claims: {
+            sub: testAccountId,
+            email: account.email || 'testagent@upyourperformance.org',
+            name: `${account.first_name} ${account.last_name}` || 'Test Agent',
+            picture: null
+          }
+        };
+        
+        await new Promise((resolve, reject) => {
+          req.session.save((err: any) => {
+            if (err) reject(err);
+            else resolve(true);
+          });
+        });
+        
+        res.json({ 
+          message: "Test login successful",
+          accountId: testAccountId,
+          email: account.email,
+          sessionId: req.sessionID
+        });
+      } catch (error) {
+        console.error("Error in test login:", error);
+        res.status(500).json({ message: "Test login failed", error: String(error) });
+      }
+    });
+  }
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {

@@ -363,10 +363,7 @@ export default function PlayerCard({
                     </h1>
 
                     <div className="mt-1 text-sm font-medium text-gray-700">
-                      {playerProfile.position || "Player"} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
-                      {playerProfile.city && (
-                        <div className="text-xs text-gray-600 mt-1">From {playerProfile.city}</div>
-                      )}
+                      {(playerProfile.position || "Player").toUpperCase()} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
                     </div>
 
                     {(playerProfile.team || playerProfile.team_name) && (

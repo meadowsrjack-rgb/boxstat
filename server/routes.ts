@@ -6,7 +6,7 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -2120,7 +2120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get all team IDs assigned to this coach
-      const teamAssignments = await storage.db
+      const teamAssignments = await db
         .select({ teamId: coachTeams.teamId })
         .from(coachTeams)
         .where(eq(coachTeams.coachId, coachId));
@@ -2132,7 +2132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamIds = teamAssignments.map(t => t.teamId);
       
       // Get all players from these teams
-      const playersData = await storage.db
+      const playersData = await db
         .select({
           user: users,
           profile: profiles,

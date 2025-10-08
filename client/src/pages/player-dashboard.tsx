@@ -296,20 +296,49 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     enabled: !!currentUser.id,
   });
 
-  // Current skill evaluations
-  const { data: currentSkills } = useQuery<any>({
-    queryKey: ["/api/coach/evaluations"],
+  // Latest skill evaluation for overall skills assessment
+  const { data: latestEvaluation } = useQuery<any>({
+    queryKey: ["/api/players", currentUser.id, "latest-evaluation"],
     queryFn: async () => {
-      const currentYear = new Date().getFullYear();
-      const currentQuarter = `Q${Math.ceil((new Date().getMonth() + 1) / 3)}`;
-      const res = await fetch(`/api/coach/evaluations?playerId=${currentUser.id}&quarter=${currentQuarter}&year=${currentYear}`, { 
+      const res = await fetch(`/api/players/${currentUser.id}/latest-evaluation`, { 
         credentials: "include" 
       });
       if (!res.ok) return null;
-      return res.json();
+      const data = await res.json();
+      return data;
     },
     enabled: !!currentUser.id,
   });
+
+  // Calculate overall skill average from evaluation scores
+  const calculateOverallSkillAverage = (evaluation: any): number => {
+    if (!evaluation?.scores) return 0;
+    
+    const scores = evaluation.scores;
+    let totalScore = 0;
+    let totalSkills = 0;
+    
+    // Iterate through all categories
+    Object.values(scores).forEach((category: any) => {
+      if (category && typeof category === 'object') {
+        // Iterate through all skills in the category
+        Object.values(category).forEach((skillValue: any) => {
+          if (typeof skillValue === 'number') {
+            totalScore += skillValue;
+            totalSkills++;
+          }
+        });
+      }
+    });
+    
+    if (totalSkills === 0) return 0;
+    
+    // Average is out of 5, convert to percentage
+    const average = totalScore / totalSkills;
+    return Math.round((average / 5) * 100);
+  };
+
+  const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
 
   // Check-ins (client derives tasks from events; server stores submissions)
   const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
@@ -1234,13 +1263,14 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
 
 
-              {/* Skills Progress */}
-              {/* Skills section wrapper - aligned with trophy grid */}
+              {/* Overall Skills Assessment */}
               <div className="px-2">
-                <div className="max-w-[340px] mx-auto space-y-4">
-                  <SkillBar label="SHOOTING"  value={currentSkills?.shooting ? (currentSkills.shooting / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="DRIBBLING" value={currentSkills?.dribbling ? (currentSkills.dribbling / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
-                  <SkillBar label="PASSING"   value={currentSkills?.passing ? (currentSkills.passing / 5) * 100 : 0} onClick={() => setLocation("/skills")} />
+                <div className="max-w-[340px] mx-auto">
+                  <SkillBar 
+                    label="OVERALL SKILLS ASSESSMENT"  
+                    value={overallSkillScore} 
+                    onClick={() => setLocation("/skills")} 
+                  />
                 </div>
               </div>
             </div>

@@ -468,7 +468,7 @@ export default function CreateProfile() {
                         name="height"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Height (Optional)</FormLabel>
+                            <FormLabel className="text-white">Height</FormLabel>
                             <Select
                               value={field.value || ""}
                               onValueChange={field.onChange}
@@ -504,7 +504,7 @@ export default function CreateProfile() {
                         name="city"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">City (Optional)</FormLabel>
+                            <FormLabel className="text-white">City</FormLabel>
                             <FormControl>
                               <Input
                                 {...field}

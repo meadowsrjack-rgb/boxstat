@@ -920,9 +920,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "You already have a pending join request for this team" });
         }
         
-        // If it's a different team, cancel the old request and allow the new one
+        // If it's a different team, cancel the old request (mark as rejected) and allow the new one
         await db.update(teamJoinRequests)
-          .set({ status: 'cancelled', decidedAt: new Date() })
+          .set({ status: 'rejected', decidedAt: new Date() })
           .where(eq(teamJoinRequests.id, existingRequest.id));
       }
       

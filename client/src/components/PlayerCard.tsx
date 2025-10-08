@@ -119,6 +119,12 @@ export default function PlayerCard({
     enabled: isOpen && !!playerId,
   });
 
+  // Get player's latest skill evaluation
+  const { data: latestEvaluation } = useQuery({
+    queryKey: [`/api/players/${playerId}/latest-evaluation`],
+    enabled: isOpen && !!playerId,
+  });
+
   // Get available awards for coaches to give
   const { data: availableAwards } = useQuery({
     queryKey: ['/api/admin/badges'],
@@ -264,19 +270,49 @@ export default function PlayerCard({
     </motion.div>
   );
 
-  const SkillBar = ({ label, value }: { label: string; value: number }) => (
-    <motion.div className="space-y-2 cursor-pointer p-2 rounded-lg" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
+  // Calculate overall skill average from evaluation scores
+  const calculateOverallSkillAverage = (evaluation: any): number => {
+    if (!evaluation?.scores) return 0;
+    
+    const scores = evaluation.scores;
+    let totalScore = 0;
+    let totalSkills = 0;
+    
+    // Iterate through all categories
+    Object.values(scores).forEach((category: any) => {
+      if (category && typeof category === 'object') {
+        // Iterate through all skills in the category
+        Object.values(category).forEach((skillValue: any) => {
+          if (typeof skillValue === 'number') {
+            totalScore += skillValue;
+            totalSkills++;
+          }
+        });
+      }
+    });
+    
+    if (totalSkills === 0) return 0;
+    
+    // Average is out of 5, convert to percentage
+    const average = totalScore / totalSkills;
+    return Math.round((average / 5) * 100);
+  };
+
+  const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
+
+  const OverallSkillBar = ({ value }: { value: number }) => (
+    <motion.div className="space-y-2 cursor-pointer p-3 rounded-lg" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 300, damping: 24 }}>
       <div className="flex justify-between text-sm">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-red-600 font-semibold">{value}%</span>
+        <span className="font-semibold text-gray-800">Overall Skills Assessment</span>
+        <span className="text-red-600 font-bold">{value}%</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
         <motion.div
-          className="bg-red-600 h-2.5 rounded-full"
+          className="bg-red-600 h-3 rounded-full"
           initial={{ width: 0 }}
           whileInView={{ width: `${value}%` }}
           viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         />
       </div>
     </motion.div>
@@ -565,17 +601,15 @@ export default function PlayerCard({
                 </motion.div>
               </div>
 
-              {/* Skills Progress */}
+              {/* Skills Progress - Overall Average */}
               <div className="px-6 mt-4 pb-8">
                 <motion.div
                   initial={{ y: 12, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.5, duration: 0.4 }}
-                  className="max-w-[340px] mx-auto space-y-4"
+                  className="max-w-[380px] mx-auto"
                 >
-                  <SkillBar label="SHOOTING" value={0} />
-                  <SkillBar label="DRIBBLING" value={0} />
-                  <SkillBar label="PASSING" value={0} />
+                  <OverallSkillBar value={overallSkillScore} />
                 </motion.div>
               </div>
 

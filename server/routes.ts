@@ -2414,6 +2414,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player's latest evaluation (for player card display)
+  app.get('/api/players/:playerId/latest-evaluation', isAuthenticated, async (req: any, res) => {
+    try {
+      const { playerId } = req.params;
+      
+      // Get the most recent evaluation for this player
+      const evaluation = await storage.getLatestPlayerEvaluation(playerId);
+      
+      res.json(evaluation || { scores: {} });
+    } catch (error) {
+      console.error("Error fetching latest player evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch player evaluation" });
+    }
+  });
+
   // Coach payroll and HR routes (placeholders)
   app.get('/api/coach/pay/summary', isAuthenticated, async (req: any, res) => {
     try {

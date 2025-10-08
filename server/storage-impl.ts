@@ -264,6 +264,7 @@ export interface IStorage {
   // Player evaluation operations
   getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined>;
   savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation>;
+  getLatestPlayerEvaluation(playerId: string): Promise<PlayerEvaluation | undefined>;
   
   // Player relationship operations (for backward compatibility)
   getPlayersByGuardianEmail(email: string): Promise<Player[]>;
@@ -1731,6 +1732,17 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result;
+  }
+
+  async getLatestPlayerEvaluation(playerId: string): Promise<PlayerEvaluation | undefined> {
+    const [evaluation] = await db
+      .select()
+      .from(playerEvaluations)
+      .where(eq(playerEvaluations.playerId, playerId))
+      .orderBy(desc(playerEvaluations.year), desc(playerEvaluations.quarter))
+      .limit(1);
+    
+    return evaluation;
   }
 
   // Player relationship operations (for backward compatibility)

@@ -8,8 +8,8 @@ import { notionService } from "./notion";
 import { notificationScheduler } from "./services/notificationScheduler";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
 // Ensure auxiliary DB tables exist
 ensureAuxTables().catch(err => console.error('ensureAuxTables failed', err));

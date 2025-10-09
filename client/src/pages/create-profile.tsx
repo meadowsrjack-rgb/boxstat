@@ -507,7 +507,13 @@ export default function CreateProfile() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent className="max-h-[300px]">
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">FNHTL</div>
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Skills Academy ONLY</div>
+                              {['Rookies', 'Intermediate', 'Special Needs'].map((team, idx) => (
+                                <SelectItem key={`skills-${idx}`} value={team}>
+                                  {team}
+                                </SelectItem>
+                              ))}
+                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">FNHTL</div>
                               {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team, idx) => (
                                 <SelectItem key={`fnhtl-${idx}`} value={team}>
                                   {team}

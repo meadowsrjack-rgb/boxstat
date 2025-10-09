@@ -21,15 +21,6 @@ import PlayerCard from "@/components/PlayerCard";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const EXPERIENCE_LEVELS = ["0-1 years", "2-3 years", "4-5 years", "6-10 years", "10+ years"];
-const COACHING_CERTIFICATIONS = [
-  "USA Basketball Coach License", 
-  "NFHS Coaching Certificate", 
-  "FIBA Coaching License",
-  "Youth Development Certificate",
-  "Sports Psychology Certificate",
-  "First Aid/CPR Certified",
-  "SafeSport Trained"
-];
 
 export function CoachProfilePage() {
   const { user } = useAuth();
@@ -46,115 +37,10 @@ export function CoachProfilePage() {
     coachingExperience: (user as any)?.coachingExperience || "",
     yearsExperience: (user as any)?.yearsExperience || "",
     bio: (user as any)?.bio || "",
-    certifications: (user as any)?.certifications?.join(", ") || "",
     previousTeams: (user as any)?.previousTeams || "",
     playingExperience: (user as any)?.playingExperience || "",
     philosophy: (user as any)?.philosophy || "",
   });
-
-  // Hardcoded teams list (same as player profile creation)
-  const TEAMS = [
-    { category: 'FNHTL', teams: ['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'] },
-    { category: 'Youth Club', teams: ['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'] },
-    { category: 'High School', teams: ['HS Elite', 'HS Red', 'HS Black', 'HS White'] }
-  ];
-
-  // Team assignment state
-  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  
-  // Team view state for dropdown
-  const [selectedTeamView, setSelectedTeamView] = useState<string>("");
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isRosterOpen, setIsRosterOpen] = useState(false);
-  
-  // Player card state
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [isPlayerCardOpen, setIsPlayerCardOpen] = useState(false);
-
-  const handlePlayerClick = (playerId: string) => {
-    setSelectedPlayerId(playerId);
-    setIsPlayerCardOpen(true);
-  };
-
-  // Fetch coach's assigned teams
-  const { data: assignedTeams = [], refetch: refetchAssignedTeams } = useQuery<any[]>({
-    queryKey: [`/api/coaches/${(user as any)?.id}/teams`],
-    enabled: !!(user as any)?.id,
-  });
-
-  // Update selected teams when assigned teams are loaded
-  useEffect(() => {
-    if (assignedTeams && assignedTeams.length > 0) {
-      setSelectedTeams(assignedTeams.map((team: any) => team.name || team.teamId));
-    }
-  }, [assignedTeams]);
-
-  // Get selected team ID from assignedTeams
-  const selectedTeamData = assignedTeams.find((team: any) => team.name === selectedTeamView);
-  const selectedTeamId = selectedTeamData?.id;
-
-  // Fetch team messages for selected team
-  const { data: teamMessages = [] } = useQuery<any[]>({
-    queryKey: [`/api/announcements/team/${selectedTeamId}`],
-    enabled: !!selectedTeamId,
-  });
-
-  // Chat state
-  const [messageContent, setMessageContent] = useState("");
-
-  // Send message mutation
-  const sendMessageMutation = useMutation({
-    mutationFn: async (messageData: any) => {
-      const response = await apiRequest("POST", "/api/announcements", messageData);
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Message sent!", description: "Your message has been sent to the team." });
-      setMessageContent("");
-      queryClient.invalidateQueries({ queryKey: [`/api/announcements/team/${selectedTeamId}`] });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
-    },
-  });
-
-  const handleSendMessage = () => {
-    if (!messageContent.trim() || !selectedTeamId) return;
-    
-    sendMessageMutation.mutate({
-      title: messageContent.slice(0, 50) + "...",
-      content: messageContent,
-      priority: "medium",
-      teamId: selectedTeamId,
-    });
-  };
-
-  // Team assignment mutation with auto-save
-  const teamAssignmentMutation = useMutation({
-    mutationFn: async (teamNames: string[]) => {
-      return apiRequest(`/api/coaches/${(user as any)?.id}/teams`, {
-        method: 'POST',
-        data: { teamNames },
-      });
-    },
-    onSuccess: () => {
-      refetchAssignedTeams();
-      toast({ title: "Success", description: "Team assignments updated!" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update team assignments", variant: "destructive" });
-    },
-  });
-
-  const handleTeamToggle = (teamName: string) => {
-    const newSelectedTeams = selectedTeams.includes(teamName)
-      ? selectedTeams.filter(name => name !== teamName)
-      : [...selectedTeams, teamName];
-    
-    setSelectedTeams(newSelectedTeams);
-    // Auto-save on change
-    teamAssignmentMutation.mutate(newSelectedTeams);
-  };
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,7 +97,6 @@ export function CoachProfilePage() {
       const updateData = {
         ...data,
         address: data.city,
-        certifications: data.certifications.split(",").map((cert: string) => cert.trim()).filter(Boolean),
       };
       
       const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
@@ -233,7 +118,6 @@ export function CoachProfilePage() {
         coachingExperience: updatedUser.coachingExperience || "",
         yearsExperience: updatedUser.yearsExperience || "",
         bio: updatedUser.bio || "",
-        certifications: updatedUser.certifications?.join(", ") || "",
         previousTeams: updatedUser.previousTeams || "",
         playingExperience: updatedUser.playingExperience || "",
         philosophy: updatedUser.philosophy || "",
@@ -477,64 +361,8 @@ export function CoachProfilePage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Team Assignments */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Team Assignments
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Select which teams you coach. Changes are saved automatically.
-              </p>
-              <div className="space-y-4">
-                {TEAMS.map(({ category, teams }) => (
-                  <div key={category}>
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      {category}
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {teams.map((teamName) => (
-                        <div key={teamName} className="flex items-center space-x-2 p-3 border border-gray-200 dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                          <Checkbox
-                            id={`team-${teamName}`}
-                            checked={selectedTeams.includes(teamName)}
-                            onCheckedChange={() => handleTeamToggle(teamName)}
-                            data-testid={`checkbox-team-${teamName.toLowerCase().replace(/\s+/g, '-')}`}
-                          />
-                          <label
-                            htmlFor={`team-${teamName}`}
-                            className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                          >
-                            {teamName}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
-
-      {/* Player Card Dialog */}
-      {selectedPlayerId && (
-        <PlayerCard
-          playerId={selectedPlayerId}
-          isOpen={isPlayerCardOpen}
-          onClose={() => {
-            setIsPlayerCardOpen(false);
-            setSelectedPlayerId(null);
-          }}
-          isCoach={true}
-          currentUserId={(user as any)?.id}
-        />
-      )}
     </div>
   );
 }

@@ -28,7 +28,19 @@ import { useToast } from "@/hooks/use-toast";
 
 const UYP_RED = "#d82428";
 
-const profileSchema = z.object({
+const parentProfileSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  phoneNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  jerseyNumber: z.string().optional(),
+  teamId: z.string().optional(),
+  height: z.string().optional(),
+  city: z.string().optional(),
+  position: z.string().optional(),
+});
+
+const playerProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   phoneNumber: z.string().optional(),
@@ -40,7 +52,7 @@ const profileSchema = z.object({
   position: z.string().min(1, "Position is required"),
 });
 
-type ProfileForm = z.infer<typeof profileSchema>;
+type ProfileForm = z.infer<typeof playerProfileSchema>;
 
 export default function CreateProfile() {
   const { user } = useAuth();
@@ -63,7 +75,7 @@ export default function CreateProfile() {
   });
 
   const form = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileType === "parent" ? parentProfileSchema : playerProfileSchema),
     defaultValues: {
       firstName: (user as any)?.firstName || "",
       lastName: (user as any)?.lastName || "",
@@ -277,45 +289,6 @@ export default function CreateProfile() {
           </div>
         </div>
 
-        {/* Claim Account Section */}
-        <Card className="mb-6 bg-white/5 border-white/10">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-white mb-3">Have an existing UYP account?</h3>
-            <p className="text-sm text-white/70 mb-3">
-              Enter your registered email to link your account and auto-fill your information
-            </p>
-            <div className="flex gap-2">
-              <Input
-                value={claimEmail}
-                onChange={(e) => setClaimEmail(e.target.value)}
-                placeholder="Enter your email"
-                type="email"
-                className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                data-testid="input-claim-email"
-              />
-              <Button
-                onClick={handleClaimAccount}
-                disabled={isClaiming}
-                variant="outline"
-                className="bg-white/10 hover:bg-white/20 border-white/20"
-                data-testid="button-claim-account"
-              >
-                {isClaiming ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Linking...
-                  </>
-                ) : (
-                  <>
-                    <LinkIcon className="h-4 w-4 mr-2" />
-                    Link
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Profile Form */}
         <Card className="bg-white/5 border-white/10">
           <CardHeader>
@@ -383,27 +356,26 @@ export default function CreateProfile() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="dateOfBirth"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-white">Date of Birth</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="date"
-                          className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                          data-testid="input-dob"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {profileType === "player" && (
                   <>
+                    <FormField
+                      control={form.control}
+                      name="dateOfBirth"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-white">Date of Birth</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="date"
+                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                              data-testid="input-dob"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}

@@ -4,6 +4,12 @@
 This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
 
 ## Recent Changes
+### Coach Team Creation (October 9, 2025)
+- **Team creation button**: Added "Add Team" button in coach dashboard Teams tab allowing coaches to create new teams directly from the interface.
+- **Team creation dialog**: Implemented form dialog with fields for team name (required), age group (required), and division (optional).
+- **Backend endpoint**: Created POST /api/teams endpoint that validates coach permissions, creates team record, and automatically assigns the creating coach to the new team.
+- **Coach-team assignment**: New teams are automatically linked to the creating coach via the coach_teams junction table, ensuring immediate access to team management features.
+
 ### Parent Dashboard & Player Following (October 9, 2025)
 - **Player profile photos**: Parent dashboard Players tab now displays profile photos next to player names using Avatar component with fallback to initials.
 - **Notion player search**: Added search bar in Players tab to search all 290+ players from Notion database. Parents can follow any UYP player even if they haven't set up an app profile yet.

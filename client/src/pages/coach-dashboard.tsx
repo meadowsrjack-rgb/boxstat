@@ -705,6 +705,10 @@ function RosterTab({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
   const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
+  const [createTeamDialogOpen, setCreateTeamDialogOpen] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamAgeGroup, setNewTeamAgeGroup] = useState("");
+  const [newTeamDivision, setNewTeamDivision] = useState("");
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -859,13 +863,67 @@ function RosterTab({
     }
   };
 
+  // Create team mutation
+  const createTeamMutation = useMutation({
+    mutationFn: async (teamData: { name: string; ageGroup: string; division?: string }) => {
+      const res = await fetch('/api/teams', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(teamData),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create team");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
+      setCreateTeamDialogOpen(false);
+      setNewTeamName("");
+      setNewTeamAgeGroup("");
+      setNewTeamDivision("");
+      toast({ title: "Success", description: "Team created successfully!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreateTeam = () => {
+    if (!newTeamName.trim() || !newTeamAgeGroup.trim()) {
+      toast({ 
+        title: "Error", 
+        description: "Please enter team name and age group", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    createTeamMutation.mutate({
+      name: newTeamName.trim(),
+      ageGroup: newTeamAgeGroup.trim(),
+      division: newTeamDivision.trim() || undefined,
+    });
+  };
+
   // Show team list if no team is selected
   if (!selectedTeamId) {
     return (
       <div className="space-y-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
-          <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
+            <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
+          </div>
+          <Button
+            onClick={() => setCreateTeamDialogOpen(true)}
+            className="bg-red-600 hover:bg-red-700 text-white"
+            data-testid="button-add-team"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Team
+          </Button>
         </div>
         {assignedTeams.length > 0 ? (
           <div className="grid gap-3">
@@ -889,6 +947,61 @@ function RosterTab({
         ) : (
           <div className="text-sm text-gray-500">No teams assigned yet.</div>
         )}
+
+        {/* Create Team Dialog */}
+        <Dialog open={createTeamDialogOpen} onOpenChange={setCreateTeamDialogOpen}>
+          <DialogContent className="sm:max-w-md" data-testid="dialog-create-team">
+            <DialogHeader>
+              <DialogTitle>Create New Team</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Team Name *</label>
+                <Input
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  placeholder="e.g., Youth Girls Black"
+                  data-testid="input-team-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Age Group *</label>
+                <Input
+                  value={newTeamAgeGroup}
+                  onChange={(e) => setNewTeamAgeGroup(e.target.value)}
+                  placeholder="e.g., 12-14, High School"
+                  data-testid="input-age-group"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Division (Optional)</label>
+                <Input
+                  value={newTeamDivision}
+                  onChange={(e) => setNewTeamDivision(e.target.value)}
+                  placeholder="e.g., Division 1, Recreation"
+                  data-testid="input-division"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setCreateTeamDialogOpen(false)}
+                data-testid="button-cancel-create-team"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateTeam}
+                disabled={createTeamMutation.isPending}
+                className="bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-submit-create-team"
+              >
+                {createTeamMutation.isPending ? "Creating..." : "Create Team"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

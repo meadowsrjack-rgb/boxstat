@@ -10,6 +10,14 @@ This is a cross-platform mobile application for the UYP Basketball youth league,
 - **Manual roster management**: Coaches can now manually add or remove players from their team rosters using "Add Player" and "Remove" buttons. Add player shows a dialog with all available app players not currently on the team.
 - **Name-based player matching**: The system matches Notion players with app accounts by comparing full names (firstName + lastName), enabling proper account linking and status indication.
 
+### Coach Settings Updates (October 9, 2025)
+- **Certifications field removed**: Completely removed the certifications field from the coaching experience section in coach settings. The experience form now only includes years of experience, bio, previous teams coached, playing experience, and coaching philosophy.
+- **Team management relocated**: Removed Team Assignments section from coach settings page. Team management functionality is now exclusively available in the Coach Dashboard's Team tab for better organization and workflow.
+- **Coaching card implementation**: Added coaching card in the HR tab that displays all coaching experience data (years of experience, bio, previous teams, playing experience, and philosophy) in a structured, read-only format.
+- **Training documents greyed out**: Training documents section in coach dashboard HR tab is now disabled and marked as "coming soon" for future implementation.
+- **Pay section greyed out**: Pay section in the pay tab is now disabled and marked as "feature coming later" for future implementation.
+- **Profile creation improvements**: Fixed parent profile creation by implementing separate validation schemas - parentProfileSchema (DOB optional) and playerProfileSchema (DOB required). DOB field now only renders for player profiles. Removed "Have an existing UYP account?" account linking section from both player and parent profile creation flows.
+
 ### Bug Fixes (October 9, 2025)
 - **Fixed profile creation name bug**: Resolved critical bug where creating a new profile would overwrite the names of ALL existing profiles. The issue was in the POST /api/profiles endpoint which was incorrectly updating the user account's firstName and lastName with each new profile's data. Now each profile maintains its own independent name in the profiles table, and the user account data remains stable.
 

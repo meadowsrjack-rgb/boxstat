@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   Link as LinkIcon,
   Globe,
-  Users,
   ChevronRight,
 } from "lucide-react";
 
@@ -33,13 +32,6 @@ export default function ParentSettingsPage() {
       label: "Profile", 
       description: "Personal information and preferences",
       path: "/parent-settings/profile"
-    },
-    { 
-      key: "family", 
-      icon: Users, 
-      label: "Family Management", 
-      description: "Manage children and family members",
-      path: "/parent-settings/family"
     },
     { 
       key: "privacy", 

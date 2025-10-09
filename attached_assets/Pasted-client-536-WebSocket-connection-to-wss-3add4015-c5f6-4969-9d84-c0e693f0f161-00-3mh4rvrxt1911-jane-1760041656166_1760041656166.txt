@@ -1,0 +1,143 @@
+client:536 WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=z-kBmwLKfoKj' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=z-kBmwLKfoKj' is invalid.
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+chunk-RPCDYKBN.js?v=cdd2174b:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+useAuth.ts:14 useAuth - user: undefined
+useAuth.ts:15 useAuth - isLoading: true
+useAuth.ts:16 useAuth - isAuthenticated: false
+main.tsx:10 SW registered:  ServiceWorkerRegistration
+App.tsx:128 SW registered:  ServiceWorkerRegistration
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:184 User data for profile check: Object
+App.tsx:185 Profile completed status: false
+App.tsx:186 IsAuthenticated: true
+App.tsx:187 IsLoading: false
+App.tsx:192 User authenticated, directing to main app with pre-created profiles
+App.tsx:194 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+App.tsx:184 User data for profile check: Object
+App.tsx:185 Profile completed status: false
+App.tsx:186 IsAuthenticated: true
+App.tsx:187 IsLoading: false
+App.tsx:192 User authenticated, directing to main app with pre-created profiles
+App.tsx:194 User has completed profile setup, proceeding to dashboard
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+/api/profiles:1  Failed to load resource: the server responded with a status of 413 (Request Entity Too Large)
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+/api/profiles:1  Failed to load resource: the server responded with a status of 413 (Request Entity Too Large)
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4AA…JyB1B2Z6NQmJ0Kh8cnP8D+LekkpO2Q8kAAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4AA…JyB1B2Z6NQmJ0Kh8cnP8D+LekkpO2Q8kAAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:180  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 413 (Request Entity Too Large)
+mutationFn @ create-profile.tsx:180
+fn @ @tanstack_react-query.js?v=cdd2174b:1189
+run @ @tanstack_react-query.js?v=cdd2174b:494
+start @ @tanstack_react-query.js?v=cdd2174b:536
+execute @ @tanstack_react-query.js?v=cdd2174b:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdd2174b:2630
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:3295
+onSubmit @ create-profile.tsx:266
+(anonymous) @ chunk-4BFJKWC4.js?v=cdd2174b:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=cdd2174b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=cdd2174b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=cdd2174b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=cdd2174b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=cdd2174b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=cdd2174b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=cdd2174b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=cdd2174b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=cdd2174b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=cdd2174b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=cdd2174b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=cdd2174b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=cdd2174b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5449
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4AA…JyB1B2Z6NQmJ0Kh8cnP8D+LekkpO2Q8kAAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4AA…JyB1B2Z6NQmJ0Kh8cnP8D+LekkpO2Q8kAAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+create-profile.tsx:180  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/profiles 413 (Request Entity Too Large)
+mutationFn @ create-profile.tsx:180
+fn @ @tanstack_react-query.js?v=cdd2174b:1189
+run @ @tanstack_react-query.js?v=cdd2174b:494
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:515
+Promise.catch
+run @ @tanstack_react-query.js?v=cdd2174b:498
+start @ @tanstack_react-query.js?v=cdd2174b:536
+execute @ @tanstack_react-query.js?v=cdd2174b:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdd2174b:2630
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:3295
+onSubmit @ create-profile.tsx:266
+(anonymous) @ chunk-4BFJKWC4.js?v=cdd2174b:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=cdd2174b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=cdd2174b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=cdd2174b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=cdd2174b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=cdd2174b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=cdd2174b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=cdd2174b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=cdd2174b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=cdd2174b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=cdd2174b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=cdd2174b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=cdd2174b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=cdd2174b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5449
+useAuth.ts:14 useAuth - user: {id: '46075288', email: 'ozdunks@gmail.com', firstName: null, lastName: null, profileImageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA4AA…JyB1B2Z6NQmJ0Kh8cnP8D+LekkpO2Q8kAAAAASUVORK5CYII=', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true

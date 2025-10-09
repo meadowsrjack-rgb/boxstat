@@ -1,0 +1,577 @@
+Account model: Netflix-style — one Account (parent) with multiple Player Profiles under the same account (no separate parent↔child linking feature).
+
+Payments: Remove SportsEngine integration and scaffold Stripe (customer creation + payment method attach) but no full checkout flow yet.
+
+Notifications: Build a complete notification system (in-app + push option) for events, RSVP & check-ins, awards/trophies, skills updates, team changes, and profile/account changes.
+
+Settings: Unify settings IA and make all tabs work for Parent / Player / Coach.
+
+Names bug: Fix display/first/last name updates so changes propagate instantly to all places (dashboards, chat authorship, awards lists, notifications, rosters, calendar chips).
+
+Geo/QR check-ins: Production-ready, React-18 compatible QR scanner + GPS geofence with server verification, parent acting through the selected Player Profile.
+
+PWA & Store: Validate PWA (manifest, SW, icons). Prepare Android TWA + iOS PWA install guidance; optional Capacitor wrapper.
+
+Repo reference points: the root README advertises PWA, multi-profile, QR check-ins, Google Calendar, SportsEngine payments, WebSocket chat; folders seen include client, server, shared, migrations, drizzle.config.ts. Use Drizzle for DB. 
+GitHub
+ 
+GitHub
+
+0) Project hygiene & aliases
+
+Confirm these aliases:
+
+@/* → client/src/* (or client/* if that’s how imports are written)
+
+@shared/* → shared/*
+
+@server/* → server/*
+
+Ensure builds run: npm i, then npm run dev, npm run build. If missing:
+
+add "db:generate" and "db:push" scripts,
+
+ensure drizzle.config.ts targets Postgres.
+
+PATCH: tsconfig.json
+
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
++     "@/*": ["client/src/*"],
++     "@shared/*": ["shared/*"],
++     "@server/*": ["server/*"]
+    }
+  }
+}
+
+1) Drizzle config + migrations
+1.1 drizzle.config.ts (Postgres/Neon ready)
+
+PATCH: /drizzle.config.ts
+
+import { defineConfig } from "drizzle-kit";
+
+export default defineConfig({
+  schema: "./shared/db/schema.ts",
+  out: "./migrations",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
+  strict: true,
+});
+
+
+PATCH: package.json scripts
+
+  "scripts": {
++   "db:generate": "drizzle-kit generate",
++   "db:push": "drizzle-kit push",
+    "dev": "vite", 
+    "build": "vite build"
+  }
+
+1.2 Unified schema (add if missing)
+
+NEW: shared/db/schema.ts (adjust names if you already have schema files; keep IDs/columns that exist)
+
+import { pgTable, uuid, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
+
+// Accounts (one parent account; multiple profiles under it)
+export const accounts = pgTable("accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull().unique(),
+  stripeCustomerId: text("stripe_customer_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Profiles belong to an account. role: 'parent' | 'player' | 'coach'
+export const profiles = pgTable("profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  accountId: uuid("account_id").notNull().references(() => accounts.id),
+  role: text("role").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  displayName: text("display_name"),
+  photoUrl: text("photo_url"),
+  jerseyNo: text("jersey_no"),
+  teamId: uuid("team_id"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const teams = pgTable("teams", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  ageGroup: text("age_group"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const events = pgTable("events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  teamId: uuid("team_id").references(() => teams.id),
+  title: text("title").notNull(),
+  eventType: text("event_type").default("practice"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const rsvps = pgTable("rsvps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").references(() => profiles.id),
+  eventId: uuid("event_id").references(() => events.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const checkins = pgTable("checkins", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").references(() => profiles.id),
+  eventId: uuid("event_id").references(() => events.id),
+  source: text("source").notNull(), // 'qr' | 'gps' | 'override'
+  lat: text("lat"),
+  lng: text("lng"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const awards = pgTable("awards", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").references(() => profiles.id),
+  slug: text("slug").notNull(),
+  kind: text("kind").notNull(), // 'badge' | 'trophy'
+  seasonId: text("season_id"),
+  awardedBy: uuid("awarded_by"),
+  awardedAt: timestamp("awarded_at").defaultNow(),
+});
+
+export const skills = pgTable("skills", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profileId: uuid("profile_id").references(() => profiles.id),
+  evaluatorProfileId: uuid("evaluator_profile_id").references(() => profiles.id),
+  payload: jsonb("payload").notNull(), // e.g., { shooting:4, passing:3, notes:"..." }
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  accountId: uuid("account_id").references(() => accounts.id),
+  profileId: uuid("profile_id").references(() => profiles.id),
+  type: text("type").notNull(),
+  payload: jsonb("payload"),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+
+Run:
+
+npm run db:generate
+npm run db:push
+
+2) Payments: remove SportsEngine, scaffold Stripe
+
+Delete/disable any SportsEngine UI, env vars, and server calls (README lists SportsEngine as current payment provider). 
+GitHub
+
+Add Stripe server helpers (no Checkout yet).
+
+NEW: server/payments/stripe.ts
+
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
+
+export async function ensureStripeCustomer(accountId: string, email: string) {
+  // fetch account, create if missing
+  // update accounts.stripe_customer_id
+}
+
+export async function attachPaymentMethod(customerId: string, paymentMethodId: string) {
+  await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
+  await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId }});
+}
+
+
+NEW: server/routes/payments.ts
+
+router.get("/api/payments/customer", requireAuth, async (req,res)=>{
+  const { id, email } = req.account;
+  const customerId = await ensureStripeCustomer(id, email);
+  res.json({ customerId });
+});
+
+router.post("/api/payments/methods/attach", requireAuth, async (req,res)=>{
+  const { customerId, paymentMethodId } = req.body;
+  await attachPaymentMethod(customerId, paymentMethodId);
+  res.json({ ok: true });
+});
+
+
+In Settings → Payments tab, show “Connect payment method” (Stripe Elements later). Hide SportsEngine.
+
+3) Notifications end-to-end
+
+Types
+
+NEW: client/src/lib/notifications/types.ts
+
+export type NotificationType =
+  | "event.created" | "event.updated" | "event.reminder"
+  | "event.rsvp.confirmed" | "event.rsvp.removed"
+  | "event.checkin.success" | "event.checkin.failed"
+  | "award.granted" | "award.progress"
+  | "skills.updated" | "skills.comment"
+  | "team.assignment.changed" | "team.chat.message"
+  | "profile.name.changed" | "profile.photo.changed"
+  | "account.payment.method.updated";
+
+export type Notification = {
+  id: string;
+  accountId: string;
+  profileId?: string;
+  type: NotificationType;
+  payload?: Record<string,any>;
+  readAt?: string | null;
+  createdAt: string;
+};
+
+
+Server dispatcher
+
+NEW: server/notifications/dispatch.ts
+
+import { db } from "../db";
+import { notifications } from "@shared/db/schema";
+// optionally push over WS to connected client sessions
+export async function dispatchNotification(input: {
+  accountId: string; profileId?: string; type: string; payload?: any;
+}){
+  await db.insert(notifications).values({
+    accountId: input.accountId,
+    profileId: input.profileId ?? null,
+    type: input.type,
+    payload: input.payload ?? {},
+  });
+  // WS broadcast to account
+}
+
+
+Routes
+
+NEW: server/routes/notifications.ts
+
+router.get("/api/notifications", requireAuth, async (req,res)=>{
+  const rows = await db.query.notifications.findMany({ where: eq(notifications.accountId, req.account.id), orderBy: desc(notifications.createdAt) });
+  res.json(rows);
+});
+
+router.post("/api/notifications", requireAuth, async (req,res)=>{
+  await dispatchNotification({ accountId: req.account.id, ...req.body });
+  res.json({ ok: true });
+});
+
+router.put("/api/notifications/:id/read", requireAuth, async (req,res)=>{
+  await db.update(notifications).set({ readAt: new Date() }).where(eq(notifications.id, req.params.id));
+  res.json({ ok: true });
+});
+
+
+Client
+
+Ensure a NotificationCenter exists that polls or subscribes via WS.
+
+Fire notifications on:
+
+Event create/update/reminder
+
+RSVP add/remove
+
+Check-in success/fail
+
+Award granted
+
+Skills updated
+
+Profile name/photo changed
+
+Payment method attached
+
+4) Settings: one layout, all tabs, role-aware
+
+Use a shared layout + tabs and mount by role.
+
+NEW: client/src/components/settings/SettingsLayout.tsx
+
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ProfileTab from "./tabs/ProfileTab";
+import AccountTab from "./tabs/AccountTab";
+import NotificationsTab from "./tabs/NotificationsTab";
+import TeamsTab from "./tabs/TeamsTab";
+import PaymentsTab from "./tabs/PaymentsTab";
+import PrivacyTab from "./tabs/PrivacyTab";
+import DangerTab from "./tabs/DangerTab";
+
+export default function SettingsLayout({ role }:{role:"parent"|"player"|"coach"}) {
+  return (
+    <div className="max-w-3xl mx-auto p-4">
+      <Tabs defaultValue="profile">
+        <TabsList className="flex flex-wrap gap-2">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="account">Account & Security</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          <TabsTrigger value="teams">Teams</TabsTrigger>
+          {role !== "coach" && <TabsTrigger value="payments">Payments</TabsTrigger>}
+          <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          <TabsTrigger value="danger">Danger Zone</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile"><ProfileTab role={role}/></TabsContent>
+        <TabsContent value="account"><AccountTab /></TabsContent>
+        <TabsContent value="notifications"><NotificationsTab role={role}/></TabsContent>
+        <TabsContent value="teams"><TeamsTab role={role}/></TabsContent>
+        {role !== "coach" && <TabsContent value="payments"><PaymentsTab /></TabsContent>}
+        <TabsContent value="privacy"><PrivacyTab /></TabsContent>
+        <TabsContent value="danger"><DangerTab role={role}/></TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+
+PATCH: mount it in parent-settings.tsx, player-settings.tsx, coach-settings.tsx:
+
+- export default function PlayerSettings(){ ... }
++ import SettingsLayout from "@/components/settings/SettingsLayout";
++ export default function PlayerSettings(){ return <SettingsLayout role="player" /> }
+
+
+Tabs:
+
+Profile: avatar, display/first/last, jersey # (player)
+
+Account & Security: email/phone, password, 2FA, active sessions
+
+Notifications: toggles per type (events, awards, skills, team changes)
+
+Teams: read-only memberships; coach sees assigned teams; no linked players concept (Netflix profile model)
+
+Payments: Stripe “Connect payment method” (stub)
+
+Privacy: profile visibility, data export request
+
+Danger: delete profile, leave team (confirmations)
+
+5) Fix the “names don’t update everywhere” bug
+
+Implement a single update path server-side and fan-out denormalized fields.
+
+PATCH: server/routes/profiles.ts
+
+router.put("/api/profiles/:id", requireAuth, async (req,res)=>{
+  const { id } = req.params;
+  const { firstName, lastName, displayName } = req.body;
+  const profile = await getAccountProfile(req.account.id, id);
+  if (!profile) return res.status(404).json({message:"Not found"});
+
+  await db.update(profiles).set({ firstName, lastName, displayName }).where(eq(profiles.id, id));
+
+  // Fan-out to denormalized columns where you display names:
+  await db.update(chatMessages).set({ authorDisplayName: displayName }).where(eq(chatMessages.authorProfileId, id));
+  await db.update(awards).set({ profileDisplayName: displayName }).where(eq(awards.profileId, id));
+  await db.update(checkins).set({ profileDisplayName: displayName }).where(eq(checkins.profileId, id));
+
+  await dispatchNotification({
+    type: "profile.name.changed",
+    accountId: req.account.id,
+    profileId: id,
+    payload: { displayName }
+  });
+
+  res.json({ ok: true });
+});
+
+
+Client: After saving, call queryClient.invalidateQueries for /api/me, /api/profiles, /api/teams/*, /api/awards, /api/notifications.
+
+6) Geo + QR check-ins (React 18 ready)
+
+GPS hook: Single-shot position with timeouts.
+
+NEW: client/src/hooks/useGeo.ts
+
+import { useCallback, useState } from "react";
+type GeoStatus = "idle"|"prompt"|"granted"|"denied";
+export function useGeo(){
+  const [status, setStatus] = useState<GeoStatus>("idle");
+  const getOnce = useCallback(()=>new Promise<GeolocationPosition|null>(resolve=>{
+    if(!("geolocation" in navigator)) return resolve(null);
+    setStatus("prompt");
+    navigator.geolocation.getCurrentPosition(
+      p=>{ setStatus("granted"); resolve(p); },
+      _=>{ setStatus("denied"); resolve(null); },
+      { enableHighAccuracy:true, timeout:10000, maximumAge:10000 }
+    )
+  }),[]);
+  return { status, getOnce };
+}
+
+
+Geo utils (Haversine + window; radius per event type):
+
+PATCH: client/src/utils/geo.ts
+
+export const GEO_RADIUS = { practice:150, game:100, skills:150, other:200 };
+export function distanceMeters(a:{lat:number;lng:number}, b:{lat:number;lng:number}){ /* keep your Haversine */ }
+export function withinWindow(startISO:string, endISO?:string, preMin=30, postMin=60){ /* keep your window check */ }
+
+
+QR scanner: replace deprecated lib with React-18 compatible.
+
+PATCH: client/src/components/QrScannerModal.tsx
+
+- // import { QrReader } from 'react-qr-reader';
++ import { QrScanner } from "@yudiel/react-qr-scanner";
+
++ <QrScanner onDecode={(text)=>handleQrDecoded(text)} onError={()=>{}} constraints={{ facingMode:"environment" }} />
++ <div className="mt-2 text-xs text-muted-foreground">
++   Trouble scanning? Upload a photo: <input type="file" accept="image/*" onChange={decodeUploadedQr}/>
++ </div>
+
+
+Client check-in button: enforce time window + radius, and post to server with { profileId: selectedProfileId, source, lat, lng, qr }.
+
+PATCH: client/src/components/CheckInButton.tsx
+
+- const okTime = withinWindow(event.startTime, event.endTime, 30, 30);
++ const okTime = withinWindow(event.startTime, event.endTime, 30, 60);
+  if (!okTime) return toast({ title:"Not in window", variant:"destructive" });
+
+  const radius = GEO_RADIUS[(event.eventType||"other").toLowerCase()] ?? 150;
+  const dist = distanceMeters({lat: pos.coords.latitude, lng: pos.coords.longitude}, {lat: event.latitude!, lng: event.longitude!});
+  if (dist > radius) return toast({ title:"Too far from venue", variant:"destructive" });
+
+  await apiRequest("POST","/api/checkins",{ profileId, eventId: event.id, source:"gps", lat: pos.coords.latitude, lng: pos.coords.longitude });
+
+
+Server verify: recompute distance/time window & validate signed QR payload.
+
+NEW: server/routes/checkins.ts
+
+router.post("/api/checkins", requireAuth, async (req,res)=>{
+  const { profileId, eventId, source, lat, lng, qr } = req.body;
+  const profile = await getAccountProfile(req.account.id, profileId);
+  if (!profile) return res.status(403).json({message:"Forbidden"});
+
+  const evt = await getEvent(eventId);
+  if (!evt || evt.latitude==null || evt.longitude==null) return res.status(400).json({message:"No event location"});
+
+  // time window
+  const now = Date.now();
+  const start = new Date(evt.startTime).getTime() - 30*60*1000;
+  const end   = new Date(evt.endTime ?? evt.startTime).getTime() + 60*60*1000;
+  if (now < start || now > end) return res.status(400).json({message:"Outside window"});
+
+  // QR verify (if provided)
+  if (source === "qr" && !verifySignedQr(qr, { eventId: evt.id, teamId: evt.teamId })) {
+    return res.status(400).json({message:"Invalid QR"});
+  }
+
+  // GPS verify (if provided)
+  if (lat != null && lng != null) {
+    const d = haversineMeters({lat, lng}, { lat: +evt.latitude!, lng: +evt.longitude! });
+    const radius = getRadiusForType(evt.eventType);
+    if (d > radius) return res.status(400).json({message:"Too far"});
+  }
+
+  await db.insert(checkins).values({ profileId, eventId, source, lat, lng });
+
+  await dispatchNotification({ type:"event.checkin.success", accountId:req.account.id, profileId, payload:{ eventId } });
+  await recomputeAwardsForProfile(profileId);  // see awards engine below
+
+  res.json({ ok:true });
+});
+
+7) RSVP & awards/trophies engine
+
+RSVP kept definition: advance RSVP + onsite check-in within window.
+
+Awards engine is idempotent; recompute on RSVP add/remove, check-in, coach grant, and nightly cron.
+
+NEW: server/awards/engine.ts
+
+type Stats = { totalCheckins:number; practiceCheckins:number; gameCheckins:number; rsvpKept:number; streakDays:number; coachAwards:Array<{slug:string; seasonId?:string}>; };
+
+export function computeAwards(stats: Stats){
+  const grants:{slug:string; kind:"badge"|"trophy"; meta?:any}[] = [];
+  if (stats.practiceCheckins >= 10) grants.push({ slug:"gym-rat", kind:"badge" });
+  if (stats.rsvpKept >= 5) grants.push({ slug:"reliable-teammate", kind:"badge" });
+  if (stats.streakDays >= 7) grants.push({ slug:"iron-streak", kind:"badge" });
+  for (const c of stats.coachAwards) grants.push({ slug:c.slug, kind:"trophy", meta:{ seasonId:c.seasonId } });
+  return grants;
+}
+
+
+NEW: server/awards/service.ts
+
+export async function recomputeAwardsForProfile(profileId:string){
+  const stats = await loadStats(profileId);
+  const toGrant = computeAwards(stats);
+  for (const g of toGrant) {
+    const exists = await db.query.awards.findFirst({ where: and(eq(awards.profileId, profileId), eq(awards.slug, g.slug)) });
+    if (!exists) {
+      await db.insert(awards).values({ profileId, slug:g.slug, kind:g.kind, seasonId:g.meta?.seasonId, awardedAt:new Date() });
+      await dispatchNotification({ type:"award.granted", accountId: await accountIdForProfile(profileId), profileId, payload:{ slug:g.slug, kind:g.kind }});
+    }
+  }
+}
+
+8) Skills/Evaluations updates → notifications
+
+PATCH: server/routes/skills.ts
+
+router.post("/api/skills/:profileId", requireCoach, async (req,res)=>{
+  const { profileId } = req.params;
+  const payload = req.body; // validated schema
+  await db.insert(skills).values({ profileId, evaluatorProfileId: req.profile.id, payload });
+  await dispatchNotification({ type:"skills.updated", accountId: await accountIdForProfile(profileId), profileId, payload:{ summary:"Coach updated your evaluation" }});
+  res.json({ ok:true });
+});
+
+9) Calendar sync protections
+
+From README: the app supports Google Calendar sync and event categorization. Ensure updates de-dupe by UID, and events receive coordinates; if missing lat/lng, disable check-ins and show an admin hint to set location. 
+GitHub
+
+10) PWA + “store ready”
+
+Verify manifest.json (name/short_name, icons incl. 512×512, display standalone, theme/background colors).
+
+Service worker: cache app shell; handle offline calendar list & last-known data.
+
+iOS: large apple-touch-icons, apple-mobile-web-app-capable meta; document “Add to Home Screen” (your repo already mentions iOS PWA). 
+GitHub
+
+Android: generate TWA with Bubblewrap (app id, asset links), or build Capacitor wrapper (same for iOS if desired).
+
+Push notifications: if you enable web push, add VAPID keys and permission flow in Settings → Notifications; otherwise keep in-app feed (required).
+
+11) QA acceptance
+
+Change name in Profile → appears on dashboard header, chat author label, awards list, notifications payloads, roster cards, calendar chips.
+
+Settings tabs: visible by role; each save returns success toast + persists.
+
+Event create/update/reminder → notifications fire to affected profiles.
+
+RSVP kept threshold → badge granted and notification shown.
+
+Check-in (GPS) within radius/time window passes; outside fails with clear error.
+
+QR scans (camera + image upload) and verifies signature; fallback works.
+
+Coach awards flow limited to team members (role check + team guard).
+
+Payments tab shows Stripe “Connect payment method”; no SportsEngine left.

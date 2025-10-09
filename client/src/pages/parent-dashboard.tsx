@@ -487,6 +487,7 @@ function PlayersTab() {
 
 function ComprehensivePlayerSnapshot({ player }: { player: any }) {
   const [, setLocation] = useLocation();
+  const initials = `${player.firstName?.[0] || 'P'}${player.lastName?.[0] || ''}`.toUpperCase();
   
   return (
     <Card 
@@ -496,8 +497,13 @@ function ComprehensivePlayerSnapshot({ player }: { player: any }) {
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           {/* Player Avatar */}
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
-            {player.firstName?.[0]?.toUpperCase() || 'P'}{player.lastName?.[0]?.toUpperCase() || ''}
+          <div className="shrink-0">
+            <Avatar className="w-16 h-16 border-2 border-blue-200">
+              <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-lg">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </div>
           
           {/* Player Info */}

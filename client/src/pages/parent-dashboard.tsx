@@ -471,12 +471,11 @@ function PlayersTab() {
     mutationFn: async (player: any) => {
       const res = await apiRequest('/api/parent/follow-notion-player', {
         method: 'POST',
-        body: JSON.stringify({
+        data: {
           notionPlayerId: player.id,
           playerName: player.fullName,
           teamName: player.team_name,
-        }),
-        headers: { 'Content-Type': 'application/json' },
+        },
       });
       if (!res.ok) throw new Error('Failed to follow player');
       return res.json();

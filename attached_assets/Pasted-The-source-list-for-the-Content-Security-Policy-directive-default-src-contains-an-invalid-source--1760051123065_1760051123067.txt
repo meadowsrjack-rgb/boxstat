@@ -1,0 +1,2183 @@
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ingest.app.coframe.com/ingest/v2/batched_monitoring/68c9ad4d4cddb58cf3a1f93d/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ingest.app.coframe.com/ingest/v2/session_result/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+UYP-Basketball:1 The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''. It will be ignored.
+UYP-Basketball:1 The Content-Security-Policy directive 'default-src' contains 'report-uri' as a source expression. Did you want to add it as a directive and forget a semicolon?
+UYP-Basketball:1 The source list for Content Security Policy directive 'default-src' contains a source with an invalid path: '/api/4509669501698048/security/?sentry_key=7eb3d90eb4660416caf507087367e67e'. The query component, including the '?', will be ignored.
+o1151714.ingest.sentry.io/api/6318792/envelope/?sentry_key=8aa91189a4274b5a8c9b7b01d46ea360&sentry_version=7&sentry_client=sentry.javascript.browser%2F7.112.0:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+ [LaunchDarkly] LaunchDarkly client initialized
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client&sv=3.26.0&t=1760050800454&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client&sv=3.26.0&t=1760050800454&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=6534&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050800535&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+cdn.segment.com/next-integrations/actions/tiktok-pixel/1526190d7b84ef9800b4.js:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ Failed to create PluginFactory Object
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+ Failed to load Remote Plugin 
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050801470&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=6534&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050801471&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050801471&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+UYP-Basketball:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050803948&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=6534&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050803949&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050803949&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808561&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=6534&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+  ERROR  [Statsig] A networking error occurred during POST request to https://beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808561&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=6534&gz=1. TypeError: Failed to fetch 
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808624&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+  ERROR  [Statsig] A networking error occurred during POST request to https://beyondwickedmapping.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808624&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1. TypeError: Failed to fetch 
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808624&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050808624&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1. TypeError: Failed to fetch 
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050810383&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=3&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050810889&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=3&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050812892&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=3&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'battery'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'layout-animations'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'navigation-override'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'oversized-images'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'publickey-credentials'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'speaker-selection'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'unoptimized-images'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'unsized-media'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Unrecognized feature: 'pointer-lock'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-c0b25f0c775122e8.js:1
+ Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-c0b25f0c775122e8.js:1
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'battery'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html?initialPath=%2F&id=%3Arm4%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050817399&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=3&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760050817399&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=3&gz=1. TypeError: Failed to fetch 
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+ WebSocket connection to 'wss://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/?token=o6oyF3jFYtKf' failed: 
+setupWebSocket @ client:536
+client:536 Uncaught (in promise) 
+ All UI tests passed
+ useAuth - user: undefined
+ useAuth - isLoading: true
+ useAuth - isAuthenticated: false
+ SW registered:  ServiceWorkerRegistration
+/public/js/beacon.js:1  Failed to load resource: net::ERR_FAILED
+ SW registered:  ServiceWorkerRegistration
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ Selecting profile: profile-1759988977960-6c2hhreb0
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ Profile selection result: Object
+ Profile selected successfully: Object
+ Navigating to dashboard for profile type: parent
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ Selecting profile: profile-1759988977960-6c2hhreb0
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ Profile selection result: Object
+ Profile selected successfully: Object
+ Navigating to dashboard for profile type: parent
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ User data for profile check: Object
+ Profile completed status: true
+ IsAuthenticated: true
+ IsLoading: false
+ User authenticated, directing to main app with pre-created profiles
+ User has completed profile setup, proceeding to dashboard
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+ useAuth - isAuthenticated: true
+ useAuth - user: Object
+ useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/parent/follow-notion-player:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+events.launchdarkly.com/events/bulk/62b35a865152ab14c5942820:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/parent/follow-notion-player:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: Object
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051057305&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=506&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051057865&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=506&gz=1:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10  POST https://ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/ net::ERR_BLOCKED_BY_CLIENT
+ne @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+ee @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+(anonymous) @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051061759&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051066331&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051066331&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=506&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a1b2394d78c4b91c.js:28:9046
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:59747)
+    at Generator.next (<anonymous>)
+    at 4133-8323eadf029ce937.js:1:57340
+    at new Promise (<anonymous>)
+    at r (4133-8323eadf029ce937.js:1:57089)
+    at s._sendRequest (4133-8323eadf029ce937.js:1:58970)
+    at 4133-8323eadf029ce937.js:1:33198
+    at l._capture (4133-8323eadf029ce937.js:1:33496)
+    at e.<computed> [as _sendRequest] (4133-8323eadf029ce937.js:1:33167)
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:60918)
+    at Generator.next (<anonymous>)
+    at s (4133-8323eadf029ce937.js:1:57145)
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+error @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+warn @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051072395&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1006&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051072922&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1006&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051074925&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1006&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10  POST https://ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/ net::ERR_BLOCKED_BY_CLIENT
+ne @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+ee @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+(anonymous) @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051079174&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051079783&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1006&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051079783&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1006&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a1b2394d78c4b91c.js:28:9046
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:59747)
+    at Generator.next (<anonymous>)
+    at 4133-8323eadf029ce937.js:1:57340
+    at new Promise (<anonymous>)
+    at r (4133-8323eadf029ce937.js:1:57089)
+    at s._sendRequest (4133-8323eadf029ce937.js:1:58970)
+    at 4133-8323eadf029ce937.js:1:33198
+    at l._capture (4133-8323eadf029ce937.js:1:33496)
+    at e.<computed> [as _sendRequest] (4133-8323eadf029ce937.js:1:33167)
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:60918)
+    at Generator.next (<anonymous>)
+    at s (4133-8323eadf029ce937.js:1:57145)
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+error @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+warn @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051079796&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051082362&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051086629&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051086879&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051086879&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=2&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a1b2394d78c4b91c.js:28:9046
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:59747)
+    at Generator.next (<anonymous>)
+    at 4133-8323eadf029ce937.js:1:57340
+    at new Promise (<anonymous>)
+    at r (4133-8323eadf029ce937.js:1:57089)
+    at s._sendRequest (4133-8323eadf029ce937.js:1:58970)
+    at 4133-8323eadf029ce937.js:1:33198
+    at l._capture (4133-8323eadf029ce937.js:1:33496)
+    at e.<computed> [as _sendRequest] (4133-8323eadf029ce937.js:1:33167)
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:60918)
+    at Generator.next (<anonymous>)
+    at s (4133-8323eadf029ce937.js:1:57145)
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+error @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+warn @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10  POST https://ingest.app.coframe.com/ingest/v2/batched_events/68c9ad4d4cddb58cf3a1f93d/ net::ERR_BLOCKED_BY_CLIENT
+ne @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+ee @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+(anonymous) @ cf.js?config=%257B%2522projectId%2522%253A%252268c9ad4d4cddb58cf3a1f93d%2522%252C%2522startTime%2522%253A1760050798744%252C%2522timeoutMs%2522%253A1000%252C%2522currentUrl%2522%253A%2522https%253A%252F%252Freplit.com%252F%2540meadowsrjack%252FUYP-Basketball%2522%252C%2522trackingOnly%2522%253Atrue%257D:10
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051087305&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051089311&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051090382&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051090888&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051092896&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28
+queryClient.ts:35  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/parent/follow-notion-player 400 (Bad Request)
+apiRequest @ queryClient.ts:35
+mutationFn @ parent-dashboard.tsx:472
+fn @ @tanstack_react-query.js?v=cdd2174b:1189
+run @ @tanstack_react-query.js?v=cdd2174b:494
+start @ @tanstack_react-query.js?v=cdd2174b:536
+execute @ @tanstack_react-query.js?v=cdd2174b:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdd2174b:2630
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:3295
+onClick @ parent-dashboard.tsx:590
+callCallback2 @ chunk-RPCDYKBN.js?v=cdd2174b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=cdd2174b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=cdd2174b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=cdd2174b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=cdd2174b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=cdd2174b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=cdd2174b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=cdd2174b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=cdd2174b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=cdd2174b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=cdd2174b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=cdd2174b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=cdd2174b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5449
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051093819&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1506&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051093819&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1506&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a1b2394d78c4b91c.js:28:9046
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:59747)
+    at Generator.next (<anonymous>)
+    at 4133-8323eadf029ce937.js:1:57340
+    at new Promise (<anonymous>)
+    at r (4133-8323eadf029ce937.js:1:57089)
+    at s._sendRequest (4133-8323eadf029ce937.js:1:58970)
+    at 4133-8323eadf029ce937.js:1:33198
+    at l._capture (4133-8323eadf029ce937.js:1:33496)
+    at e.<computed> [as _sendRequest] (4133-8323eadf029ce937.js:1:33167)
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:60918)
+    at Generator.next (<anonymous>)
+    at s (4133-8323eadf029ce937.js:1:57145)
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+error @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_app-a1b2394d78c4b91c.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+warn @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_retryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeRetryFailedLogs @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+t._notifyVisibilityChanged @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+queryClient.ts:35  POST https://3add4015-c5f6-4969-9d84-c0e693f0f161-00-3mh4rvrxt1911.janeway.replit.dev/api/parent/follow-notion-player 400 (Bad Request)
+apiRequest @ queryClient.ts:35
+mutationFn @ parent-dashboard.tsx:472
+fn @ @tanstack_react-query.js?v=cdd2174b:1189
+run @ @tanstack_react-query.js?v=cdd2174b:494
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:519
+Promise.then
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:515
+Promise.catch
+run @ @tanstack_react-query.js?v=cdd2174b:498
+start @ @tanstack_react-query.js?v=cdd2174b:536
+execute @ @tanstack_react-query.js?v=cdd2174b:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=cdd2174b:2630
+(anonymous) @ @tanstack_react-query.js?v=cdd2174b:3295
+onClick @ parent-dashboard.tsx:590
+callCallback2 @ chunk-RPCDYKBN.js?v=cdd2174b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=cdd2174b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=cdd2174b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=cdd2174b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=cdd2174b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=cdd2174b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=cdd2174b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=cdd2174b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=cdd2174b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=cdd2174b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=cdd2174b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=cdd2174b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=cdd2174b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=cdd2174b:5449
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+useAuth.ts:14 useAuth - user: {id: '45134358', email: 'meadowsrjack@gmail.com', firstName: 'Jack', lastName: 'Meadows', profileImageUrl: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD…fye1/J7X8ntfyMeXn/wCxv//aAAgBAQIfPxD/AHcA7/vAv//Z', …}
+useAuth.ts:15 useAuth - isLoading: false
+useAuth.ts:16 useAuth - isAuthenticated: true
+_app-a1b2394d78c4b91c.js:28  POST https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051097400&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1 net::ERR_BLOCKED_BY_CLIENT
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28
+_app-a1b2394d78c4b91c.js:28  ERROR  [Statsig] A networking error occurred during POST request to https://prodregistryv2.org/v1/rgstr?k=client-Bp7m7pNB6H0fnSGjVtxN5BeWQw4BSAat4OFsXa3VcTF&st=javascript-client-react&sv=3.26.0&t=1760051097400&sid=312e5257-92b8-4a83-b077-bf9ea3c77c55&ec=1&gz=1. TypeError: Failed to fetch TypeError: Failed to fetch
+    at _app-a1b2394d78c4b91c.js:28:9046
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:59747)
+    at Generator.next (<anonymous>)
+    at 4133-8323eadf029ce937.js:1:57340
+    at new Promise (<anonymous>)
+    at r (4133-8323eadf029ce937.js:1:57089)
+    at s._sendRequest (4133-8323eadf029ce937.js:1:58970)
+    at 4133-8323eadf029ce937.js:1:33198
+    at l._capture (4133-8323eadf029ce937.js:1:33496)
+    at e.<computed> [as _sendRequest] (4133-8323eadf029ce937.js:1:33167)
+    at s.<anonymous> (4133-8323eadf029ce937.js:1:60918)
+    at Generator.next (<anonymous>)
+    at s (4133-8323eadf029ce937.js:1:57145)
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+error @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+a @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendRequest @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+post @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEventsViaPost @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28
+_app-a1b2394d78c4b91c.js:28   WARN  [Statsig] Failed to flush events.
+(anonymous) @ _app-a1b2394d78c4b91c.js:28
+warn @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+s @ 4133-8323eadf029ce937.js:1
+Promise.then
+l @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+_sendEvents @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+r @ 4133-8323eadf029ce937.js:1
+flush @ 4133-8323eadf029ce937.js:1
+(anonymous) @ 4133-8323eadf029ce937.js:1
+_capture @ 4133-8323eadf029ce937.js:1
+e.<computed> @ 4133-8323eadf029ce937.js:1
+_safeFlushAndForget @ 4133-8323eadf029ce937.js:1
+e @ 4133-8323eadf029ce937.js:1
+n @ _app-a1b2394d78c4b91c.js:28

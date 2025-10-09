@@ -416,6 +416,7 @@ function ProfileAvatarRing({
 function PlayersTab() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -432,7 +433,7 @@ function PlayersTab() {
   });
 
   // Query for followed Notion players
-  const { data: followedPlayers = [], refetch: refetchFollowed } = useQuery<any[]>({
+  const { data: followedPlayers = [] } = useQuery<any[]>({
     queryKey: ['/api/parent/followed-notion-players'],
     queryFn: async () => {
       const res = await fetch('/api/parent/followed-notion-players', { credentials: 'include' });
@@ -482,7 +483,7 @@ function PlayersTab() {
     },
     onSuccess: () => {
       toast({ title: 'Player followed', description: 'You can now track this player' });
-      refetchFollowed();
+      queryClient.invalidateQueries({ queryKey: ['/api/parent/followed-notion-players'] });
       setSearchQuery('');
       setSearchResults([]);
     },
@@ -501,7 +502,7 @@ function PlayersTab() {
     },
     onSuccess: () => {
       toast({ title: 'Player unfollowed' });
-      refetchFollowed();
+      queryClient.invalidateQueries({ queryKey: ['/api/parent/followed-notion-players'] });
     },
     onError: (error: any) => {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });

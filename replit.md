@@ -10,6 +10,9 @@ This is a cross-platform mobile application for the UYP Basketball youth league,
 - **Manual roster management**: Coaches can now manually add or remove players from their team rosters using "Add Player" and "Remove" buttons. Add player shows a dialog with all available app players not currently on the team.
 - **Name-based player matching**: The system matches Notion players with app accounts by comparing full names (firstName + lastName), enabling proper account linking and status indication.
 
+### Bug Fixes (October 9, 2025)
+- **Fixed profile creation name bug**: Resolved critical bug where creating a new profile would overwrite the names of ALL existing profiles. The issue was in the POST /api/profiles endpoint which was incorrectly updating the user account's firstName and lastName with each new profile's data. Now each profile maintains its own independent name in the profiles table, and the user account data remains stable.
+
 ### Bug Fixes (October 8, 2025)
 - **Fixed join request display in coach dashboard**: Join requests were silently failing to display when authentication errors occurred. Now properly throws errors with user-friendly error banner and retry button. Includes smart retry logic that prevents infinite loops on auth failures.
 - **Fixed team selection during profile creation**: Team dropdown values were slugified (e.g., "youth-youth-girls-black") but backend expected actual team names ("Youth Girls Black"). Updated select values to use actual team names, ensuring join requests are created successfully when players select teams during profile creation.

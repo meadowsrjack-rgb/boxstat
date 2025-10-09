@@ -123,6 +123,18 @@ export const profileRelationships = pgTable("profile_relationships", {
   uniqueRelationship: unique().on(table.parentProfileId, table.playerProfileId),
 }));
 
+// Followed Notion players - allows parents to follow players without app profiles
+export const followedNotionPlayers = pgTable("followed_notion_players", {
+  id: serial("id").primaryKey(),
+  accountId: varchar("account_id").notNull().references(() => accounts.id),
+  notionPlayerId: varchar("notion_player_id").notNull(), // Notion player ID
+  playerName: varchar("player_name").notNull(), // Store name for display
+  teamName: varchar("team_name"), // Store team for display
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueFollow: unique().on(table.accountId, table.notionPlayerId),
+}));
+
 // Legacy family relationships table (for backward compatibility)
 export const familyMembers = pgTable("family_members", {
   id: serial("id").primaryKey(),
@@ -849,6 +861,7 @@ export const pushSubscriptionsRelations = relations(pushSubscriptions, ({ one })
 export const insertAccountSchema = createInsertSchema(accounts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertProfileRelationshipSchema = createInsertSchema(profileRelationships).omit({ id: true, createdAt: true });
+export const insertFollowedNotionPlayerSchema = createInsertSchema(followedNotionPlayers).omit({ id: true, createdAt: true });
 
 // Legacy insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, updatedAt: true });

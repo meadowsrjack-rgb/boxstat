@@ -6,7 +6,7 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles, accounts } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
@@ -4290,6 +4290,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching parent events:', error);
       res.status(500).json({ message: 'Failed to fetch events' });
+    }
+  });
+
+  // Followed Notion Players endpoints
+  app.get('/api/parent/followed-notion-players', isAuthenticated, async (req: any, res) => {
+    try {
+      const accountId = req.user.claims.sub;
+      
+      const followedPlayers = await db
+        .select()
+        .from(followedNotionPlayers)
+        .where(eq(followedNotionPlayers.accountId, accountId));
+      
+      res.json(followedPlayers);
+    } catch (error) {
+      console.error('Error fetching followed Notion players:', error);
+      res.status(500).json({ message: 'Failed to fetch followed players' });
+    }
+  });
+
+  app.post('/api/parent/follow-notion-player', isAuthenticated, async (req: any, res) => {
+    try {
+      const accountId = req.user.claims.sub;
+      const { notionPlayerId, playerName, teamName } = req.body;
+      
+      if (!notionPlayerId || !playerName) {
+        return res.status(400).json({ message: 'Player ID and name are required' });
+      }
+      
+      // Check if already following
+      const existing = await db
+        .select()
+        .from(followedNotionPlayers)
+        .where(
+          and(
+            eq(followedNotionPlayers.accountId, accountId),
+            eq(followedNotionPlayers.notionPlayerId, notionPlayerId)
+          )
+        )
+        .limit(1);
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ message: 'Already following this player' });
+      }
+      
+      // Add to followed players
+      const [followed] = await db
+        .insert(followedNotionPlayers)
+        .values({
+          accountId,
+          notionPlayerId,
+          playerName,
+          teamName: teamName || null,
+        })
+        .returning();
+      
+      res.json(followed);
+    } catch (error) {
+      console.error('Error following Notion player:', error);
+      res.status(500).json({ message: 'Failed to follow player' });
+    }
+  });
+
+  app.delete('/api/parent/unfollow-notion-player/:notionPlayerId', isAuthenticated, async (req: any, res) => {
+    try {
+      const accountId = req.user.claims.sub;
+      const notionPlayerId = req.params.notionPlayerId;
+      
+      await db
+        .delete(followedNotionPlayers)
+        .where(
+          and(
+            eq(followedNotionPlayers.accountId, accountId),
+            eq(followedNotionPlayers.notionPlayerId, notionPlayerId)
+          )
+        );
+      
+      res.json({ success: true, message: 'Player unfollowed successfully' });
+    } catch (error) {
+      console.error('Error unfollowing Notion player:', error);
+      res.status(500).json({ message: 'Failed to unfollow player' });
     }
   });
 

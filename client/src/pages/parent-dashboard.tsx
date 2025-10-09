@@ -5,6 +5,7 @@ import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailPanel from "@/components/EventDetailPanel";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { User as UserType, Event } from "@shared/schema";
@@ -415,6 +416,10 @@ function ProfileAvatarRing({
 function PlayersTab() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const { toast } = useToast();
 
   // Query for player profiles in this account
   const { data: allProfiles = [], isLoading } = useQuery<any[]>({
@@ -426,8 +431,87 @@ function PlayersTab() {
     },
   });
 
+  // Query for followed Notion players
+  const { data: followedPlayers = [], refetch: refetchFollowed } = useQuery<any[]>({
+    queryKey: ['/api/parent/followed-notion-players'],
+    queryFn: async () => {
+      const res = await fetch('/api/parent/followed-notion-players', { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
   // Filter for player profiles only
   const playerProfiles = allProfiles.filter(profile => profile.profileType === 'player');
+
+  // Search Notion players
+  const searchNotionPlayers = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/search/notion-players?q=${encodeURIComponent(query)}`, {
+        credentials: 'include'
+      });
+      const data = await res.json();
+      setSearchResults(data.players || []);
+    } catch (error) {
+      console.error('Error searching players:', error);
+      toast({ title: 'Search failed', description: 'Could not search players', variant: 'destructive' });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Follow/Unfollow player
+  const followPlayerMutation = useMutation({
+    mutationFn: async (player: any) => {
+      const res = await apiRequest('/api/parent/follow-notion-player', {
+        method: 'POST',
+        body: JSON.stringify({
+          notionPlayerId: player.id,
+          playerName: player.fullName,
+          teamName: player.team_name,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Failed to follow player');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Player followed', description: 'You can now track this player' });
+      refetchFollowed();
+      setSearchQuery('');
+      setSearchResults([]);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const unfollowPlayerMutation = useMutation({
+    mutationFn: async (notionPlayerId: string) => {
+      const res = await apiRequest(`/api/parent/unfollow-notion-player/${notionPlayerId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to unfollow player');
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Player unfollowed' });
+      refetchFollowed();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const isFollowing = (playerId: string) => {
+    return followedPlayers.some(p => p.notionPlayerId === playerId);
+  };
 
   return (
     <div className="space-y-5">
@@ -447,7 +531,7 @@ function PlayersTab() {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => setLocation('/create-profile')}
+                onClick={() => setLocation('/select-profile')}
                 className="text-blue-600 border-blue-300 hover:bg-blue-100"
                 data-testid="button-create-player-profile"
               >
@@ -458,26 +542,113 @@ function PlayersTab() {
         </CardContent>
       </Card>
 
-      {/* Player Snapshots */}
-      {isLoading ? (
+      {/* Search Bar */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            searchNotionPlayers(e.target.value);
+          }}
+          placeholder="Search all UYP players from Notion..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          data-testid="input-search-players"
+        />
+        {isSearching && (
+          <div className="absolute right-3 top-2.5">
+            <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+          </div>
+        )}
+      </div>
+
+      {/* Search Results */}
+      {searchResults.length > 0 && (
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-            <div className="text-sm text-gray-500">Loading player information...</div>
+          <CardContent className="p-4">
+            <h3 className="font-semibold text-sm text-gray-700 mb-3">Search Results</h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {searchResults.map((player: any) => (
+                <div key={player.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                  <div>
+                    <div className="font-medium text-gray-900">{player.fullName}</div>
+                    <div className="text-xs text-gray-500">{player.team_name || 'No team'}</div>
+                  </div>
+                  {isFollowing(player.id) ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => unfollowPlayerMutation.mutate(player.id)}
+                      disabled={unfollowPlayerMutation.isPending}
+                      className="text-gray-600"
+                      data-testid={`button-unfollow-${player.id}`}
+                    >
+                      Following
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => followPlayerMutation.mutate(player)}
+                      disabled={followPlayerMutation.isPending}
+                      data-testid={`button-follow-${player.id}`}
+                    >
+                      Follow
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
-      ) : playerProfiles.length ? (
+      )}
+
+      {/* Player Profiles from Account */}
+      {playerProfiles.length > 0 && (
         <div className="space-y-4">
+          <h3 className="font-semibold text-sm text-gray-700">My Player Profiles</h3>
           {playerProfiles.map((player: any) => (
             <ComprehensivePlayerSnapshot key={player.id} player={player} />
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Followed Notion Players */}
+      {followedPlayers.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-sm text-gray-700">Followed Players</h3>
+          {followedPlayers.map((player: any) => (
+            <Card key={player.id} className="border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-900">{player.playerName}</div>
+                    <div className="text-xs text-gray-500">{player.teamName || 'No team'}</div>
+                    <div className="text-xs text-orange-600 mt-1">⚠️ No app profile yet</div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => unfollowPlayerMutation.mutate(player.notionPlayerId)}
+                    disabled={unfollowPlayerMutation.isPending}
+                    className="text-gray-600"
+                    data-testid={`button-unfollow-followed-${player.id}`}
+                  >
+                    Unfollow
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && playerProfiles.length === 0 && followedPlayers.length === 0 && (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6 text-center text-sm text-gray-500">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <div className="text-gray-500 mb-2">No player profiles yet</div>
-            <div className="text-xs text-gray-400">Create a player profile to get started</div>
+            <div className="text-xs text-gray-400">Create a player profile or search to follow players</div>
           </CardContent>
         </Card>
       )}

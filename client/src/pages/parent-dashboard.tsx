@@ -414,22 +414,49 @@ function ProfileAvatarRing({
 /* =================== Players Tab =================== */
 function PlayersTab() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
-  // Query for comprehensive player data
-  const { data: linkedPlayers = [], isLoading } = useQuery<any[]>({
-    queryKey: ['/api/parent/players/comprehensive'],
+  // Query for player profiles in this account
+  const { data: allProfiles = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/profiles/me'],
     queryFn: async () => {
-      const res = await fetch('/api/parent/players/comprehensive', { credentials: 'include' });
+      const res = await fetch('/api/profiles/me', { credentials: 'include' });
       if (!res.ok) return [];
       return res.json();
     },
   });
 
+  // Filter for player profiles only
+  const playerProfiles = allProfiles.filter(profile => profile.profileType === 'player');
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Linked Players</h2>
+        <h2 className="text-xl font-bold text-gray-900">Player Profiles</h2>
       </div>
+
+      {/* Reminder about creating player profiles */}
+      <Card className="border-0 shadow-sm bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 mb-2">
+                To follow and track a player's progress, you'll need to set up a player profile.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setLocation('/create-profile')}
+                className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                data-testid="button-create-player-profile"
+              >
+                Create Player Profile
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Player Snapshots */}
       {isLoading ? (
@@ -439,9 +466,9 @@ function PlayersTab() {
             <div className="text-sm text-gray-500">Loading player information...</div>
           </CardContent>
         </Card>
-      ) : linkedPlayers.length ? (
+      ) : playerProfiles.length ? (
         <div className="space-y-4">
-          {linkedPlayers.map((player: any) => (
+          {playerProfiles.map((player: any) => (
             <ComprehensivePlayerSnapshot key={player.id} player={player} />
           ))}
         </div>
@@ -449,23 +476,11 @@ function PlayersTab() {
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6 text-center text-sm text-gray-500">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <div className="text-gray-500 mb-2">No players linked yet</div>
-            <div className="text-xs text-gray-400">Players will automatically appear here when linked to your account</div>
+            <div className="text-gray-500 mb-2">No player profiles yet</div>
+            <div className="text-xs text-gray-400">Create a player profile to get started</div>
           </CardContent>
         </Card>
       )}
-
-      {/* Helpful tip */}
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-2">
-            <Sparkles className="h-5 w-5 text-red-600" />
-            <p className="text-sm text-gray-600">
-              Player snapshots show real-time data including skills, achievements, attendance, and upcoming events.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -581,6 +581,7 @@ export default function CoachDashboard() {
               announcements={hrAnnouncements} 
               showLeadEvaluation={showLeadEvaluation}
               setShowLeadEvaluation={setShowLeadEvaluation}
+              currentUser={currentUser}
             />
           )}
 
@@ -1414,55 +1415,22 @@ function PlayerProfileModal({
 
 /* ---------- Pay Tab ---------- */
 function PayTab({ pay, onOpenPortal }: { pay?: CoachPaySummary; onOpenPortal: () => void }) {
-  const statusBadge = (s?: CoachPaySummary["status"]) => {
-    switch (s) {
-      case "paid":
-        return <Badge className="bg-green-100 text-green-700">Paid</Badge>;
-      case "upcoming":
-        return <Badge className="bg-blue-100 text-blue-700">Upcoming</Badge>;
-      case "processing":
-        return <Badge className="bg-yellow-100 text-yellow-700">Processing</Badge>;
-      case "on_hold":
-        return <Badge className="bg-orange-100 text-orange-700">On hold</Badge>;
-      case "past_due":
-        return <Badge className="bg-red-100 text-red-700">Past due</Badge>;
-      default:
-        return <Badge variant="secondary">—</Badge>;
-    }
-  };
-  const currency = (pay?.currency || "usd").toUpperCase();
-  const amt = pay?.nextPayAmountCents != null ? (pay.nextPayAmountCents / 100).toLocaleString(undefined, { style: "currency", currency }) : null;
-
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-bold text-gray-900">Pay</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900">Pay</h2>
+        <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+      </div>
 
-      <Card className="border-0 shadow-sm">
+      <Card className="border-0 shadow-sm opacity-50">
         <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-sm text-gray-500">Status</div>
-              <div className="mt-1" data-testid="status-pay">{statusBadge(pay?.status)}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Next pay date</div>
-              <div className="font-semibold text-gray-900" data-testid="text-next-pay-date">{pay?.nextPayDate ? format(new Date(pay.nextPayDate), "MMM d, yyyy") : "—"}</div>
-              <div className="mt-3 text-sm text-gray-500">Amount</div>
-              <div className="font-semibold text-gray-900" data-testid="text-pay-amount">{amt ?? "—"}</div>
-            </div>
+          <div className="text-center py-8">
+            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Portal</h3>
+            <p className="text-sm text-gray-500">
+              Coach payroll and compensation management will be available here soon.
+            </p>
           </div>
-
-          <div className="mt-4">
-            <Button className="w-full bg-red-600 hover:bg-red-700" onClick={onOpenPortal} data-testid="button-open-payroll">
-              <DollarSign className="h-4 w-4 mr-2" /> Open Payroll Portal
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="text-sm text-gray-600">Need to update your tax or banking info? Use the payroll portal above.</div>
         </CardContent>
       </Card>
     </div>
@@ -1474,12 +1442,14 @@ function HRTab({
   docs, 
   announcements, 
   showLeadEvaluation, 
-  setShowLeadEvaluation 
+  setShowLeadEvaluation,
+  currentUser 
 }: { 
   docs: Array<{ id: string | number; title: string; url: string }>; 
   announcements: Array<{ id: string | number; title: string; body: string; createdAt: string }>;
   showLeadEvaluation: boolean;
   setShowLeadEvaluation: (show: boolean) => void;
+  currentUser: UserType;
 }) {
   
   // If showing lead evaluation form, render it instead of default HR content
@@ -1501,21 +1471,59 @@ function HRTab({
         </Button>
       </div>
 
+      {/* Coaching Card */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="text-md font-bold text-gray-900 mb-3">Training Documents</h3>
-          {docs?.length ? (
-            <div className="space-y-2">
-              {docs.map((d) => (
-                <a key={d.id} href={d.url} target="_blank" className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50" data-testid={`link-doc-${d.id}`}>
-                  <div className="text-sm font-medium text-gray-900">{d.title}</div>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">No documents available.</div>
-          )}
+          <div className="flex items-center gap-2 mb-3">
+            <Award className="h-5 w-5 text-red-600" />
+            <h3 className="text-md font-bold text-gray-900">Coaching Profile</h3>
+          </div>
+          <div className="space-y-3">
+            {(currentUser as any)?.yearsExperience && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Experience Level</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).yearsExperience}</div>
+              </div>
+            )}
+            {(currentUser as any)?.bio && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Bio</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).bio}</div>
+              </div>
+            )}
+            {(currentUser as any)?.previousTeams && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Previous Teams</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).previousTeams}</div>
+              </div>
+            )}
+            {(currentUser as any)?.playingExperience && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Playing Experience</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).playingExperience}</div>
+              </div>
+            )}
+            {(currentUser as any)?.philosophy && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Philosophy</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).philosophy}</div>
+              </div>
+            )}
+            {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && !(currentUser as any)?.playingExperience && !(currentUser as any)?.philosophy && (
+              <div className="text-sm text-gray-500">No coaching information added yet. Update your profile in settings.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Training Documents - Greyed Out */}
+      <Card className="border-0 shadow-sm opacity-50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-md font-bold text-gray-900">Training Documents</h3>
+            <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+          </div>
+          <div className="text-sm text-gray-500">Training documents will be available here soon.</div>
         </CardContent>
       </Card>
 

@@ -859,14 +859,42 @@ function RosterTab({
     }
   };
 
+  // Join team mutation
+  const joinTeamMutation = useMutation({
+    mutationFn: async (teamId: number) => {
+      const res = await fetch(`/api/coaches/${currentUser?.id}/teams/${teamId}/join`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to join team");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
+      toast({ title: "Success", description: "Joined team successfully!" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Get available teams (teams the coach hasn't joined yet)
+  const availableTeams = allTeams.filter(
+    (team) => !assignedTeams.some((assigned) => assigned.id === Number(team.id))
+  );
+
   // Show team list if no team is selected
   if (!selectedTeamId) {
     return (
-      <div className="space-y-4">
-        <div className="mb-4">
+      <div className="space-y-6">
+        <div>
           <h3 className="text-lg font-bold text-gray-900">Your Teams</h3>
           <p className="text-sm text-gray-500">Select a team to view roster and chat</p>
         </div>
+        
         {assignedTeams.length > 0 ? (
           <div className="grid gap-3">
             {assignedTeams.map((team) => (
@@ -887,7 +915,35 @@ function RosterTab({
             ))}
           </div>
         ) : (
-          <div className="text-sm text-gray-500">No teams assigned yet.</div>
+          <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
+            You haven't joined any teams yet. Select from available teams below to join.
+          </div>
+        )}
+
+        {/* Available Teams Section */}
+        {availableTeams.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Join a Team</h3>
+            <p className="text-sm text-gray-500 mb-4">Click on a team to join</p>
+            <div className="grid gap-3">
+              {availableTeams.map((team) => (
+                <Card 
+                  key={team.id} 
+                  className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-red-200"
+                  onClick={() => joinTeamMutation.mutate(team.id)}
+                  data-testid={`available-team-card-${team.id}`}
+                >
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-gray-900">{team.name}</div>
+                      <div className="text-sm text-gray-500">{team.ageGroup}</div>
+                    </div>
+                    <UserPlus className="h-5 w-5 text-gray-400" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     );

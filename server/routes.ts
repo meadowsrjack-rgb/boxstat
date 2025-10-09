@@ -2414,6 +2414,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Join existing team (for coaches)
+  app.post('/api/coaches/:coachId/teams/:teamId/join', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId, teamId } = req.params;
+      const currentUserId = req.user.claims.sub;
+      
+      // Verify the user is the coach
+      if (currentUserId !== coachId) {
+        return res.status(403).json({ message: "Access denied. You can only join teams for yourself." });
+      }
+
+      // Verify the user is actually a coach
+      const user = await storage.getUser(coachId);
+      if (!user || user.userType !== 'coach') {
+        return res.status(400).json({ message: "User is not a coach" });
+      }
+
+      // Verify team exists
+      const team = await storage.getTeam(parseInt(teamId));
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      // Check if already joined
+      const existingAssignment = await storage.db
+        .select()
+        .from(coachTeams)
+        .where(and(
+          eq(coachTeams.coachId, coachId),
+          eq(coachTeams.teamId, parseInt(teamId))
+        ))
+        .limit(1);
+
+      if (existingAssignment.length > 0) {
+        return res.status(400).json({ message: "Already joined this team" });
+      }
+
+      // Add coach to team
+      await storage.db.insert(coachTeams).values({
+        coachId: coachId,
+        teamId: parseInt(teamId),
+      });
+
+      res.json({ success: true, message: 'Joined team successfully' });
+    } catch (error) {
+      console.error("Error joining team:", error);
+      res.status(500).json({ message: "Failed to join team" });
+    }
+  });
+
   // Get all players from coach's assigned teams
   app.get('/api/coaches/:coachId/players', isAuthenticated, async (req: any, res) => {
     try {

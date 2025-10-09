@@ -785,6 +785,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search endpoints for players
+  app.get('/api/search/notion-players', isAuthenticated, async (req: any, res) => {
+    try {
+      const query = req.query.q?.toLowerCase() || '';
+      const teamFilter = req.query.team;
+      
+      // Get all Notion players
+      const notionPlayers = await notionService.getAllPlayers();
+      
+      // Filter by search query
+      let results = notionPlayers;
+      
+      if (query) {
+        results = results.filter((player: any) => {
+          const fullName = player.name?.toLowerCase() || '';
+          const team = player.team?.toLowerCase() || '';
+          return fullName.includes(query) || team.includes(query);
+        });
+      }
+      
+      // Filter by team if specified
+      if (teamFilter && teamFilter !== 'all') {
+        const notionTeams = await notionService.getAllTeams();
+        const selectedTeam = notionTeams.find((t: any) => t.id === teamFilter);
+        if (selectedTeam) {
+          results = results.filter((player: any) => 
+            player.team?.toLowerCase() === selectedTeam.name?.toLowerCase()
+          );
+        }
+      }
+      
+      // Transform to match PlayerSearch expected format
+      const transformedResults = results.map((player: any) => ({
+        id: player.id,
+        first_name: player.name?.split(' ')[0] || '',
+        last_name: player.name?.split(' ').slice(1).join(' ') || '',
+        profile_image_url: null,
+        team_id: null,
+        team_name: player.team,
+        age: player.age,
+        date_of_birth: null,
+        registration_status: player.registration_status,
+        parent_name: player.parent_name,
+        parent_email: player.parent_email,
+        account_email: player.account_email,
+        phone_number: player.phone_number,
+        emergency_contact: player.emergency_contact,
+        emergency_phone: player.emergency_phone,
+        grade: player.grade,
+        school_grade: player.grade,
+        session: player.session,
+        position: null,
+        jersey_number: null,
+        address: null,
+        medical_info: null,
+        allergies: null,
+        badges_public: false,
+        trophies_public: false,
+        skills_public: false,
+      }));
+      
+      res.json({ ok: true, players: transformedResults });
+    } catch (error) {
+      console.error("Error searching Notion players:", error);
+      res.status(500).json({ ok: false, players: [], message: "Failed to search players" });
+    }
+  });
+
+  app.get('/api/search/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const notionTeams = await notionService.getAllTeams();
+      
+      // Transform to match expected format
+      const transformedTeams = notionTeams.map((team: any) => ({
+        id: team.id,
+        name: team.name,
+        roster_count: team.roster?.length || 0,
+        roster: team.roster || [],
+      }));
+      
+      res.json({ ok: true, teams: transformedTeams });
+    } catch (error) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ ok: false, teams: [], message: "Failed to fetch teams" });
+    }
+  });
+
   // Player profile route
   app.get('/api/players/:playerId/profile', isAuthenticated, async (req: any, res) => {
     try {

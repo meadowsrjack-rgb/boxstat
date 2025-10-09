@@ -4,6 +4,15 @@
 This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
 
 ## Recent Changes
+### Parent Dashboard & Player Following (October 9, 2025)
+- **Player profile photos**: Parent dashboard Players tab now displays profile photos next to player names using Avatar component with fallback to initials.
+- **Notion player search**: Added search bar in Players tab to search all 290+ players from Notion database. Parents can follow any UYP player even if they haven't set up an app profile yet.
+- **Follow system implementation**: New `followed_notion_players` table tracks which Notion players parents want to follow. When a player creates a profile with matching name, it automatically links to the followed entry.
+- **Three-tier player display**: Players tab shows (1) My Player Profiles (account-based profiles), (2) Followed Players (Notion players without app profiles, marked with ⚠️ "No app profile yet"), and (3) Search Results.
+- **Profile creation navigation**: "Create Player Profile" button now navigates to profile selection page (`/select-profile`) instead of direct profile creation.
+- **Skills Academy teams**: Added "Skills Academy ONLY" section to team dropdown in player profile creation with three options: Rookies, Intermediate, and Special Needs.
+- **Parent profile name fix**: Profile creation now properly updates user account firstName/lastName fields so parent names display correctly in dashboard header.
+
 ### Coach Roster Management Enhancement (October 8, 2025)
 - **Complete Notion roster display**: Coach dashboards now display ALL players from the Notion database for their teams, not just those with app accounts. Players without app accounts are shown with visual indicators (grayed out, "No Account" badge).
 - **Disabled actions for unregistered players**: Players without app accounts cannot receive awards, evaluations, or have their player cards viewed. Evaluate and Reward buttons are disabled and grayed out for these players.

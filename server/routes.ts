@@ -2150,46 +2150,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create team (for coaches)
-  app.post('/api/teams', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      // Only coaches can create teams
-      if (user?.userType !== 'coach') {
-        return res.status(403).json({ message: "Access denied - Coaches only" });
-      }
-
-      const { name, ageGroup, division } = req.body;
-
-      // Validate required fields
-      if (!name || !ageGroup) {
-        return res.status(400).json({ message: "Team name and age group are required" });
-      }
-
-      // Create the team
-      const newTeam = await storage.createTeam({
-        name: name.trim(),
-        ageGroup: ageGroup.trim(),
-        coachId: userId,
-        division: division?.trim() || null,
-        color: "#d82428", // Default red color
-      });
-
-      // Add coach to the team (create team assignment)
-      await db.insert(coachTeams).values({
-        coachId: userId,
-        teamId: newTeam.id,
-      });
-
-      res.status(201).json(newTeam);
-    } catch (error) {
-      console.error("Error creating team:", error);
-      res.status(500).json({ message: "Failed to create team" });
-    }
-  });
-
   // Get teams by coach (for admin dashboard)
   app.get('/api/teams/coach/:coachId', isAuthenticated, async (req: any, res) => {
     try {

@@ -209,7 +209,7 @@ export interface IStorage {
   // Badge operations
   getAllBadges(): Promise<Badge[]>;
   getUserBadges(userId: string, profileId?: string): Promise<UserBadge[]>;
-  awardBadge(userId: string, badgeId: number, profileId?: string): Promise<UserBadge>;
+  awardBadge(userId: string, badgeTypeOrId: string | number, profileId?: string): Promise<UserBadge>;
   
   // Trophy operations
   getAllTrophies(): Promise<Trophy[]>;
@@ -996,8 +996,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(userBadges).where(condition);
   }
 
-  async awardBadge(userId: string, badgeId: number, profileId?: string): Promise<UserBadge> {
-    const [userBadge] = await db.insert(userBadges).values({ userId, badgeId, profileId }).returning();
+  async awardBadge(userId: string, badgeTypeOrId: string | number, profileId?: string): Promise<UserBadge> {
+    // Support both badgeType (string) for coach awards and badgeId (number) for auto-awards
+    const values = typeof badgeTypeOrId === 'string'
+      ? { userId, badgeType: badgeTypeOrId, profileId }
+      : { userId, badgeId: badgeTypeOrId, profileId };
+    
+    const [userBadge] = await db.insert(userBadges).values(values).returning();
     return userBadge;
   }
 

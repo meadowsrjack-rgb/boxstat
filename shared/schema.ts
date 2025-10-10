@@ -271,7 +271,8 @@ export const userBadges = pgTable("user_badges", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
   profileId: varchar("profile_id").references(() => profiles.id), // Profile-specific awards
-  badgeId: integer("badge_id").references(() => badges.id).notNull(),
+  badgeId: integer("badge_id").references(() => badges.id), // Nullable for coach-awarded badges
+  badgeType: varchar("badge_type", { length: 50 }), // For coach-awarded badges: game-mvp, hustle, teammate, student, recruiter
   earnedAt: timestamp("earned_at").defaultNow(),
 });
 

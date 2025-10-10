@@ -2635,11 +2635,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { playerId, awardId, category } = req.body;
       
+      // Validate required parameters
+      if (!playerId || !awardId || !category) {
+        return res.status(400).json({ message: "Missing required parameters: playerId, awardId, category" });
+      }
+      
       if (category === 'badge') {
+        // Validate coach badge types
+        const validBadgeTypes = ['game-mvp', 'hustle', 'teammate', 'student', 'recruiter'];
+        if (typeof awardId === 'string' && !validBadgeTypes.includes(awardId)) {
+          return res.status(400).json({ message: `Invalid badge type: ${awardId}` });
+        }
         await storage.awardBadge(playerId, awardId);
       } else if (category === 'trophy') {
+        // Trophy uses awardId as the trophy name/type
+        const validTrophyTypes = ['season-mvp', 'coach-award', 'season-mip', 'defensive-player'];
+        if (!validTrophyTypes.includes(awardId)) {
+          return res.status(400).json({ message: `Invalid trophy type: ${awardId}` });
+        }
         const { awardName, awardDescription } = req.body;
-        await storage.awardTrophy(playerId, awardName, awardDescription);
+        await storage.awardTrophy(playerId, awardName || awardId, awardDescription);
+      } else {
+        return res.status(400).json({ message: "Invalid category. Must be 'badge' or 'trophy'" });
       }
 
       res.json({ success: true });

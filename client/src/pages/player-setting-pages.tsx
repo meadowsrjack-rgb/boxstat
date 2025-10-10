@@ -120,15 +120,11 @@ export function PlayerProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      const previousTeam = (user as any)?.teamName || (user as any)?.teamId;
-      const teamChanged = data.teamId && data.teamId !== previousTeam;
-      
-      // Send profile update without teamId (will be set via join request)
+      // Send profile update including teamId for direct assignment
       const updateData = {
         ...data,
         address: data.city,
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
-        teamId: undefined, // Remove teamId from profile update
       };
       
       const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
@@ -140,45 +136,7 @@ export function PlayerProfilePage() {
       if (!response.ok) throw new Error("Failed to update profile");
       const updatedUser = await response.json();
       
-      // If team changed, create join request
-      let joinRequestCreated = false;
-      let requestedTeamName = "";
-      
-      if (teamChanged) {
-        const teamsResponse = await fetch("/api/teams", { credentials: "include" });
-        if (teamsResponse.ok) {
-          const teams = await teamsResponse.json();
-          const selectedTeam = teams.find((t: any) => t.name === data.teamId);
-          
-          if (selectedTeam) {
-            // Ensure we have a valid profileId before creating join request
-            if (!currentProfile?.id) {
-              throw new Error("Unable to create join request. Profile information is not available. Please try again.");
-            }
-            
-            const joinResponse = await fetch(`/api/teams/${selectedTeam.id}/join-requests`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ profileId: currentProfile.id })
-            });
-            
-            if (joinResponse.ok) {
-              joinRequestCreated = true;
-              requestedTeamName = data.teamId;
-            } else {
-              const errorData = await joinResponse.json();
-              throw new Error(errorData.message || "Failed to create team join request");
-            }
-          }
-        }
-      }
-      
-      return { 
-        ...updatedUser, 
-        joinRequestPending: joinRequestCreated, 
-        requestedTeamName 
-      };
+      return updatedUser;
     },
     onSuccess: (updatedUser) => {
       // Update local profile state with server response
@@ -196,7 +154,7 @@ export function PlayerProfilePage() {
         emergencyPhone: updatedUser.emergencyPhone || "",
         medicalInfo: updatedUser.medicalInfo || "",
         allergies: updatedUser.allergies || "",
-        teamId: updatedUser.teamId || "",
+        teamId: updatedUser.teamName || updatedUser.teamId || "",
       });
       
       // Invalidate queries to refresh all user data across the app
@@ -209,13 +167,9 @@ export function PlayerProfilePage() {
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
       
-      const description = updatedUser.joinRequestPending
-        ? `Profile updated! Your request to join ${updatedUser.requestedTeamName} is pending coach approval.`
-        : "Your player profile has been successfully updated.";
-      
       toast({ 
         title: "Profile Updated", 
-        description
+        description: "Your player profile has been successfully updated."
       });
     },
     onError: (error: any) => {

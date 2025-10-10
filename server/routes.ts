@@ -436,26 +436,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.teamId && req.body.teamId.trim() !== '') {
         const teamName = req.body.teamId; // This is the team name from the frontend
         
-        // Check if team exists
-        const [existingTeam] = await storage.db
-          .select()
-          .from(teams)
-          .where(eq(teams.name, teamName))
-          .limit(1);
+        // Get all teams and find the matching one
+        const allTeams = await storage.getAllTeams();
+        const existingTeam = allTeams.find(t => t.name === teamName);
         
         if (existingTeam) {
           teamDbId = existingTeam.id.toString();
           teamNumericId = existingTeam.id;
         } else {
           // Create the team if it doesn't exist
-          const [newTeam] = await storage.db
-            .insert(teams)
-            .values({
-              name: teamName,
-              ageGroup: 'Various', // Default age group
-              color: '#DC2626', // UYP red color
-            })
-            .returning();
+          const newTeam = await storage.createTeam({
+            name: teamName,
+            ageGroup: 'Various', // Default age group
+            color: '#DC2626', // UYP red color
+          });
           teamDbId = newTeam.id.toString();
           teamNumericId = newTeam.id;
         }

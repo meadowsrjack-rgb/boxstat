@@ -2788,7 +2788,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { playerId, scores, quarter, year } = req.body;
       
+      console.log("Evaluation request body:", JSON.stringify(req.body));
+      console.log("Parsed values:", { playerId, scores, quarter, year });
+      
       if (!playerId || !quarter || !year || !scores) {
+        console.log("Missing parameters detected:", { 
+          hasPlayerId: !!playerId, 
+          hasQuarter: !!quarter, 
+          hasYear: !!year, 
+          hasScores: !!scores 
+        });
         return res.status(400).json({ message: "Missing required parameters: playerId, scores, quarter, year" });
       }
 

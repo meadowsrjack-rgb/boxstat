@@ -873,6 +873,9 @@ function RosterTab({
     }
   };
 
+  // Selected team for dropdown
+  const [selectedTeamToAdd, setSelectedTeamToAdd] = useState<string>("");
+
   // Join team mutation
   const joinTeamMutation = useMutation({
     mutationFn: async (teamId: number) => {
@@ -888,7 +891,8 @@ function RosterTab({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
-      toast({ title: "Success", description: "Joined team successfully!" });
+      setSelectedTeamToAdd(""); // Reset dropdown
+      toast({ title: "Success", description: "Team added successfully!" });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -939,7 +943,11 @@ function RosterTab({
           <div className="mt-6">
             <h3 className="text-lg font-bold text-gray-900 mb-3">Add a Team</h3>
             <Select 
-              onValueChange={(value) => joinTeamMutation.mutate(parseInt(value))}
+              value={selectedTeamToAdd}
+              onValueChange={(value) => {
+                setSelectedTeamToAdd(value);
+                joinTeamMutation.mutate(parseInt(value));
+              }}
               data-testid="select-add-team"
             >
               <SelectTrigger className="w-full">

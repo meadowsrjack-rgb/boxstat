@@ -352,20 +352,26 @@ export function PlayerProfilePage() {
                     <SelectValue placeholder="Select your team" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">FNHTL</div>
-                    {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team) => (
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Skills Academy</div>
+                    {['Rookies', 'Intermediate', 'Advanced', 'Elite', 'Special Needs'].map((team) => (
+                      <SelectItem key={team} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">FNHTL</div>
+                    {['Dragons', 'Eagles', 'Trojans', 'Titans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team) => (
                       <SelectItem key={team} value={team}>
                         {team}
                       </SelectItem>
                     ))}
                     <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
-                    {['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team) => (
+                    {['10u Black', '12u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team) => (
                       <SelectItem key={team} value={team}>
                         {team}
                       </SelectItem>
                     ))}
                     <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
-                    {['HS Elite', 'HS Red', 'HS Black', 'HS White'].map((team) => (
+                    {['High-School-Elite', 'High-School-Red', 'High-School-Black', 'High-School-White'].map((team) => (
                       <SelectItem key={team} value={team}>
                         {team}
                       </SelectItem>

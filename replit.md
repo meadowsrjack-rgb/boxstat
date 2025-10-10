@@ -4,6 +4,12 @@
 This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
 
 ## Recent Changes
+### Team Program Organization (October 10, 2025)
+- **Program field added to teams table**: Teams are now organized into 4 programs - Skills-Academy, FNHTL, Youth-Club, and High-School-Club. The program field uses an enum type with these values.
+- **Automatic program assignment**: The upsertTeam function in ClaimRepository now includes a getTeamProgram() method that automatically assigns programs to teams based on their names when syncing from Notion. This ensures all teams are properly categorized without manual intervention.
+- **Team categorization logic**: Skills-Academy teams include Rookies, Intermediate, Advanced, Elite, and Special-Needs. FNHTL teams include Wizards, Wolverines, Wildcats, Anteaters, Dolphins, Storm, Vikings, Silverswords, Bruins, Titans, Trojans, Eagles, and Dragons. Youth-Club includes age-group teams (10u, 12u, 13u, 14u) and Youth Girls teams. High-School-Club includes all high school teams.
+- **Database migration**: Added program column to teams table using ALTER TABLE SQL command. Existing teams were updated with their correct program values based on name matching.
+
 ### Coach Team Management Update (October 9, 2025)
 - **Removed team creation**: Coaches can no longer create new teams. Teams are pre-populated in the database and managed by administrators.
 - **Join Team feature**: Coaches now join existing teams from a comprehensive list in the Teams tab. The "Join a Team" section displays all available teams that the coach hasn't joined yet.

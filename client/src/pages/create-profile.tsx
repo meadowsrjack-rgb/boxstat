@@ -193,7 +193,7 @@ export default function CreateProfile() {
           height: data.height,
           city: data.city,
           position: data.position,
-          profileImageUrl: claimData?.photoUrl || (user as any)?.profileImageUrl,
+          profileImageUrl: null, // Default to null so Avatar shows initials until manually uploaded
           verified: isVerified, // Pass verification status from Notion claim
         }),
       });

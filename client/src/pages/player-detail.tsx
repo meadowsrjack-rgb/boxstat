@@ -60,11 +60,14 @@ export default function PlayerDetailPage() {
   // Award player mutation
   const awardPlayerMutation = useMutation({
     mutationFn: async (data: AwardFormValues & { playerId: string }) => {
-      return await apiRequest('/api/coach/award', {
+      const response = await fetch('/api/coach/award', {
         method: 'POST',
-        body: JSON.stringify(data),
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
       });
+      if (!response.ok) throw new Error('Failed to award player');
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -72,7 +75,14 @@ export default function PlayerDetailPage() {
         description: "The player has been awarded successfully.",
       });
       setShowAwardModal(false);
-      // Optionally refetch player data to show updated awards
+      awardForm.reset();
+      // Invalidate queries to update player card and profile
+      if (player) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${player.id}/badges`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${player.id}/trophies`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${player.id}/awards`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/players/${player.id}`] });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -86,8 +96,10 @@ export default function PlayerDetailPage() {
   // Skill evaluation mutation
   const skillEvaluationMutation = useMutation({
     mutationFn: async (data: SkillEvaluationValues & { playerId: number }) => {
-      return await apiRequest('/api/coach/evaluations', {
+      const response = await fetch('/api/coach/evaluations', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           playerId: data.playerId,
           quarter: data.quarter,
@@ -103,8 +115,9 @@ export default function PlayerDetailPage() {
           },
           notes: data.notes,
         }),
-        headers: { 'Content-Type': 'application/json' },
       });
+      if (!response.ok) throw new Error('Failed to save evaluation');
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -112,6 +125,12 @@ export default function PlayerDetailPage() {
         description: "Player skills evaluation has been saved successfully.",
       });
       setShowEvaluationModal(false);
+      evaluationForm.reset();
+      // Invalidate queries to update player card with new evaluation
+      if (player) {
+        queryClient.invalidateQueries({ queryKey: [`/api/players/${player.id}/latest-evaluation`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/players/${player.id}`] });
+      }
     },
     onError: (error: any) => {
       toast({

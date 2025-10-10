@@ -202,10 +202,6 @@ export class NotionPlayerService {
           teamName = skillsAcademySession;
         }
         
-        // Debug: Log sample players to understand data structure
-        if (name.toLowerCase().includes('jayden') || name.toLowerCase().includes('jack')) {
-          console.log(`DEBUG: ${name} - Program: ${currentProgram}, Team: ${teamName}, YC: ${youthClubTeam}, HS: ${highSchoolTeam}, FNHTL: ${fnhtlTeam}, SA: ${skillsAcademySession}, SessionTags: ${sessionTags?.join(', ') || 'none'}`);
-        }
         
         const teamSlug = slugify(teamName);
 

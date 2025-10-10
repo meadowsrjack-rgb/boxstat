@@ -103,50 +103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
-  // Debug route to find player by name in Notion
-  if (process.env.NODE_ENV === 'development') {
-    app.get('/api/debug/notion-player/:name', async (req, res) => {
-      try {
-        const searchName = req.params.name.toLowerCase();
-        const allPlayers = notionService.getAllPlayers();
-        const matchingPlayers = allPlayers.filter(p => 
-          p.name.toLowerCase().includes(searchName)
-        );
-        const result = { 
-          found: matchingPlayers.length,
-          players: matchingPlayers.map(p => ({
-            name: p.name,
-            currentProgram: p.currentProgram,
-            team: p.team,
-            grade: p.grade
-          }))
-        };
-        console.log('DEBUG: Notion player search for', searchName, ':', JSON.stringify(result, null, 2));
-        res.json(result);
-      } catch (error) {
-        console.error("Error searching Notion players:", error);
-        res.status(500).json({ message: "Failed to search players", error: String(error) });
-      }
-    });
-    
-    app.get('/api/debug/notion-teams', async (req, res) => {
-      try {
-        const allTeams = notionService.getAllTeams();
-        res.json({ 
-          count: allTeams.length,
-          teams: allTeams.map(t => ({
-            name: t.name,
-            slug: t.slug,
-            rosterCount: t.roster.length
-          }))
-        });
-      } catch (error) {
-        console.error("Error fetching Notion teams:", error);
-        res.status(500).json({ message: "Failed to fetch teams", error: String(error) });
-      }
-    });
-  }
-
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
@@ -1022,26 +978,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(rosterData);
       }
       
-      // Get app players for this team
+      // Get app players for this team (source of truth - takes precedence over Notion)
       const appPlayers = await storage.getTeamPlayers(teamId);
       
-      // Create a map of app players by name for quick lookup
-      const appPlayersByName = new Map();
-      appPlayers.forEach(player => {
-        const fullName = `${player.firstName} ${player.lastName}`.toLowerCase().trim();
-        appPlayersByName.set(fullName, player);
+      // Create a map of Notion players by name for quick lookup
+      const notionPlayersByName = new Map();
+      notionTeam.roster.forEach(player => {
+        const normalizedName = player.name.toLowerCase().trim();
+        notionPlayersByName.set(normalizedName, player);
       });
       
-      // Combine Notion players with app account data
-      const combinedRoster = notionTeam.roster.map(notionPlayer => {
-        const normalizedName = notionPlayer.name.toLowerCase().trim();
-        const appPlayer = appPlayersByName.get(normalizedName);
+      // Start with app players (these override Notion assignments)
+      const combinedRoster = appPlayers.map(appPlayer => {
+        const fullName = `${appPlayer.firstName} ${appPlayer.lastName}`.toLowerCase().trim();
+        const notionPlayer = notionPlayersByName.get(fullName);
         
-        if (appPlayer) {
-          // Player has an app account
+        if (notionPlayer) {
+          // Remove from Notion map so we don't duplicate later
+          notionPlayersByName.delete(fullName);
+          
+          // Player exists in both app and Notion - use app data with Notion metadata
           return {
             notionId: notionPlayer.id,
-            name: notionPlayer.name,
+            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
             position: appPlayer.position,
             jerseyNumber: appPlayer.jerseyNumber,
             hasAppAccount: true,
@@ -1053,25 +1012,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             status: notionPlayer.status,
           };
         } else {
-          // Player does NOT have an app account
-          const nameParts = notionPlayer.name.split(' ');
-          const firstName = nameParts.slice(0, -1).join(' ') || notionPlayer.name;
-          const lastName = nameParts[nameParts.length - 1] || '';
-          
+          // Player only in app (not in Notion) - use app data only
           return {
-            notionId: notionPlayer.id,
-            name: notionPlayer.name,
-            position: null,
-            jerseyNumber: null,
-            hasAppAccount: false,
-            appAccountId: null,
-            profileImageUrl: null,
-            firstName,
-            lastName,
-            grade: notionPlayer.grade,
-            status: notionPlayer.status,
+            notionId: null,
+            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
+            position: appPlayer.position,
+            jerseyNumber: appPlayer.jerseyNumber,
+            hasAppAccount: true,
+            appAccountId: appPlayer.id,
+            profileImageUrl: appPlayer.profileImageUrl,
+            firstName: appPlayer.firstName,
+            lastName: appPlayer.lastName,
+            grade: null,
+            status: null,
           };
         }
+      });
+      
+      // Add remaining Notion-only players (those without app accounts)
+      notionPlayersByName.forEach((notionPlayer) => {
+        const nameParts = notionPlayer.name.split(' ');
+        const firstName = nameParts.slice(0, -1).join(' ') || notionPlayer.name;
+        const lastName = nameParts[nameParts.length - 1] || '';
+        
+        combinedRoster.push({
+          notionId: notionPlayer.id,
+          name: notionPlayer.name,
+          position: null,
+          jerseyNumber: null,
+          hasAppAccount: false,
+          appAccountId: null,
+          profileImageUrl: null,
+          firstName,
+          lastName,
+          grade: notionPlayer.grade,
+          status: notionPlayer.status,
+        });
       });
       
       res.json(combinedRoster);

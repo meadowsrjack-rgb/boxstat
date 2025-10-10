@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/u
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import {
   Bell,
@@ -929,33 +930,36 @@ function RosterTab({
           </div>
         ) : (
           <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
-            You haven't joined any teams yet. Select from available teams below to join.
+            You haven't added any teams yet. Use the dropdown below to add a team.
           </div>
         )}
 
-        {/* Available Teams Section */}
+        {/* Add a Team Dropdown */}
         {availableTeams.length > 0 && (
           <div className="mt-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Join a Team</h3>
-            <p className="text-sm text-gray-500 mb-4">Click on a team to join</p>
-            <div className="grid gap-3">
-              {availableTeams.map((team) => (
-                <Card 
-                  key={team.id} 
-                  className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:border-red-200"
-                  onClick={() => joinTeamMutation.mutate(team.id)}
-                  data-testid={`available-team-card-${team.id}`}
-                >
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-gray-900">{team.name}</div>
-                      <div className="text-sm text-gray-500">{team.ageGroup}</div>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Add a Team</h3>
+            <Select 
+              onValueChange={(value) => joinTeamMutation.mutate(parseInt(value))}
+              data-testid="select-add-team"
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a team to add..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTeams.map((team) => (
+                  <SelectItem 
+                    key={team.id} 
+                    value={team.id.toString()}
+                    data-testid={`select-item-team-${team.id}`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-medium">{team.name}</span>
+                      <span className="text-sm text-gray-500 ml-2">{team.ageGroup}</span>
                     </div>
-                    <UserPlus className="h-5 w-5 text-gray-400" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>

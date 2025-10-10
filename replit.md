@@ -1,53 +1,7 @@
 # UYP Basketball League Mobile App
 
 ## Overview
-This is a cross-platform mobile application for the UYP Basketball youth league, serving Parents and Players with tailored interfaces and features. The application aims to streamline league operations, enhance communication, and provide a comprehensive platform for managing schedules, player development, and team activities. It is built with a modern full-stack architecture using React/TypeScript frontend, Express.js backend, and a PostgreSQL database.
-
-## Recent Changes
-### Team Program Organization (October 10, 2025)
-- **Program field added to teams table**: Teams are now organized into 4 programs - Skills-Academy, FNHTL, Youth-Club, and High-School-Club. The program field uses an enum type with these values.
-- **Automatic program assignment**: The upsertTeam function in ClaimRepository now includes a getTeamProgram() method that automatically assigns programs to teams based on their names when syncing from Notion. This ensures all teams are properly categorized without manual intervention.
-- **Team categorization logic**: Skills-Academy teams include Rookies, Intermediate, Advanced, Elite, and Special-Needs. FNHTL teams include Wizards, Wolverines, Wildcats, Anteaters, Dolphins, Storm, Vikings, Silverswords, Bruins, Titans, Trojans, Eagles, and Dragons. Youth-Club includes age-group teams (10u, 12u, 13u, 14u) and Youth Girls teams. High-School-Club includes all high school teams.
-- **Database migration**: Added program column to teams table using ALTER TABLE SQL command. Existing teams were updated with their correct program values based on name matching.
-
-### Coach Team Management Update (October 9, 2025)
-- **Removed team creation**: Coaches can no longer create new teams. Teams are pre-populated in the database and managed by administrators.
-- **Join Team feature**: Coaches now join existing teams from a comprehensive list in the Teams tab. The "Join a Team" section displays all available teams that the coach hasn't joined yet.
-- **Backend endpoint**: POST /api/coaches/:coachId/teams/:teamId/join validates coach permissions, checks team existence, prevents duplicate joins, and adds coach to team via coach_teams junction table.
-- **Smart filtering**: Available teams filter correctly handles ID type conversion (string to number) to prevent showing already-joined teams. Teams move from "Join a Team" to "Your Teams" section after successful join.
-
-### Parent Dashboard & Player Following (October 9, 2025)
-- **Player profile photos**: Parent dashboard Players tab now displays profile photos next to player names using Avatar component with fallback to initials.
-- **Notion player search**: Added search bar in Players tab to search all 290+ players from Notion database. Parents can follow any UYP player even if they haven't set up an app profile yet.
-- **Follow system implementation**: New `followed_notion_players` table tracks which Notion players parents want to follow. When a player creates a profile with matching name, it automatically links to the followed entry.
-- **Three-tier player display**: Players tab shows (1) My Player Profiles (account-based profiles), (2) Followed Players (Notion players without app profiles, marked with ⚠️ "No app profile yet"), and (3) Search Results.
-- **Profile creation navigation**: "Create Player Profile" button now navigates to profile selection page (`/select-profile`) instead of direct profile creation.
-- **Skills Academy teams**: Added "Skills Academy ONLY" section to team dropdown in player profile creation with three options: Rookies, Intermediate, and Special Needs.
-- **Parent profile name fix**: Profile creation now properly updates user account firstName/lastName fields so parent names display correctly in dashboard header.
-
-### Coach Roster Management Enhancement (October 8, 2025)
-- **Complete Notion roster display**: Coach dashboards now display ALL players from the Notion database for their teams, not just those with app accounts. Players without app accounts are shown with visual indicators (grayed out, "No Account" badge).
-- **Disabled actions for unregistered players**: Players without app accounts cannot receive awards, evaluations, or have their player cards viewed. Evaluate and Reward buttons are disabled and grayed out for these players.
-- **Manual roster management**: Coaches can now manually add or remove players from their team rosters using "Add Player" and "Remove" buttons. Add player shows a dialog with all available app players not currently on the team.
-- **Name-based player matching**: The system matches Notion players with app accounts by comparing full names (firstName + lastName), enabling proper account linking and status indication.
-
-### Coach Settings Updates (October 9, 2025)
-- **Certifications field removed**: Completely removed the certifications field from the coaching experience section in coach settings. The experience form now only includes years of experience, bio, previous teams coached, playing experience, and coaching philosophy.
-- **Team management relocated**: Removed Team Assignments section from coach settings page. Team management functionality is now exclusively available in the Coach Dashboard's Team tab for better organization and workflow.
-- **Coaching card implementation**: Added coaching card in the HR tab that displays all coaching experience data (years of experience, bio, previous teams, playing experience, and philosophy) in a structured, read-only format.
-- **Training documents greyed out**: Training documents section in coach dashboard HR tab is now disabled and marked as "coming soon" for future implementation.
-- **Pay section greyed out**: Pay section in the pay tab is now disabled and marked as "feature coming later" for future implementation.
-- **Profile creation improvements**: Fixed parent profile creation by implementing separate validation schemas - parentProfileSchema (DOB optional) and playerProfileSchema (DOB required). DOB field now only renders for player profiles. Removed "Have an existing UYP account?" account linking section from both player and parent profile creation flows.
-
-### Bug Fixes (October 9, 2025)
-- **Fixed profile creation name bug**: Resolved critical bug where creating a new profile would overwrite the names of ALL existing profiles. The issue was in the POST /api/profiles endpoint which was incorrectly updating the user account's firstName and lastName with each new profile's data. Now each profile maintains its own independent name in the profiles table, and the user account data remains stable.
-
-### Bug Fixes (October 8, 2025)
-- **Fixed join request display in coach dashboard**: Join requests were silently failing to display when authentication errors occurred. Now properly throws errors with user-friendly error banner and retry button. Includes smart retry logic that prevents infinite loops on auth failures.
-- **Fixed team selection during profile creation**: Team dropdown values were slugified (e.g., "youth-youth-girls-black") but backend expected actual team names ("Youth Girls Black"). Updated select values to use actual team names, ensuring join requests are created successfully when players select teams during profile creation.
-- **Fixed team selection in player settings**: Similar issue where team select values didn't match backend expectations. Now using consistent team name format across all team selection UIs.
-- **Fixed team change blocking when pending request exists**: Players can now change their team selection even when they have a pending join request. The system automatically cancels the old request (marks as rejected) and creates a new one when switching teams. Prevents duplicate requests to the same team.
-- **Fixed profile creation field labels**: Removed "(Optional)" labels from Height and City fields since they are required fields. Only Phone Number remains marked as optional.
+This cross-platform mobile application for the UYP Basketball youth league provides tailored interfaces for Parents and Players. It aims to streamline league operations, enhance communication, and offer a comprehensive platform for managing schedules, player development, and team activities. Built with a modern full-stack architecture, it uses React/TypeScript for the frontend, Express.js for the backend, and PostgreSQL for the database. The application focuses on improving user experience through PWA features, secure authentication, and robust data management, while also providing tools for coaches and administrators to manage teams and player development effectively.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -77,22 +31,21 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: Comprehensive schema supporting users, teams, events, payments, etc.
 
 ### Key Features & Design Decisions
-- **Authentication Flow**: Post-login account linking system with automatic coach detection. Users authenticate via Replit Auth, and the system automatically detects coaches by email domain (@upyourperformance.org or @upyourperformance.com). Coach profiles are auto-created and users are directed to coach dashboard. Non-coach users are presented with a simple profile type selection (parent or player) before being directed to their respective dashboards.
-- **User Management**: Single Parent account with linked child profiles (data objects, not independent users). Implements a Dual Mode System (Parent Mode with full access, Player Mode with restricted child access) secured by a 4-digit PIN.
-- **Player Profile Verification**: Player profiles must be verified before becoming public/searchable. During profile creation, only phone number is optional; all other fields (name, date of birth, jersey number, team, height, city, position) are required. Profiles start as unverified and can be verified by linking with the Notion database via the 'link' button (email matching). Unverified player profiles are filtered from public search results to ensure only registered UYP members are discoverable.
-- **Profile Management**: Users can delete their profiles (parent, player, or coach) from settings. Deletion removes only the specific profile without affecting other profiles. Available in settings danger zone and player security tab with confirmation dialogs.
-- **QR Code Check-in**: Secure gym entry and attendance tracking at Momentous Sports Center using static QR codes per player.
-- **Team Management**: Age-grouped teams with coaches and player rosters, supporting real-time chat and player performance tracking. Players send join requests when selecting teams during profile creation or in settings. Join requests include both accountId (playerId) and profileId to properly link the request to the specific player profile. The system ensures profileId is always included by: (1) fetching current profile before allowing team selection, (2) disabling save button while profile loads, (3) throwing error if profileId is unavailable. Coaches view and manage these requests in their dashboard.
-- **Event & Scheduling**: Handles various event types, integrated with Google Calendar for automatic hourly sync (upyourperformance@gmail.com). Features advanced event parsing, interactive filtering, and an enhanced calendar UI with color-coded events and a modern sliding drawer for details.
+- **Authentication Flow**: Post-login account linking system with automatic coach detection via email domain. Users are directed to appropriate dashboards (coach, parent, or player) based on profile type.
+- **User Management**: Single Parent account with linked child profiles. Implements a Dual Mode System (Parent/Player) secured by a 4-digit PIN. Users can delete their profiles (parent, player, or coach) from settings.
+- **Player Profile Management**: Profiles require verification to become public/searchable, linking with the Notion database via email matching. Profiles start as unverified and are filtered from public search results until verified. All required fields must be completed (name, date of birth, jersey number, team, height, city, position).
+- **Team Management**: Teams are organized into four programs (Skills-Academy, FNHTL, Youth-Club, High-School-Club) with automatic assignment based on team names. Coaches join existing teams from a comprehensive list. Players send join requests when selecting teams, which coaches manage in their dashboard. Coaches can also manually add/remove players.
+- **Roster Management**: Coach dashboards display all Notion players for their teams, indicating players without app accounts and disabling actions for them.
+- **Event & Scheduling**: Handles various event types, integrated with Google Calendar for hourly sync. Features an enhanced calendar UI with color-coded events and a sliding drawer for details. Players can RSVP to events within a specific window and check-in using device GPS location (within 200m of event).
 - **Payment Integration**: Uses SportsEngine for secure payment processing (league fees, uniforms, tournaments) with transaction tracking and quick pay options.
-- **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities for offline functionality. Player dashboard includes skills progress, interactive trophy/badge counters (32% larger total for better visibility with clickable navigation to trophies-badges page), and profile photo upload. Coach dashboard is coach-focused with QR code scanner for player check-ins and team management features. Player Mode hides pricing and payment options, showing only purchased content. Schedule navigation uses calendar icons for intuitive recognition.
-- **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for dribbling, shooting, passing, catching, coachability, and defense. Evaluations can be exported as PDF or shared directly via the Web Share API to messaging apps (Telegram, WhatsApp, etc.) on mobile devices.
+- **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities. Player dashboard includes skills progress and interactive trophy/badge counters. Coach dashboard features a QR code scanner for player check-ins and team management. Player Mode restricts access to pricing/payment options.
+- **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for various aspects, exportable as PDF or shareable via Web Share API.
+- **Coach Settings**: Coaching experience includes years of experience, bio, previous teams coached, playing experience, and coaching philosophy. Team management functionality is centralized in the Coach Dashboard's Team tab.
 
 ## External Dependencies
 
 ### Authentication & Security
 - **Replit Auth**: OpenID Connect-based authentication.
-- **PostgreSQL**: For session management.
 
 ### Payment Processing
 - **SportsEngine**: For payment processing, customer management, and transaction handling.

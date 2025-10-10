@@ -107,41 +107,104 @@ export class NotionPlayerService {
                       getNotionProperty(properties, 'Status', 'rich_text') || 
                       'Active';
         const currentProgram = getNotionProperty(properties, 'Current Program', 'select');
-        // Handle Youth Club Team - could be select or relation
+        
+        // Read all 4 team columns
         let youthClubTeam = getNotionProperty(properties, 'Youth Club Team', 'select');
         if (!youthClubTeam) {
           // If it's a relation field, try to get the page title
           const relationId = getNotionProperty(properties, 'Youth Club Team', 'relation');
           if (relationId) {
             try {
-              // Fetch the related page to get its title
               const relatedPage = await notion.pages.retrieve({ page_id: relationId });
               if ('properties' in relatedPage) {
-                // Find the title property
                 const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title') as any;
                 youthClubTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
               }
             } catch (error) {
               console.error(`Error fetching team page ${relationId}:`, error);
-              // Fallback to the relation ID
               youthClubTeam = relationId;
             }
           }
         }
-        const hsTeam = getNotionProperty(properties, 'HS Team', 'rich_text');
+        
+        let highSchoolTeam = getNotionProperty(properties, 'High School Team', 'select');
+        if (!highSchoolTeam) {
+          const relationId = getNotionProperty(properties, 'High School Team', 'relation');
+          if (relationId) {
+            try {
+              const relatedPage = await notion.pages.retrieve({ page_id: relationId });
+              if ('properties' in relatedPage) {
+                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title') as any;
+                highSchoolTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
+              }
+            } catch (error) {
+              console.error(`Error fetching HS team page ${relationId}:`, error);
+              highSchoolTeam = relationId;
+            }
+          }
+        }
+        
+        let fnhtlTeam = getNotionProperty(properties, 'FNHTL Team', 'select');
+        if (!fnhtlTeam) {
+          const relationId = getNotionProperty(properties, 'FNHTL Team', 'relation');
+          if (relationId) {
+            try {
+              const relatedPage = await notion.pages.retrieve({ page_id: relationId });
+              if ('properties' in relatedPage) {
+                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title') as any;
+                fnhtlTeam = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
+              }
+            } catch (error) {
+              console.error(`Error fetching FNHTL team page ${relationId}:`, error);
+              fnhtlTeam = relationId;
+            }
+          }
+        }
+        
+        let skillsAcademySession = getNotionProperty(properties, 'Skills Academy Session', 'select');
+        if (!skillsAcademySession) {
+          const relationId = getNotionProperty(properties, 'Skills Academy Session', 'relation');
+          if (relationId) {
+            try {
+              const relatedPage = await notion.pages.retrieve({ page_id: relationId });
+              if ('properties' in relatedPage) {
+                const titleProp = Object.values(relatedPage.properties).find((prop: any) => prop.type === 'title') as any;
+                skillsAcademySession = titleProp?.title?.[0]?.plain_text?.trim() || relationId;
+              }
+            } catch (error) {
+              console.error(`Error fetching Skills Academy session page ${relationId}:`, error);
+              skillsAcademySession = relationId;
+            }
+          }
+        }
+        
         const grade = getNotionProperty(properties, 'Grade', 'number') || getNotionProperty(properties, 'Grade', 'select');
         const sessionTags = getNotionProperty(properties, 'Session', 'multi_select');
         const social = getNotionProperty(properties, 'Social Media', 'rich_text');
 
-        // Determine team name based on program
+        // Determine team name based on Current Program
         let teamName = 'Unassigned';
-        if (youthClubTeam) {
+        if (currentProgram === 'Youth Club' && youthClubTeam) {
           teamName = youthClubTeam;
-        } else if (currentProgram === 'FNHTL' && sessionTags && sessionTags.length > 0) {
-          // For FNHTL, use the first session tag as the team name
-          teamName = sessionTags[0];
-        } else if (hsTeam) {
-          teamName = hsTeam;
+        } else if (currentProgram === 'High School' && highSchoolTeam) {
+          teamName = highSchoolTeam;
+        } else if (currentProgram === 'FNHTL' && fnhtlTeam) {
+          teamName = fnhtlTeam;
+        } else if (currentProgram === 'Skills Academy' && skillsAcademySession) {
+          teamName = skillsAcademySession;
+        } else if (youthClubTeam) {
+          teamName = youthClubTeam;
+        } else if (highSchoolTeam) {
+          teamName = highSchoolTeam;
+        } else if (fnhtlTeam) {
+          teamName = fnhtlTeam;
+        } else if (skillsAcademySession) {
+          teamName = skillsAcademySession;
+        }
+        
+        // Debug: Log sample players to understand data structure
+        if (name.toLowerCase().includes('jayden') || name.toLowerCase().includes('jack')) {
+          console.log(`DEBUG: ${name} - Program: ${currentProgram}, Team: ${teamName}, YC: ${youthClubTeam}, HS: ${highSchoolTeam}, FNHTL: ${fnhtlTeam}, SA: ${skillsAcademySession}, SessionTags: ${sessionTags?.join(', ') || 'none'}`);
         }
         
         const teamSlug = slugify(teamName);
@@ -153,7 +216,7 @@ export class NotionPlayerService {
           currentProgram,
           team: teamName,
           teamSlug,
-          hsTeam,
+          hsTeam: highSchoolTeam,
           grade,
           sessionTags: sessionTags || [],
           social,

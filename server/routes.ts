@@ -103,6 +103,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
 
+  // Debug route to find player by name in Notion
+  if (process.env.NODE_ENV === 'development') {
+    app.get('/api/debug/notion-player/:name', async (req, res) => {
+      try {
+        const searchName = req.params.name.toLowerCase();
+        const allPlayers = notionService.getAllPlayers();
+        const matchingPlayers = allPlayers.filter(p => 
+          p.name.toLowerCase().includes(searchName)
+        );
+        const result = { 
+          found: matchingPlayers.length,
+          players: matchingPlayers.map(p => ({
+            name: p.name,
+            currentProgram: p.currentProgram,
+            team: p.team,
+            grade: p.grade
+          }))
+        };
+        console.log('DEBUG: Notion player search for', searchName, ':', JSON.stringify(result, null, 2));
+        res.json(result);
+      } catch (error) {
+        console.error("Error searching Notion players:", error);
+        res.status(500).json({ message: "Failed to search players", error: String(error) });
+      }
+    });
+    
+    app.get('/api/debug/notion-teams', async (req, res) => {
+      try {
+        const allTeams = notionService.getAllTeams();
+        res.json({ 
+          count: allTeams.length,
+          teams: allTeams.map(t => ({
+            name: t.name,
+            slug: t.slug,
+            rosterCount: t.roster.length
+          }))
+        });
+      } catch (error) {
+        console.error("Error fetching Notion teams:", error);
+        res.status(500).json({ message: "Failed to fetch teams", error: String(error) });
+      }
+    });
+  }
+
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {

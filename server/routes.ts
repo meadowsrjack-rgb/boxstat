@@ -2227,7 +2227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Teams routes
-  app.get('/api/teams', isAuthenticated, async (req: any, res) => {
+  app.get('/api/teams', async (req: any, res) => {
     try {
       const teams = await storage.getAllTeams();
       res.json(teams);

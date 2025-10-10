@@ -961,11 +961,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get Notion team data using team name
       const allNotionTeams = await notionService.getAllTeams();
+      console.log(`Looking for team "${team.name}" in Notion. Available Notion teams:`, allNotionTeams.map(t => t.name));
       const notionTeam = allNotionTeams.find(
         t => t.name.toLowerCase() === team.name.toLowerCase()
       );
       
       if (!notionTeam) {
+        console.log(`No Notion team found for "${team.name}"`);
         // No Notion data, return only app players
         const appPlayers = await storage.getTeamPlayers(teamId);
         const rosterData = appPlayers.map(player => ({

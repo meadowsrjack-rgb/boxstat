@@ -133,7 +133,17 @@ export class NotionPlayerService {
         const sessionTags = getNotionProperty(properties, 'Session', 'multi_select');
         const social = getNotionProperty(properties, 'Social Media', 'rich_text');
 
-        const teamName = youthClubTeam || 'Unassigned';
+        // Determine team name based on program
+        let teamName = 'Unassigned';
+        if (youthClubTeam) {
+          teamName = youthClubTeam;
+        } else if (currentProgram === 'FNHTL' && sessionTags && sessionTags.length > 0) {
+          // For FNHTL, use the first session tag as the team name
+          teamName = sessionTags[0];
+        } else if (hsTeam) {
+          teamName = hsTeam;
+        }
+        
         const teamSlug = slugify(teamName);
 
         const player: NotionPlayer = {

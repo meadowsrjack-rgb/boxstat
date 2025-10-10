@@ -960,7 +960,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get Notion team data using team name
-      const notionTeam = notionService.getAllTeams().find(
+      const allNotionTeams = await notionService.getAllTeams();
+      const notionTeam = allNotionTeams.find(
         t => t.name.toLowerCase() === team.name.toLowerCase()
       );
       

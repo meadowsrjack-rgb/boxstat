@@ -53,7 +53,7 @@ export default function PlayerDetailPage() {
   });
 
   // Get current user to check if they're a coach
-  const { data: currentUser } = useQuery({
+  const { data: currentUser } = useQuery<{ id: string; userType: string }>({
     queryKey: ['/api/auth/user'],
   });
 
@@ -174,7 +174,8 @@ export default function PlayerDetailPage() {
 
   const onEvaluationSubmit = (data: SkillEvaluationValues) => {
     if (!player) return;
-    skillEvaluationMutation.mutate({ ...data, playerId: player.id });
+    const playerId = typeof player.id === 'string' ? parseInt(player.id, 10) : player.id;
+    skillEvaluationMutation.mutate({ ...data, playerId });
   };
 
   const isCoach = currentUser?.userType === 'coach' || currentUser?.userType === 'admin';
@@ -528,7 +529,7 @@ export default function PlayerDetailPage() {
                                           min={1}
                                           max={5}
                                           step={1}
-                                          value={[field.value]}
+                                          value={[typeof field.value === 'number' ? field.value : 3]}
                                           onValueChange={(value) => field.onChange(value[0])}
                                           className="w-full"
                                           data-testid={`slider-${skill.name}`}

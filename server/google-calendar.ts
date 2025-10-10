@@ -136,7 +136,16 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     const eventType = determineEventType(googleEvent.summary, googleEvent.description);
     
     // Extract team information if available
-    const teamId = extractTeamId(googleEvent.summary, googleEvent.description);
+    let teamId = extractTeamId(googleEvent.summary, googleEvent.description);
+    
+    // Verify team exists in database, if not set to null
+    if (teamId) {
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        console.log(`Team ID ${teamId} not found for event "${googleEvent.summary}", setting to null`);
+        teamId = null;
+      }
+    }
 
     // Geocode the location to get coordinates for check-in functionality
     const location = googleEvent.location || 'TBD';

@@ -261,6 +261,7 @@ export const trophies = pgTable("trophies", {
 export const userTrophies = pgTable("user_trophies", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  profileId: varchar("profile_id").references(() => profiles.id), // Profile-specific awards
   trophyName: varchar("trophy_name").notNull(),
   trophyDescription: text("trophy_description"),
   earnedAt: timestamp("earned_at").defaultNow(),
@@ -269,6 +270,7 @@ export const userTrophies = pgTable("user_trophies", {
 export const userBadges = pgTable("user_badges", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
+  profileId: varchar("profile_id").references(() => profiles.id), // Profile-specific awards
   badgeId: integer("badge_id").references(() => badges.id).notNull(),
   earnedAt: timestamp("earned_at").defaultNow(),
 });
@@ -445,6 +447,7 @@ export const playerStats = pgTable("player_stats", {
 export const playerEvaluations = pgTable("player_evaluations", {
   id: serial("id").primaryKey(),
   playerId: varchar("player_id").references(() => users.id).notNull(),
+  profileId: varchar("profile_id").references(() => profiles.id), // Profile-specific evaluations
   coachId: varchar("coach_id").references(() => users.id).notNull(),
   quarter: varchar("quarter", { enum: ["Q1", "Q2", "Q3", "Q4"] }).notNull(),
   year: integer("year").notNull(),

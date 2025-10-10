@@ -208,13 +208,13 @@ export interface IStorage {
   
   // Badge operations
   getAllBadges(): Promise<Badge[]>;
-  getUserBadges(userId: string): Promise<UserBadge[]>;
-  awardBadge(userId: string, badgeId: number): Promise<UserBadge>;
+  getUserBadges(userId: string, profileId?: string): Promise<UserBadge[]>;
+  awardBadge(userId: string, badgeId: number, profileId?: string): Promise<UserBadge>;
   
   // Trophy operations
   getAllTrophies(): Promise<Trophy[]>;
-  getUserTrophies(userId: string): Promise<UserTrophy[]>;
-  awardTrophy(userId: string, trophyName: string, trophyDescription?: string): Promise<UserTrophy>;
+  getUserTrophies(userId: string, profileId?: string): Promise<UserTrophy[]>;
+  awardTrophy(userId: string, trophyName: string, trophyDescription?: string, profileId?: string): Promise<UserTrophy>;
   
   // Message operations
   getTeamMessages(teamId: number): Promise<Message[]>;
@@ -262,9 +262,9 @@ export interface IStorage {
   getPlayerTotalPoints(playerId: string): Promise<number>;
   
   // Player evaluation operations
-  getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined>;
-  savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation>;
-  getLatestPlayerEvaluation(playerId: string): Promise<PlayerEvaluation | undefined>;
+  getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number; profileId?: string }): Promise<PlayerEvaluation | undefined>;
+  savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number; notes?: string; profileId?: string }): Promise<PlayerEvaluation>;
+  getLatestPlayerEvaluation(playerId: string, profileId?: string): Promise<PlayerEvaluation | undefined>;
   
   // Player relationship operations (for backward compatibility)
   getPlayersByGuardianEmail(email: string): Promise<Player[]>;
@@ -988,12 +988,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(badges).where(eq(badges.isActive, true));
   }
 
-  async getUserBadges(userId: string): Promise<UserBadge[]> {
-    return await db.select().from(userBadges).where(eq(userBadges.userId, userId));
+  async getUserBadges(userId: string, profileId?: string): Promise<UserBadge[]> {
+    // If profileId is provided, filter by profileId; otherwise fall back to userId
+    const condition = profileId 
+      ? eq(userBadges.profileId, profileId)
+      : eq(userBadges.userId, userId);
+    return await db.select().from(userBadges).where(condition);
   }
 
-  async awardBadge(userId: string, badgeId: number): Promise<UserBadge> {
-    const [userBadge] = await db.insert(userBadges).values({ userId, badgeId }).returning();
+  async awardBadge(userId: string, badgeId: number, profileId?: string): Promise<UserBadge> {
+    const [userBadge] = await db.insert(userBadges).values({ userId, badgeId, profileId }).returning();
     return userBadge;
   }
 
@@ -1002,12 +1006,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(trophies).where(eq(trophies.isActive, true));
   }
 
-  async getUserTrophies(userId: string): Promise<UserTrophy[]> {
-    return await db.select().from(userTrophies).where(eq(userTrophies.userId, userId));
+  async getUserTrophies(userId: string, profileId?: string): Promise<UserTrophy[]> {
+    // If profileId is provided, filter by profileId; otherwise fall back to userId
+    const condition = profileId 
+      ? eq(userTrophies.profileId, profileId)
+      : eq(userTrophies.userId, userId);
+    return await db.select().from(userTrophies).where(condition);
   }
 
-  async awardTrophy(userId: string, trophyName: string, trophyDescription?: string): Promise<UserTrophy> {
-    const [userTrophy] = await db.insert(userTrophies).values([{ userId, trophyName, trophyDescription }]).returning();
+  async awardTrophy(userId: string, trophyName: string, trophyDescription?: string, profileId?: string): Promise<UserTrophy> {
+    const [userTrophy] = await db.insert(userTrophies).values([{ userId, trophyName, trophyDescription, profileId }]).returning();
     return userTrophy;
   }
 
@@ -1444,26 +1452,30 @@ export class DatabaseStorage implements IStorage {
 
 
   // Player evaluation operations
-  async getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number }): Promise<PlayerEvaluation | undefined> {
-    const { playerId, quarter, year } = params;
+  async getPlayerEvaluation(params: { playerId: number; coachId: string; quarter: string; year: number; profileId?: string }): Promise<PlayerEvaluation | undefined> {
+    const { playerId, quarter, year, profileId } = params;
+    
+    const conditions = [
+      eq(playerEvaluations.playerId, playerId.toString()),
+      eq(playerEvaluations.quarter, quarter as "Q1" | "Q2" | "Q3" | "Q4"),
+      eq(playerEvaluations.year, year)
+    ];
+    
+    if (profileId) {
+      conditions.push(eq(playerEvaluations.profileId, profileId));
+    }
     
     const [evaluation] = await db
       .select()
       .from(playerEvaluations)
-      .where(
-        and(
-          eq(playerEvaluations.playerId, playerId.toString()),
-          eq(playerEvaluations.quarter, quarter as "Q1" | "Q2" | "Q3" | "Q4"),
-          eq(playerEvaluations.year, year)
-        )
-      )
+      .where(and(...conditions))
       .limit(1);
     
     return evaluation;
   }
 
-  async savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number }): Promise<PlayerEvaluation> {
-    const { playerId, coachId, scores, quarter, year } = params;
+  async savePlayerEvaluation(params: { playerId: number; coachId: string; scores: any; quarter: string; year: number; notes?: string; profileId?: string }): Promise<PlayerEvaluation> {
+    const { playerId, coachId, scores, quarter, year, notes, profileId } = params;
     
     // Use ON CONFLICT DO UPDATE to handle updates to existing evaluations
     const [result] = await db
@@ -1474,6 +1486,8 @@ export class DatabaseStorage implements IStorage {
         scores,
         quarter: quarter as "Q1" | "Q2" | "Q3" | "Q4",
         year,
+        notes,
+        profileId,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -1481,6 +1495,8 @@ export class DatabaseStorage implements IStorage {
         set: {
           scores,
           coachId,
+          notes,
+          profileId,
           updatedAt: new Date(),
         }
       })
@@ -1489,11 +1505,15 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getLatestPlayerEvaluation(playerId: string): Promise<PlayerEvaluation | undefined> {
+  async getLatestPlayerEvaluation(playerId: string, profileId?: string): Promise<PlayerEvaluation | undefined> {
+    const condition = profileId 
+      ? and(eq(playerEvaluations.playerId, playerId), eq(playerEvaluations.profileId, profileId))
+      : eq(playerEvaluations.playerId, playerId);
+      
     const [evaluation] = await db
       .select()
       .from(playerEvaluations)
-      .where(eq(playerEvaluations.playerId, playerId))
+      .where(condition)
       .orderBy(desc(playerEvaluations.year), desc(playerEvaluations.quarter))
       .limit(1);
     

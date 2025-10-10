@@ -161,7 +161,7 @@ export default function CoachDashboard() {
     },
   });
 
-  // Query for all teams (for filter dropdown - used for universal team search)
+  // Query for all teams (for filter dropdown - Notion teams)
   const { data: allTeams = [] } = useQuery<Array<{id: string; name: string; ageGroup?: string}>>({
     queryKey: ["/api/search/teams"],
     queryFn: async () => {
@@ -169,6 +169,16 @@ export default function CoachDashboard() {
       if (!res.ok) return [];
       const data = await res.json();
       return data.teams || [];
+    },
+  });
+
+  // Query for database teams (for coach to join)
+  const { data: databaseTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup?: string}>>({
+    queryKey: ["/api/teams"],
+    queryFn: async () => {
+      const res = await fetch("/api/teams", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
     },
   });
 
@@ -529,6 +539,7 @@ export default function CoachDashboard() {
               assignedTeams={assignedTeams}
               messages={teamMessages}
               allTeams={allTeams}
+              databaseTeams={databaseTeams}
               selectedTeamFilter={selectedTeamFilter}
               onTeamFilterChange={setSelectedTeamFilter}
               onSend={async (m) => {
@@ -677,6 +688,7 @@ function RosterTab({
   assignedTeams,
   messages,
   allTeams,
+  databaseTeams,
   selectedTeamFilter,
   onTeamFilterChange,
   onSend,
@@ -690,6 +702,7 @@ function RosterTab({
   assignedTeams: Array<{id: number; name: string; ageGroup: string}>;
   messages: any[];
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
+  databaseTeams: Array<{id: number; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
   onTeamFilterChange: (filter: 'my-team' | number) => void;
   onSend: (m: string) => void;
@@ -881,9 +894,9 @@ function RosterTab({
     },
   });
 
-  // Get available teams (teams the coach hasn't joined yet)
-  const availableTeams = allTeams.filter(
-    (team) => !assignedTeams.some((assigned) => assigned.id === Number(team.id))
+  // Get available teams from database (teams the coach hasn't joined yet)
+  const availableTeams = databaseTeams.filter(
+    (team) => !assignedTeams.some((assigned) => assigned.id === team.id)
   );
 
   // Show team list if no team is selected

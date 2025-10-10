@@ -1652,7 +1652,6 @@ function TeamBlock() {
       <div>
         <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-find-players">Find Players & Teams</h3>
         <PlayerSearch
-          teamId={userTeam?.id}
           onPlayerSelect={(player) => setSelectedPlayerId(player.id)}
           placeholder="Search for players and teams..."
         />

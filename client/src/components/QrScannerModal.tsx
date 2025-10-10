@@ -1,5 +1,5 @@
 'use client';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useMutation } from '@tanstack/react-query';
 // import { QrReader } from 'react-qr-reader'; // Disabled due to React 18 compatibility issues
 import { useState } from 'react';

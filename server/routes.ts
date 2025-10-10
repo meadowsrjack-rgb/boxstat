@@ -2438,7 +2438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if already joined
-      const existingAssignment = await storage.db
+      const existingAssignment = await db
         .select()
         .from(coachTeams)
         .where(and(
@@ -2452,7 +2452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Add coach to team
-      await storage.db.insert(coachTeams).values({
+      await db.insert(coachTeams).values({
         coachId: coachId,
         teamId: parseInt(teamId),
       });

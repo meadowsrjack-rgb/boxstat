@@ -164,6 +164,7 @@ export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
   ageGroup: varchar("age_group").notNull(),
+  program: varchar("program", { enum: ["Skills-Academy", "FNHTL", "Youth-Club", "High-School-Club"] }),
   color: varchar("color").notNull().default("#1E40AF"),
   coachId: varchar("coach_id").references(() => users.id),
   division: varchar("division"),

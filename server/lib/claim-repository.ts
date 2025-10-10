@@ -18,11 +18,41 @@ import {
 } from '@shared/schema';
 import { eq, and, desc, asc, sql, or, like, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import type { NotionPlayerData, NotionTeamData } from './notion-adapter';
+import type { NotionPersonData, NotionTeamData } from './notion-adapter';
 
 export class ClaimRepository {
   
   // ========== TEAM OPERATIONS ==========
+  
+  // Map team names to their programs
+  private getTeamProgram(teamName: string): "Skills-Academy" | "FNHTL" | "Youth-Club" | "High-School-Club" | null {
+    const name = teamName.toLowerCase().trim();
+    
+    // Skills-Academy teams
+    const skillsAcademy = ['rookies', 'intermediate', 'advanced', 'elite', 'special-needs', 'special needs'];
+    if (skillsAcademy.some(team => name.includes(team))) {
+      return 'Skills-Academy';
+    }
+    
+    // FNHTL teams
+    const fnhtl = ['wizards', 'wolverines', 'wildcats', 'anteaters', 'dolphins', 'storm', 'vikings', 
+                   'silverswords', 'bruins', 'titans', 'trojans', 'eagles', 'dragons'];
+    if (fnhtl.some(team => name.includes(team))) {
+      return 'FNHTL';
+    }
+    
+    // High-School-Club teams
+    if (name.includes('high-school') || name.includes('high school')) {
+      return 'High-School-Club';
+    }
+    
+    // Youth-Club teams (default for other youth teams)
+    if (name.includes('youth') || name.includes('u-') || name.match(/\d+u/)) {
+      return 'Youth-Club';
+    }
+    
+    return null;
+  }
   
   async upsertTeam(input: { 
     name: string; 
@@ -32,6 +62,8 @@ export class ClaimRepository {
     ageGroup?: string;
     color?: string;
   }): Promise<Team> {
+    const program = this.getTeamProgram(input.name);
+    
     const [team] = await db
       .insert(teams)
       .values({
@@ -40,7 +72,8 @@ export class ClaimRepository {
         coachNames: input.coachNames || null,
         notionId: input.notionId,
         ageGroup: input.ageGroup || 'Youth',
-        color: input.color || '#1E40AF'
+        color: input.color || '#1E40AF',
+        program: program
       })
       .onConflictDoUpdate({
         target: [teams.notionId],
@@ -48,6 +81,7 @@ export class ClaimRepository {
           name: input.name,
           division: input.division || null,
           coachNames: input.coachNames || null,
+          program: program
         }
       })
       .returning();
@@ -88,7 +122,7 @@ export class ClaimRepository {
 
   // ========== PLAYER OPERATIONS ==========
   
-  async upsertPlayer(input: NotionPlayerData & { teamId?: number | null }): Promise<Player> {
+  async upsertPlayer(input: NotionPersonData & { teamId?: number | null }): Promise<Player> {
     const [player] = await db
       .insert(players)
       .values({
@@ -399,7 +433,7 @@ export class ClaimRepository {
 
   // ========== SYNC OPERATIONS ==========
   
-  async syncNotionData(notionPlayers: NotionPlayerData[], notionTeams: NotionTeamData[]): Promise<{
+  async syncNotionData(notionPlayers: NotionPersonData[], notionTeams: NotionTeamData[]): Promise<{
     playersUpserted: number;
     teamsUpserted: number;
     playersMarkedInactive: number;

@@ -271,13 +271,18 @@ export default function CoachDashboard() {
     mutationFn: async () => {
       if (!selectedPlayer) throw new Error("No player selected");
       const payload = { playerId: selectedPlayer.id, quarter, year, scores };
+      console.log("Evaluation payload:", payload);
       const res = await fetch(`/api/coach/evaluations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to save evaluation");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: res.statusText }));
+        console.error("Evaluation error:", errorData);
+        throw new Error(errorData.message || "Failed to save evaluation");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -299,7 +304,10 @@ export default function CoachDashboard() {
         credentials: "include",
         body: JSON.stringify({ playerId: selectedPlayer.id, awardId, category: kind }),
       });
-      if (!res.ok) throw new Error("Failed to give award");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(errorData.message || "Failed to give award");
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -312,7 +320,7 @@ export default function CoachDashboard() {
       setAwardsOpen(false);
       setSelectedPlayer(null);
     },
-    onError: () => toast({ title: "Failed to give award", variant: "destructive" }),
+    onError: (e: any) => toast({ title: "Failed to give award", description: e?.message || String(e), variant: "destructive" }),
   });
 
   /* =================== UI =================== */

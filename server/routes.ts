@@ -6,7 +6,7 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
-import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, teamJoinRequests, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
+import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";

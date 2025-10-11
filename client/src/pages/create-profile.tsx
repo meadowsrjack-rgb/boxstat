@@ -34,7 +34,6 @@ const parentProfileSchema = z.object({
   phoneNumber: z.string().optional(),
   dateOfBirth: z.string().optional(),
   jerseyNumber: z.string().optional(),
-  teamId: z.string().optional(),
   height: z.string().optional(),
   city: z.string().optional(),
   position: z.string().optional(),
@@ -46,7 +45,6 @@ const playerProfileSchema = z.object({
   phoneNumber: z.string().optional(),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   jerseyNumber: z.string().min(1, "Jersey number is required"),
-  teamId: z.string().min(1, "Team is required"),
   height: z.string().min(1, "Height is required"),
   city: z.string().min(1, "City is required"),
   position: z.string().min(1, "Position is required"),
@@ -69,11 +67,6 @@ export default function CreateProfile() {
   const [claimData, setClaimData] = useState<any>(null);
   const [isVerified, setIsVerified] = useState(false); // Track if profile was verified via Notion
 
-  // Fetch teams for selector
-  const { data: teams = [] } = useQuery<Array<{ id: number; name: string; ageGroup: string }>>({
-    queryKey: ["/api/teams"],
-  });
-
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileType === "parent" ? parentProfileSchema : playerProfileSchema),
     defaultValues: {
@@ -82,7 +75,6 @@ export default function CreateProfile() {
       phoneNumber: "",
       dateOfBirth: "",
       jerseyNumber: "",
-      teamId: "",
       height: "",
       city: "",
       position: "",
@@ -127,11 +119,6 @@ export default function CreateProfile() {
         form.setValue("phoneNumber", matchingRecord.phoneNumber || "");
         form.setValue("dateOfBirth", matchingRecord.dob || "");
         form.setValue("jerseyNumber", matchingRecord.jerseyNumber || "");
-        
-        // Set teamId if available
-        if (matchingRecord.teamId) {
-          form.setValue("teamId", matchingRecord.teamId);
-        }
         
         toast({
           title: "Account Found!",
@@ -205,45 +192,15 @@ export default function CreateProfile() {
 
       const profileData = await response.json();
 
-      // If player selected a team, create join request
-      if (profileType === "player" && data.teamId) {
-        // Find team by name to get team ID
-        const teamsResponse = await fetch("/api/teams", { credentials: "include" });
-        if (teamsResponse.ok) {
-          const teams = await teamsResponse.json();
-          const selectedTeam = teams.find((t: any) => t.name === data.teamId);
-          
-          if (selectedTeam) {
-            const joinResponse = await fetch(`/api/teams/${selectedTeam.id}/join-requests`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ profileId: profileData.id })
-            });
-            
-            if (!joinResponse.ok) {
-              console.error("Failed to create join request");
-            } else {
-              profileData.joinRequestPending = true;
-              profileData.requestedTeamName = data.teamId;
-            }
-          }
-        }
-      }
-
       return profileData;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
-      const description = data.joinRequestPending 
-        ? `Your profile has been created! Your request to join ${data.requestedTeamName} is pending coach approval.`
-        : "Your profile has been successfully created.";
-      
       toast({
         title: "Profile Created!",
-        description,
+        description: "Your profile has been successfully created.",
       });
 
       // Redirect based on profile type
@@ -490,53 +447,6 @@ export default function CreateProfile() {
                         )}
                       />
                     </div>
-
-                    <FormField
-                      control={form.control}
-                      name="teamId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Team</FormLabel>
-                          <Select
-                            value={field.value || ""}
-                            onValueChange={field.onChange}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-team">
-                                <SelectValue placeholder="Select your team" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className="max-h-[300px]">
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Skills Academy ONLY</div>
-                              {['Rookies', 'Intermediate', 'Special Needs'].map((team, idx) => (
-                                <SelectItem key={`skills-${idx}`} value={team}>
-                                  {team}
-                                </SelectItem>
-                              ))}
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">FNHTL</div>
-                              {['Dragons', 'Titans', 'Eagles', 'Trojans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team, idx) => (
-                                <SelectItem key={`fnhtl-${idx}`} value={team}>
-                                  {team}
-                                </SelectItem>
-                              ))}
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
-                              {['10u Black', '11u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team, idx) => (
-                                <SelectItem key={`youth-${idx}`} value={team}>
-                                  {team}
-                                </SelectItem>
-                              ))}
-                              <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
-                              {['HS Elite', 'HS Red', 'HS Black', 'HS White'].map((team, idx) => (
-                                <SelectItem key={`hs-${idx}`} value={team}>
-                                  {team}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </>
                 )}
 

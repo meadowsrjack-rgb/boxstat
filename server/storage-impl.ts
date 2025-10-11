@@ -10,7 +10,6 @@ import {
   users,
   teams,
   coachTeams,
-  teamJoinRequests,
   events,
   attendances,
   badges,
@@ -89,8 +88,6 @@ import {
   type InsertAnnouncementAcknowledgment,
   type InsertPlayerTask,
   type InsertPlayerPoints,
-  type TeamJoinRequest,
-  type InsertTeamJoinRequest,
   // New insert schemas
   insertAccountSchema,
   insertProfileSchema,

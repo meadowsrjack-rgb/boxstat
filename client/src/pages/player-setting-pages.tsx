@@ -65,7 +65,6 @@ export function PlayerProfilePage() {
     emergencyPhone: (user as any)?.emergencyPhone || "",
     medicalInfo: (user as any)?.medicalInfo || "",
     allergies: (user as any)?.allergies || "",
-    teamId: (user as any)?.teamId || "",
   });
 
   // Profile picture upload state
@@ -120,7 +119,6 @@ export function PlayerProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      // Send profile update including teamId for direct assignment
       const updateData = {
         ...data,
         address: data.city,
@@ -154,7 +152,6 @@ export function PlayerProfilePage() {
         emergencyPhone: updatedUser.emergencyPhone || "",
         medicalInfo: updatedUser.medicalInfo || "",
         allergies: updatedUser.allergies || "",
-        teamId: updatedUser.teamName || updatedUser.teamId || "",
       });
       
       // Invalidate queries to refresh all user data across the app
@@ -345,41 +342,6 @@ export function PlayerProfilePage() {
               <CardTitle>Basketball Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
-                <Select value={profile.teamId || ""} onValueChange={(value) => setProfile(p => ({ ...p, teamId: value }))}>
-                  <SelectTrigger data-testid="select-team">
-                    <SelectValue placeholder="Select your team" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500">Skills Academy</div>
-                    {['Rookies', 'Intermediate', 'Advanced', 'Elite', 'Special Needs'].map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">FNHTL</div>
-                    {['Dragons', 'Eagles', 'Trojans', 'Titans', 'Bruins', 'Silverswords', 'Vikings', 'Storm', 'Dolphins', 'Anteaters', 'Wildcats', 'Wolverines', 'Wizards'].map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">Youth Club</div>
-                    {['10u Black', '12u Black', '12u Red', 'Youth Girls Black', 'Youth Girls Red', '13u White', '13u Black', '14u Black', '14u Gray', '14u Red', 'Black Elite'].map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                    <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 mt-2">High School</div>
-                    {['High-School-Elite', 'High-School-Red', 'High-School-Black', 'High-School-White'].map((team) => (
-                      <SelectItem key={team} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>

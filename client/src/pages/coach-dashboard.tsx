@@ -738,6 +738,8 @@ function RosterTab({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -747,6 +749,52 @@ function RosterTab({
       const res = await fetch(`/api/teams/${selectedTeamId}/roster-with-notion`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
+    },
+  });
+
+  // Search players
+  const searchPlayers = async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/coach/players/search?q=${encodeURIComponent(query)}`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const results = await res.json();
+        setSearchResults(results);
+      }
+    } catch (error) {
+      console.error("Error searching players:", error);
+    }
+  };
+
+  // Assign player to team mutation
+  const assignPlayerMutation = useMutation({
+    mutationFn: async (playerId: string) => {
+      const res = await fetch(`/api/teams/${selectedTeamId}/assign-player`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ playerId }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to assign player");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      setSearchQuery("");
+      setSearchResults([]);
+      toast({ title: "Success", description: "Player assigned to team" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -895,6 +943,81 @@ function RosterTab({
         </Button>
         <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
         <p className="text-sm text-gray-500">{selectedTeam?.ageGroup}</p>
+      </div>
+
+      {/* Player Search */}
+      <div className="space-y-2">
+        <h4 className="font-semibold text-gray-900">Add Player to Team</h4>
+        <Input
+          type="text"
+          placeholder="Search players by name..."
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            searchPlayers(e.target.value);
+          }}
+          className="w-full"
+          data-testid="input-search-players"
+        />
+        
+        {searchResults.length > 0 && (
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-0">
+              <div className="max-h-64 overflow-y-auto divide-y divide-gray-100">
+                {searchResults.map((player) => (
+                  <div
+                    key={player.id}
+                    className="p-3 flex items-center justify-between hover:bg-gray-50"
+                    data-testid={`search-result-${player.id}`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={player.profileImageUrl} />
+                        <AvatarFallback className="text-xs">
+                          {player.firstName?.[0]}{player.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="truncate">
+                        <div className="font-medium text-sm text-gray-900 flex items-center gap-2">
+                          {player.firstName} {player.lastName}
+                          {!player.hasAppProfile && (
+                            <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+                              Notion Only
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {player.teamName || "No team"}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (player.hasAppProfile && player.appUserId) {
+                          assignPlayerMutation.mutate(player.appUserId);
+                        } else {
+                          toast({
+                            title: "Cannot Assign",
+                            description: "Player must have an app account to be assigned to a team.",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={!player.hasAppProfile || assignPlayerMutation.isPending}
+                      className="text-green-600 border-green-600 hover:bg-green-50 disabled:opacity-50"
+                      data-testid={`button-assign-${player.id}`}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Assign
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Roster */}

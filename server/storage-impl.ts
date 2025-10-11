@@ -178,14 +178,6 @@ export interface IStorage {
   removeCoachTeams(coachId: string): Promise<void>;
   getCoachTeams(coachId: string): Promise<Team[]>;
   
-  // Team join request operations
-  createTeamJoinRequest(request: InsertTeamJoinRequest): Promise<TeamJoinRequest>;
-  getCoachJoinRequests(coachId: string): Promise<TeamJoinRequest[]>;
-  getJoinRequest(id: number): Promise<TeamJoinRequest | undefined>;
-  approveJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest>;
-  rejectJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest>;
-  getPendingPlayerJoinRequest(playerId: string): Promise<TeamJoinRequest | undefined>;
-  
   // Event operations
   getAllEvents(): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
@@ -731,122 +723,6 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(teams.ageGroup), asc(teams.name));
     
     return coachTeamsList;
-  }
-
-  // Team join request operations
-  async createTeamJoinRequest(request: InsertTeamJoinRequest): Promise<TeamJoinRequest> {
-    const [newRequest] = await db.insert(teamJoinRequests).values(request).returning();
-    return newRequest;
-  }
-
-  async getCoachJoinRequests(coachId: string): Promise<TeamJoinRequest[]> {
-    return await db
-      .select()
-      .from(teamJoinRequests)
-      .where(
-        and(
-          eq(teamJoinRequests.coachId, coachId),
-          eq(teamJoinRequests.status, 'pending')
-        )
-      )
-      .orderBy(desc(teamJoinRequests.requestedAt));
-  }
-
-  async getJoinRequest(id: number): Promise<TeamJoinRequest | undefined> {
-    const [request] = await db
-      .select()
-      .from(teamJoinRequests)
-      .where(eq(teamJoinRequests.id, id));
-    return request;
-  }
-
-  async approveJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {
-    // Use transaction to ensure atomic approval and prevent race conditions
-    return await db.transaction(async (tx) => {
-      // Lock the join request for update to prevent concurrent approvals
-      const [request] = await tx
-        .select()
-        .from(teamJoinRequests)
-        .where(eq(teamJoinRequests.id, id))
-        .for('update');
-      
-      if (!request) {
-        throw new Error("Join request not found");
-      }
-      
-      // Re-check status is still pending (idempotency)
-      if (request.status !== 'pending') {
-        throw new Error(`Request already ${request.status}`);
-      }
-      
-      // Re-check player doesn't have a different team (conflict detection)
-      // Lock the player row to prevent concurrent team assignments
-      const [player] = await tx
-        .select()
-        .from(users)
-        .where(eq(users.id, request.playerId))
-        .for('update');
-      
-      if (player?.teamId && player.teamId !== request.teamId) {
-        throw new Error("Player is already assigned to another team");
-      }
-      
-      // Update join request status
-      const [updated] = await tx
-        .update(teamJoinRequests)
-        .set({
-          status: 'approved',
-          decidedAt: new Date(),
-          decidedBy
-        })
-        .where(eq(teamJoinRequests.id, id))
-        .returning();
-      
-      // Update user's team assignment
-      await tx
-        .update(users)
-        .set({ teamId: request.teamId, teamName: request.teamName })
-        .where(eq(users.id, request.playerId));
-      
-      // Also update profile if profileId exists
-      if (request.playerProfileId) {
-        await tx
-          .update(profiles)
-          .set({ teamId: request.teamName })
-          .where(eq(profiles.id, request.playerProfileId));
-      }
-      
-      return updated;
-    });
-  }
-
-  async rejectJoinRequest(id: number, decidedBy: string): Promise<TeamJoinRequest> {
-    const [updated] = await db
-      .update(teamJoinRequests)
-      .set({
-        status: 'rejected',
-        decidedAt: new Date(),
-        decidedBy
-      })
-      .where(eq(teamJoinRequests.id, id))
-      .returning();
-    
-    return updated;
-  }
-
-  async getPendingPlayerJoinRequest(playerId: string): Promise<TeamJoinRequest | undefined> {
-    const [request] = await db
-      .select()
-      .from(teamJoinRequests)
-      .where(
-        and(
-          eq(teamJoinRequests.playerId, playerId),
-          eq(teamJoinRequests.status, 'pending')
-        )
-      )
-      .orderBy(desc(teamJoinRequests.requestedAt))
-      .limit(1);
-    return request;
   }
 
   // Event operations

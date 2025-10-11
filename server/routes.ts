@@ -1057,45 +1057,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manually add player to team (only for players with app accounts)
-  app.post('/api/teams/:teamId/add-player', isAuthenticated, async (req: any, res) => {
-    try {
-      const teamId = parseInt(req.params.teamId);
-      const { playerId } = req.body;
-      const coachId = req.user.claims.sub;
-      
-      // Verify coach has access to this team
-      const team = await storage.getTeam(teamId);
-      if (!team) {
-        return res.status(404).json({ message: "Team not found" });
-      }
-      
-      // Check if coach is assigned to this team
-      const isCoachOfTeam = team.coachId === coachId || 
-        (await db.select().from(coachTeams)
-          .where(and(eq(coachTeams.coachId, coachId), eq(coachTeams.teamId, teamId)))
-          .limit(1)).length > 0;
-      
-      if (!isCoachOfTeam) {
-        return res.status(403).json({ message: "You are not authorized to manage this team" });
-      }
-      
-      // Update player's team
-      await db.update(users)
-        .set({ 
-          teamId: teamId,
-          teamName: team.name,
-          updatedAt: new Date()
-        })
-        .where(eq(users.id, playerId));
-      
-      res.json({ message: "Player added to team successfully" });
-    } catch (error) {
-      console.error("Error adding player to team:", error);
-      res.status(500).json({ message: "Failed to add player to team" });
-    }
-  });
-
   // Manually remove player from team (only for players with app accounts)
   app.post('/api/teams/:teamId/remove-player', isAuthenticated, async (req: any, res) => {
     try {
@@ -1155,295 +1116,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team join request routes
-  app.post('/api/teams/:teamId/join-requests', isAuthenticated, async (req: any, res) => {
+  // Assign player to team (coach only)
+  app.post('/api/teams/:teamId/assign-player', isAuthenticated, async (req: any, res) => {
     try {
       const teamId = parseInt(req.params.teamId);
-      const userId = req.user.claims.sub;
-      
-      // Get team to find coach
-      const team = await storage.getTeam(teamId);
-      if (!team) {
-        return res.status(404).json({ message: "Team not found" });
-      }
-      
-      // Get coach assigned to this team
-      let coachId = team.coachId;
-      
-      // If no coach assigned to team directly, find from coachTeams junction table
-      if (!coachId) {
-        const result = await db.select({ coachId: coachTeams.coachId })
-          .from(coachTeams)
-          .where(eq(coachTeams.teamId, teamId))
-          .limit(1);
-        
-        if (result.length > 0) {
-          coachId = result[0].coachId;
-        }
-      }
-      
-      if (!coachId) {
-        return res.status(400).json({ message: "Team has no assigned coach" });
-      }
-      
-      // Check for existing pending request
-      const existingRequest = await storage.getPendingPlayerJoinRequest(userId);
-      if (existingRequest) {
-        // If it's the same team, reject duplicate request
-        if (existingRequest.teamId === teamId) {
-          return res.status(400).json({ message: "You already have a pending join request for this team" });
-        }
-        
-        // If it's a different team, cancel the old request (mark as rejected) and allow the new one
-        await db.update(teamJoinRequests)
-          .set({ status: 'rejected', decidedAt: new Date() })
-          .where(eq(teamJoinRequests.id, existingRequest.id));
-      }
-      
-      // Get user profile
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Get coach's coach profile to target notification correctly
-      const coachProfiles = await db.select()
-        .from(profiles)
-        .where(eq(profiles.accountId, coachId));
-      const coachProfile = coachProfiles.find(p => p.profileType === 'coach');
-      
-      // Create join request
-      const joinRequest = await storage.createTeamJoinRequest({
-        playerId: userId,
-        playerProfileId: req.body.profileId || null,
-        teamId: teamId,
-        teamName: team.name,
-        coachId: coachId,
-        status: 'pending',
-        decidedBy: null
-      });
-      
-      // Create notification for coach using NotificationService for push support
-      // Target the coach's coach profile specifically
-      await notificationService.createNotification({
-        userId: coachId,
-        profileId: coachProfile?.id || null,
-        type: 'team_join_request',
-        title: 'New Team Join Request',
-        message: `${user.firstName} ${user.lastName} wants to join ${team.name}`,
-        actionUrl: '/coach-dashboard',
-        data: { joinRequestId: joinRequest.id, playerId: userId, teamId: teamId },
-        priority: 'normal'
-      });
-      
-      res.json(joinRequest);
-    } catch (error) {
-      console.error("Error creating join request:", error);
-      res.status(500).json({ message: "Failed to create join request" });
-    }
-  });
-
-  app.get('/api/coaches/:coachId/join-requests', isAuthenticated, async (req: any, res) => {
-    try {
-      const coachId = req.params.coachId;
-      const requests = await storage.getCoachJoinRequests(coachId);
-      
-      // Enrich with player and team info
-      const enrichedRequests = await Promise.all(
-        requests.map(async (request) => {
-          const player = await storage.getUser(request.playerId);
-          const team = await storage.getTeam(request.teamId);
-          return {
-            ...request,
-            player: player ? {
-              id: player.id,
-              firstName: player.firstName,
-              lastName: player.lastName,
-              profileImageUrl: player.profileImageUrl,
-              position: player.position,
-              jerseyNumber: player.jerseyNumber
-            } : null,
-            team: team ? {
-              id: team.id,
-              name: team.name,
-              ageGroup: team.ageGroup
-            } : null
-          };
-        })
-      );
-      
-      res.json(enrichedRequests);
-    } catch (error) {
-      console.error("Error fetching join requests:", error);
-      res.status(500).json({ message: "Failed to fetch join requests" });
-    }
-  });
-
-  app.get('/api/teams/:teamId/join-requests', isAuthenticated, async (req: any, res) => {
-    try {
-      const teamId = parseInt(req.params.teamId);
-      const userId = req.user.claims.sub;
+      const { playerId } = req.body;
+      const coachId = req.user.claims.sub;
       
       if (isNaN(teamId)) {
         return res.status(400).json({ message: "Invalid team ID" });
       }
       
-      // Check if the coach is assigned to this team
-      const coachTeamsList = await db.select()
-        .from(coachTeams)
-        .where(eq(coachTeams.coachId, userId));
-      
-      const isAuthorized = coachTeamsList.some(ct => ct.teamId === teamId);
-      
-      if (!isAuthorized) {
-        return res.status(403).json({ message: "Access denied: You are not assigned to this team" });
+      // Verify coach has access to this team
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
       }
       
-      // Get all pending join requests for this team
-      const allRequests = await db.select()
-        .from(teamJoinRequests)
-        .where(and(
-          eq(teamJoinRequests.teamId, teamId),
-          eq(teamJoinRequests.status, 'pending')
-        ))
-        .orderBy(desc(teamJoinRequests.requestedAt));
+      // Check if coach is assigned to this team
+      const isCoachOfTeam = team.coachId === coachId || 
+        (await db.select().from(coachTeams)
+          .where(and(eq(coachTeams.coachId, coachId), eq(coachTeams.teamId, teamId)))
+          .limit(1)).length > 0;
       
-      // Enrich with player info
-      const enrichedRequests = await Promise.all(
-        allRequests.map(async (request) => {
-          const player = await storage.getUser(request.playerId);
-          return {
-            ...request,
-            player: player ? {
-              id: player.id,
-              firstName: player.firstName,
-              lastName: player.lastName,
-              profileImageUrl: player.profileImageUrl,
-              position: player.position,
-              jerseyNumber: player.jerseyNumber
-            } : null
-          };
+      if (!isCoachOfTeam) {
+        return res.status(403).json({ message: "You are not authorized to manage this team" });
+      }
+      
+      // Update player's team
+      await db.update(users)
+        .set({ 
+          teamId: teamId,
+          teamName: team.name,
+          updatedAt: new Date()
         })
-      );
+        .where(eq(users.id, playerId));
       
-      res.json(enrichedRequests);
+      res.json({ message: "Player assigned to team successfully" });
     } catch (error) {
-      console.error("Error fetching team join requests:", error);
-      res.status(500).json({ message: "Failed to fetch team join requests" });
-    }
-  });
-
-  // Validation schemas for join request approval
-  const joinRequestIdSchema = z.object({
-    id: z.string().transform((val) => {
-      const num = Number(val);
-      if (!Number.isInteger(num) || num <= 0) {
-        throw new Error("Invalid request ID");
-      }
-      return num;
-    })
-  });
-
-  const joinRequestActionSchema = z.object({
-    action: z.enum(['approve', 'reject'])
-  });
-
-  app.patch('/api/join-requests/:id', isAuthenticated, async (req: any, res) => {
-    try {
-      // Validate request ID with zod
-      const paramsResult = joinRequestIdSchema.safeParse(req.params);
-      if (!paramsResult.success) {
-        return res.status(400).json({ message: "Invalid request ID" });
-      }
-      const { id: requestId } = paramsResult.data;
-      
-      // Validate action with zod
-      const bodyResult = joinRequestActionSchema.safeParse(req.body);
-      if (!bodyResult.success) {
-        return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'" });
-      }
-      const { action } = bodyResult.data;
-      
-      const userId = req.user.claims.sub;
-      
-      const joinRequest = await storage.getJoinRequest(requestId);
-      if (!joinRequest) {
-        return res.status(404).json({ message: "Join request not found" });
-      }
-      
-      // Verify the user is the coach for this request
-      if (joinRequest.coachId !== userId) {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-      
-      // Check if request is already processed
-      if (joinRequest.status !== 'pending') {
-        return res.status(400).json({ message: `Request already ${joinRequest.status}` });
-      }
-      
-      let updatedRequest;
-      let notificationType: 'team_join_approved' | 'team_join_rejected';
-      let notificationMessage: string;
-      
-      if (action === 'approve') {
-        // Check if player already has a team
-        const player = await storage.getUser(joinRequest.playerId);
-        if (player?.teamId && player.teamId !== joinRequest.teamId) {
-          return res.status(409).json({ 
-            message: "Player is already assigned to another team. Please ask them to leave their current team first." 
-          });
-        }
-        
-        updatedRequest = await storage.approveJoinRequest(requestId, userId);
-        notificationType = 'team_join_approved';
-        notificationMessage = `Your request to join ${joinRequest.teamName} has been approved!`;
-      } else {
-        updatedRequest = await storage.rejectJoinRequest(requestId, userId);
-        notificationType = 'team_join_rejected';
-        notificationMessage = `Your request to join ${joinRequest.teamName} has been declined.`;
-      }
-      
-      // Send notification to player's profile
-      // Get player's player profile to target notification correctly
-      const playerProfiles = await db.select()
-        .from(profiles)
-        .where(eq(profiles.accountId, joinRequest.playerId));
-      const playerProfile = playerProfiles.find(p => p.profileType === 'player') || 
-                           playerProfiles.find(p => p.id === joinRequest.playerProfileId);
-      
-      await notificationService.createNotification({
-        userId: joinRequest.playerId,
-        profileId: playerProfile?.id || null,
-        type: notificationType,
-        title: action === 'approve' ? 'Join Request Approved' : 'Join Request Declined',
-        message: notificationMessage,
-        actionUrl: action === 'approve' ? '/player-dashboard' : undefined,
-        data: { joinRequestId: requestId, teamId: joinRequest.teamId },
-        priority: 'high'
-      });
-      
-      res.json(updatedRequest);
-    } catch (error) {
-      console.error("Error updating join request:", error);
-      
-      // Map storage layer errors to appropriate HTTP status codes
-      const errorMessage = (error as Error).message || "Failed to update join request";
-      
-      // Conflict errors (409) - includes all transaction-level conflicts
-      if (errorMessage.includes("already assigned to another team") ||
-          errorMessage.toLowerCase().includes("already approved") ||
-          errorMessage.toLowerCase().includes("already rejected") ||
-          errorMessage.toLowerCase().includes("request already")) {
-        return res.status(409).json({ message: errorMessage });
-      }
-      
-      // Not found errors (404)
-      if (errorMessage.toLowerCase().includes("not found")) {
-        return res.status(404).json({ message: errorMessage });
-      }
-      
-      // Default to 500 for unexpected errors
-      res.status(500).json({ message: "Failed to update join request" });
+      console.error("Error assigning player to team:", error);
+      res.status(500).json({ message: "Failed to assign player to team" });
     }
   });
 

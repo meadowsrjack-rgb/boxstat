@@ -564,16 +564,32 @@ export default function CoachDashboard() {
               }}
 
               onEvaluate={(p) => {
-                setSelectedPlayer(p);
+                // Transform roster player to PlayerLite format
+                const playerLite: PlayerLite = {
+                  id: p.appAccountId || p.id,
+                  firstName: p.firstName,
+                  lastName: p.lastName,
+                  teamName: p.teamName,
+                  profileImageUrl: p.profileImageUrl
+                };
+                setSelectedPlayer(playerLite);
                 // Load existing eval for player/quarter/year
-                fetch(`/api/coach/evaluations?playerId=${p.id}&quarter=${quarter}&year=${year}`, { credentials: "include" })
+                fetch(`/api/coach/evaluations?playerId=${playerLite.id}&quarter=${quarter}&year=${year}`, { credentials: "include" })
                   .then((r) => (r.ok ? r.json() : null))
                   .then((data) => setScores((data as EvalScores) || {}));
                 setEvalOpen(true);
               }}
 
               onReward={(p) => {
-                setSelectedPlayer(p);
+                // Transform roster player to PlayerLite format
+                const playerLite: PlayerLite = {
+                  id: p.appAccountId || p.id,
+                  firstName: p.firstName,
+                  lastName: p.lastName,
+                  teamName: p.teamName,
+                  profileImageUrl: p.profileImageUrl
+                };
+                setSelectedPlayer(playerLite);
                 setAwardsOpen(true);
               }}
 

@@ -351,10 +351,8 @@ export default function CoachDashboard() {
     enabled: !!currentUser?.id,
   });
 
-  // Filter for unread join request notifications
-  const unreadJoinRequests = notifications.filter(
-    (n: any) => n.type === "team_join_request" && !n.isRead
-  );
+  // Filter for unread notifications
+  const unreadNotifications = notifications.filter((n: any) => !n.isRead);
 
   // Mark notification as read
   const markAsReadMutation = useMutation({
@@ -378,23 +376,22 @@ export default function CoachDashboard() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100 relative" aria-label="Notifications" data-testid="button-notifications">
                   <Bell className="h-6 w-6" />
-                  {unreadJoinRequests.length > 0 && (
+                  {unreadNotifications.length > 0 && (
                     <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs" data-testid="notification-badge">
-                      {unreadJoinRequests.length}
+                      {unreadNotifications.length}
                     </Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80">
-                {unreadJoinRequests.length > 0 ? (
+                {unreadNotifications.length > 0 ? (
                   <div className="max-h-96 overflow-y-auto">
-                    {unreadJoinRequests.map((notification: any) => (
+                    {unreadNotifications.map((notification: any) => (
                       <DropdownMenuItem
                         key={notification.id}
                         className="flex flex-col items-start p-3 cursor-pointer"
                         onClick={() => {
                           markAsReadMutation.mutate(notification.id);
-                          setActiveTab("roster");
                         }}
                         data-testid={`notification-${notification.id}`}
                       >
@@ -741,8 +738,6 @@ function RosterTab({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
-  const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
-  const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -752,108 +747,6 @@ function RosterTab({
       const res = await fetch(`/api/teams/${selectedTeamId}/roster-with-notion`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
-    },
-  });
-
-  // Fetch pending join requests for the selected team
-  const { data: teamJoinRequests = [], error: joinRequestsError, isError: joinRequestsHasError } = useQuery<any[]>({
-    queryKey: ["/api/teams", selectedTeamId, "join-requests"],
-    enabled: !!selectedTeamId,
-    queryFn: async () => {
-      const res = await fetch(`/api/teams/${selectedTeamId}/join-requests`, { credentials: "include" });
-      if (res.status === 401) {
-        throw new Error("Session expired. Please refresh the page.");
-      }
-      if (!res.ok) {
-        throw new Error("Failed to load join requests");
-      }
-      return res.json();
-    },
-    retry: (failureCount, error: any) => {
-      // Don't retry on auth errors
-      if (error?.message?.includes("Session expired")) {
-        return false;
-      }
-      return failureCount < 2;
-    },
-  });
-
-  // Approve join request mutation
-  const approveMutation = useMutation({
-    mutationFn: async (requestId: number) => {
-      const res = await fetch(`/api/teams/join-requests/${requestId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action: "approve" }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to approve request");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/players`] });
-      toast({ title: "Success", description: "Player added to team!" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  // Reject join request mutation
-  const rejectMutation = useMutation({
-    mutationFn: async (requestId: number) => {
-      const res = await fetch(`/api/teams/join-requests/${requestId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action: "reject" }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to reject request");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/join-requests`] });
-      toast({ title: "Request declined" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  // Add player to team mutation
-  const addPlayerMutation = useMutation({
-    mutationFn: async (playerId: string) => {
-      const res = await fetch(`/api/teams/${selectedTeamId}/add-player`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ playerId }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to add player");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      setAddPlayerDialogOpen(false);
-      toast({ title: "Success", description: "Player added to team!" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
 
@@ -881,21 +774,6 @@ function RosterTab({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-
-  // Fetch all players (for add player dialog)
-  const fetchAvailablePlayers = async () => {
-    try {
-      const res = await fetch('/api/players/all', { credentials: "include" });
-      if (!res.ok) return;
-      const allPlayers = await res.json();
-      // Filter out players already on this team
-      const rosterPlayerIds = new Set(teamRoster.filter((p: any) => p.hasAppAccount).map((p: any) => p.appAccountId));
-      const available = allPlayers.filter((p: any) => !rosterPlayerIds.has(p.id) && p.userType === 'player');
-      setAvailablePlayers(available);
-    } catch (error) {
-      console.error("Error fetching available players:", error);
-    }
-  };
 
   // Selected team for dropdown
   const [selectedTeamToAdd, setSelectedTeamToAdd] = useState<string>("");
@@ -1019,45 +897,10 @@ function RosterTab({
         <p className="text-sm text-gray-500">{selectedTeam?.ageGroup}</p>
       </div>
 
-      {/* Join Requests Error Banner */}
-      {joinRequestsHasError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="join-requests-error">
-          <div className="flex items-start gap-2">
-            <X className="h-5 w-5 text-red-600 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-red-800">Failed to load join requests</p>
-              <p className="text-xs text-red-600 mt-1">{(joinRequestsError as Error)?.message || "An error occurred"}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-2 text-red-600 border-red-300 hover:bg-red-50"
-                onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "join-requests"] })}
-                data-testid="button-retry-join-requests"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Roster */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="font-semibold text-gray-900">Team Roster</h4>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              fetchAvailablePlayers();
-              setAddPlayerDialogOpen(true);
-            }}
-            className="text-green-600 border-green-600 hover:bg-green-50"
-            data-testid="button-add-player"
-          >
-            <UserPlus className="h-4 w-4 mr-1" />
-            Add Player
-          </Button>
         </div>
         {teamRoster.length > 0 ? (
           <Card className="border-0 shadow-sm">
@@ -1154,61 +997,6 @@ function RosterTab({
                     </div>
                   );
                 })}
-                
-                {/* Pending Join Requests at bottom - grayed out */}
-                {teamJoinRequests.length > 0 && (
-                  <>
-                    <div className="px-4 py-2 bg-gray-50 border-t-2 border-gray-200">
-                      <span className="text-xs font-semibold text-gray-600 uppercase">Pending Requests</span>
-                    </div>
-                    {teamJoinRequests.map((request: any) => (
-                      <div 
-                        key={request.id} 
-                        className="p-4 flex items-center justify-between bg-gray-50 opacity-70" 
-                        data-testid={`join-request-${request.id}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 grayscale">
-                            <AvatarImage src={request.player?.profileImageUrl} />
-                            <AvatarFallback className="text-xs">
-                              {request.player?.firstName?.[0]}{request.player?.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-600">
-                              {request.player?.firstName} {request.player?.lastName}
-                            </div>
-                            <div className="text-xs text-gray-500">Pending approval</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-600 border-green-600 hover:bg-green-50"
-                            onClick={() => approveMutation.mutate(request.id)}
-                            disabled={approveMutation.isPending || rejectMutation.isPending}
-                            data-testid={`button-accept-${request.id}`}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 border-red-600 hover:bg-red-50"
-                            onClick={() => rejectMutation.mutate(request.id)}
-                            disabled={approveMutation.isPending || rejectMutation.isPending}
-                            data-testid={`button-decline-${request.id}`}
-                          >
-                            <X className="h-4 w-4 mr-1" />
-                            Decline
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -1222,52 +1010,6 @@ function RosterTab({
         <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
         <TeamChat teamId={selectedTeamId} />
       </div>
-
-      {/* Add Player Dialog */}
-      <Dialog open={addPlayerDialogOpen} onOpenChange={setAddPlayerDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Player to Team</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {availablePlayers.length > 0 ? (
-              <div className="max-h-96 overflow-y-auto space-y-2">
-                {availablePlayers.map((player) => (
-                  <div
-                    key={player.id}
-                    className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer flex items-center justify-between"
-                    onClick={() => addPlayerMutation.mutate(player.id)}
-                    data-testid={`available-player-${player.id}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={player.profileImageUrl} />
-                        <AvatarFallback className="text-xs">
-                          {player.firstName?.[0]}{player.lastName?.[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {player.firstName} {player.lastName}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {player.position || "Player"}
-                          {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
-                        </div>
-                      </div>
-                    </div>
-                    <UserPlus className="h-4 w-4 text-green-600" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-sm text-gray-500">
-                No available players to add
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

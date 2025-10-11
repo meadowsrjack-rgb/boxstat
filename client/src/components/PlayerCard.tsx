@@ -169,7 +169,7 @@ export default function PlayerCard({
   const awardMutation = useMutation({
     mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
       if (!selectedPlayer) throw new Error("No player selected");
-      return await apiRequest('/api/coach/award-manual', {
+      return await apiRequest('/api/coach/award', {
         method: 'POST',
         data: { playerId: selectedPlayer.id, awardId, category: kind },
       });

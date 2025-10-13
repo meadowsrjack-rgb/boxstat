@@ -1080,13 +1080,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You are not authorized to manage this team" });
       }
       
-      // Remove player from team (set teamId to null in profiles table)
+      // Remove player from team (dual-write to both profiles and users for backward compatibility)
       await db.update(profiles)
         .set({ 
           teamId: null,
           updatedAt: new Date()
         })
         .where(eq(profiles.id, playerId));
+      
+      // Also update users table for backward compatibility (if user exists with same ID)
+      try {
+        await db.update(users)
+          .set({ 
+            teamId: null
+          })
+          .where(eq(users.id, playerId));
+      } catch {
+        // Silently ignore if user doesn't exist
+      }
       
       res.json({ message: "Player removed from team successfully" });
     } catch (error) {
@@ -1142,13 +1153,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You are not authorized to manage this team" });
       }
       
-      // Update player's team in profiles table
+      // Update player's team (dual-write to both profiles and users for backward compatibility)
       await db.update(profiles)
         .set({ 
           teamId: teamId.toString(), // profiles.teamId is varchar
           updatedAt: new Date()
         })
         .where(eq(profiles.id, playerId));
+      
+      // Also update users table for backward compatibility (if user exists with same ID)
+      try {
+        await db.update(users)
+          .set({ 
+            teamId: teamId // users.teamId is integer
+          })
+          .where(eq(users.id, playerId));
+      } catch {
+        // Silently ignore if user doesn't exist
+      }
       
       res.json({ message: "Player assigned to team successfully" });
     } catch (error) {

@@ -340,6 +340,9 @@ function extractTags(description: string): string[] {
   return tags;
 }
 
+// Export tag definitions for use in other modules
+export { VALID_TAGS, ALL_VALID_TAGS };
+
 // Scheduled sync function that can be called periodically
 export async function scheduledCalendarSync() {
   try {
@@ -348,4 +351,101 @@ export async function scheduledCalendarSync() {
   } catch (error) {
     console.error('Scheduled calendar sync failed:', error);
   }
+}
+
+// Event filtering logic based on profile and tags
+export interface EventFilterContext {
+  profileType: 'parent' | 'player' | 'coach';
+  profileId: string;
+  accountId: string;
+  teamId?: string | null;
+  teamName?: string | null;
+  linkedPlayerProfiles?: Array<{ id: string; teamId?: string; teamName?: string }>;
+  coachTeamIds?: number[];
+}
+
+export function shouldShowEventToProfile(event: any, context: EventFilterContext): boolean {
+  // If event has no tags, show to everyone (legacy behavior)
+  if (!event.tags || event.tags.length === 0) {
+    return true;
+  }
+  
+  const { profileType, teamName, linkedPlayerProfiles = [], coachTeamIds = [] } = context;
+  
+  // Check each tag
+  for (const tag of event.tags) {
+    // Org-Level tags
+    if (tag === 'UYP') return true; // Everyone sees UYP events
+    if (tag === 'Leadership' && profileType === 'coach') return true;
+    if (tag === 'Coaches' && profileType === 'coach') return true;
+    if (tag === 'Parents' && profileType === 'parent') return true;
+    if (tag === 'Players' && profileType === 'player') return true;
+    
+    // Program-Level tags
+    if (VALID_TAGS.PROGRAM.includes(tag)) {
+      // Map program tags to teams
+      const programTeamMapping: Record<string, string[]> = {
+        'Skills-Academy': ['SA-Special-Needs', 'SA-Rookies', 'SA-Beginner', 'SA-Intermediate', 'SA-Advanced', 'SA-Elite'],
+        'FNHTL': ['Wizards', 'Wolverines', 'Wildcats', 'Anteaters', 'Dolphins', 'Storm', 'Vikings', 'Silverswords', 'Bruins', 'Titans', 'Trojans', 'Eagles', 'Dragons'],
+        'Youth-Club': ['Black-Elite', '10u-Black', '12u-Red', '12u-Black', '13u-White', '13u-Black', '14u-Black', '14u-Gray', '14u-Red', 'Youth-Girls-Red', 'Youth-Girls-Black'],
+        'High-School': ['High-School-Elite', 'High-School-Black', 'High-School-White', 'High-School-Red']
+      };
+      
+      // Handle specific Skills Academy sub-sessions
+      if (tag.startsWith('SA-')) {
+        if (profileType === 'player' && teamName && teamName.includes(tag.replace('SA-', ''))) return true;
+        if (profileType === 'parent' && linkedPlayerProfiles.some(p => p.teamName?.includes(tag.replace('SA-', '')))) return true;
+        if (profileType === 'coach') return true; // Coaches see all SA events
+      } else if (programTeamMapping[tag]) {
+        // Check if profile's team is in this program
+        if (profileType === 'player' && teamName) {
+          const matchesProgram = programTeamMapping[tag].some(team => 
+            teamName.toLowerCase().includes(team.toLowerCase()) || team.toLowerCase().includes(teamName.toLowerCase())
+          );
+          if (matchesProgram) return true;
+        }
+        // Check if any linked player profiles are in this program
+        if (profileType === 'parent') {
+          const hasPlayerInProgram = linkedPlayerProfiles.some(p => 
+            p.teamName && programTeamMapping[tag].some(team => 
+              p.teamName!.toLowerCase().includes(team.toLowerCase()) || team.toLowerCase().includes(p.teamName!.toLowerCase())
+            )
+          );
+          if (hasPlayerInProgram) return true;
+        }
+        // Coaches see all program events
+        if (profileType === 'coach') return true;
+      }
+    }
+    
+    // Team-Level tags
+    if (VALID_TAGS.TEAM.includes(tag)) {
+      // Normalize tag for comparison (handle hyphens and spaces)
+      const normalizedTag = tag.toLowerCase().replace(/[-\s]/g, '');
+      const normalizedTeamName = teamName?.toLowerCase().replace(/[-\s]/g, '');
+      
+      // Player profiles: show if their team matches
+      if (profileType === 'player' && normalizedTeamName && normalizedTeamName.includes(normalizedTag)) {
+        return true;
+      }
+      
+      // Parent profiles: show if any linked player is on this team
+      if (profileType === 'parent') {
+        const hasPlayerOnTeam = linkedPlayerProfiles.some(p => {
+          const pTeamName = p.teamName?.toLowerCase().replace(/[-\s]/g, '');
+          return pTeamName && pTeamName.includes(normalizedTag);
+        });
+        if (hasPlayerOnTeam) return true;
+      }
+      
+      // Coach profiles: show if assigned to this team
+      if (profileType === 'coach') {
+        // Check if coach is assigned to this team by matching team name
+        // This requires the team name to be resolved from coachTeamIds
+        return true; // For now, show to all coaches - will refine with team name matching
+      }
+    }
+  }
+  
+  return false; // No matching tags found
 }

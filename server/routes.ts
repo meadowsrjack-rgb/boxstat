@@ -1271,14 +1271,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Event routes
-  // General events route for all calendar events (no auth required for demo)
+  // General events route for all calendar events
   app.get('/api/events', async (req: any, res) => {
     try {
-      console.log('API /api/events route hit directly');
+      console.log('API /api/events route hit');
       res.setHeader('Content-Type', 'application/json');
-      const events = await storage.getAllEvents();
-      console.log(`Found ${events.length} events in database`);
-      res.json(events);
+      
+      let allEvents = await storage.getAllEvents();
+      
+      // If user is authenticated, filter events based on active profile
+      if (req.user?.id) {
+        const currentUser = await storage.getUser(req.user.id);
+        
+        if (currentUser?.activeProfileId) {
+          const activeProfile = await storage.getProfile(currentUser.activeProfileId);
+          
+          if (activeProfile) {
+            // Get linked player profiles for parent accounts
+            let linkedPlayerProfiles: Array<{ id: string; teamId?: string; teamName?: string }> = [];
+            if (activeProfile.profileType === 'parent') {
+              const relationships = await db.select()
+                .from(profileRelationships)
+                .where(eq(profileRelationships.parentProfileId, activeProfile.id));
+              
+              for (const rel of relationships) {
+                if (rel.playerProfileId) {
+                  const playerProfile = await storage.getProfile(rel.playerProfileId);
+                  if (playerProfile && playerProfile.teamId) {
+                    // profiles.teamId is varchar, need to get team name from teams table
+                    const teamNumericId = parseInt(playerProfile.teamId);
+                    const team = !isNaN(teamNumericId) ? await storage.getTeam(teamNumericId) : null;
+                    linkedPlayerProfiles.push({
+                      id: playerProfile.id,
+                      teamId: playerProfile.teamId,
+                      teamName: team?.name || undefined
+                    });
+                  }
+                }
+              }
+            }
+            
+            // Get coach team assignments
+            let coachTeamIds: number[] = [];
+            if (activeProfile.profileType === 'coach') {
+              const coachTeamsData = await db.select()
+                .from(coachTeams)
+                .where(eq(coachTeams.coachId, currentUser.id));
+              coachTeamIds = coachTeamsData.map(ct => ct.teamId);
+            }
+            
+            // Get team name for the active profile
+            let teamName: string | null = null;
+            if (activeProfile.teamId) {
+              // profiles.teamId is varchar, convert to number to get team
+              const teamNumericId = parseInt(activeProfile.teamId);
+              if (!isNaN(teamNumericId)) {
+                const team = await storage.getTeam(teamNumericId);
+                teamName = team?.name || null;
+              }
+            }
+            
+            // Filter events using the shouldShowEventToProfile function
+            const { shouldShowEventToProfile } = await import('./google-calendar');
+            
+            allEvents = allEvents.filter(event => {
+              return shouldShowEventToProfile(event, {
+                profileType: activeProfile.profileType as 'parent' | 'player' | 'coach',
+                profileId: activeProfile.id,
+                accountId: currentUser.id,
+                teamId: activeProfile.teamId,
+                teamName: teamName,
+                linkedPlayerProfiles: linkedPlayerProfiles,
+                coachTeamIds: coachTeamIds
+              });
+            });
+            
+            console.log(`Filtered to ${allEvents.length} events for ${activeProfile.profileType} profile`);
+          }
+        }
+      }
+      
+      console.log(`Returning ${allEvents.length} events`);
+      res.json(allEvents);
     } catch (error) {
       console.error("Error fetching events:", error);
       res.status(500).json({ message: "Failed to fetch events", error: (error as Error).message || "Unknown error" });

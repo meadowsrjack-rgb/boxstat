@@ -430,6 +430,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
       
+      // CRITICAL: Check activeProfileId BEFORE any mutations to prevent inconsistent state
+      const currentUser = await storage.getUser(userId);
+      
+      if (!currentUser?.activeProfileId) {
+        return res.status(400).json({ 
+          message: "No active profile selected. Please select a profile first.",
+          requiresProfileSelection: true 
+        });
+      }
+      
+      const currentProfile = await storage.getProfile(currentUser.activeProfileId);
+      
+      if (!currentProfile || currentProfile.accountId !== userId) {
+        return res.status(404).json({ message: "Active profile not found or access denied" });
+      }
+      
       // Handle team assignment if teamId is provided
       let teamDbId: string | undefined = undefined;
       let teamNumericId: number | undefined = undefined;
@@ -463,21 +479,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const updatedUser = await storage.updateUserProfile(userId, updateData);
-      
-      // Update the active profile (not all profiles, just the one currently in use)
-      // Require activeProfileId to be set - fail hard if missing to avoid updating wrong profile
-      if (!updatedUser.activeProfileId) {
-        return res.status(400).json({ 
-          message: "No active profile selected. Please select a profile first.",
-          requiresProfileSelection: true 
-        });
-      }
-      
-      const currentProfile = await storage.getProfile(updatedUser.activeProfileId);
-      
-      if (!currentProfile || currentProfile.accountId !== userId) {
-        return res.status(404).json({ message: "Active profile not found or access denied" });
-      }
       
       // Update ONLY the active profile with the changes
       await storage.updateProfile(currentProfile.id, {
@@ -677,15 +678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'No file uploaded' });
       }
 
-      // Convert buffer to base64 for simple storage (in a real app, you'd save to file storage/cloud)
-      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-      
-      // Update user profile with new image URL
-      await db.update(users)
-        .set({ profileImageUrl: base64Image })
-        .where(eq(users.id, userId));
-
-      // Also update the active profile to keep them in sync
+      // CRITICAL: Check activeProfileId BEFORE any mutations
       const user = await storage.getUser(userId);
       
       if (!user) {
@@ -704,7 +697,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!currentProfile || currentProfile.accountId !== userId) {
         return res.status(404).json({ message: "Active profile not found or access denied" });
       }
+
+      // Convert buffer to base64 for simple storage (in a real app, you'd save to file storage/cloud)
+      const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
       
+      // Update user profile with new image URL
+      await db.update(users)
+        .set({ profileImageUrl: base64Image })
+        .where(eq(users.id, userId));
+
+      // Also update the active profile to keep them in sync
       await storage.updateProfile(currentProfile.id, {
         profileImageUrl: base64Image
       });

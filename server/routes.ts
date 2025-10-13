@@ -962,24 +962,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!notionTeam) {
         console.log(`No Notion team found for "${team.name}"`);
-        // No Notion data, return only app players from profiles table
+        // No Notion data, return app players from profiles table (with fallback to users)
         const appProfiles = await db.select().from(profiles).where(eq(profiles.teamId, teamId.toString()));
-        const rosterData = appProfiles.map(profile => ({
-          notionId: null,
-          name: `${profile.firstName} ${profile.lastName}`,
-          position: profile.position,
-          jerseyNumber: profile.jerseyNumber,
-          hasAppAccount: true,
-          appAccountId: profile.id,
-          profileImageUrl: profile.profileImageUrl,
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-        }));
+        const appUsers = await db.select().from(users).where(eq(users.teamId, teamId));
+        
+        // Get profile IDs to avoid duplicates
+        const profileIds = new Set(appProfiles.map(p => p.id));
+        
+        const rosterData = [
+          ...appProfiles.map(profile => ({
+            notionId: null,
+            name: `${profile.firstName} ${profile.lastName}`,
+            position: profile.position,
+            jerseyNumber: profile.jerseyNumber,
+            hasAppAccount: true,
+            appAccountId: profile.id,
+            profileImageUrl: profile.profileImageUrl,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+          })),
+          // Add users without profiles
+          ...appUsers.filter(u => !profileIds.has(u.id)).map(user => ({
+            notionId: null,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+            position: user.position,
+            jerseyNumber: user.jerseyNumber,
+            hasAppAccount: true,
+            appAccountId: user.id,
+            profileImageUrl: user.profileImageUrl,
+            firstName: user.firstName,
+            lastName: user.lastName,
+          }))
+        ];
         return res.json(rosterData);
       }
       
       // Get app players for this team from profiles table (source of truth - takes precedence over Notion)
       const appProfiles = await db.select().from(profiles).where(eq(profiles.teamId, teamId.toString()));
+      // Also get users without profiles as fallback
+      const appUsers = await db.select().from(users).where(eq(users.teamId, teamId));
       
       // Create a map of Notion players by name for quick lookup
       const notionPlayersByName = new Map();
@@ -988,9 +1009,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notionPlayersByName.set(normalizedName, player);
       });
       
-      // Start with app profiles (these override Notion assignments)
-      const combinedRoster = appProfiles.map(appProfile => {
-        const fullName = `${appProfile.firstName} ${appProfile.lastName}`.toLowerCase().trim();
+      // Get profile IDs to avoid duplicating users who have profiles
+      const profileIds = new Set(appProfiles.map(p => p.id));
+      
+      // Combine app profiles and users (users only if they don't have a profile)
+      const allAppPlayers = [
+        ...appProfiles.map(p => ({ ...p, source: 'profile' as const })),
+        ...appUsers.filter(u => !profileIds.has(u.id)).map(u => ({ 
+          id: u.id,
+          firstName: u.firstName,
+          lastName: u.lastName,
+          position: u.position,
+          jerseyNumber: u.jerseyNumber,
+          profileImageUrl: u.profileImageUrl,
+          source: 'user' as const 
+        }))
+      ];
+      
+      // Start with all app players (these override Notion assignments)
+      const combinedRoster = allAppPlayers.map(appPlayer => {
+        const fullName = `${appPlayer.firstName} ${appPlayer.lastName}`.toLowerCase().trim();
         const notionPlayer = notionPlayersByName.get(fullName);
         
         if (notionPlayer) {
@@ -1000,14 +1038,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Player exists in both app and Notion - use app data with Notion metadata
           return {
             notionId: notionPlayer.id,
-            name: `${appProfile.firstName} ${appProfile.lastName}`,
-            position: appProfile.position,
-            jerseyNumber: appProfile.jerseyNumber,
+            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
+            position: appPlayer.position,
+            jerseyNumber: appPlayer.jerseyNumber,
             hasAppAccount: true,
-            appAccountId: appProfile.id,
-            profileImageUrl: appProfile.profileImageUrl,
-            firstName: appProfile.firstName,
-            lastName: appProfile.lastName,
+            appAccountId: appPlayer.id,
+            profileImageUrl: appPlayer.profileImageUrl,
+            firstName: appPlayer.firstName,
+            lastName: appPlayer.lastName,
             grade: notionPlayer.grade,
             status: notionPlayer.status,
           };
@@ -1015,14 +1053,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Player only in app (not in Notion) - use app data only
           return {
             notionId: null,
-            name: `${appProfile.firstName} ${appProfile.lastName}`,
-            position: appProfile.position,
-            jerseyNumber: appProfile.jerseyNumber,
+            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
+            position: appPlayer.position,
+            jerseyNumber: appPlayer.jerseyNumber,
             hasAppAccount: true,
-            appAccountId: appProfile.id,
-            profileImageUrl: appProfile.profileImageUrl,
-            firstName: appProfile.firstName,
-            lastName: appProfile.lastName,
+            appAccountId: appPlayer.id,
+            profileImageUrl: appPlayer.profileImageUrl,
+            firstName: appPlayer.firstName,
+            lastName: appPlayer.lastName,
             grade: null,
             status: null,
           };

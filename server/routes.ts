@@ -1222,14 +1222,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await db.update(users)
           .set({ 
-            teamId: teamId // users.teamId is integer
+            teamId: teamId, // users.teamId is integer
+            teamName: team.name // Also update team name
           })
           .where(eq(users.id, playerId));
       } catch {
         // Silently ignore if user doesn't exist
       }
       
-      res.json({ message: "Player assigned to team successfully" });
+      // Fetch updated player data to return
+      const [updatedProfile] = await db.select().from(profiles).where(eq(profiles.id, playerId)).limit(1);
+      
+      res.json({ 
+        message: "Player assigned to team successfully",
+        player: updatedProfile,
+        team: team
+      });
     } catch (error) {
       console.error("Error assigning player to team:", error);
       res.status(500).json({ message: "Failed to assign player to team" });

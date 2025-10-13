@@ -465,30 +465,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedUser = await storage.updateUserProfile(userId, updateData);
       
       // Update the active profile (not all profiles, just the one currently in use)
-      // Use activeProfileId to target the specific profile being edited
-      if (updatedUser.activeProfileId) {
-        const currentProfile = await storage.getProfile(updatedUser.activeProfileId);
-        
-        if (currentProfile && currentProfile.accountId === userId) {
-          // Update ONLY the active profile with the changes
-          await storage.updateProfile(currentProfile.id, {
-            firstName: req.body.firstName || currentProfile.firstName,
-            lastName: req.body.lastName || currentProfile.lastName,
-            profileImageUrl: req.body.profileImageUrl || currentProfile.profileImageUrl,
-            phoneNumber: req.body.phoneNumber !== undefined ? req.body.phoneNumber : currentProfile.phoneNumber,
-            dateOfBirth: req.body.dateOfBirth !== undefined ? req.body.dateOfBirth : currentProfile.dateOfBirth,
-            emergencyContact: req.body.emergencyContact !== undefined ? req.body.emergencyContact : currentProfile.emergencyContact,
-            emergencyPhone: req.body.emergencyPhone !== undefined ? req.body.emergencyPhone : currentProfile.emergencyPhone,
-            address: req.body.address || req.body.city || currentProfile.address,
-            medicalInfo: req.body.medicalInfo !== undefined ? req.body.medicalInfo : currentProfile.medicalInfo,
-            allergies: req.body.allergies !== undefined ? req.body.allergies : currentProfile.allergies,
-            schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : currentProfile.schoolGrade,
-            position: req.body.position !== undefined ? req.body.position : currentProfile.position,
-            jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : currentProfile.jerseyNumber,
-            teamId: teamDbId || currentProfile.teamId, // Store team ID in profiles table
-          });
-        }
+      // Require activeProfileId to be set - fail hard if missing to avoid updating wrong profile
+      if (!updatedUser.activeProfileId) {
+        return res.status(400).json({ 
+          message: "No active profile selected. Please select a profile first.",
+          requiresProfileSelection: true 
+        });
       }
+      
+      const currentProfile = await storage.getProfile(updatedUser.activeProfileId);
+      
+      if (!currentProfile || currentProfile.accountId !== userId) {
+        return res.status(404).json({ message: "Active profile not found or access denied" });
+      }
+      
+      // Update ONLY the active profile with the changes
+      await storage.updateProfile(currentProfile.id, {
+        firstName: req.body.firstName || currentProfile.firstName,
+        lastName: req.body.lastName || currentProfile.lastName,
+        profileImageUrl: req.body.profileImageUrl || currentProfile.profileImageUrl,
+        phoneNumber: req.body.phoneNumber !== undefined ? req.body.phoneNumber : currentProfile.phoneNumber,
+        dateOfBirth: req.body.dateOfBirth !== undefined ? req.body.dateOfBirth : currentProfile.dateOfBirth,
+        emergencyContact: req.body.emergencyContact !== undefined ? req.body.emergencyContact : currentProfile.emergencyContact,
+        emergencyPhone: req.body.emergencyPhone !== undefined ? req.body.emergencyPhone : currentProfile.emergencyPhone,
+        address: req.body.address || req.body.city || currentProfile.address,
+        medicalInfo: req.body.medicalInfo !== undefined ? req.body.medicalInfo : currentProfile.medicalInfo,
+        allergies: req.body.allergies !== undefined ? req.body.allergies : currentProfile.allergies,
+        schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : currentProfile.schoolGrade,
+        position: req.body.position !== undefined ? req.body.position : currentProfile.position,
+        jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : currentProfile.jerseyNumber,
+        teamId: teamDbId || currentProfile.teamId, // Store team ID in profiles table
+      });
       
       res.json(updatedUser);
     } catch (error) {
@@ -680,15 +687,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Also update the active profile to keep them in sync
       const user = await storage.getUser(userId);
-      if (user && user.activeProfileId) {
-        const currentProfile = await storage.getProfile(user.activeProfileId);
-        
-        if (currentProfile && currentProfile.accountId === userId) {
-          await storage.updateProfile(currentProfile.id, {
-            profileImageUrl: base64Image
-          });
-        }
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
       }
+      
+      if (!user.activeProfileId) {
+        return res.status(400).json({ 
+          message: "No active profile selected. Please select a profile first.",
+          requiresProfileSelection: true 
+        });
+      }
+      
+      const currentProfile = await storage.getProfile(user.activeProfileId);
+      
+      if (!currentProfile || currentProfile.accountId !== userId) {
+        return res.status(404).json({ message: "Active profile not found or access denied" });
+      }
+      
+      await storage.updateProfile(currentProfile.id, {
+        profileImageUrl: base64Image
+      });
 
       res.json({ 
         message: 'Profile photo updated successfully',

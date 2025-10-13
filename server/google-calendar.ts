@@ -150,6 +150,9 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     // Geocode the location to get coordinates for check-in functionality
     const location = googleEvent.location || 'TBD';
     const coordinates = await geocodeLocation(location);
+    
+    // Extract tags from event description for visibility filtering
+    const tags = extractTags(googleEvent.description || '');
 
     const eventData = {
       title: googleEvent.summary || 'Untitled Event',
@@ -165,6 +168,7 @@ async function processGoogleCalendarEvent(googleEvent: any) {
       opponentTeam: extractOpponentTeam(googleEvent.summary, googleEvent.description),
       isRecurring: false,
       googleEventId: googleEvent.id,
+      tags: tags.length > 0 ? tags : null,
       lastSyncedAt: new Date(),
       // Store raw Google event data for client-side parsing
       rawGoogleEvent: JSON.stringify(googleEvent)
@@ -175,16 +179,19 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     
     if (existingEvent) {
       // Update existing event if it has changed
+      const tagsChanged = JSON.stringify(existingEvent.tags?.sort()) !== JSON.stringify(eventData.tags?.sort());
       const hasChanged = 
         existingEvent.title !== eventData.title ||
         existingEvent.startTime.getTime() !== eventData.startTime.getTime() ||
         existingEvent.location !== eventData.location ||
         existingEvent.latitude !== eventData.latitude ||
-        existingEvent.longitude !== eventData.longitude;
+        existingEvent.longitude !== eventData.longitude ||
+        tagsChanged;
 
       if (hasChanged) {
         await storage.updateEvent(existingEvent.id, eventData);
-        console.log(`Updated event: ${eventData.title}${coordinates ? ` (geocoded to ${coordinates.lat}, ${coordinates.lng})` : ''}`);
+        const tagInfo = tags.length > 0 ? ` [Tags: ${tags.join(', ')}]` : '';
+        console.log(`Updated event: ${eventData.title}${coordinates ? ` (geocoded to ${coordinates.lat}, ${coordinates.lng})` : ''}${tagInfo}`);
       } else if (!existingEvent.latitude && !existingEvent.longitude && coordinates) {
         // Update events that don't have coordinates yet
         await storage.updateEvent(existingEvent.id, { 
@@ -197,7 +204,8 @@ async function processGoogleCalendarEvent(googleEvent: any) {
     } else {
       // Create new event
       await storage.createEvent(eventData);
-      console.log(`Created new event: ${eventData.title}`);
+      const tagInfo = tags.length > 0 ? ` [Tags: ${tags.join(', ')}]` : '';
+      console.log(`Created new event: ${eventData.title}${tagInfo}`);
     }
 
   } catch (error) {
@@ -272,6 +280,64 @@ function extractOpponentTeam(summary: string, description: string): string | nul
   }
   
   return null;
+}
+
+// Tag definitions for event visibility filtering
+const VALID_TAGS = {
+  // Org-Level tags
+  ORG: ['UYP', 'Leadership', 'Coaches', 'Parents', 'Players'],
+  
+  // Program-Level tags
+  PROGRAM: [
+    'Skills-Academy', 'SA-Special-Needs', 'SA-Rookies', 'SA-Beginner', 
+    'SA-Intermediate', 'SA-Advanced', 'SA-Elite', 
+    'High-School', 'Youth-Club', 'FNHTL'
+  ],
+  
+  // Team-Level tags
+  TEAM: [
+    // FNHTL Teams
+    'Wizards', 'Wolverines', 'Wildcats', 'Anteaters', 'Dolphins', 'Storm', 
+    'Vikings', 'Silverswords', 'Bruins', 'Titans', 'Trojans', 'Eagles', 'Dragons',
+    // Youth Club Teams
+    'Black-Elite', '10u-Black', '12u-Red', '12u-Black', '13u-White', '13u-Black', 
+    '14u-Black', '14u-Gray', '14u-Red', 'Youth-Girls-Red', 'Youth-Girls-Black',
+    // High School Teams
+    'High-School-Elite', 'High-School-Black', 'High-School-White', 'High-School-Red'
+  ]
+};
+
+// Flatten all valid tags for easy lookup
+const ALL_VALID_TAGS = [
+  ...VALID_TAGS.ORG,
+  ...VALID_TAGS.PROGRAM,
+  ...VALID_TAGS.TEAM
+];
+
+function extractTags(description: string): string[] {
+  if (!description) return [];
+  
+  const tags: string[] = [];
+  const lines = description.split('\n');
+  
+  // Look for tags in the description (comma or newline separated)
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    
+    // Check if this line contains any valid tags
+    for (const validTag of ALL_VALID_TAGS) {
+      // Case-insensitive matching with word boundaries or commas
+      const regex = new RegExp(`\\b${validTag}\\b`, 'i');
+      if (regex.test(trimmedLine)) {
+        // Store tags in their canonical form (as defined in VALID_TAGS)
+        if (!tags.includes(validTag)) {
+          tags.push(validTag);
+        }
+      }
+    }
+  }
+  
+  return tags;
 }
 
 // Scheduled sync function that can be called periodically

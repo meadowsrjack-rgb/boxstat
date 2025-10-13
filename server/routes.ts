@@ -2262,17 +2262,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Search both Notion players and local database users
+        // Search both Notion players and local database profiles
         const notionPlayers = notionService.searchPlayers(query);
-        const localPlayers = await storage.searchPlayers(query);
+        const searchTerm = `%${query.toLowerCase()}%`;
+        
+        // Search profiles table instead of users
+        const localProfiles = await db
+          .select()
+          .from(profiles)
+          .where(
+            and(
+              eq(profiles.profileType, 'player'),
+              or(
+                sql`lower(${profiles.firstName}) LIKE ${searchTerm}`,
+                sql`lower(${profiles.lastName}) LIKE ${searchTerm}`
+              )
+            )
+          )
+          .limit(10);
+        
+        // Get team info for local profiles
+        const profilesWithTeams = await Promise.all(localProfiles.map(async (profile) => {
+          let teamName = 'Unassigned';
+          if (profile.teamId) {
+            const team = await storage.getTeam(parseInt(profile.teamId));
+            if (team) teamName = team.name;
+          }
+          return { ...profile, teamName };
+        }));
         
         // Format Notion players with app profile checking
         const formattedNotionPlayers = await Promise.all(notionPlayers.map(async (player) => {
           const firstName = player.name.split(' ')[0] || player.name;
           const lastName = player.name.split(' ').slice(1).join(' ') || '';
           
-          // Try to find existing user by name match
-          const existingUser = await storage.getUserByName(firstName, lastName);
+          // Try to find existing profile by name match
+          const existingProfile = await db
+            .select()
+            .from(profiles)
+            .where(
+              and(
+                sql`LOWER(${profiles.firstName}) = ${firstName.toLowerCase()}`,
+                sql`LOWER(${profiles.lastName}) = ${lastName.toLowerCase()}`
+              )
+            )
+            .limit(1);
           
           return {
             id: parseInt(player.id.replace(/-/g, '').substring(0, 8), 16), // Convert notion ID to number
@@ -2281,23 +2315,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamName: player.team || 'Unassigned',
             youthClubTeam: player.team || null, // Store the Notion club team data
             profileImageUrl: null, // Notion doesn't have profile images
-            hasAppProfile: !!existingUser,
-            appUserId: existingUser?.id,
-            email: existingUser?.email || ''
+            hasAppProfile: !!existingProfile[0],
+            appUserId: existingProfile[0]?.id,
+            email: ''
           };
         }));
 
         // Format local players (these already have app profiles)
-        const formattedLocalPlayers = localPlayers.map(user => ({
-          id: parseInt(user.id) || parseInt(user.id.replace(/-/g, '').substring(0, 8), 16),
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          teamName: user.teamName || 'Unassigned',
-          youthClubTeam: user.youthClubTeam || null,
-          profileImageUrl: user.profileImageUrl,
-          hasAppProfile: true, // Local players always have app profiles
-          appUserId: user.id,
-          email: user.email || ''
+        const formattedLocalPlayers = profilesWithTeams.map(profile => ({
+          id: parseInt(profile.id.replace(/-/g, '').substring(0, 8), 16),
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
+          teamName: profile.teamName || 'Unassigned',
+          youthClubTeam: null,
+          profileImageUrl: profile.profileImageUrl,
+          hasAppProfile: true, // Local profiles always have app profiles
+          appUserId: profile.id,
+          email: ''
         }));
 
         // Combine results and remove duplicates (prefer local players over Notion matches)
@@ -2313,18 +2347,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(allPlayers.slice(0, 10)); // Limit to 10 results
       } catch (notionError) {
         console.error("Notion search failed, falling back to local search only:", notionError);
-        // Fall back to local database search only
-        const players = await storage.searchPlayers(query);
-        const formattedPlayers = players.map(user => ({
-          id: parseInt(user.id) || parseInt(user.id.replace(/-/g, '').substring(0, 8), 16),
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          teamName: user.teamName || 'Unassigned',
-          youthClubTeam: user.youthClubTeam || null,
-          profileImageUrl: user.profileImageUrl,
+        // Fall back to local database search only (from profiles)
+        const searchTerm = `%${query.toLowerCase()}%`;
+        const localProfiles = await db
+          .select()
+          .from(profiles)
+          .where(
+            and(
+              eq(profiles.profileType, 'player'),
+              or(
+                sql`lower(${profiles.firstName}) LIKE ${searchTerm}`,
+                sql`lower(${profiles.lastName}) LIKE ${searchTerm}`
+              )
+            )
+          )
+          .limit(10);
+        
+        // Get team info for profiles
+        const profilesWithTeams = await Promise.all(localProfiles.map(async (profile) => {
+          let teamName = 'Unassigned';
+          if (profile.teamId) {
+            const team = await storage.getTeam(parseInt(profile.teamId));
+            if (team) teamName = team.name;
+          }
+          return { ...profile, teamName };
+        }));
+        
+        const formattedPlayers = profilesWithTeams.map(profile => ({
+          id: parseInt(profile.id.replace(/-/g, '').substring(0, 8), 16),
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
+          teamName: profile.teamName || 'Unassigned',
+          youthClubTeam: null,
+          profileImageUrl: profile.profileImageUrl,
           hasAppProfile: true,
-          appUserId: user.id,
-          email: user.email || ''
+          appUserId: profile.id,
+          email: ''
         }));
         res.json(formattedPlayers);
       }

@@ -678,13 +678,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ profileImageUrl: base64Image })
         .where(eq(users.id, userId));
 
-      // Also update the corresponding profile to keep them in sync
+      // Also update the active profile to keep them in sync
       const user = await storage.getUser(userId);
-      if (user) {
-        const profiles = await storage.getAccountProfiles(userId);
-        const currentProfile = profiles.find(p => p.profileType === user.userType);
+      if (user && user.activeProfileId) {
+        const currentProfile = await storage.getProfile(user.activeProfileId);
         
-        if (currentProfile) {
+        if (currentProfile && currentProfile.accountId === userId) {
           await storage.updateProfile(currentProfile.id, {
             profileImageUrl: base64Image
           });

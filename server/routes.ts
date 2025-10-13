@@ -1371,7 +1371,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/users/:userId/events', isAuthenticated, async (req: any, res) => {
     try {
-      const events = await storage.getUserEvents(req.params.userId);
+      const currentUser = req.user;
+      let events = await storage.getUserEvents(req.params.userId);
+      
+      // Apply tag-based filtering if tags exist on events
+      const user = await storage.getUser(currentUser.claims.sub);
+      const activeProfileId = user?.activeProfileId;
+      
+      if (activeProfileId) {
+        // Get active profile
+        const activeProfile = await db.select()
+          .from(profiles)
+          .where(eq(profiles.id, activeProfileId))
+          .limit(1);
+        
+        if (activeProfile.length > 0) {
+          const profile = activeProfile[0];
+          
+          // Get linked player profiles if parent
+          let linkedPlayerProfiles: Array<{ id: string; teamId?: string; teamName?: string }> = [];
+          if (profile.profileType === 'parent') {
+            const linkedPlayers = await db.select()
+              .from(profiles)
+              .where(
+                and(
+                  eq(profiles.accountId, currentUser.claims.sub),
+                  eq(profiles.profileType, 'player')
+                )
+              );
+            
+            for (const player of linkedPlayers) {
+              let playerTeamName = null;
+              if (player.teamId) {
+                const team = await storage.getTeam(player.teamId);
+                if (team) {
+                  playerTeamName = team.name;
+                }
+              }
+              linkedPlayerProfiles.push({
+                id: player.id,
+                teamId: player.teamId?.toString(),
+                teamName: playerTeamName
+              });
+            }
+          }
+          
+          // Get coach team assignments with team names
+          let coachTeamIds: number[] = [];
+          let coachTeamNames: string[] = [];
+          if (profile.profileType === 'coach') {
+            const coachTeamsData = await db.select()
+              .from(coachTeams)
+              .where(eq(coachTeams.coachId, currentUser.claims.sub));
+            coachTeamIds = coachTeamsData.map(ct => ct.teamId);
+            
+            // Fetch team names for the coach's assigned teams
+            for (const teamId of coachTeamIds) {
+              const team = await storage.getTeam(teamId);
+              if (team) {
+                coachTeamNames.push(team.name);
+              }
+            }
+          }
+          
+          // Get team name for the active profile
+          let teamName: string | null = null;
+          if (profile.teamId) {
+            const team = await storage.getTeam(profile.teamId);
+            if (team) {
+              teamName = team.name;
+            }
+          }
+          
+          // Filter events using the shouldShowEventToProfile function
+          const { shouldShowEventToProfile } = await import('./google-calendar');
+          
+          events = events.filter(event => {
+            return shouldShowEventToProfile(event, {
+              profileType: profile.profileType as 'parent' | 'player' | 'coach',
+              profileId: profile.id,
+              accountId: currentUser.claims.sub,
+              teamId: profile.teamId?.toString(),
+              teamName: teamName,
+              linkedPlayerProfiles: linkedPlayerProfiles,
+              coachTeamIds: coachTeamIds,
+              coachTeamNames: coachTeamNames
+            });
+          });
+          
+          console.log(`Filtered ${events.length} events for ${profile.profileType} profile (${profile.id})`);
+        }
+      }
+      
       res.json(events);
     } catch (error) {
       console.error("Error fetching events:", error);
@@ -2225,7 +2316,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      const events = await storage.getCoachEvents(userId);
+      let events = await storage.getCoachEvents(userId);
+      
+      // Apply tag-based filtering
+      const activeProfileId = user?.activeProfileId;
+      
+      if (activeProfileId) {
+        // Get active profile
+        const activeProfile = await db.select()
+          .from(profiles)
+          .where(eq(profiles.id, activeProfileId))
+          .limit(1);
+        
+        if (activeProfile.length > 0) {
+          const profile = activeProfile[0];
+          
+          // Get coach team assignments with team names
+          let coachTeamIds: number[] = [];
+          let coachTeamNames: string[] = [];
+          if (profile.profileType === 'coach') {
+            const coachTeamsData = await db.select()
+              .from(coachTeams)
+              .where(eq(coachTeams.coachId, userId));
+            coachTeamIds = coachTeamsData.map(ct => ct.teamId);
+            
+            // Fetch team names for the coach's assigned teams
+            for (const teamId of coachTeamIds) {
+              const team = await storage.getTeam(teamId);
+              if (team) {
+                coachTeamNames.push(team.name);
+              }
+            }
+          }
+          
+          // Get team name for the active profile
+          let teamName: string | null = null;
+          if (profile.teamId) {
+            const team = await storage.getTeam(profile.teamId);
+            if (team) {
+              teamName = team.name;
+            }
+          }
+          
+          // Filter events using the shouldShowEventToProfile function
+          const { shouldShowEventToProfile } = await import('./google-calendar');
+          
+          events = events.filter(event => {
+            return shouldShowEventToProfile(event, {
+              profileType: profile.profileType as 'parent' | 'player' | 'coach',
+              profileId: profile.id,
+              accountId: userId,
+              teamId: profile.teamId?.toString(),
+              teamName: teamName,
+              linkedPlayerProfiles: [],
+              coachTeamIds: coachTeamIds,
+              coachTeamNames: coachTeamNames
+            });
+          });
+          
+          console.log(`Filtered ${events.length} coach events for profile (${profile.id})`);
+        }
+      }
+      
       res.json(events);
     } catch (error) {
       console.error("Error fetching coach events:", error);
@@ -4438,9 +4590,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Remove duplicates and sort by date
-      const uniqueEvents = allEvents.filter((event, index, self) => 
+      let uniqueEvents = allEvents.filter((event, index, self) => 
         index === self.findIndex(e => e.id === event.id)
       ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      
+      // Apply tag-based filtering
+      const user = await storage.getUser(parentId);
+      const activeProfileId = user?.activeProfileId;
+      
+      if (activeProfileId) {
+        // Get active profile
+        const activeProfile = await db.select()
+          .from(profiles)
+          .where(eq(profiles.id, activeProfileId))
+          .limit(1);
+        
+        if (activeProfile.length > 0) {
+          const profile = activeProfile[0];
+          
+          // Get linked player profiles with team names
+          let linkedPlayerProfiles: Array<{ id: string; teamId?: string; teamName?: string }> = [];
+          if (profile.profileType === 'parent') {
+            const linkedPlayers = await db.select()
+              .from(profiles)
+              .where(
+                and(
+                  eq(profiles.accountId, parentId),
+                  eq(profiles.profileType, 'player')
+                )
+              );
+            
+            for (const player of linkedPlayers) {
+              let playerTeamName = null;
+              if (player.teamId) {
+                const team = await storage.getTeam(player.teamId);
+                if (team) {
+                  playerTeamName = team.name;
+                }
+              }
+              linkedPlayerProfiles.push({
+                id: player.id,
+                teamId: player.teamId?.toString(),
+                teamName: playerTeamName
+              });
+            }
+          }
+          
+          // Get team name for the active profile
+          let teamName: string | null = null;
+          if (profile.teamId) {
+            const team = await storage.getTeam(profile.teamId);
+            if (team) {
+              teamName = team.name;
+            }
+          }
+          
+          // Filter events using the shouldShowEventToProfile function
+          const { shouldShowEventToProfile } = await import('./google-calendar');
+          
+          uniqueEvents = uniqueEvents.filter(event => {
+            return shouldShowEventToProfile(event, {
+              profileType: profile.profileType as 'parent' | 'player' | 'coach',
+              profileId: profile.id,
+              accountId: parentId,
+              teamId: profile.teamId?.toString(),
+              teamName: teamName,
+              linkedPlayerProfiles: linkedPlayerProfiles,
+              coachTeamIds: [],
+              coachTeamNames: []
+            });
+          });
+          
+          console.log(`Filtered ${uniqueEvents.length} parent events for profile (${profile.id})`);
+        }
+      }
       
       res.json(uniqueEvents);
     } catch (error) {

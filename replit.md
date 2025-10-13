@@ -42,6 +42,11 @@ Preferred communication style: Simple, everyday language.
 - **Roster Management**: Coach dashboards display all Notion players for their teams, indicating players without app accounts and disabling actions for them. **App team assignments always take precedence over Notion data** - if a player changes their team in the app, the app assignment overrides what Notion says.
 - **Notion Sync**: Syncs player data from Notion database on startup and automatically every 24 hours at 2 AM Pacific Time. Pulls from 4 team columns: Youth Club Team, High School Team, FNHTL Team, and Skills Academy Session. Players read from Current Program, Grade, Status, and Session fields.
 - **Event & Scheduling**: Handles various event types, integrated with Google Calendar for hourly sync. Features an enhanced calendar UI with color-coded events and a sliding drawer for details. Players can RSVP to events within a specific window and check-in using device GPS location (within 200m of event).
+  - **Tag-Based Event Filtering**: Events can be tagged for targeted visibility. Tags are parsed from Google Calendar event descriptions and stored in the database. Three tag levels:
+    - **Org-Level**: UYP (all), Leadership (coaches), Coaches (coaches), Parents (parents), Players (players)
+    - **Program-Level**: Skills-Academy, FNHTL, Youth-Club, High-School (shows to profiles in that program)
+    - **Team-Level**: Specific team names like Youth-Girls-Black, 10u-Black (shows to players on team, parents with children on team, coaches assigned to team)
+  - Events without tags show to everyone (legacy behavior). Team name matching is normalized to handle spaces vs hyphens.
 - **Payment Integration**: Uses SportsEngine for secure payment processing (league fees, uniforms, tournaments) with transaction tracking and quick pay options.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities. Player dashboard includes skills progress and interactive trophy/badge counters. Coach dashboard features a QR code scanner for player check-ins and team management. Player Mode restricts access to pricing/payment options.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for various aspects, exportable as PDF or shareable via Web Share API.

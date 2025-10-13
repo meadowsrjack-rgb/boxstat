@@ -3180,15 +3180,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile(profileData);
       console.log("Profile created successfully:", profile);
       
-      // Update user's profileCompleted status, name fields, and set as active profile
-      await storage.updateUser(userId, { 
+      // Get current user to check if they already have an active profile
+      const currentUser = await storage.getUser(userId);
+      
+      // Update user's profileCompleted status and name fields
+      // Only set activeProfileId if not already set (first profile) to avoid switching on subsequent profile creations
+      const updateData: any = { 
         profileCompleted: true,
         userType: profile.profileType as "parent" | "player" | "admin" | "coach",
-        activeProfileId: profileId, // Set the newly created profile as active
         firstName: profile.firstName,
         lastName: profile.lastName,
-      });
-      console.log("User account status, name, and active profile updated");
+      };
+      
+      if (!currentUser?.activeProfileId) {
+        updateData.activeProfileId = profileId; // Set as active only if no profile is currently active
+      }
+      
+      await storage.updateUser(userId, updateData);
+      console.log("User account status and name updated", !currentUser?.activeProfileId ? "(set as active profile)" : "(kept existing active profile)");
       
       res.json(profile);
     } catch (error) {

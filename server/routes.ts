@@ -890,8 +890,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const playerId = req.params.playerId;
       
-      // First try to get from regular profiles table
+      // First try to get from regular users table
       let player = await storage.getUser(playerId);
+      
+      // If found in users table, transform to snake_case format expected by frontend
+      if (player) {
+        const transformedPlayer = {
+          id: player.id,
+          first_name: player.firstName,
+          last_name: player.lastName,
+          full_name: `${player.firstName || ''} ${player.lastName || ''}`.trim(),
+          profile_image_url: player.profileImageUrl,
+          age: player.age,
+          schoolGrade: player.schoolGrade,
+          team: player.teamName,
+          team_id: player.teamId,
+          team_name: player.teamName,
+          position: player.position,
+          jerseyNumber: player.jerseyNumber,
+          dateOfBirth: player.dateOfBirth,
+          height: player.height,
+          city: player.city,
+          parent_name: null,
+          parent_email: null,
+          account_email: player.email,
+          phone_number: player.phoneNumber,
+          registration_status: null,
+          session: null
+        };
+        return res.json(transformedPlayer);
+      }
       
       // If not found and ID looks like Notion UUID, try Notion data
       if (!player && playerId.includes('-')) {
@@ -901,7 +929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (player) {
             // Transform Notion player data to match PlayerCard expected format
-            player = {
+            const transformedPlayer = {
               id: player.id,
               first_name: player.name?.split(' ')[0] || '',
               last_name: player.name?.split(' ').slice(1).join(' ') || '',
@@ -911,6 +939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               schoolGrade: player.grade,
               team: player.team,
               team_id: null,
+              team_name: player.team,
               position: null,
               jerseyNumber: null,
               dateOfBirth: null,
@@ -923,17 +952,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               registration_status: player.registration_status,
               session: player.session
             };
+            return res.json(transformedPlayer);
           }
         } catch (notionError) {
           console.error("Error fetching from Notion:", notionError);
         }
       }
       
-      if (!player) {
-        return res.status(404).json({ message: "Player not found" });
-      }
-      
-      res.json(player);
+      return res.status(404).json({ message: "Player not found" });
     } catch (error) {
       console.error("Error fetching player profile:", error);
       res.status(500).json({ message: "Failed to fetch player profile" });

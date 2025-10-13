@@ -3161,14 +3161,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile(profileData);
       console.log("Profile created successfully:", profile);
       
-      // Update user's profileCompleted status and name fields (especially for parent profiles)
+      // Update user's profileCompleted status, name fields, and set as active profile
       await storage.updateUser(userId, { 
         profileCompleted: true,
         userType: profile.profileType as "parent" | "player" | "admin" | "coach",
+        activeProfileId: profileId, // Set the newly created profile as active
         firstName: profile.firstName,
         lastName: profile.lastName,
       });
-      console.log("User account status and name updated");
+      console.log("User account status, name, and active profile updated");
       
       res.json(profile);
     } catch (error) {

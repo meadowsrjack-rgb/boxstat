@@ -366,9 +366,9 @@ export interface EventFilterContext {
 }
 
 export function shouldShowEventToProfile(event: any, context: EventFilterContext): boolean {
-  // If event has no tags, show to everyone (legacy behavior)
+  // If event has no tags, hide it (strict filtering - only show tagged events)
   if (!event.tags || event.tags.length === 0) {
-    return true;
+    return false;
   }
   
   const { profileType, teamName, linkedPlayerProfiles = [], coachTeamIds = [] } = context;

@@ -786,9 +786,12 @@ function RosterTab({
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, playerId) => {
+      // Invalidate roster queries so the team list updates
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      // Invalidate the specific player's profile so their card updates
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
       setSearchQuery("");
       setSearchResults([]);
       toast({ title: "Success", description: "Player assigned to team" });
@@ -813,9 +816,12 @@ function RosterTab({
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, playerId) => {
+      // Invalidate roster queries so the team list updates
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      // Invalidate the specific player's profile so their card updates
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
       toast({ title: "Success", description: "Player removed from team" });
     },
     onError: (error: any) => {

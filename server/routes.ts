@@ -962,24 +962,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!notionTeam) {
         console.log(`No Notion team found for "${team.name}"`);
-        // No Notion data, return only app players
-        const appPlayers = await storage.getTeamPlayers(teamId);
-        const rosterData = appPlayers.map(player => ({
+        // No Notion data, return only app players from profiles table
+        const appProfiles = await db.select().from(profiles).where(eq(profiles.teamId, teamId.toString()));
+        const rosterData = appProfiles.map(profile => ({
           notionId: null,
-          name: `${player.firstName} ${player.lastName}`,
-          position: player.position,
-          jerseyNumber: player.jerseyNumber,
+          name: `${profile.firstName} ${profile.lastName}`,
+          position: profile.position,
+          jerseyNumber: profile.jerseyNumber,
           hasAppAccount: true,
-          appAccountId: player.id,
-          profileImageUrl: player.profileImageUrl,
-          firstName: player.firstName,
-          lastName: player.lastName,
+          appAccountId: profile.id,
+          profileImageUrl: profile.profileImageUrl,
+          firstName: profile.firstName,
+          lastName: profile.lastName,
         }));
         return res.json(rosterData);
       }
       
-      // Get app players for this team (source of truth - takes precedence over Notion)
-      const appPlayers = await storage.getTeamPlayers(teamId);
+      // Get app players for this team from profiles table (source of truth - takes precedence over Notion)
+      const appProfiles = await db.select().from(profiles).where(eq(profiles.teamId, teamId.toString()));
       
       // Create a map of Notion players by name for quick lookup
       const notionPlayersByName = new Map();
@@ -988,9 +988,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notionPlayersByName.set(normalizedName, player);
       });
       
-      // Start with app players (these override Notion assignments)
-      const combinedRoster = appPlayers.map(appPlayer => {
-        const fullName = `${appPlayer.firstName} ${appPlayer.lastName}`.toLowerCase().trim();
+      // Start with app profiles (these override Notion assignments)
+      const combinedRoster = appProfiles.map(appProfile => {
+        const fullName = `${appProfile.firstName} ${appProfile.lastName}`.toLowerCase().trim();
         const notionPlayer = notionPlayersByName.get(fullName);
         
         if (notionPlayer) {
@@ -1000,14 +1000,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Player exists in both app and Notion - use app data with Notion metadata
           return {
             notionId: notionPlayer.id,
-            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
-            position: appPlayer.position,
-            jerseyNumber: appPlayer.jerseyNumber,
+            name: `${appProfile.firstName} ${appProfile.lastName}`,
+            position: appProfile.position,
+            jerseyNumber: appProfile.jerseyNumber,
             hasAppAccount: true,
-            appAccountId: appPlayer.id,
-            profileImageUrl: appPlayer.profileImageUrl,
-            firstName: appPlayer.firstName,
-            lastName: appPlayer.lastName,
+            appAccountId: appProfile.id,
+            profileImageUrl: appProfile.profileImageUrl,
+            firstName: appProfile.firstName,
+            lastName: appProfile.lastName,
             grade: notionPlayer.grade,
             status: notionPlayer.status,
           };
@@ -1015,14 +1015,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Player only in app (not in Notion) - use app data only
           return {
             notionId: null,
-            name: `${appPlayer.firstName} ${appPlayer.lastName}`,
-            position: appPlayer.position,
-            jerseyNumber: appPlayer.jerseyNumber,
+            name: `${appProfile.firstName} ${appProfile.lastName}`,
+            position: appProfile.position,
+            jerseyNumber: appProfile.jerseyNumber,
             hasAppAccount: true,
-            appAccountId: appPlayer.id,
-            profileImageUrl: appPlayer.profileImageUrl,
-            firstName: appPlayer.firstName,
-            lastName: appPlayer.lastName,
+            appAccountId: appProfile.id,
+            profileImageUrl: appProfile.profileImageUrl,
+            firstName: appProfile.firstName,
+            lastName: appProfile.lastName,
             grade: null,
             status: null,
           };
@@ -1080,14 +1080,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You are not authorized to manage this team" });
       }
       
-      // Remove player from team (set teamId to null)
-      await db.update(users)
+      // Remove player from team (set teamId to null in profiles table)
+      await db.update(profiles)
         .set({ 
           teamId: null,
-          teamName: null,
           updatedAt: new Date()
         })
-        .where(eq(users.id, playerId));
+        .where(eq(profiles.id, playerId));
       
       res.json({ message: "Player removed from team successfully" });
     } catch (error) {
@@ -1143,14 +1142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You are not authorized to manage this team" });
       }
       
-      // Update player's team
-      await db.update(users)
+      // Update player's team in profiles table
+      await db.update(profiles)
         .set({ 
-          teamId: teamId,
-          teamName: team.name,
+          teamId: teamId.toString(), // profiles.teamId is varchar
           updatedAt: new Date()
         })
-        .where(eq(users.id, playerId));
+        .where(eq(profiles.id, playerId));
       
       res.json({ message: "Player assigned to team successfully" });
     } catch (error) {

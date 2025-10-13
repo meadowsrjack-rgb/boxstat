@@ -362,6 +362,7 @@ export interface EventFilterContext {
   teamName?: string | null;
   linkedPlayerProfiles?: Array<{ id: string; teamId?: string; teamName?: string }>;
   coachTeamIds?: number[];
+  coachTeamNames?: string[];
 }
 
 export function shouldShowEventToProfile(event: any, context: EventFilterContext): boolean {
@@ -425,24 +426,32 @@ export function shouldShowEventToProfile(event: any, context: EventFilterContext
       const normalizedTeamName = teamName?.toLowerCase().replace(/[-\s]/g, '');
       
       // Player profiles: show if their team matches
-      if (profileType === 'player' && normalizedTeamName && normalizedTeamName.includes(normalizedTag)) {
-        return true;
+      if (profileType === 'player' && normalizedTeamName) {
+        // Match if normalized tag is in team name OR team name is in tag
+        if (normalizedTeamName.includes(normalizedTag) || normalizedTag.includes(normalizedTeamName)) {
+          return true;
+        }
       }
       
       // Parent profiles: show if any linked player is on this team
       if (profileType === 'parent') {
         const hasPlayerOnTeam = linkedPlayerProfiles.some(p => {
-          const pTeamName = p.teamName?.toLowerCase().replace(/[-\s]/g, '');
-          return pTeamName && pTeamName.includes(normalizedTag);
+          if (!p.teamName) return false;
+          const pTeamName = p.teamName.toLowerCase().replace(/[-\s]/g, '');
+          // Match if normalized tag is in team name OR team name is in tag
+          return pTeamName.includes(normalizedTag) || normalizedTag.includes(pTeamName);
         });
         if (hasPlayerOnTeam) return true;
       }
       
       // Coach profiles: show if assigned to this team
-      if (profileType === 'coach') {
-        // Check if coach is assigned to this team by matching team name
-        // This requires the team name to be resolved from coachTeamIds
-        return true; // For now, show to all coaches - will refine with team name matching
+      if (profileType === 'coach' && context.coachTeamNames && context.coachTeamNames.length > 0) {
+        const isAssignedToTeam = context.coachTeamNames.some(coachTeam => {
+          const normalizedCoachTeam = coachTeam.toLowerCase().replace(/[-\s]/g, '');
+          // Match if normalized tag is in team name OR team name is in tag
+          return normalizedCoachTeam.includes(normalizedTag) || normalizedTag.includes(normalizedCoachTeam);
+        });
+        if (isAssignedToTeam) return true;
       }
     }
   }

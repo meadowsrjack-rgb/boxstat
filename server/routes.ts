@@ -1311,13 +1311,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
             
-            // Get coach team assignments
+            // Get coach team assignments with team names
             let coachTeamIds: number[] = [];
+            let coachTeamNames: string[] = [];
             if (activeProfile.profileType === 'coach') {
               const coachTeamsData = await db.select()
                 .from(coachTeams)
                 .where(eq(coachTeams.coachId, currentUser.id));
               coachTeamIds = coachTeamsData.map(ct => ct.teamId);
+              
+              // Fetch team names for the coach's assigned teams
+              for (const teamId of coachTeamIds) {
+                const team = await storage.getTeam(teamId);
+                if (team) {
+                  coachTeamNames.push(team.name);
+                }
+              }
             }
             
             // Get team name for the active profile
@@ -1342,7 +1351,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamId: activeProfile.teamId,
                 teamName: teamName,
                 linkedPlayerProfiles: linkedPlayerProfiles,
-                coachTeamIds: coachTeamIds
+                coachTeamIds: coachTeamIds,
+                coachTeamNames: coachTeamNames
               });
             });
             

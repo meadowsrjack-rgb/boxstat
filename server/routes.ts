@@ -1435,9 +1435,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Get team name for the active profile
+          // Fall back to user's team if profile doesn't have one
           let teamName: string | null = null;
-          if (profile.teamId) {
-            const team = await storage.getTeam(profile.teamId);
+          const teamIdToUse = profile.teamId || user?.teamId;
+          if (teamIdToUse) {
+            const team = await storage.getTeam(parseInt(teamIdToUse.toString()));
             if (team) {
               teamName = team.name;
             }
@@ -2350,9 +2352,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Get team name for the active profile
+          // Fall back to user's team if profile doesn't have one
           let teamName: string | null = null;
-          if (profile.teamId) {
-            const team = await storage.getTeam(profile.teamId);
+          const teamIdToUse = profile.teamId || user?.teamId;
+          if (teamIdToUse) {
+            const team = await storage.getTeam(parseInt(teamIdToUse.toString()));
             if (team) {
               teamName = team.name;
             }
@@ -4565,34 +4569,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parentId = req.user.claims.sub;
       
-      // Get all family members' events
-      const familyMembers = await storage.getFamilyMembers(parentId);
-      const playerIds = familyMembers.map((member: any) => member.playerId);
-      
-      let allEvents: any[] = [];
-      
-      // Get events for each player
-      for (const playerId of playerIds) {
-        try {
-          const playerEvents = await storage.getUserEvents(playerId);
-          allEvents = allEvents.concat(playerEvents);
-        } catch (error) {
-          console.error(`Error fetching events for player ${playerId}:`, error);
-        }
-      }
-      
-      // Also get league-wide events (events with no team assignment)
-      try {
-        const leagueEvents = await storage.getLeagueEvents();
-        allEvents = allEvents.concat(leagueEvents);
-      } catch (error) {
-        console.error('Error fetching league events:', error);
-      }
-      
-      // Remove duplicates and sort by date
-      let uniqueEvents = allEvents.filter((event, index, self) => 
-        index === self.findIndex(e => e.id === event.id)
-      ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      // Get all events once (getUserEvents now returns all events for tag filtering)
+      let uniqueEvents = await storage.getUserEvents(parentId);
       
       // Apply tag-based filtering
       const user = await storage.getUser(parentId);
@@ -4637,9 +4615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Get team name for the active profile
+          // Fall back to user's team if profile doesn't have one
           let teamName: string | null = null;
-          if (profile.teamId) {
-            const team = await storage.getTeam(profile.teamId);
+          const teamIdToUse = profile.teamId || user?.teamId;
+          if (teamIdToUse) {
+            const team = await storage.getTeam(parseInt(teamIdToUse.toString()));
             if (team) {
               teamName = team.name;
             }

@@ -768,24 +768,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserEvents(userId: string): Promise<Event[]> {
-    const user = await this.getUser(userId);
-    if (!user) return [];
-
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Get team events, user-specific events, and league-wide events (include events from today onwards)
+    // Return ALL active future events for tag-based filtering at route level
+    // Tag filtering will handle which events to show based on profile
     const userEvents = await db
       .select()
       .from(events)
       .where(
         and(
-          or(
-            eq(events.teamId, user.teamId || 0),    // Team-specific events
-            eq(events.playerId, userId),            // User-specific events  
-            isNull(events.teamId)                   // League-wide events (like Skills sessions)
-          ),
-          gte(events.startTime, startOfToday)
+          gte(events.startTime, startOfToday),
+          eq(events.isActive, true)
         )
       )
       .orderBy(asc(events.startTime));
@@ -1270,23 +1264,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoachEvents(coachId: string): Promise<Event[]> {
-    // Get the coach's team first
-    const coach = await db.select().from(users).where(eq(users.id, coachId)).limit(1);
-    if (!coach.length) return [];
-
-    const teamId = coach[0].teamId;
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
-    // Get team events AND league-wide events (like Google Calendar events) - same as getUserEvents
+    // Return ALL active future events for tag-based filtering at route level
+    // Tag filtering will handle which events to show based on coach's assigned teams
     return await db
       .select()
       .from(events)
       .where(and(
-        or(
-          eq(events.teamId, teamId || 0),   // Team-specific events
-          isNull(events.teamId)             // League-wide events (Google Calendar)
-        ),
         gte(events.startTime, startOfToday),
         eq(events.isActive, true)
       ))

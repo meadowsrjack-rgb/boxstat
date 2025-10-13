@@ -3186,10 +3186,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const profile = await storage.selectProfile(userId, profileId);
       
-      // Update the user's current profile status
+      // Update the user's current profile status AND store the active profile ID
       await storage.updateUser(userId, { 
         profileCompleted: true,
-        userType: profile.profileType as "parent" | "player" | "admin" | "coach"
+        userType: profile.profileType as "parent" | "player" | "admin" | "coach",
+        activeProfileId: profileId, // Store which specific profile is active
       });
       
       res.json(profile);

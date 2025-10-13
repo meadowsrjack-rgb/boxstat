@@ -1591,7 +1591,7 @@ function TeamBlock() {
   });
   
   // Fetch team roster with Notion data (includes players without app accounts)
-  const { data: teamPlayers = [] } = useQuery<any[]>({
+  const { data: teamPlayers = [], isLoading: isLoadingRoster } = useQuery<any[]>({
     queryKey: ["/api/teams", userTeam?.id, "roster-with-notion"],
     enabled: !!userTeam?.id,
   });
@@ -1633,53 +1633,63 @@ function TeamBlock() {
       </div>
       
       {/* Team Roster Section */}
-      {userTeam && teamPlayers.length > 0 && (
+      {userTeam && (
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-roster">Team Roster</h3>
           <Card className="border-0 shadow-sm">
             <CardContent className="p-0">
-              <div className="max-h-64 overflow-y-auto">
-                {teamPlayers.map((player: any, index: number) => {
-                  const playerKey = player.appAccountId || player.notionId || `player-${index}`;
-                  const playerName = player.name || `${player.firstName} ${player.lastName}`;
-                  const initials = player.firstName?.[0] && player.lastName?.[0] 
-                    ? `${player.firstName[0]}${player.lastName[0]}`
-                    : playerName.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
-                  
-                  return (
-                    <div 
-                      key={playerKey} 
-                      className={`p-3 border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
-                        player.hasAppAccount ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60'
-                      }`}
-                      onClick={() => player.hasAppAccount && setSelectedPlayerId(player.appAccountId)}
-                      data-testid={`player-roster-${playerKey}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={player.profileImageUrl} />
-                          <AvatarFallback className="text-xs bg-red-100 text-red-600">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium text-gray-900 flex items-center gap-2" data-testid={`text-player-name-${playerKey}`}>
-                            {playerName}
-                            {!player.hasAppAccount && (
-                              <span className="text-xs text-gray-400 font-normal">(No app)</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {player.position || "Player"}
-                            {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
-                            {player.grade ? ` • ${player.grade}` : ""}
+              {isLoadingRoster ? (
+                <div className="p-6 text-center text-sm text-gray-500">
+                  Loading roster...
+                </div>
+              ) : teamPlayers.length === 0 ? (
+                <div className="p-6 text-center text-sm text-gray-500">
+                  No players on this team yet.
+                </div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto">
+                  {teamPlayers.map((player: any, index: number) => {
+                    const playerKey = player.appAccountId || player.notionId || `player-${index}`;
+                    const playerName = player.name || `${player.firstName} ${player.lastName}`;
+                    const initials = player.firstName?.[0] && player.lastName?.[0] 
+                      ? `${player.firstName[0]}${player.lastName[0]}`
+                      : playerName.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
+                    
+                    return (
+                      <div 
+                        key={playerKey} 
+                        className={`p-3 border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
+                          player.hasAppAccount ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60'
+                        }`}
+                        onClick={() => player.hasAppAccount && setSelectedPlayerId(player.appAccountId)}
+                        data-testid={`player-roster-${playerKey}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={player.profileImageUrl} />
+                            <AvatarFallback className="text-xs bg-red-100 text-red-600">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-900 flex items-center gap-2" data-testid={`text-player-name-${playerKey}`}>
+                              {playerName}
+                              {!player.hasAppAccount && (
+                                <span className="text-xs text-gray-400 font-normal">(No app)</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {player.position || "Player"}
+                              {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
+                              {player.grade ? ` • ${player.grade}` : ""}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

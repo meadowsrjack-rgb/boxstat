@@ -28,19 +28,44 @@ export function CoachProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [profile, setProfile] = useState({
-    firstName: (user as any)?.firstName || "",
-    lastName: (user as any)?.lastName || "",
-    phoneNumber: (user as any)?.phoneNumber || "",
-    email: (user as any)?.email || "",
-    city: (user as any)?.city || (user as any)?.address || "",
-    coachingExperience: (user as any)?.coachingExperience || "",
-    yearsExperience: (user as any)?.yearsExperience || "",
-    bio: (user as any)?.bio || "",
-    previousTeams: (user as any)?.previousTeams || "",
-    playingExperience: (user as any)?.playingExperience || "",
-    philosophy: (user as any)?.philosophy || "",
+  // Fetch the active profile data
+  const { data: activeProfile } = useQuery({
+    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
+    enabled: !!(user as any)?.activeProfileId,
   });
+
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    email: "",
+    city: "",
+    coachingExperience: "",
+    yearsExperience: "",
+    bio: "",
+    previousTeams: "",
+    playingExperience: "",
+    philosophy: "",
+  });
+
+  // Update profile state when active profile loads
+  React.useEffect(() => {
+    if (activeProfile) {
+      setProfile({
+        firstName: activeProfile.firstName || "",
+        lastName: activeProfile.lastName || "",
+        phoneNumber: activeProfile.phoneNumber || "",
+        email: (user as any)?.email || "",
+        city: activeProfile.city || activeProfile.address || "",
+        coachingExperience: (activeProfile as any)?.coachingExperience || "",
+        yearsExperience: (activeProfile as any)?.yearsExperience || "",
+        bio: (activeProfile as any)?.bio || "",
+        previousTeams: (activeProfile as any)?.previousTeams || "",
+        playingExperience: (activeProfile as any)?.playingExperience || "",
+        philosophy: (activeProfile as any)?.philosophy || "",
+      });
+    }
+  }, [activeProfile, user]);
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,8 +86,9 @@ export function CoachProfilePage() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
+      // Invalidate active profile query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       setSelectedFile(null);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -99,7 +125,7 @@ export function CoachProfilePage() {
         address: data.city,
       };
       
-      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -108,24 +134,24 @@ export function CoachProfilePage() {
       if (!response.ok) throw new Error("Failed to update coach profile");
       return response.json();
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedProfile) => {
       setProfile({
-        firstName: updatedUser.firstName || "",
-        lastName: updatedUser.lastName || "",
-        phoneNumber: updatedUser.phoneNumber || "",
-        email: updatedUser.email || "",
-        city: updatedUser.city || updatedUser.address || "",
-        coachingExperience: updatedUser.coachingExperience || "",
-        yearsExperience: updatedUser.yearsExperience || "",
-        bio: updatedUser.bio || "",
-        previousTeams: updatedUser.previousTeams || "",
-        playingExperience: updatedUser.playingExperience || "",
-        philosophy: updatedUser.philosophy || "",
+        firstName: updatedProfile.firstName || "",
+        lastName: updatedProfile.lastName || "",
+        phoneNumber: updatedProfile.phoneNumber || "",
+        email: (user as any)?.email || "",
+        city: updatedProfile.city || updatedProfile.address || "",
+        coachingExperience: updatedProfile.coachingExperience || "",
+        yearsExperience: updatedProfile.yearsExperience || "",
+        bio: updatedProfile.bio || "",
+        previousTeams: updatedProfile.previousTeams || "",
+        playingExperience: updatedProfile.playingExperience || "",
+        philosophy: updatedProfile.philosophy || "",
       });
       
+      // Invalidate active profile query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
       toast({ 
         title: "Saved", 
@@ -399,7 +425,7 @@ export function CoachCoachingPage() {
         languages: data.languages.split(",").map((l: string) => l.trim()).filter(Boolean),
       };
       
-      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

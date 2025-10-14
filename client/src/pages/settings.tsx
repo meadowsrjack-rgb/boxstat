@@ -434,32 +434,38 @@ function ProfileSection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [editableProfile, setEditableProfile] = useState({
-    firstName: (user as UserType)?.firstName || "",
-    lastName: (user as UserType)?.lastName || "",
-    teamName: (user as UserType)?.teamName || "",
-    age: (user as UserType)?.age || "",
-    height: (user as UserType)?.height || "",
-    location: (user as UserType)?.address || "",
-    position: (user as UserType)?.position || "",
-    jerseyNumber: (user as UserType)?.jerseyNumber?.toString() || "",
+  // Fetch the active profile data
+  const { data: activeProfile } = useQuery({
+    queryKey: [`/api/profile/${(user as UserType)?.activeProfileId}`],
+    enabled: !!(user as UserType)?.activeProfileId,
   });
 
-  // Update editable profile when user data changes
+  const [editableProfile, setEditableProfile] = useState({
+    firstName: "",
+    lastName: "",
+    teamName: "",
+    age: "",
+    height: "",
+    location: "",
+    position: "",
+    jerseyNumber: "",
+  });
+
+  // Update editable profile when active profile data changes
   useEffect(() => {
-    if (user) {
+    if (activeProfile) {
       setEditableProfile({
-        firstName: (user as UserType)?.firstName || "",
-        lastName: (user as UserType)?.lastName || "",
-        teamName: (user as UserType)?.teamName || "",
+        firstName: activeProfile.firstName || "",
+        lastName: activeProfile.lastName || "",
+        teamName: activeProfile.teamId || "",
         age: (user as UserType)?.age || "",
         height: (user as UserType)?.height || "",
-        location: (user as UserType)?.address || "",
-        position: (user as UserType)?.position || "",
-        jerseyNumber: (user as UserType)?.jerseyNumber?.toString() || "",
+        location: activeProfile.address || "",
+        position: activeProfile.position || "",
+        jerseyNumber: activeProfile.jerseyNumber?.toString() || "",
       });
     }
-  }, [user]);
+  }, [activeProfile, user]);
 
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
@@ -475,7 +481,7 @@ function ProfileSection() {
         jerseyNumber: payload.jerseyNumber ? parseInt(payload.jerseyNumber) : null, // Convert to integer
       };
       
-      const res = await fetch(`/api/users/${(user as UserType)?.id}/profile`, {
+      const res = await fetch(`/api/profile/${(user as UserType)?.activeProfileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -484,23 +490,24 @@ function ProfileSection() {
       if (!res.ok) throw new Error("Failed to save profile");
       return res.json();
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedProfile) => {
       toast({ title: "Profile updated", description: "Changes saved successfully." });
-      // Update the form state with the returned data to keep input values
-      if (updatedUser) {
+      // Update the form state with the returned profile data
+      if (updatedProfile) {
         setEditableProfile({
-          firstName: updatedUser.firstName || "",
-          lastName: updatedUser.lastName || "",
-          teamName: updatedUser.teamName || "",
-          age: updatedUser.age || "",
-          height: updatedUser.height || "",
-          location: updatedUser.address || "",
-          position: updatedUser.position || "",
-          jerseyNumber: updatedUser.jerseyNumber?.toString() || "",
+          firstName: updatedProfile.firstName || "",
+          lastName: updatedProfile.lastName || "",
+          teamName: updatedProfile.teamId || "",
+          age: (user as UserType)?.age || "",
+          height: (user as UserType)?.height || "",
+          location: updatedProfile.address || "",
+          position: updatedProfile.position || "",
+          jerseyNumber: updatedProfile.jerseyNumber?.toString() || "",
         });
       }
+      // Invalidate profile query to refetch the updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as UserType)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as UserType)?.id] });
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),
   });

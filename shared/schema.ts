@@ -63,6 +63,22 @@ export const profiles = pgTable("profiles", {
   jerseyNumber: integer("jersey_number"),
   position: varchar("position"),
   schoolGrade: varchar("school_grade"),
+  // Player-specific fields
+  age: varchar("age"),
+  height: varchar("height"),
+  city: varchar("city"),
+  // Coach-specific fields
+  coachingExperience: text("coaching_experience"),
+  yearsExperience: varchar("years_experience"),
+  bio: text("bio"),
+  previousTeams: text("previous_teams"),
+  playingExperience: text("playing_experience"),
+  philosophy: text("philosophy"),
+  // Parent-specific fields
+  occupation: varchar("occupation"),
+  workPhone: varchar("work_phone"),
+  relationship: varchar("relationship", { enum: ["parent", "guardian", "sibling", "grandparent"] }),
+  // Common fields
   parentalConsent: boolean("parental_consent").default(false),
   profileCompleted: boolean("profile_completed").default(false),
   verified: boolean("verified").default(false), // Player profiles must be verified via Notion before being public/searchable

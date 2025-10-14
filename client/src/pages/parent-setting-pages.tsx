@@ -23,18 +23,42 @@ export function ParentProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const [profile, setProfile] = useState({
-    firstName: (user as any)?.firstName || "",
-    lastName: (user as any)?.lastName || "",
-    email: (user as any)?.email || "",
-    phoneNumber: (user as any)?.phoneNumber || "",
-    address: (user as any)?.address || "",
-    emergencyContact: (user as any)?.emergencyContact || "",
-    emergencyPhone: (user as any)?.emergencyPhone || "",
-    occupation: (user as any)?.occupation || "",
-    workPhone: (user as any)?.workPhone || "",
-    relationship: (user as any)?.relationship || "parent",
+  // Fetch the active profile data
+  const { data: activeProfile } = useQuery({
+    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
+    enabled: !!(user as any)?.activeProfileId,
   });
+
+  const [profile, setProfile] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    address: "",
+    emergencyContact: "",
+    emergencyPhone: "",
+    occupation: "",
+    workPhone: "",
+    relationship: "parent",
+  });
+
+  // Update profile state when active profile loads
+  React.useEffect(() => {
+    if (activeProfile) {
+      setProfile({
+        firstName: activeProfile.firstName || "",
+        lastName: activeProfile.lastName || "",
+        email: (user as any)?.email || "",
+        phoneNumber: activeProfile.phoneNumber || "",
+        address: activeProfile.address || "",
+        emergencyContact: activeProfile.emergencyContact || "",
+        emergencyPhone: activeProfile.emergencyPhone || "",
+        occupation: (activeProfile as any)?.occupation || "",
+        workPhone: (activeProfile as any)?.workPhone || "",
+        relationship: (activeProfile as any)?.relationship || "parent",
+      });
+    }
+  }, [activeProfile, user]);
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -55,8 +79,9 @@ export function ParentProfilePage() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
+      // Invalidate active profile query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       setSelectedFile(null);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -88,7 +113,7 @@ export function ParentProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -97,23 +122,23 @@ export function ParentProfilePage() {
       if (!response.ok) throw new Error("Failed to update profile");
       return response.json();
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedProfile) => {
       setProfile({
-        firstName: updatedUser.firstName || "",
-        lastName: updatedUser.lastName || "",
-        email: updatedUser.email || "",
-        phoneNumber: updatedUser.phoneNumber || "",
-        address: updatedUser.address || "",
-        emergencyContact: updatedUser.emergencyContact || "",
-        emergencyPhone: updatedUser.emergencyPhone || "",
-        occupation: updatedUser.occupation || "",
-        workPhone: updatedUser.workPhone || "",
-        relationship: updatedUser.relationship || "parent",
+        firstName: updatedProfile.firstName || "",
+        lastName: updatedProfile.lastName || "",
+        email: (user as any)?.email || "",
+        phoneNumber: updatedProfile.phoneNumber || "",
+        address: updatedProfile.address || "",
+        emergencyContact: updatedProfile.emergencyContact || "",
+        emergencyPhone: updatedProfile.emergencyPhone || "",
+        occupation: updatedProfile.occupation || "",
+        workPhone: updatedProfile.workPhone || "",
+        relationship: updatedProfile.relationship || "parent",
       });
       
+      // Invalidate active profile query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       
       toast({ 
         title: "Profile Updated", 

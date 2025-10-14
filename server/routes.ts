@@ -471,17 +471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Update user profile with team data
-      const updateData = {
-        ...req.body,
-        teamId: teamNumericId, // Numeric ID for users table
-        teamName: req.body.teamId, // Team name for users table teamName field
-      };
-      
-      const updatedUser = await storage.updateUserProfile(userId, updateData);
-      
-      // Update ONLY the active profile with the changes
-      await storage.updateProfile(currentProfile.id, {
+      // Update ONLY the active profile with the changes (not the user account)
+      const updatedProfile = await storage.updateProfile(currentProfile.id, {
         firstName: req.body.firstName || currentProfile.firstName,
         lastName: req.body.lastName || currentProfile.lastName,
         profileImageUrl: req.body.profileImageUrl || currentProfile.profileImageUrl,
@@ -496,9 +487,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: req.body.position !== undefined ? req.body.position : currentProfile.position,
         jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : currentProfile.jerseyNumber,
         teamId: teamDbId || currentProfile.teamId, // Store team ID in profiles table
+        // Player-specific fields
+        age: req.body.age !== undefined ? req.body.age : currentProfile.age,
+        height: req.body.height !== undefined ? req.body.height : currentProfile.height,
+        city: req.body.city !== undefined ? req.body.city : currentProfile.city,
+        // Coach-specific fields
+        coachingExperience: req.body.coachingExperience !== undefined ? req.body.coachingExperience : currentProfile.coachingExperience,
+        yearsExperience: req.body.yearsExperience !== undefined ? req.body.yearsExperience : currentProfile.yearsExperience,
+        bio: req.body.bio !== undefined ? req.body.bio : currentProfile.bio,
+        previousTeams: req.body.previousTeams !== undefined ? req.body.previousTeams : currentProfile.previousTeams,
+        playingExperience: req.body.playingExperience !== undefined ? req.body.playingExperience : currentProfile.playingExperience,
+        philosophy: req.body.philosophy !== undefined ? req.body.philosophy : currentProfile.philosophy,
+        // Parent-specific fields
+        occupation: req.body.occupation !== undefined ? req.body.occupation : currentProfile.occupation,
+        workPhone: req.body.workPhone !== undefined ? req.body.workPhone : currentProfile.workPhone,
+        relationship: req.body.relationship !== undefined ? req.body.relationship : currentProfile.relationship,
       });
       
-      res.json(updatedUser);
+      res.json(updatedProfile);
     } catch (error) {
       console.error("Error updating user profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
@@ -701,12 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Convert buffer to base64 for simple storage (in a real app, you'd save to file storage/cloud)
       const base64Image = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
       
-      // Update user profile with new image URL
-      await db.update(users)
-        .set({ profileImageUrl: base64Image })
-        .where(eq(users.id, userId));
-
-      // Also update the active profile to keep them in sync
+      // Update ONLY the active profile (not the user account)
       await storage.updateProfile(currentProfile.id, {
         profileImageUrl: base64Image
       });
@@ -3353,6 +3354,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/privacy', privacyRoutes);
 
   // Profile Management Routes (new unified system)
+  // Get single profile by ID
+  app.get('/api/profile/:profileId', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = req.params.profileId;
+      const userId = req.user.claims.sub;
+      
+      const profile = await storage.getProfile(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      // Ensure user can only access their own profiles
+      if (profile.accountId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // Update profile by ID
+  app.patch('/api/profile/:profileId', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = req.params.profileId;
+      const userId = req.user.claims.sub;
+      
+      const profile = await storage.getProfile(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      // Ensure user can only update their own profiles
+      if (profile.accountId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Handle team assignment if teamId is provided
+      let teamDbId: string | undefined = undefined;
+      if (req.body.teamId && req.body.teamId.trim() !== '') {
+        const teamName = req.body.teamId;
+        const allTeams = await storage.getAllTeams();
+        const existingTeam = allTeams.find(t => t.name === teamName);
+        
+        if (existingTeam) {
+          teamDbId = existingTeam.id.toString();
+        } else {
+          const newTeam = await storage.createTeam({
+            name: teamName,
+            ageGroup: 'Various',
+            color: '#DC2626',
+          });
+          teamDbId = newTeam.id.toString();
+        }
+      }
+      
+      // Update the profile with all fields
+      const updatedProfile = await storage.updateProfile(profileId, {
+        firstName: req.body.firstName !== undefined ? req.body.firstName : profile.firstName,
+        lastName: req.body.lastName !== undefined ? req.body.lastName : profile.lastName,
+        profileImageUrl: req.body.profileImageUrl !== undefined ? req.body.profileImageUrl : profile.profileImageUrl,
+        phoneNumber: req.body.phoneNumber !== undefined ? req.body.phoneNumber : profile.phoneNumber,
+        dateOfBirth: req.body.dateOfBirth !== undefined ? req.body.dateOfBirth : profile.dateOfBirth,
+        emergencyContact: req.body.emergencyContact !== undefined ? req.body.emergencyContact : profile.emergencyContact,
+        emergencyPhone: req.body.emergencyPhone !== undefined ? req.body.emergencyPhone : profile.emergencyPhone,
+        address: req.body.address !== undefined ? req.body.address : (req.body.city || profile.address),
+        medicalInfo: req.body.medicalInfo !== undefined ? req.body.medicalInfo : profile.medicalInfo,
+        allergies: req.body.allergies !== undefined ? req.body.allergies : profile.allergies,
+        schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : profile.schoolGrade,
+        position: req.body.position !== undefined ? req.body.position : profile.position,
+        jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : profile.jerseyNumber,
+        teamId: teamDbId || profile.teamId,
+        // Player-specific fields
+        age: req.body.age !== undefined ? req.body.age : profile.age,
+        height: req.body.height !== undefined ? req.body.height : profile.height,
+        city: req.body.city !== undefined ? req.body.city : profile.city,
+        // Coach-specific fields
+        coachingExperience: req.body.coachingExperience !== undefined ? req.body.coachingExperience : profile.coachingExperience,
+        yearsExperience: req.body.yearsExperience !== undefined ? req.body.yearsExperience : profile.yearsExperience,
+        bio: req.body.bio !== undefined ? req.body.bio : profile.bio,
+        previousTeams: req.body.previousTeams !== undefined ? req.body.previousTeams : profile.previousTeams,
+        playingExperience: req.body.playingExperience !== undefined ? req.body.playingExperience : profile.playingExperience,
+        philosophy: req.body.philosophy !== undefined ? req.body.philosophy : profile.philosophy,
+        // Parent-specific fields
+        occupation: req.body.occupation !== undefined ? req.body.occupation : profile.occupation,
+        workPhone: req.body.workPhone !== undefined ? req.body.workPhone : profile.workPhone,
+        relationship: req.body.relationship !== undefined ? req.body.relationship : profile.relationship,
+      });
+      
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   app.get('/api/profiles/:accountId', isAuthenticated, async (req: any, res) => {
     try {
       const accountId = req.params.accountId;

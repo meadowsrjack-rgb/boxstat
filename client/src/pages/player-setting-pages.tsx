@@ -37,13 +37,11 @@ export function PlayerProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Get current player profile for profileId
-  const { data: profiles = [], isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['/api/profiles/me'],
-    enabled: !!(user as any)?.id
+  // Fetch the active profile data
+  const { data: activeProfile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
+    enabled: !!(user as any)?.activeProfileId,
   });
-  
-  const currentProfile = (profiles as any[]).find((p: any) => p.profileType === 'player');
 
   // Fetch current team data to display (read-only)
   const { data: teamData } = useQuery({
@@ -52,20 +50,41 @@ export function PlayerProfilePage() {
   });
 
   const [profile, setProfile] = useState({
-    firstName: (user as any)?.firstName || "",
-    lastName: (user as any)?.lastName || "",
-    position: (user as any)?.position || "",
-    jerseyNumber: (user as any)?.jerseyNumber?.toString() || "",
-    city: (user as any)?.city || (user as any)?.address || "",
-    age: (user as any)?.age || "",
-    height: (user as any)?.height || "",
-    schoolGrade: (user as any)?.schoolGrade || "",
-    phoneNumber: (user as any)?.phoneNumber || "",
-    emergencyContact: (user as any)?.emergencyContact || "",
-    emergencyPhone: (user as any)?.emergencyPhone || "",
-    medicalInfo: (user as any)?.medicalInfo || "",
-    allergies: (user as any)?.allergies || "",
+    firstName: "",
+    lastName: "",
+    position: "",
+    jerseyNumber: "",
+    city: "",
+    age: "",
+    height: "",
+    schoolGrade: "",
+    phoneNumber: "",
+    emergencyContact: "",
+    emergencyPhone: "",
+    medicalInfo: "",
+    allergies: "",
   });
+
+  // Update profile state when active profile loads
+  React.useEffect(() => {
+    if (activeProfile) {
+      setProfile({
+        firstName: activeProfile.firstName || "",
+        lastName: activeProfile.lastName || "",
+        position: activeProfile.position || "",
+        jerseyNumber: activeProfile.jerseyNumber?.toString() || "",
+        city: (activeProfile as any)?.city || activeProfile.address || "",
+        age: (activeProfile as any)?.age || "",
+        height: (activeProfile as any)?.height || "",
+        schoolGrade: activeProfile.schoolGrade || "",
+        phoneNumber: activeProfile.phoneNumber || "",
+        emergencyContact: activeProfile.emergencyContact || "",
+        emergencyPhone: activeProfile.emergencyPhone || "",
+        medicalInfo: activeProfile.medicalInfo || "",
+        allergies: activeProfile.allergies || "",
+      });
+    }
+  }, [activeProfile, user]);
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -86,8 +105,9 @@ export function PlayerProfilePage() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
+      // Invalidate active profile query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       setSelectedFile(null);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -125,7 +145,7 @@ export function PlayerProfilePage() {
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
       };
       
-      const response = await fetch(`/api/users/${(user as any)?.id}/profile`, {
+      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -136,32 +156,31 @@ export function PlayerProfilePage() {
       
       return updatedUser;
     },
-    onSuccess: (updatedUser) => {
+    onSuccess: (updatedProfile) => {
       // Update local profile state with server response
       setProfile({
-        firstName: updatedUser.firstName || "",
-        lastName: updatedUser.lastName || "",
-        position: updatedUser.position || "",
-        jerseyNumber: updatedUser.jerseyNumber?.toString() || "",
-        city: updatedUser.city || updatedUser.address || "",
-        age: updatedUser.age || "",
-        height: updatedUser.height || "",
-        schoolGrade: updatedUser.schoolGrade || "",
-        phoneNumber: updatedUser.phoneNumber || "",
-        emergencyContact: updatedUser.emergencyContact || "",
-        emergencyPhone: updatedUser.emergencyPhone || "",
-        medicalInfo: updatedUser.medicalInfo || "",
-        allergies: updatedUser.allergies || "",
+        firstName: updatedProfile.firstName || "",
+        lastName: updatedProfile.lastName || "",
+        position: updatedProfile.position || "",
+        jerseyNumber: updatedProfile.jerseyNumber?.toString() || "",
+        city: updatedProfile.address || "",
+        age: (user as any)?.age || "",
+        height: (user as any)?.height || "",
+        schoolGrade: updatedProfile.schoolGrade || "",
+        phoneNumber: updatedProfile.phoneNumber || "",
+        emergencyContact: updatedProfile.emergencyContact || "",
+        emergencyPhone: updatedProfile.emergencyPhone || "",
+        medicalInfo: updatedProfile.medicalInfo || "",
+        allergies: updatedProfile.allergies || "",
       });
       
-      // Invalidate queries to refresh all user data across the app
+      // Invalidate active profile query to refresh all profile data
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${(user as any)?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "team"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "awards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
       
       toast({ 
@@ -220,7 +239,7 @@ export function PlayerProfilePage() {
               <div className="flex flex-col items-center py-4 border-b border-gray-200 dark:border-gray-700 mb-4">
                 <Avatar className="h-16 w-16 mb-4">
                   <AvatarImage 
-                    src={previewUrl || (user as any)?.profileImageUrl} 
+                    src={previewUrl || activeProfile?.profileImageUrl} 
                     alt="Profile"
                     className="object-cover w-full h-full"
                   />

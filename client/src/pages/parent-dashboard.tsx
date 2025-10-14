@@ -417,9 +417,6 @@ function PlayersTab() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
   // Query for player profiles in this account
@@ -445,53 +442,7 @@ function PlayersTab() {
   // Filter for player profiles only
   const playerProfiles = allProfiles.filter(profile => profile.profileType === 'player');
 
-  // Search Notion players
-  const searchNotionPlayers = async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const res = await fetch(`/api/search/notion-players?q=${encodeURIComponent(query)}`, {
-        credentials: 'include'
-      });
-      const data = await res.json();
-      setSearchResults(data.players || []);
-    } catch (error) {
-      console.error('Error searching players:', error);
-      toast({ title: 'Search failed', description: 'Could not search players', variant: 'destructive' });
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  // Follow/Unfollow player
-  const followPlayerMutation = useMutation({
-    mutationFn: async (player: any) => {
-      const res = await apiRequest('/api/parent/follow-notion-player', {
-        method: 'POST',
-        data: {
-          notionPlayerId: player.id,
-          playerName: player.fullName,
-          teamName: player.team_name,
-        },
-      });
-      if (!res.ok) throw new Error('Failed to follow player');
-      return res.json();
-    },
-    onSuccess: () => {
-      toast({ title: 'Player followed', description: 'You can now track this player' });
-      queryClient.invalidateQueries({ queryKey: ['/api/parent/followed-notion-players'] });
-      setSearchQuery('');
-      setSearchResults([]);
-    },
-    onError: (error: any) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    },
-  });
-
+  // Unfollow player mutation
   const unfollowPlayerMutation = useMutation({
     mutationFn: async (notionPlayerId: string) => {
       const res = await apiRequest(`/api/parent/unfollow-notion-player/${notionPlayerId}`, {
@@ -508,10 +459,6 @@ function PlayersTab() {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
-
-  const isFollowing = (playerId: string) => {
-    return followedPlayers.some(p => p.notionPlayerId === playerId);
-  };
 
   return (
     <div className="space-y-5">
@@ -542,65 +489,6 @@ function PlayersTab() {
         </CardContent>
       </Card>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            searchNotionPlayers(e.target.value);
-          }}
-          placeholder="Search all UYP players from Notion..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          data-testid="input-search-players"
-        />
-        {isSearching && (
-          <div className="absolute right-3 top-2.5">
-            <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-          </div>
-        )}
-      </div>
-
-      {/* Search Results */}
-      {searchResults.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-sm text-gray-700 mb-3">Search Results</h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {searchResults.map((player: any) => (
-                <div key={player.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-900">{player.fullName}</div>
-                    <div className="text-xs text-gray-500">{player.team_name || 'No team'}</div>
-                  </div>
-                  {isFollowing(player.id) ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => unfollowPlayerMutation.mutate(player.id)}
-                      disabled={unfollowPlayerMutation.isPending}
-                      className="text-gray-600"
-                      data-testid={`button-unfollow-${player.id}`}
-                    >
-                      Following
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => followPlayerMutation.mutate(player)}
-                      disabled={followPlayerMutation.isPending}
-                      data-testid={`button-follow-${player.id}`}
-                    >
-                      Follow
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Player Profiles from Account */}
       {playerProfiles.length > 0 && (

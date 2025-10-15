@@ -10,6 +10,9 @@ import { useEffect } from "react";
 import Teams from "@/pages/teams";
 import PrivacySettingsPage from "@/pages/privacy";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
+import VerifyEmail from "@/pages/verify-email";
+import AuthMagicLink from "@/pages/auth-magic-link";
 import AccountSetup from "@/pages/account-setup";
 import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
@@ -160,6 +163,9 @@ function Router() {
       <Switch>
         <Route path="/privacy" component={PrivacySettingsPage} />
         <Route path="/teams" component={Teams} />
+        <Route path="/login" component={Login} />
+        <Route path="/verify-email" component={VerifyEmail} />
+        <Route path="/auth/magic-link" component={AuthMagicLink} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>

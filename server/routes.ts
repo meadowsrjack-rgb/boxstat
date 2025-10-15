@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const magicLinkUrl = `${protocol}://${domain}/auth/magic-link?token=${token}`;
 
       // Send email with magic link
-      await resend.emails.send({
+      const { data, error } = await resend.emails.send({
         from: process.env.MAIL_FROM || 'UYP Basketball <noreply@upyourperformance.org>',
         to: normalizedEmail,
         subject: 'Sign in to UYP Basketball',
@@ -197,6 +197,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `,
       });
 
+      if (error) {
+        console.error("Resend API error:", error);
+        return res.status(500).json({ message: "Failed to send email", error: error.message });
+      }
+
+      console.log("Magic link email sent successfully to:", normalizedEmail, "Email ID:", data?.id);
       res.json({ message: "Magic link sent successfully" });
     } catch (error) {
       console.error("Error sending magic link:", error);

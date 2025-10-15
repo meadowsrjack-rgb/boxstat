@@ -6,6 +6,7 @@ import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { Resend } from "resend";
+import { randomBytes } from "crypto";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
@@ -136,8 +137,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const normalizedEmail = email.toLowerCase().trim();
 
-      // Generate magic link token
-      const token = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      // Generate cryptographically secure magic link token
+      const token = randomBytes(32).toString('hex');
       const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
       // Get or create account

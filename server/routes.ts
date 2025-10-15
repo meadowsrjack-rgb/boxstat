@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { goHighLevelService } from "./services/gohighlevel";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
+import { Resend } from "resend";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
 import { eq, count, and, inArray, desc } from "drizzle-orm";
@@ -35,6 +36,11 @@ const stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { 
       apiVersion: "2023-10-16",
     })
+  : null;
+
+// Initialize Resend for email
+const resend = process.env.RESEND_API_KEY 
+  ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
 // Configure multer for file uploads
@@ -112,6 +118,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Magic link authentication - Send magic link
+  app.post('/api/auth/send-magic-link', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      if (!resend) {
+        return res.status(500).json({ message: "Email service not configured" });
+      }
+
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Generate magic link token
+      const token = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      // Get or create account
+      let account = await storage.getAccountByEmail(normalizedEmail);
+      
+      if (!account) {
+        // Create new account
+        account = await storage.upsertAccount({
+          id: `account-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          email: normalizedEmail,
+          primaryAccountType: "parent", // Default to parent, can be changed later
+          accountCompleted: false,
+          magicLinkToken: token,
+          magicLinkExpires: expires,
+        });
+      } else {
+        // Update existing account with magic link token
+        account = await storage.updateAccount(account.id, {
+          magicLinkToken: token,
+          magicLinkExpires: expires,
+        });
+      }
+
+      // Get the app domain
+      const domain = req.hostname;
+      const protocol = req.protocol;
+      const magicLinkUrl = `${protocol}://${domain}/auth/magic-link?token=${token}`;
+
+      // Send email with magic link
+      await resend.emails.send({
+        from: process.env.MAIL_FROM || 'UYP Basketball <noreply@upyourperformance.org>',
+        to: normalizedEmail,
+        subject: 'Sign in to UYP Basketball',
+        html: `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">UYP Basketball</h1>
+            </div>
+            <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
+              <h2 style="color: #1f2937; margin-top: 0;">Welcome back!</h2>
+              <p style="color: #4b5563; font-size: 16px;">Click the button below to sign in to your UYP Basketball account. This link will expire in 15 minutes.</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${magicLinkUrl}" style="background: #DC2626; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Sign In to UYP</a>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">If you didn't request this email, you can safely ignore it.</p>
+              <p style="color: #9ca3af; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">This is an automated message from UYP Basketball. Please do not reply to this email.</p>
+            </div>
+          </body>
+          </html>
+        `,
+      });
+
+      res.json({ message: "Magic link sent successfully" });
+    } catch (error) {
+      console.error("Error sending magic link:", error);
+      res.status(500).json({ message: "Failed to send magic link" });
+    }
+  });
+
+  // Magic link authentication - Verify magic link and create session
+  app.post('/api/auth/verify-magic-link', async (req: any, res) => {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+
+      // Get account by magic link token
+      const account = await storage.getAccountByMagicToken(token);
+
+      if (!account) {
+        return res.status(400).json({ message: "Invalid or expired magic link" });
+      }
+
+      // Check if token is expired
+      if (account.magicLinkExpires && new Date() > new Date(account.magicLinkExpires)) {
+        return res.status(400).json({ message: "Magic link has expired" });
+      }
+
+      // Clear the magic link token
+      await storage.clearMagicLinkToken(account.id);
+
+      // Create session - mimic Replit Auth structure for compatibility
+      req.session.user = {
+        claims: {
+          sub: account.id,
+          email: account.email,
+          name: account.email?.split('@')[0] || 'User',
+          picture: null,
+        },
+      };
+
+      // Save session
+      await new Promise((resolve, reject) => {
+        req.session.save((err: any) => {
+          if (err) reject(err);
+          else resolve(true);
+        });
+      });
+
+      res.json({ message: "Authentication successful", accountId: account.id });
+    } catch (error) {
+      console.error("Error verifying magic link:", error);
+      res.status(500).json({ message: "Failed to verify magic link" });
     }
   });
 

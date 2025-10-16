@@ -104,55 +104,66 @@ export default function Profile() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Info */}
+          {/* Profile Info - Large Square Picture with Overlay */}
           <div className="lg:col-span-1">
-            <Card>
-              <CardHeader className="text-center">
-                <Avatar className="w-20 h-20 mx-auto mb-4">
-                  <AvatarImage src={displayProfileImage} alt={displayFirstName} />
-                  <AvatarFallback className="text-2xl">
-                    {displayFirstName?.[0]}{displayLastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <CardTitle className="text-2xl">
-                  {displayFirstName} {displayLastName}
-                </CardTitle>
-                <div className="flex items-center justify-center gap-2 mt-2">
-                  <Badge variant="secondary" className="flex items-center">
-                    {isParent && <Baby className="h-3 w-3 mr-1" />}
-                    {isPlayer && <User className="h-3 w-3 mr-1" />}
-                    {user.role === 'admin' && <Shield className="h-3 w-3 mr-1" />}
-                    {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
-                  </Badge>
-                  {userTeam && (
-                    <Badge variant="default">
-                      {userTeam.name}
-                    </Badge>
-                  )}
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                {/* Large Square Profile Picture with Text Overlay */}
+                <div className="relative w-full">
+                  {/* Square Profile Picture */}
+                  <div className="w-full aspect-square overflow-hidden">
+                    <Avatar className="w-full h-full rounded-none">
+                      <AvatarImage src={displayProfileImage} alt={displayFirstName} className="object-cover" />
+                      <AvatarFallback className="text-6xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600 rounded-none">
+                        {displayFirstName?.[0]}{displayLastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  
+                  {/* Top Right Corner Overlay - Name and Role (50% opacity) */}
+                  <div className="absolute top-4 right-4 text-right space-y-1">
+                    {/* Player Name - Two Lines */}
+                    <div className="opacity-50">
+                      <h1 className="text-3xl font-black tracking-tight leading-none text-white">
+                        {displayFirstName}
+                      </h1>
+                      <h2 className="text-3xl font-black tracking-tight leading-none text-white">
+                        {displayLastName}
+                      </h2>
+                    </div>
+                    
+                    {/* Role & Team */}
+                    <div className="text-white text-sm font-bold uppercase tracking-wide opacity-50">
+                      {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
+                      {userTeam && ` | ${userTeam.name}`}
+                    </div>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">{user.email}</span>
+
+                {/* Profile Details Below Picture */}
+                <div className="p-6 space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">{user.email}</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm text-gray-600">
+                      Joined {format(new Date(user.createdAt), "MMMM yyyy")}
+                    </span>
+                  </div>
+                  <Button className="w-full mt-4" variant="outline" onClick={() => setLocation('/settings')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline"
+                    onClick={() => window.location.href = '/api/logout'}
+                  >
+                    Sign Out
+                  </Button>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-600">
-                    Joined {format(new Date(user.createdAt), "MMMM yyyy")}
-                  </span>
-                </div>
-                <Button className="w-full mt-4" variant="outline">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-                <Button 
-                  className="w-full" 
-                  variant="outline"
-                  onClick={() => window.location.href = '/api/logout'}
-                >
-                  Sign Out
-                </Button>
               </CardContent>
             </Card>
           </div>

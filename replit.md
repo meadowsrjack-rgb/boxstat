@@ -20,7 +20,7 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js
 - **Language**: TypeScript with ESM modules
-- **Authentication**: Custom UYP magic link authentication via email (fully branded, no third-party OAuth)
+- **Authentication**: Replit Auth with OpenID Connect
 - **Session Management**: Express sessions with PostgreSQL storage
 - **Real-time Communication**: WebSocket support for features like team chat.
 - **API Design**: RESTful endpoints.
@@ -31,7 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: Comprehensive schema supporting users, teams, events, payments, etc.
 
 ### Key Features & Design Decisions
-- **Authentication Flow**: Custom UYP magic link authentication with zero third-party branding. Users enter their email, receive a secure magic link (cryptographically random token, 15-min expiry), click to authenticate, and are directed to appropriate dashboards based on profile type. Sessions maintain compatibility with legacy Replit Auth structure for backward compatibility.
+- **Authentication Flow**: Post-login account linking system with automatic coach detection via email domain. Users are directed to appropriate dashboards (coach, parent, or player) based on profile type.
 - **User Management**: Single Parent account with linked child profiles. Implements a Dual Mode System (Parent/Player) secured by a 4-digit PIN. Users can delete their profiles (parent, player, or coach) from settings.
 - **Player Profile Management**: Profiles require verification to become public/searchable, linking with the Notion database via email matching. Profiles start as unverified and are filtered from public search results until verified. All required fields must be completed (name, date of birth, jersey number, team, height, city, position).
 - **Team Management**: Teams are organized into four programs with rosters synced from Notion databases. Players can directly select and be assigned to teams without approval. Coaches join existing teams from a comprehensive list and can manually add/remove players.
@@ -55,7 +55,7 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Authentication & Security
-- **Resend**: Email delivery service for magic link authentication.
+- **Replit Auth**: OpenID Connect-based authentication.
 
 ### Payment Processing
 - **SportsEngine**: For payment processing, customer management, and transaction handling.

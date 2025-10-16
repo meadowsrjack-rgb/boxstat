@@ -88,6 +88,7 @@ export function CoachProfilePage() {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
       // Invalidate active profile query to refetch updated data
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setSelectedFile(null);
       if (previewUrl) {
@@ -151,6 +152,7 @@ export function CoachProfilePage() {
       
       // Invalidate active profile query to refetch updated data
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({ 

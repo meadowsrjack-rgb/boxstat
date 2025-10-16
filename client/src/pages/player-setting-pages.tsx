@@ -107,6 +107,7 @@ export function PlayerProfilePage() {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
       // Invalidate active profile query to refetch updated data
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setSelectedFile(null);
       if (previewUrl) {
@@ -176,6 +177,7 @@ export function PlayerProfilePage() {
       
       // Invalidate active profile query to refresh all profile data
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "team"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "awards"] });

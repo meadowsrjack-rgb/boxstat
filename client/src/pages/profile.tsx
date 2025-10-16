@@ -108,10 +108,10 @@ export default function Profile() {
           <div className="lg:col-span-1">
             <Card className="overflow-hidden">
               <CardContent className="p-0">
-                {/* Large Square Profile Picture with Text Overlay */}
-                <div className="relative w-full">
+                {/* Large Square Profile Picture with Text Overlay - Matching PlayerCard Design */}
+                <div className="relative w-full max-w-md mx-auto">
                   {/* Square Profile Picture */}
-                  <div className="w-full aspect-square overflow-hidden">
+                  <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white">
                     <Avatar className="w-full h-full rounded-none">
                       <AvatarImage src={displayProfileImage} alt={displayFirstName} className="object-cover" />
                       <AvatarFallback className="text-6xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600 rounded-none">

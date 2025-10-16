@@ -27,6 +27,12 @@ export default function Profile() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
+  // Fetch active profile data
+  const { data: activeProfile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
+    enabled: !!(user as any)?.activeProfileId,
+  });
+
   const { data: userPayments } = useQuery({
     queryKey: ["/api/users", user?.id, "payments"],
     enabled: !!user?.id,
@@ -57,12 +63,17 @@ export default function Profile() {
     refetchInterval: false,
   });
 
-  if (!user) {
+  if (!user || isLoadingProfile) {
     return <div>Loading...</div>;
   }
 
   const isParent = user.role === 'parent';
   const isPlayer = user.role === 'player';
+  
+  // Use profile data if available, fall back to user data
+  const displayFirstName = activeProfile?.firstName || user.firstName;
+  const displayLastName = activeProfile?.lastName || user.lastName;
+  const displayProfileImage = activeProfile?.profileImageUrl || user.profileImageUrl;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,13 +109,13 @@ export default function Profile() {
             <Card>
               <CardHeader className="text-center">
                 <Avatar className="w-20 h-20 mx-auto mb-4">
-                  <AvatarImage src={user.profileImageUrl} alt={user.firstName} />
+                  <AvatarImage src={displayProfileImage} alt={displayFirstName} />
                   <AvatarFallback className="text-2xl">
-                    {user.firstName?.[0]}{user.lastName?.[0]}
+                    {displayFirstName?.[0]}{displayLastName?.[0]}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-2xl">
-                  {user.firstName} {user.lastName}
+                  {displayFirstName} {displayLastName}
                 </CardTitle>
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <Badge variant="secondary" className="flex items-center">

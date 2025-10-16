@@ -300,11 +300,11 @@ export default function PlayerCard({
 
   const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
 
-  // Profile Picture with OVR Overlay - Clickable to view full skills assessment
+  // Large Square Profile Picture with Text Overlay - Clickable to view full skills assessment
   const ProfileWithOVR = ({ profile, ovrScore }: { profile: PlayerProfile; ovrScore: number }) => (
     <motion.div
-      className="relative cursor-pointer group"
-      whileHover={{ scale: 1.05 }}
+      className="relative cursor-pointer group w-full max-w-md mx-auto"
+      whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
       onClick={() => {
@@ -314,35 +314,55 @@ export default function PlayerCard({
       }}
       data-testid="profile-picture-ovr"
     >
-      {/* Profile Picture */}
-      <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg">
-        <Avatar className="w-full h-full">
-          <AvatarImage src={profile.profile_image_url} alt={getPlayerFullName(profile)} />
-          <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600">
+      {/* Square Profile Picture */}
+      <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white">
+        <Avatar className="w-full h-full rounded-none">
+          <AvatarImage src={profile.profile_image_url} alt={getPlayerFullName(profile)} className="object-cover" />
+          <AvatarFallback className="text-6xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600 rounded-none">
             {getPlayerInitials(profile)}
           </AvatarFallback>
         </Avatar>
       </div>
       
-      {/* OVR Rating Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full ring-2 ring-white/50 shadow-xl">
-          <div className="flex items-baseline gap-1">
-            <span className="text-white text-2xl font-black tracking-tight" data-testid="text-ovr-score">
-              {ovrScore}
-            </span>
-            <span className="text-white/90 text-xs font-bold uppercase tracking-wider" data-testid="text-ovr-label">
-              OVR
-            </span>
-          </div>
+      {/* Top Right Corner Overlay - OVR, Name, Position (50% opacity) */}
+      <div className="absolute top-4 right-4 text-right space-y-1">
+        {/* OVR Rating */}
+        <div className="flex items-baseline justify-end gap-1">
+          <span className="text-white text-5xl font-black tracking-tight opacity-50" data-testid="text-ovr-score">
+            {ovrScore}
+          </span>
+          <span className="text-white text-lg font-bold uppercase tracking-wider opacity-50" data-testid="text-ovr-label">
+            OVR
+          </span>
+        </div>
+        
+        {/* Player Name - Two Lines */}
+        <div className="opacity-50">
+          <h1
+            className="text-3xl font-black tracking-tight leading-none text-white"
+            data-testid="text-player-first-name"
+          >
+            {profile.first_name === "🔒" ? "Private" : profile.first_name}
+          </h1>
+          <h2
+            className="text-3xl font-black tracking-tight leading-none text-white"
+            data-testid="text-player-last-name"
+          >
+            {profile.first_name === "🔒" ? "Profile" : profile.last_name}
+          </h2>
+        </div>
+        
+        {/* Position & Jersey */}
+        <div className="text-white text-sm font-bold uppercase tracking-wide opacity-50">
+          {(profile.position || "Player")} {profile.jerseyNumber && `#${profile.jerseyNumber}`}
         </div>
       </div>
 
       {/* Hover Effect Indicator for Coaches */}
       {isCoach && (
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shadow-md">
-            View Assessment
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="bg-red-600/90 text-white text-sm font-semibold px-4 py-2 rounded-full whitespace-nowrap shadow-xl">
+            Click to View Full Assessment
           </div>
         </div>
       )}
@@ -412,47 +432,18 @@ export default function PlayerCard({
                     }}
                   />
 
-                  {/* Header - Profile Picture with OVR + Two-Line Name */}
+                  {/* Header - Centered Large Square Profile Picture with Text Overlay */}
                   <div className="relative px-6 pt-8 pb-5">
                     <div id="player-profile-description" className="sr-only">
                       Player profile information including stats, achievements, and contact details
                     </div>
                     
-                    <div className="flex items-center justify-center gap-6">
-                      {/* Profile Picture with OVR Overlay */}
-                      <ProfileWithOVR profile={playerProfile} ovrScore={overallSkillScore} />
-                      
-                      {/* Two-Line Name */}
-                      <div className="flex flex-col items-start">
-                        <h1
-                          className="text-3xl font-black tracking-tight leading-none"
-                          style={{
-                            color: "#d82428",
-                            textShadow: "0 1px 0 rgba(255,255,255,0.6)",
-                          }}
-                          data-testid="text-player-first-name"
-                        >
-                          {playerProfile.first_name === "🔒" ? "Private" : playerProfile.first_name}
-                        </h1>
-                        <h2
-                          className="text-3xl font-black tracking-tight leading-none mt-1"
-                          style={{
-                            color: "#d82428",
-                            textShadow: "0 1px 0 rgba(255,255,255,0.6)",
-                          }}
-                          data-testid="text-player-last-name"
-                        >
-                          {playerProfile.first_name === "🔒" ? "Profile" : playerProfile.last_name}
-                        </h2>
-                        
-                        <div className="mt-2 text-sm font-medium text-gray-700">
-                          {(playerProfile.position || "Player").toUpperCase()} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
-                        </div>
-                      </div>
-                    </div>
+                    {/* Centered Profile Picture with Text Overlay */}
+                    <ProfileWithOVR profile={playerProfile} ovrScore={overallSkillScore} />
 
+                    {/* Team Badge Below Picture */}
                     {(playerProfile.team || playerProfile.team_name) && (
-                      <div className="mt-4 text-center">
+                      <div className="mt-6 text-center">
                         <div className="inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
                           <Shirt className="h-4 w-4 text-[#d82428]" />
                           {playerProfile.team || playerProfile.team_name}
@@ -521,67 +512,6 @@ export default function PlayerCard({
                   </div>
                 </motion.section>
               </div>
-
-              {/* Contact & Registration Info */}
-              {(playerProfile.parent_name || playerProfile.parent_email || playerProfile.phone_number || playerProfile.registration_status) && (
-                <div className="px-6 mt-4">
-                  <motion.section
-                    initial={{ y: 12, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.4 }}
-                    className="relative rounded-2xl bg-white/70 backdrop-blur-xl overflow-hidden p-6"
-                  >
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Contact & Registration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      {playerProfile.parent_name && (
-                        <div>
-                          <span className="text-gray-600">Parent:</span>
-                          <p className="font-medium">{playerProfile.parent_name}</p>
-                        </div>
-                      )}
-                      {playerProfile.parent_email && (
-                        <div>
-                          <span className="text-gray-600">Parent Email:</span>
-                          <p className="font-medium">{playerProfile.parent_email}</p>
-                        </div>
-                      )}
-                      {playerProfile.phone_number && (
-                        <div>
-                          <span className="text-gray-600">Phone:</span>
-                          <p className="font-medium">{playerProfile.phone_number}</p>
-                        </div>
-                      )}
-                      {playerProfile.registration_status && (
-                        <div>
-                          <span className="text-gray-600">Status:</span>
-                          <Badge 
-                            variant="outline" 
-                            className={`ml-2 ${
-                              playerProfile.registration_status === 'active' ? 'bg-green-50 text-green-700' :
-                              playerProfile.registration_status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                              'bg-red-50 text-red-700'
-                            }`}
-                          >
-                            {playerProfile.registration_status}
-                          </Badge>
-                        </div>
-                      )}
-                      {playerProfile.session && (
-                        <div>
-                          <span className="text-gray-600">Program:</span>
-                          <p className="font-medium">{playerProfile.session}</p>
-                        </div>
-                      )}
-                      {playerProfile.schoolGrade && (
-                        <div>
-                          <span className="text-gray-600">Grade:</span>
-                          <p className="font-medium">{playerProfile.schoolGrade}</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.section>
-                </div>
-              )}
 
               {/* Coach Actions */}
               {isCoach && (

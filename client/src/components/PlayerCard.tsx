@@ -300,27 +300,52 @@ export default function PlayerCard({
 
   const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
 
-  const OverallSkillBar = ({ value }: { value: number }) => (
-    <motion.div 
-      className="space-y-2 cursor-pointer p-3 rounded-lg bg-white/80 backdrop-blur-sm shadow-sm border border-gray-100" 
-      whileHover={{ scale: 1.01 }} 
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
-      data-testid="overall-skills-bar"
+  // Profile Picture with OVR Overlay - Clickable to view full skills assessment
+  const ProfileWithOVR = ({ profile, ovrScore }: { profile: PlayerProfile; ovrScore: number }) => (
+    <motion.div
+      className="relative cursor-pointer group"
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      onClick={() => {
+        if (isCoach) {
+          handleEvaluatePlayer();
+        }
+      }}
+      data-testid="profile-picture-ovr"
     >
-      <div className="flex justify-between text-sm">
-        <span className="font-semibold text-gray-800" data-testid="text-skills-label">Overall Skills Assessment</span>
-        <span className="text-red-600 font-bold" data-testid="text-skills-percentage">{value}%</span>
+      {/* Profile Picture */}
+      <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-lg">
+        <Avatar className="w-full h-full">
+          <AvatarImage src={profile.profile_image_url} alt={getPlayerFullName(profile)} />
+          <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600">
+            {getPlayerInitials(profile)}
+          </AvatarFallback>
+        </Avatar>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-        <motion.div
-          className="bg-red-600 h-3 rounded-full"
-          initial={{ width: 0 }}
-          whileInView={{ width: `${value}%` }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          data-testid="progress-bar-fill"
-        />
+      
+      {/* OVR Rating Overlay */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full ring-2 ring-white/50 shadow-xl">
+          <div className="flex items-baseline gap-1">
+            <span className="text-white text-2xl font-black tracking-tight" data-testid="text-ovr-score">
+              {ovrScore}
+            </span>
+            <span className="text-white/90 text-xs font-bold uppercase tracking-wider" data-testid="text-ovr-label">
+              OVR
+            </span>
+          </div>
+        </div>
       </div>
+
+      {/* Hover Effect Indicator for Coaches */}
+      {isCoach && (
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="bg-red-600 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap shadow-md">
+            View Assessment
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 
@@ -387,31 +412,51 @@ export default function PlayerCard({
                     }}
                   />
 
-                  {/* Header */}
-                  <div className="relative px-6 pt-8 pb-5 text-center">
+                  {/* Header - Profile Picture with OVR + Two-Line Name */}
+                  <div className="relative px-6 pt-8 pb-5">
                     <div id="player-profile-description" className="sr-only">
                       Player profile information including stats, achievements, and contact details
                     </div>
                     
-                    <h1
-                      className="mt-3 text-4xl font-black tracking-tight leading-tight"
-                      style={{
-                        color: "#d82428",
-                        textShadow: "0 1px 0 rgba(255,255,255,0.6)",
-                      }}
-                      data-testid="text-player-header"
-                    >
-                      {getPlayerFullName(playerProfile)}
-                    </h1>
-
-                    <div className="mt-1 text-sm font-medium text-gray-700">
-                      {(playerProfile.position || "Player").toUpperCase()} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
+                    <div className="flex items-center justify-center gap-6">
+                      {/* Profile Picture with OVR Overlay */}
+                      <ProfileWithOVR profile={playerProfile} ovrScore={overallSkillScore} />
+                      
+                      {/* Two-Line Name */}
+                      <div className="flex flex-col items-start">
+                        <h1
+                          className="text-3xl font-black tracking-tight leading-none"
+                          style={{
+                            color: "#d82428",
+                            textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                          }}
+                          data-testid="text-player-first-name"
+                        >
+                          {playerProfile.first_name === "🔒" ? "Private" : playerProfile.first_name}
+                        </h1>
+                        <h2
+                          className="text-3xl font-black tracking-tight leading-none mt-1"
+                          style={{
+                            color: "#d82428",
+                            textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                          }}
+                          data-testid="text-player-last-name"
+                        >
+                          {playerProfile.first_name === "🔒" ? "Profile" : playerProfile.last_name}
+                        </h2>
+                        
+                        <div className="mt-2 text-sm font-medium text-gray-700">
+                          {(playerProfile.position || "Player").toUpperCase()} {playerProfile.jerseyNumber && `#${playerProfile.jerseyNumber}`}
+                        </div>
+                      </div>
                     </div>
 
                     {(playerProfile.team || playerProfile.team_name) && (
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
-                        <Shirt className="h-4 w-4 text-[#d82428]" />
-                        {playerProfile.team || playerProfile.team_name}
+                      <div className="mt-4 text-center">
+                        <div className="inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
+                          <Shirt className="h-4 w-4 text-[#d82428]" />
+                          {playerProfile.team || playerProfile.team_name}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -596,7 +641,7 @@ export default function PlayerCard({
               )}
 
               {/* Trophies & Badges */}
-              <div className="px-6 mt-4">
+              <div className="px-6 mt-4 pb-8">
                 <motion.div
                   initial={{ y: 12, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -604,18 +649,6 @@ export default function PlayerCard({
                   className="cursor-pointer"
                 >
                   <UypTrophyRings data={ringsData} size={109} stroke={8} />
-                </motion.div>
-              </div>
-
-              {/* Skills Progress - Overall Average */}
-              <div className="px-6 mt-4 pb-8">
-                <motion.div
-                  initial={{ y: 12, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5, duration: 0.4 }}
-                  className="max-w-[380px] mx-auto"
-                >
-                  <OverallSkillBar value={overallSkillScore} />
                 </motion.div>
               </div>
 

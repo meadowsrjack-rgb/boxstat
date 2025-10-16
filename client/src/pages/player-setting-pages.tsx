@@ -105,10 +105,20 @@ export function PlayerProfilePage() {
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
-      // Invalidate active profile query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
+      // Invalidate all relevant caches for profile picture synchronization
+      const activeProfileId = (user as any)?.activeProfileId;
+      const accountId = (user as any)?.id;
+      
+      // Settings and profile tab cache
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+      // PlayerCard cache - use profile ID as player ID
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      // Profile selection cache
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
+      // Auth state
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       setSelectedFile(null);
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -175,15 +185,23 @@ export function PlayerProfilePage() {
         allergies: updatedProfile.allergies || "",
       });
       
-      // Invalidate active profile query to refresh all profile data
-      queryClient.invalidateQueries({ queryKey: [`/api/profile/${(user as any)?.activeProfileId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${(user as any)?.id}/profile`] });
+      // Invalidate all relevant caches for profile synchronization
+      const activeProfileId = (user as any)?.activeProfileId;
+      const accountId = (user as any)?.id;
+      
+      // Settings and profile tab cache
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+      // PlayerCard cache - use profile ID as player ID
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      // Profile selection cache
+      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
+      // Auth state and user-specific caches
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "team"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "awards"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", (user as any)?.id, "tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "team"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "awards"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "tasks"] });
       
       toast({ 
         title: "Profile Updated", 

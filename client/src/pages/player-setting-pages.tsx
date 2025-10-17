@@ -93,6 +93,10 @@ export function PlayerProfilePage() {
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      // Capture IDs before async operations
+      const activeProfileId = (user as any)?.activeProfileId;
+      const accountId = (user as any)?.id;
+      
       const formData = new FormData();
       formData.append('photo', file);
       const response = await fetch('/api/upload-profile-photo', {
@@ -101,22 +105,30 @@ export function PlayerProfilePage() {
         body: formData,
       });
       if (!response.ok) throw new Error('Upload failed');
-      return response.json();
+      return { result: await response.json(), activeProfileId, accountId };
     },
-    onSuccess: () => {
+    onSuccess: async ({ activeProfileId, accountId }) => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
-      // Invalidate all relevant caches for profile picture synchronization
-      const activeProfileId = (user as any)?.activeProfileId;
-      const accountId = (user as any)?.id;
       
-      // Settings and profile tab cache
-      queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
-      // PlayerCard cache - use profile ID as player ID
+      try {
+        // Refetch and update profile data immediately
+        const response = await fetch(`/api/profile/${activeProfileId}`, { credentials: 'include' });
+        if (response.ok) {
+          const updatedProfile = await response.json();
+          queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
+        } else {
+          // Fallback to invalidation if refetch fails
+          queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+        }
+      } catch {
+        // Fallback to invalidation on error
+        queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+      }
+      
+      // Invalidate PlayerCard and other caches
       queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
-      // Profile selection cache
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
-      // Auth state
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       setSelectedFile(null);
@@ -185,18 +197,17 @@ export function PlayerProfilePage() {
         allergies: updatedProfile.allergies || "",
       });
       
-      // Invalidate all relevant caches for profile synchronization
+      // Update caches with new data for immediate UI sync
       const activeProfileId = (user as any)?.activeProfileId;
       const accountId = (user as any)?.id;
       
-      // Settings and profile tab cache
-      queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
-      // PlayerCard cache - use profile ID as player ID
+      // Directly set the updated profile data in all relevant caches
+      queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
+      
+      // Force refetch for PlayerCard and other views
       queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
-      // Profile selection cache
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
-      // Auth state and user-specific caches
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "team"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "awards"] });

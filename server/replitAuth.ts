@@ -61,7 +61,9 @@ async function upsertUser(
   console.log("Upserting user with claims:", claims);
   
   const email = claims["email"];
-  const isCoach = isCoachEmail(email);
+  // Check for admin BEFORE coach to ensure admin email doesn't get classified as coach
+  const isAdmin = isAdminEmail(email);
+  const isCoach = !isAdmin && isCoachEmail(email);
   
   const userData = {
     id: claims["sub"],
@@ -69,18 +71,18 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    userType: isCoach ? "coach" as const : "parent" as const,
+    userType: isAdmin ? "admin" as const : (isCoach ? "coach" as const : "parent" as const),
     profileCompleted: false, // Will be set to true after checking if profiles exist
   };
   
   console.log("User data to upsert:", userData);
-  console.log(`Email ${email} identified as ${isCoach ? 'COACH' : 'PARENT/PLAYER'}`);
+  console.log(`Email ${email} identified as ${isAdmin ? 'ADMIN' : (isCoach ? 'COACH' : 'PARENT/PLAYER')}`);
   
   await storage.upsertUser(userData);
   console.log("User upserted successfully");
   
-  // For coaches, auto-create their profile if they don't have one
-  if (isCoach) {
+  // For coaches (not admin), auto-create their profile if they don't have one
+  if (isCoach && !isAdmin) {
     try {
       const existingProfiles = await storage.getAccountProfiles(userData.id);
       if (existingProfiles.length === 0) {

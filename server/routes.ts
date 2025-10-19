@@ -108,6 +108,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // If user has an active profile, merge in the profile's data (especially profileImageUrl)
+      if (user.activeProfileId) {
+        const activeProfile = await storage.getProfile(user.activeProfileId);
+        if (activeProfile) {
+          // Override user fields with active profile data for multi-profile support
+          return res.json({
+            ...user,
+            profileImageUrl: activeProfile.profileImageUrl || user.profileImageUrl,
+            firstName: activeProfile.firstName || user.firstName,
+            lastName: activeProfile.lastName || user.lastName,
+          });
+        }
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);

@@ -8,7 +8,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import { AwardsDialog, EvaluationDialog, type PlayerLite, type EvalScores, type Quarter } from "@/components/CoachAwardDialogs";
 import UypTrophyRings from "@/components/UypTrophyRings";
-import SkillBar from "@/components/SkillBar";
 import {
   X,
   Shirt,
@@ -460,5 +459,41 @@ export default function PlayerCard({
         />
       )}
     </>
+  );
+}
+
+// SkillBar component
+function SkillBar({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  onClick?: () => void;
+}) {
+  return (
+    <motion.div
+      onClick={onClick}
+      className="space-y-2 cursor-pointer p-2 rounded-lg"
+      whileHover={{ scale: 1.01 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+    >
+      <div className="flex justify-between text-sm">
+        <span className="font-medium text-gray-700">{label}</span>
+        <span className="text-red-600 font-semibold">{value}%</span>
+      </div>
+
+      {/* Wider track to visually line up with trophy rings */}
+      <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+        <motion.div
+          className="bg-red-600 h-2.5 rounded-full"
+          initial={{ width: 0 }}
+          whileInView={{ width: `${value}%` }}
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+      </div>
+    </motion.div>
   );
 }

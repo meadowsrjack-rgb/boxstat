@@ -4860,15 +4860,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes - comprehensive admin functionality
-  app.get('/api/admin/stats', isAuthenticated, async (req: any, res) => {
+  // Admin access control middleware
+  const isAdmin: RequestHandler = async (req: any, res, next) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const accountId = req.user?.claims?.sub;
+      if (!accountId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get all profiles for this account
+      const profiles = await storage.getAccountProfiles(accountId);
       
-      if (user?.userType !== 'admin') {
+      // Check if any profile has admin type
+      const hasAdminProfile = profiles.some(p => p.profileType === 'admin');
+      
+      if (!hasAdminProfile) {
         return res.status(403).json({ message: "Access denied - Admin only" });
       }
+      
+      next();
+    } catch (error) {
+      console.error("Error checking admin access:", error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  };
+
+  // Admin routes - comprehensive admin functionality
+  app.get('/api/admin/stats', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
 
       // Get all user counts
       const allUsers = await db.select().from(users);
@@ -4906,14 +4926,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const allUserData = await db.select().from(users);
       
@@ -4952,14 +4967,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/users', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/users', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const { firstName, lastName, email, userType, phoneNumber, teamId } = req.body;
       
@@ -4985,14 +4994,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/admin/users/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const targetUserId = req.params.id;
       const updates = req.body;
@@ -5005,14 +5008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/users/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/admin/users/:id', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const targetUserId = req.params.id;
       await db.delete(users).where(eq(users.id, targetUserId));
@@ -5023,14 +5020,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/teams', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/teams', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const teams = await storage.getAllTeams();
       
@@ -5070,14 +5061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/teams', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/teams', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const { name, ageGroup, coachId, description } = req.body;
 
@@ -5098,14 +5083,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/events', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/events', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const events = await storage.getAllEvents();
       
@@ -5142,14 +5121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/events', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/events', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const { title, startTime, endTime, location, eventType, teamId, description } = req.body;
 
@@ -5171,14 +5144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/chats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/chats', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       // Mock chat channels data - this would be retrieved from actual chat system
       const channels = [
@@ -5240,14 +5207,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/admin/user-awards', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/user-awards', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      
-      if (user?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       // Get user badges
       const userBadgesList = await db
@@ -5304,14 +5265,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/award-badge', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/award-badge', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
       const adminUserId = req.user.claims.sub;
-      const adminUser = await storage.getUser(adminUserId);
-      
-      if (adminUser?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
 
       const { userId, awardId, reason } = req.body;
 
@@ -5325,15 +5281,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/admin/user-awards/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/admin/user-awards/:id', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const adminUserId = req.user.claims.sub;
-      const adminUser = await storage.getUser(adminUserId);
-      
-      if (adminUser?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
-
       const awardId = req.params.id;
 
       // Try to delete from badges first
@@ -5440,15 +5389,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin route to sync from Notion
-  app.post('/api/admin/sync', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/sync', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const adminUserId = req.user.claims.sub;
-      const adminUser = await storage.getUser(adminUserId);
-      
-      if (adminUser?.userType !== 'admin') {
-        return res.status(403).json({ message: "Access denied - Admin only" });
-      }
-      
       const result = await notionService.syncFromNotion();
       res.json({ 
         message: 'Sync completed',

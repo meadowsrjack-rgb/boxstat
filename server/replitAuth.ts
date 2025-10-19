@@ -7,7 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { isCoachEmail, isAdminEmail } from "./coaches";
+import { isCoachEmail } from "./coaches";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -61,9 +61,7 @@ async function upsertUser(
   console.log("Upserting user with claims:", claims);
   
   const email = claims["email"];
-  // Check for admin BEFORE coach to ensure admin email doesn't get classified as coach
-  const isAdmin = isAdminEmail(email);
-  const isCoach = !isAdmin && isCoachEmail(email);
+  const isCoach = isCoachEmail(email);
   
   const userData = {
     id: claims["sub"],
@@ -71,18 +69,18 @@ async function upsertUser(
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-    userType: isAdmin ? "admin" as const : (isCoach ? "coach" as const : "parent" as const),
+    userType: isCoach ? "coach" as const : "parent" as const,
     profileCompleted: false, // Will be set to true after checking if profiles exist
   };
   
   console.log("User data to upsert:", userData);
-  console.log(`Email ${email} identified as ${isAdmin ? 'ADMIN' : (isCoach ? 'COACH' : 'PARENT/PLAYER')}`);
+  console.log(`Email ${email} identified as ${isCoach ? 'COACH' : 'PARENT/PLAYER'}`);
   
   await storage.upsertUser(userData);
   console.log("User upserted successfully");
   
-  // For coaches (not admin), auto-create their profile if they don't have one
-  if (isCoach && !isAdmin) {
+  // For coaches, auto-create their profile if they don't have one
+  if (isCoach) {
     try {
       const existingProfiles = await storage.getAccountProfiles(userData.id);
       if (existingProfiles.length === 0) {
@@ -169,37 +167,13 @@ export async function setupAuth(app: Express) {
             return res.redirect("/");
           }
           
-          // Check if this is an admin account (highest priority)
-          if (isAdminEmail(email)) {
-            // Create admin profile if it doesn't exist
-            const existingProfiles = await storage.getAccountProfiles(userId);
-            const adminProfile = existingProfiles.find(p => p.profileType === "admin");
-            
-            if (!adminProfile) {
-              // Create admin profile
-              const adminProfileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-              await storage.createProfile({
-                id: adminProfileId,
-                accountId: userId,
-                profileType: "admin",
-                firstName: "Admin",
-                lastName: "UYP",
-                profileCompleted: true,
-                verified: true,
-              });
-            }
-            
-            // Admin goes to profile selection to see their admin profile
-            return res.redirect("/");
-          }
-          
           // Check if this is a coach account
           if (isCoachEmail(email)) {
             // Coaches go directly to coach dashboard
             return res.redirect("/coach-dashboard");
           }
           
-          // For non-coaches/non-admins, check if they have existing profiles
+          // For non-coaches, check if they have existing profiles
           const existingProfiles = await storage.getAccountProfiles(userId);
           
           if (existingProfiles && existingProfiles.length > 0) {

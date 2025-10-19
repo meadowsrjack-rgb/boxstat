@@ -1,6 +1,3 @@
-// Admin email - only this email has full admin access
-const ADMIN_EMAIL = "meadowsrjack@gmail.com";
-
 // Coach email domains - any email from these domains is automatically a coach
 const COACH_EMAIL_DOMAINS = [
   "@upyourperformance.org",
@@ -17,16 +14,6 @@ export const COACH_EMAILS = [
   "carlos@upyourperformance.org",
   "tony@upyourperformance.org"
 ];
-
-/**
- * Checks if the provided email belongs to the admin
- * @param email The email address to check
- * @returns true if the email is the admin email, false otherwise
- */
-export function isAdminEmail(email: string): boolean {
-  if (!email) return false;
-  return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-}
 
 /**
  * Checks if the provided email belongs to a coach

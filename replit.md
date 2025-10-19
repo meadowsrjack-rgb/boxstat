@@ -31,19 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema**: Comprehensive schema supporting users, teams, events, payments, etc.
 
 ### Key Features & Design Decisions
-- **Admin System**: Comprehensive administrative control accessible exclusively to meadowsrjack@gmail.com. On login, an admin profile is automatically created with full platform access. Admin dashboard provides 10 management tabs:
-  - **Overview**: Platform statistics and quick actions
-  - **Users**: User account management (create, edit, delete)
-  - **Teams**: Team management and roster control
-  - **Events**: Event creation and calendar management
-  - **Awards**: Badge and trophy distribution
-  - **Chats**: Team chat channel moderation
-  - **Registrations**: Player registration status tracking (placeholder)
-  - **Payments**: Payment package management and tracking (placeholder)
-  - **Training**: Training program access control (placeholder)
-  - **Communications**: Broadcast announcements with targeting (placeholder)
-  - All admin API endpoints protected by `isAdmin` middleware verifying admin profile ownership. Admin email takes priority over coach domain detection.
-- **Authentication Flow**: Post-login account linking system with automatic role detection (admin → coach → parent/player). Admin email gets highest priority, then coach domain detection. Users are directed to appropriate dashboards based on profile type.
+- **Authentication Flow**: Post-login account linking system with automatic coach detection via email domain. Users are directed to appropriate dashboards (coach, parent, or player) based on profile type.
 - **User Management**: Single Parent account with linked child profiles. Implements a Dual Mode System (Parent/Player) secured by a 4-digit PIN. Users can delete their profiles (parent, player, or coach) from settings.
 - **Player Profile Management**: Profiles require verification to become public/searchable, linking with the Notion database via email matching. Profiles start as unverified and are filtered from public search results until verified. All required fields must be completed (name, date of birth, jersey number, team, height, city, position).
 - **Team Management**: Teams are organized into four programs with rosters synced from Notion databases. Players can directly select and be assigned to teams without approval. Coaches join existing teams from a comprehensive list and can manually add/remove players.

@@ -33,9 +33,9 @@ export const sessions = pgTable(
 export const accounts = pgTable("accounts", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
-  primaryAccountType: varchar("primary_account_type", { enum: ["parent", "player", "coach", "admin"] }).notNull(),
+  primaryAccountType: varchar("primary_account_type", { enum: ["parent", "player", "coach"] }).notNull(),
   accountCompleted: boolean("account_completed").default(false),
-  registrationStatus: varchar("registration_status", { enum: ["pending", "active", "payment_required", "expired", "incomplete"] }).default("pending"),
+  registrationStatus: varchar("registration_status", { enum: ["pending", "active", "payment_required"] }).default("pending"),
   paymentStatus: varchar("payment_status", { enum: ["pending", "paid", "overdue"] }).default("pending"),
   magicLinkToken: varchar("magic_link_token"),
   magicLinkExpires: timestamp("magic_link_expires"),
@@ -48,7 +48,7 @@ export const accounts = pgTable("accounts", {
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey().notNull(),
   accountId: varchar("account_id").notNull().references(() => accounts.id),
-  profileType: varchar("profile_type", { enum: ["parent", "player", "coach", "admin"] }).notNull(),
+  profileType: varchar("profile_type", { enum: ["parent", "player", "coach"] }).notNull(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -300,14 +300,8 @@ export const announcements = pgTable("announcements", {
   content: text("content").notNull(),
   authorId: varchar("author_id").references(() => users.id).notNull(),
   teamId: integer("team_id").references(() => teams.id), // null for league-wide announcements
-  targetType: varchar("target_type", { 
-    enum: ["all", "team", "program", "role"] 
-  }).default("all"), // Admin control: who sees this
-  targetIds: text("target_ids").array(), // Admin control: specific team IDs, program names, or roles
   priority: varchar("priority", { enum: ["low", "medium", "high"] }).default("medium"),
   isActive: boolean("is_active").default(true),
-  sendEmail: boolean("send_email").default(false), // Admin control: send email notification
-  sendPush: boolean("send_push").default(true), // Admin control: send push notification
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -356,24 +350,16 @@ export const messages = pgTable("messages", {
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id).notNull(),
-  parentId: varchar("parent_id").references(() => users.id), // Admin-managed: parent making payment
-  playerId: varchar("player_id").references(() => users.id), // Admin-managed: player payment is for
-  programId: varchar("program_id", { 
-    enum: ["hs-club", "skills-academy", "youth-club", "fnh", "fnh-sa-combo", "private-training", "camp"] 
-  }), // Admin-managed: which program
-  paymentPlan: varchar("payment_plan"), // Admin-managed: e.g., "monthly", "3-month", "full"
   amount: real("amount").notNull(),
   currency: varchar("currency").default("usd"),
   paymentType: varchar("payment_type", { enum: ["registration", "uniform", "tournament", "training_subscription", "other"] }).notNull(),
   stripePaymentId: varchar("stripe_payment_id"),
   sportsEnginePaymentId: varchar("sports_engine_payment_id"),
   sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
-  status: varchar("status", { enum: ["pending", "completed", "failed", "refunded", "overdue"] }).default("pending"),
+  status: varchar("status", { enum: ["pending", "completed", "failed", "refunded"] }).default("pending"),
   description: text("description"),
   dueDate: date("due_date"),
   paidAt: timestamp("paid_at"),
-  verifiedByAdmin: boolean("verified_by_admin").default(false), // Admin can manually verify
-  adminNotes: text("admin_notes"), // Admin notes about payment
   createdAt: timestamp("created_at").defaultNow(),
 });
 

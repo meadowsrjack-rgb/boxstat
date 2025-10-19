@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 
 type Profile = {
   id: string;
-  profileType: "parent" | "player" | "coach" | "admin";
+  profileType: "parent" | "player" | "coach";
   firstName: string;
   lastName: string;
   profileImageUrl?: string;
@@ -86,7 +86,6 @@ export default function ProfileSelection() {
       console.log("Navigating to dashboard for profile type:", t);
       if (t === "player") setLocation("/player-dashboard");
       else if (t === "coach") setLocation("/coach-dashboard");
-      else if (t === "admin") setLocation("/admin-dashboard");
       else setLocation("/parent-dashboard");
     },
     onError: (error: any) => {
@@ -321,12 +320,9 @@ export default function ProfileSelection() {
 }
 
 function badgeStyle(type: Profile["profileType"]): React.CSSProperties {
-  if (type === "player") {
-    return { backgroundColor: UYP_RED, color: "#fff" };
-  } else if (type === "admin") {
-    return { backgroundColor: "#FFD700", color: "#000", border: "1px solid #FFD700", fontWeight: "bold" };
-  }
-  return { backgroundColor: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)" };
+  return type === "player"
+    ? { backgroundColor: UYP_RED, color: "#fff" }
+    : { backgroundColor: "rgba(255,255,255,0.14)", color: "#fff", border: "1px solid rgba(255,255,255,0.22)" };
 }
 
 function labelFor(type: Profile["profileType"]) {
@@ -339,8 +335,6 @@ function getEmojiAvatar(type: Profile["profileType"]) {
       return "⚽";
     case "coach":
       return "👨‍🏫";
-    case "admin":
-      return "👑";
     case "parent":
       return "👤";
     default:

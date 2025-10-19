@@ -96,21 +96,28 @@ export function CoachProfilePage() {
         const response = await fetch(`/api/profile/${activeProfileId}`, { credentials: 'include' });
         if (response.ok) {
           const updatedProfile = await response.json();
+          // Directly update the cache with fresh data
           queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
         } else {
-          // Fallback to invalidation if refetch fails
-          queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+          // Fallback to invalidation with refetch if fetch fails
+          await queryClient.invalidateQueries({ 
+            queryKey: [`/api/profile/${activeProfileId}`],
+            refetchType: 'active'
+          });
         }
       } catch {
-        // Fallback to invalidation on error
-        queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
+        // Fallback to invalidation with refetch on error
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/profile/${activeProfileId}`],
+          refetchType: 'active'
+        });
       }
       
-      // Invalidate PlayerCard and other caches
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Invalidate PlayerCard and other caches with forced refetch
+      await queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
       
       setSelectedFile(null);
       if (previewUrl) {

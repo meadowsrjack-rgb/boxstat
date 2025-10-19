@@ -2,33 +2,21 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
 import { AwardsDialog, EvaluationDialog, type PlayerLite, type EvalScores, type Quarter } from "@/components/CoachAwardDialogs";
 import UypTrophyRings from "@/components/UypTrophyRings";
+import SkillBar from "@/components/SkillBar";
 import {
-  User,
-  Users,
-  Trophy,
-  Award,
-  Star,
-  Calendar,
-  MapPin,
-  Hash,
-  Ruler,
-  Weight,
-  Target,
-  TrendingUp,
-  MessageCircle,
   X,
   Shirt,
-  Gauge
+  Ruler,
+  Gauge,
+  MapPin,
+  Award,
+  Trophy
 } from "lucide-react";
 
 interface PlayerCardProps {
@@ -39,45 +27,57 @@ interface PlayerCardProps {
   currentUserId?: string;
 }
 
-interface PlayerProfile {
+interface Profile {
   id: string;
-  first_name: string;
-  last_name: string;
-  full_name?: string;
-  profile_image_url?: string;
-  team?: string;
-  team_id?: number;
-  team_name?: string;
-  jerseyNumber?: number;
-  position?: string;
-  dateOfBirth?: string;
-  height?: string;
-  age?: string;
-  city?: string;
-  schoolGrade?: string;
-  parent_name?: string;
-  parent_email?: string;
-  account_email?: string;
-  phone_number?: string;
-  registration_status?: string;
-  session?: string;
+  accountId: string;
+  profileType: 'player' | 'parent' | 'coach';
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  phoneNumber: string | null;
+  dateOfBirth: string | null;
+  emergencyContact: string | null;
+  emergencyPhone: string | null;
+  address: string | null;
+  medicalInfo: string | null;
+  allergies: string | null;
+  schoolGrade: string | null;
+  position: string | null;
+  jerseyNumber: number | null;
+  teamId: string | null;
+  age: number | null;
+  height: string | null;
+  city: string | null;
+  coachingExperience: string | null;
+  yearsExperience: number | null;
+  bio: string | null;
+  previousTeams: string | null;
+  playingExperience: string | null;
+  philosophy: string | null;
+  occupation: string | null;
+  workPhone: string | null;
+  relationship: string | null;
+  isVerified: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
-interface PlayerStats {
-  totalBadges: number;
-  totalTrophies: number;
-  skillRatings: Record<string, number>;
-  recentAchievements: Achievement[];
-}
-
-interface Achievement {
-  id: string;
+interface TeamInfo {
+  id: number;
   name: string;
-  description: string;
-  earnedAt: string;
-  type: 'badge' | 'trophy';
-  icon?: string;
-  color?: string;
+  ageGroup: string;
+  color: string;
+}
+
+interface AwardsSummary {
+  rookieBadgesCount: number;
+  starterBadgesCount: number;
+  allStarBadgesCount: number;
+  superstarBadgesCount: number;
+  hallOfFameBadgesCount: number;
+  prospectBadgesCount: number;
+  trophiesCount: number;
 }
 
 export default function PlayerCard({ 
@@ -92,7 +92,7 @@ export default function PlayerCard({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Shared dialog state (matching roster behavior)
+  // Shared dialog state
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerLite | null>(null);
   const [scores, setScores] = useState<EvalScores>({});
   const [quarter, setQuarter] = useState<Quarter>(() => {
@@ -101,21 +101,21 @@ export default function PlayerCard({
   });
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
-  // Get player profile details
-  const { data: playerProfile, isLoading: profileLoading } = useQuery<PlayerProfile>({
-    queryKey: [`/api/players/${playerId}/profile`],
+  // Get player profile from /api/profile endpoint (actual profile data)
+  const { data: playerProfile, isLoading: profileLoading } = useQuery<Profile>({
+    queryKey: [`/api/profile/${playerId}`],
     enabled: isOpen && !!playerId,
   });
 
-  // Get player badges
-  const { data: badges = [] } = useQuery({
-    queryKey: [`/api/users/${playerId}/badges`],
+  // Get team info
+  const { data: teamInfo } = useQuery<TeamInfo>({
+    queryKey: [`/api/users/${playerId}/team`],
     enabled: isOpen && !!playerId,
   });
 
-  // Get player trophies
-  const { data: trophies = [] } = useQuery({
-    queryKey: [`/api/users/${playerId}/trophies`],
+  // Get player awards summary
+  const { data: awardsSummary } = useQuery<AwardsSummary>({
+    queryKey: [`/api/users/${playerId}/awards`],
     enabled: isOpen && !!playerId,
   });
 
@@ -137,35 +137,18 @@ export default function PlayerCard({
     enabled: isCoach && isOpen,
   });
 
-  const getPlayerInitials = (profile: PlayerProfile) => {
-    return `${profile.first_name?.charAt(0) || ''}${profile.last_name?.charAt(0) || ''}`.toUpperCase();
+  const getPlayerInitials = (profile: Profile) => {
+    return `${profile.firstName?.charAt(0) || ''}${profile.lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
-  const getPlayerFullName = (profile: PlayerProfile) => {
-    if (profile.first_name === "🔒") {
-      return "Private Profile";
+  const getPlayerFullName = (profile: Profile) => {
+    if (!profile.firstName && !profile.lastName) {
+      return "Player";
     }
-    return `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+    return `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
   };
 
-  const getPlayerHeaderTitle = (profile: PlayerProfile) => {
-    const fullName = getPlayerFullName(profile);
-    const position = profile.position ? ` | ${profile.position}` : '';
-    const jerseyNumber = profile.jerseyNumber ? ` #${profile.jerseyNumber}` : '';
-    return `${fullName}${position}${jerseyNumber}`;
-  };
-
-  const computeAge = (profile: PlayerProfile) => {
-    if (profile.age) return profile.age;
-    if (!profile.dateOfBirth) return null;
-    const birthDate = new Date(profile.dateOfBirth);
-    const today = new Date();
-    const diffTime = today.getTime() - birthDate.getTime();
-    const diffYears = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365.25));
-    return diffYears > 0 ? diffYears : null;
-  };
-
-  // Award mutation (matching roster behavior)
+  // Award mutation
   const awardMutation = useMutation({
     mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
       if (!selectedPlayer) throw new Error("No player selected");
@@ -175,445 +158,307 @@ export default function PlayerCard({
       });
     },
     onSuccess: () => {
-      toast({ title: "Award granted!", description: "The player has been awarded successfully." });
+      toast({ title: "Award given successfully!" });
       setShowAwardDialog(false);
-      // Use selectedPlayer.id for cache invalidation, not playerId
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer?.id}/badges`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer?.id}/trophies`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/awards`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/badges`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/trophies`] });
     },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to award player", variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to give award", variant: "destructive" });
     },
   });
 
-  // Skill evaluation mutation (matching roster behavior)  
-  const saveEvaluation = useMutation({
-    mutationFn: async () => {
-      if (!selectedPlayer) throw new Error("No player selected");
-      return await apiRequest('/api/coach/evaluations', {
+  // Skills evaluation mutation
+  const skillsMutation = useMutation({
+    mutationFn: async (data: { playerId: string; scores: Record<string, number>; quarter: string; year: number }) => {
+      return await apiRequest('/api/coach/evaluate', {
         method: 'POST',
-        data: { playerId: parseInt(selectedPlayer.id), quarter, year, scores },
+        data,
       });
     },
     onSuccess: () => {
-      toast({ title: "Evaluation saved!", description: "Player skills evaluation has been saved successfully." });
+      toast({ title: "Evaluation saved successfully!" });
       setShowSkillEvaluation(false);
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/latest-evaluation`] });
     },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to save evaluation", variant: "destructive" });
-    },
-  });
-
-  // Team assignment mutation
-  const updateTeamMutation = useMutation({
-    mutationFn: async (teamName: string) => {
-      if (!playerId) throw new Error("No player selected");
-      return await apiRequest(`/api/users/${playerId}/profile`, {
-        method: 'PUT',
-        data: { teamId: teamName }, // API expects teamId as team name
-      });
-    },
-    onSuccess: () => {
-      toast({ title: "Team updated!", description: "Player's team has been updated successfully." });
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
-      // Invalidate all team queries so rosters update automatically
-      queryClient.invalidateQueries({ queryKey: ['/api/teams'], exact: false });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to update team", variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to save evaluation", variant: "destructive" });
     },
   });
 
-  // Convert PlayerProfile to PlayerLite for dialogs
-  const convertToPlayerLite = (profile: PlayerProfile): PlayerLite => ({
-    id: profile.id,
-    firstName: profile.first_name,
-    lastName: profile.last_name,
-    teamName: profile.team_name,
-    profileImageUrl: profile.profile_image_url,
-  });
+  // Calculate overall skill score from latest evaluation
+  const overallSkillScore = latestEvaluation?.skillsData 
+    ? Math.round(
+        Object.values(latestEvaluation.skillsData as Record<string, number>)
+          .filter((val): val is number => typeof val === 'number')
+          .reduce((sum, val) => sum + val, 0) / 
+        Object.keys(latestEvaluation.skillsData).length * 20
+      )
+    : 0;
 
-  // Handler functions (matching roster behavior)
-  const handleAwardPlayer = () => {
-    if (!playerProfile) return;
-    setSelectedPlayer(convertToPlayerLite(playerProfile));
-    setShowAwardDialog(true);
+  // Prepare rings data for trophy display
+  const ringsData = awardsSummary ? {
+    trophies: awardsSummary.trophiesCount || 0,
+    hallOfFame: awardsSummary.hallOfFameBadgesCount || 0,
+    superstar: awardsSummary.superstarBadgesCount || 0,
+    allStar: awardsSummary.allStarBadgesCount || 0,
+    starter: awardsSummary.starterBadgesCount || 0,
+    prospect: awardsSummary.prospectBadgesCount || 0,
+  } : {
+    trophies: 0,
+    hallOfFame: 0,
+    superstar: 0,
+    allStar: 0,
+    starter: 0,
+    prospect: 0,
   };
 
-  const handleEvaluatePlayer = () => {
-    if (!playerProfile) return;
-    setSelectedPlayer(convertToPlayerLite(playerProfile));
-    // Load existing evaluation
-    fetch(`/api/coach/evaluations?playerId=${playerProfile.id}&quarter=${quarter}&year=${year}`, { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setScores((data as EvalScores) || {}));
-    setShowSkillEvaluation(true);
-  };
-
-  // Helper components
-  const ProfileAvatarRing = ({ src, initials, size = 80 }: { src?: string; initials: string; size?: number }) => (
-    <motion.div
-      className="inline-block rounded-full p-[3px] bg-[conic-gradient(at_50%_50%,#fecaca,#fde8e8,#fecaca)] shadow-sm"
-      animate={{ rotate: 360 }}
-      transition={{ duration: 20, ease: "linear", repeat: Infinity }}
-      whileHover={{ scale: 1.03 }}
-      style={{ width: size + 6, height: size + 6 }}
-    >
-      <div className="rounded-full overflow-hidden bg-white ring-4 ring-white shadow-md" style={{ width: size, height: size }}>
-        <Avatar className="w-full h-full">
-          <AvatarImage src={src} alt="Player Avatar" />
-          <AvatarFallback className="text-lg font-bold bg-gray-200">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-    </motion.div>
-  );
-
-  // Calculate overall skill average from evaluation scores
-  const calculateOverallSkillAverage = (evaluation: any): number => {
-    if (!evaluation?.scores) return 0;
-    
-    const scores = evaluation.scores;
-    let totalScore = 0;
-    let totalSkills = 0;
-    
-    // Iterate through all categories
-    Object.values(scores).forEach((category: any) => {
-      if (category && typeof category === 'object') {
-        // Iterate through all skills in the category
-        Object.values(category).forEach((skillValue: any) => {
-          if (typeof skillValue === 'number') {
-            totalScore += skillValue;
-            totalSkills++;
-          }
-        });
-      }
-    });
-    
-    if (totalSkills === 0) return 0;
-    
-    // Average is out of 5, convert to percentage
-    const average = totalScore / totalSkills;
-    return Math.round((average / 5) * 100);
-  };
-
-  const overallSkillScore = calculateOverallSkillAverage(latestEvaluation);
-
-  // Large Square Profile Picture with Text Overlay - Clickable to view full skills assessment
-  const ProfileWithOVR = ({ profile, ovrScore }: { profile: PlayerProfile; ovrScore: number }) => (
-    <motion.div
-      className="relative cursor-pointer group w-full max-w-md mx-auto"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      onClick={() => {
-        if (isCoach) {
-          handleEvaluatePlayer();
-        }
-      }}
-      data-testid="profile-picture-ovr"
-    >
-      {/* Square Profile Picture */}
-      <div className="w-full aspect-square rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white">
-        <Avatar className="w-full h-full rounded-none">
-          <AvatarImage src={profile.profile_image_url} alt={getPlayerFullName(profile)} className="object-cover" />
-          <AvatarFallback className="text-6xl font-bold bg-gradient-to-br from-red-100 to-red-50 text-red-600 rounded-none">
-            {getPlayerInitials(profile)}
-          </AvatarFallback>
-        </Avatar>
-      </div>
-      
-      {/* Top Right Corner Overlay - OVR, Name, Position (50% opacity) */}
-      <div className="absolute top-4 right-4 text-right space-y-1">
-        {/* OVR Rating */}
-        <div className="flex items-baseline justify-end gap-1">
-          <span className="text-white text-5xl font-black tracking-tight opacity-50" data-testid="text-ovr-score">
-            {ovrScore}
-          </span>
-          <span className="text-white text-lg font-bold uppercase tracking-wider opacity-50" data-testid="text-ovr-label">
-            OVR
-          </span>
-        </div>
-        
-        {/* Player Name - Two Lines */}
-        <div className="opacity-50">
-          <h1
-            className="text-3xl font-black tracking-tight leading-none text-white"
-            data-testid="text-player-first-name"
-          >
-            {profile.first_name === "🔒" ? "Private" : profile.first_name}
-          </h1>
-          <h2
-            className="text-3xl font-black tracking-tight leading-none text-white"
-            data-testid="text-player-last-name"
-          >
-            {profile.first_name === "🔒" ? "Profile" : profile.last_name}
-          </h2>
-        </div>
-        
-        {/* Position & Jersey */}
-        <div className="text-white text-sm font-bold uppercase tracking-wide opacity-50">
-          {(profile.position || "Player")} {profile.jerseyNumber && `#${profile.jerseyNumber}`}
-        </div>
-      </div>
-
-      {/* Hover Effect Indicator for Coaches */}
-      {isCoach && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-red-600/90 text-white text-sm font-semibold px-4 py-2 rounded-full whitespace-nowrap shadow-xl">
-            Click to View Full Assessment
+  if (profileLoading || !playerProfile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
           </div>
-        </div>
-      )}
-    </motion.div>
-  );
-
-  const ringsData = {
-    trophies:   { earned: Array.isArray(trophies) ? trophies.length : 0, total: 10 },
-    hallOfFame: { earned: 0, total: 8  },
-    superstar:  { earned: 0, total: 12 },
-    allStar:    { earned: 0, total: 20 },
-    starter:    { earned: Array.isArray(badges) ? badges.length : 0, total: 18 },
-    prospect:   { earned: 0, total: 24 },
-  };
-
-  if (!isOpen || !playerId) return null;
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" aria-describedby="player-profile-description">
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{getPlayerFullName(playerProfile)}'s Profile</DialogTitle>
+          </DialogHeader>
           
           {/* Close button */}
-          <div className="absolute top-4 right-4 z-10">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0 bg-white/80 backdrop-blur-sm hover:bg-white"
-              data-testid="button-close-player-card"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 z-10 rounded-full p-2 bg-white/90 hover:bg-white shadow-lg transition-all"
+            data-testid="close-player-card"
+          >
+            <X className="h-4 w-4 text-gray-600" />
+          </button>
 
-          {profileLoading ? (
-            <div className="space-y-4 animate-pulse p-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-full"></div>
-                <div className="space-y-2">
-                  <div className="h-6 bg-gray-200 rounded w-48"></div>
-                  <div className="h-4 bg-gray-200 rounded w-32"></div>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-20 bg-gray-200 rounded"></div>
-                ))}
-              </div>
-            </div>
-          ) : playerProfile ? (
-            <div className="min-h-screen">
-              {/* Futuristic Bio Section */}
-              <div className="relative px-6 pt-6">
-                <motion.section
-                  initial={{ y: 24, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="relative rounded-3xl bg-white/70 backdrop-blur-xl overflow-hidden"
-                >
-                  {/* Decorative grid overlay */}
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-[0.06]"
-                    style={{
-                      backgroundImage: "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
-                      backgroundSize: "16px 16px",
-                    }}
-                  />
+          <div className="bg-gradient-to-b from-gray-50 to-white">
+            {/* Profile Section */}
+            <div className="relative px-0 pt-6">
+              <motion.section
+                initial={{ y: 24, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="relative rounded-3xl bg-white/70 backdrop-blur-xl overflow-hidden"
+              >
+                {/* Decorative grid overlay */}
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-[0.06]"
+                  style={{
+                    backgroundImage: "radial-gradient(circle at 1px 1px, #000 1px, transparent 0)",
+                    backgroundSize: "16px 16px",
+                  }}
+                />
 
-                  {/* Header - Centered Large Square Profile Picture with Text Overlay */}
-                  <div className="relative px-6 pt-8 pb-5">
-                    <div id="player-profile-description" className="sr-only">
-                      Player profile information including stats, achievements, and contact details
+                {/* Header with Profile Picture */}
+                <div className="relative px-6 pt-8 pb-5 text-center">
+                  {/* Profile Picture */}
+                  {playerProfile.profileImageUrl && (
+                    <div className="flex justify-center mb-4">
+                      <Avatar className="h-24 w-24 ring-4 ring-white shadow-xl">
+                        <AvatarImage src={playerProfile.profileImageUrl} alt={getPlayerFullName(playerProfile)} />
+                        <AvatarFallback className="bg-red-100 text-red-600 text-2xl">
+                          {getPlayerInitials(playerProfile)}
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
-                    
-                    {/* Centered Profile Picture with Text Overlay */}
-                    <ProfileWithOVR profile={playerProfile} ovrScore={overallSkillScore} />
+                  )}
 
-                    {/* Team Badge Below Picture */}
-                    {(playerProfile.team || playerProfile.team_name) && (
-                      <div className="mt-6 text-center">
-                        <div className="inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
-                          <Shirt className="h-4 w-4 text-[#d82428]" />
-                          {playerProfile.team || playerProfile.team_name}
-                        </div>
-                      </div>
+                  <h1
+                    className="mt-3 text-4xl font-black tracking-tight leading-tight"
+                    style={{
+                      color: "#d82428",
+                      textShadow: "0 1px 0 rgba(255,255,255,0.6)",
+                    }}
+                    data-testid="player-name"
+                  >
+                    {getPlayerFullName(playerProfile)}
+                  </h1>
+
+                  <div className="mt-1 text-sm font-medium text-gray-700" data-testid="player-position-jersey">
+                    {playerProfile.position || "Player"} #{playerProfile.jerseyNumber || "0"}
+                    {playerProfile.city && (
+                      <div className="text-xs text-gray-600 mt-1">From {playerProfile.city}</div>
                     )}
                   </div>
 
-                  {/* Info grid */}
-                  <div className="relative px-6 pb-8">
-                    <div className="grid grid-cols-3 gap-3">
-                      <motion.div
-                        initial={{ y: 12, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0, duration: 0.35 }}
-                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
-                            <Ruler className="h-4 w-4" />
-                          </span>
-                          <span>HEIGHT</span>
-                        </div>
-                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                          {playerProfile.height || "N/A"}
-                        </div>
-                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 12, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.05, duration: 0.35 }}
-                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
-                            <Gauge className="h-4 w-4" />
-                          </span>
-                          <span>AGE</span>
-                        </div>
-                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                          {playerProfile.age || computeAge(playerProfile) || "N/A"}
-                        </div>
-                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                      </motion.div>
-
-                      <motion.div
-                        initial={{ y: 12, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.10, duration: 0.35 }}
-                        className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                          <span className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]" style={{ color: "#d82428" }}>
-                            <MapPin className="h-4 w-4" />
-                          </span>
-                          <span>FROM</span>
-                        </div>
-                        <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                          {(playerProfile.city || "N/A").replace(", CA", "").replace(",CA", "")}
-                        </div>
-                        <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                      </motion.div>
+                  {teamInfo?.name && (
+                    <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
+                      <Shirt className="h-4 w-4 text-[#d82428]" />
+                      {teamInfo.name}
                     </div>
-                  </div>
-                </motion.section>
-              </div>
-
-              {/* Coach Actions */}
-              {isCoach && (
-                <div className="px-6 mt-4">
-                  <motion.section
-                    initial={{ y: 12, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.4 }}
-                    className="relative rounded-2xl bg-white/70 backdrop-blur-xl overflow-hidden p-6"
-                  >
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Coach Actions</h3>
-                    <div className="space-y-4">
-                      <div className="flex gap-4">
-                        <Button
-                          onClick={handleAwardPlayer}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                          data-testid="button-award-player"
-                        >
-                          <Trophy className="h-4 w-4 mr-1" />
-                          Award Player
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={handleEvaluatePlayer}
-                          data-testid="button-evaluate-skills"
-                        >
-                          <Star className="h-4 w-4 mr-1" />
-                          Evaluate Skills
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="flex-1">
-                          <label className="text-sm font-medium text-gray-700 mb-1 block">
-                            Change Team
-                          </label>
-                          <Select
-                            value={playerProfile?.team_name || playerProfile?.team || ""}
-                            onValueChange={(value) => updateTeamMutation.mutate(value)}
-                            disabled={updateTeamMutation.isPending}
-                          >
-                            <SelectTrigger className="w-full" data-testid="select-player-team">
-                              <SelectValue placeholder="Select team..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {allTeams.map((team) => (
-                                <SelectItem key={team.id} value={team.name} data-testid={`team-option-${team.id}`}>
-                                  {team.name} ({team.ageGroup})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.section>
+                  )}
                 </div>
-              )}
 
-              {/* Trophies & Badges */}
-              <div className="px-6 mt-4 pb-8">
-                <motion.div
-                  initial={{ y: 12, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4, duration: 0.4 }}
-                  className="cursor-pointer"
-                >
-                  <UypTrophyRings data={ringsData} size={109} stroke={8} />
-                </motion.div>
+                {/* Info grid */}
+                <div className="relative px-6 pb-8">
+                  <div className="grid grid-cols-3 gap-3">
+                    <motion.div
+                      initial={{ y: 12, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0, duration: 0.35 }}
+                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                        <span
+                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                          style={{ color: "#d82428" }}
+                        >
+                          <Ruler className="h-4 w-4" />
+                        </span>
+                        <span>HEIGHT</span>
+                      </div>
+                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                        {playerProfile.height || "-"}
+                      </div>
+                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ y: 12, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.05, duration: 0.35 }}
+                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                        <span
+                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                          style={{ color: "#d82428" }}
+                        >
+                          <Gauge className="h-4 w-4" />
+                        </span>
+                        <span>AGE</span>
+                      </div>
+                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                        {playerProfile.age || "-1"}
+                      </div>
+                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ y: 12, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.10, duration: 0.35 }}
+                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
+                        <span
+                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
+                          style={{ color: "#d82428" }}
+                        >
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <span>FROM</span>
+                      </div>
+                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
+                        {(playerProfile.city || "Unknown").replace(", CA", "").replace(",CA", "")}
+                      </div>
+                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.section>
+            </div>
+
+            {/* Trophies & Badges */}
+            <div className="p-2">
+              <UypTrophyRings data={ringsData} size={109} stroke={8} />
+            </div>
+
+            {/* Overall Skills Assessment */}
+            <div className="px-2 pb-6">
+              <div className="max-w-[340px] mx-auto">
+                <SkillBar 
+                  label="OVERALL SKILLS ASSESSMENT"  
+                  value={overallSkillScore} 
+                />
               </div>
-
-              {/* Shared Awards Dialog (same as roster) */}
-              <AwardsDialog
-                open={showAwardDialog}
-                onOpenChange={setShowAwardDialog}
-                player={selectedPlayer}
-                onGive={(awardId, kind) => awardMutation.mutate({ awardId, kind })}
-                giving={awardMutation.isPending}
-              />
-
-              {/* Shared Evaluation Dialog (same as roster) */}
-              <EvaluationDialog
-                open={showSkillEvaluation}
-                onOpenChange={setShowSkillEvaluation}
-                player={selectedPlayer}
-                scores={scores}
-                setScores={setScores}
-                quarter={quarter}
-                setQuarter={setQuarter}
-                year={year}
-                setYear={setYear}
-                onSave={() => saveEvaluation.mutate()}
-                saving={saveEvaluation.isPending}
-              />
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Player profile not found</p>
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* Coach Actions */}
+            {isCoach && (
+              <div className="px-6 pb-6 space-y-3">
+                <Button
+                  onClick={() => {
+                    setSelectedPlayer({
+                      id: playerId,
+                      name: getPlayerFullName(playerProfile),
+                    });
+                    setShowAwardDialog(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg"
+                  data-testid="button-give-award"
+                >
+                  <Award className="h-4 w-4 mr-2" />
+                  Give Award
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setSelectedPlayer({
+                      id: playerId,
+                      name: getPlayerFullName(playerProfile),
+                    });
+                    setShowSkillEvaluation(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
+                  data-testid="button-evaluate-skills"
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Evaluate Skills
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Awards Dialog */}
+      {showAwardDialog && selectedPlayer && (
+        <AwardsDialog
+          isOpen={showAwardDialog}
+          onClose={() => setShowAwardDialog(false)}
+          player={selectedPlayer}
+          availableAwards={availableAwards || []}
+          onSubmit={({ awardId, kind }) => awardMutation.mutate({ awardId, kind })}
+          isSubmitting={awardMutation.isPending}
+        />
+      )}
+
+      {/* Evaluation Dialog */}
+      {showSkillEvaluation && selectedPlayer && (
+        <EvaluationDialog
+          isOpen={showSkillEvaluation}
+          onClose={() => setShowSkillEvaluation(false)}
+          player={selectedPlayer}
+          scores={scores}
+          setScores={setScores}
+          quarter={quarter}
+          setQuarter={setQuarter}
+          year={year}
+          setYear={setYear}
+          onSubmit={() => {
+            skillsMutation.mutate({
+              playerId: selectedPlayer.id,
+              scores,
+              quarter,
+              year,
+            });
+          }}
+          isSubmitting={skillsMutation.isPending}
+        />
+      )}
+    </>
   );
 }

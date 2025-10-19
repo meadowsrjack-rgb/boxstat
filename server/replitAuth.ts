@@ -189,8 +189,8 @@ export async function setupAuth(app: Express) {
               });
             }
             
-            // Admin goes directly to admin dashboard
-            return res.redirect("/admin-dashboard");
+            // Admin goes to profile selection to see their admin profile
+            return res.redirect("/");
           }
           
           // Check if this is a coach account

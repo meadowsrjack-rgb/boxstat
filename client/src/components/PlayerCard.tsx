@@ -100,11 +100,59 @@ export default function PlayerCard({
   });
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
-  // Get player profile from /api/profile endpoint (actual profile data)
-  const { data: playerProfile, isLoading: profileLoading } = useQuery<Profile>({
+  // Get player profile - try to get from /api/profile if it's a profile ID, otherwise from /api/players
+  const isProfileId = playerId.startsWith('profile-');
+  
+  const { data: profileData, isLoading: profileLoading } = useQuery<Profile>({
     queryKey: [`/api/profile/${playerId}`],
-    enabled: isOpen && !!playerId,
+    enabled: isOpen && !!playerId && isProfileId,
   });
+
+  const { data: playerData, isLoading: playerLoading } = useQuery<any>({
+    queryKey: [`/api/players/${playerId}/profile`],
+    enabled: isOpen && !!playerId && !isProfileId,
+  });
+
+  // Convert player data to Profile format if needed
+  const playerProfile: Profile | undefined = isProfileId 
+    ? profileData 
+    : playerData ? {
+        id: playerData.id || playerId,
+        accountId: playerId,
+        profileType: 'player' as const,
+        firstName: playerData.first_name,
+        lastName: playerData.last_name,
+        profileImageUrl: playerData.profile_image_url,
+        phoneNumber: playerData.phone_number,
+        dateOfBirth: playerData.dateOfBirth,
+        emergencyContact: null,
+        emergencyPhone: null,
+        address: playerData.city,
+        medicalInfo: null,
+        allergies: null,
+        schoolGrade: playerData.schoolGrade,
+        position: playerData.position,
+        jerseyNumber: playerData.jerseyNumber,
+        teamId: playerData.team_id?.toString() || null,
+        age: playerData.age,
+        height: playerData.height,
+        city: playerData.city,
+        coachingExperience: null,
+        yearsExperience: null,
+        bio: null,
+        previousTeams: null,
+        playingExperience: null,
+        philosophy: null,
+        occupation: null,
+        workPhone: null,
+        relationship: null,
+        isVerified: false,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } : undefined;
+
+  const loading = isProfileId ? profileLoading : playerLoading;
 
   // Get team info
   const { data: teamInfo } = useQuery<TeamInfo>({
@@ -213,7 +261,7 @@ export default function PlayerCard({
     prospect: 0,
   };
 
-  if (profileLoading || !playerProfile) {
+  if (loading || !playerProfile) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">

@@ -7,7 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
-import { isCoachEmail } from "./coaches";
+import { isCoachEmail, isAdminEmail } from "./coaches";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -167,13 +167,37 @@ export async function setupAuth(app: Express) {
             return res.redirect("/");
           }
           
+          // Check if this is an admin account (highest priority)
+          if (isAdminEmail(email)) {
+            // Create admin profile if it doesn't exist
+            const existingProfiles = await storage.getAccountProfiles(userId);
+            const adminProfile = existingProfiles.find(p => p.profileType === "admin");
+            
+            if (!adminProfile) {
+              // Create admin profile
+              const adminProfileId = `profile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+              await storage.createProfile({
+                id: adminProfileId,
+                accountId: userId,
+                profileType: "admin",
+                firstName: "Admin",
+                lastName: "UYP",
+                profileCompleted: true,
+                verified: true,
+              });
+            }
+            
+            // Admin goes directly to admin dashboard
+            return res.redirect("/admin-dashboard");
+          }
+          
           // Check if this is a coach account
           if (isCoachEmail(email)) {
             // Coaches go directly to coach dashboard
             return res.redirect("/coach-dashboard");
           }
           
-          // For non-coaches, check if they have existing profiles
+          // For non-coaches/non-admins, check if they have existing profiles
           const existingProfiles = await storage.getAccountProfiles(userId);
           
           if (existingProfiles && existingProfiles.length > 0) {

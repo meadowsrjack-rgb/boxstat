@@ -38,48 +38,73 @@ export function useNotifications() {
   // Subscribe to push notifications
   const subscribeMutation = useMutation({
     mutationFn: async () => {
-      if (!isSupported || !vapidKey?.publicKey) {
-        throw new Error('Push notifications not supported');
+      try {
+        console.log('Starting push notification subscription...');
+        
+        if (!isSupported) {
+          throw new Error('Push notifications are not supported in this browser');
+        }
+
+        if (!vapidKey?.publicKey) {
+          throw new Error('VAPID public key not available. Please refresh the page and try again.');
+        }
+
+        console.log('Requesting notification permission...');
+        // Request permission
+        const newPermission = await Notification.requestPermission();
+        setPermission(newPermission);
+        console.log('Permission result:', newPermission);
+
+        if (newPermission !== 'granted') {
+          throw new Error('Notification permission was denied. Please enable notifications in your browser settings.');
+        }
+
+        console.log('Waiting for service worker to be ready...');
+        // Get service worker registration - with timeout
+        const swTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Service worker took too long to activate. Please refresh the page and try again.')), 10000)
+        );
+        const registration = await Promise.race([
+          navigator.serviceWorker.ready,
+          swTimeout
+        ]) as ServiceWorkerRegistration;
+        
+        console.log('Service worker ready, subscribing to push manager...');
+        // Subscribe to push service
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey.publicKey),
+        });
+        console.log('Push subscription successful');
+
+        // Send subscription to server
+        const subscriptionData = {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+            auth: arrayBufferToBase64(subscription.getKey('auth')!),
+          },
+          userAgent: navigator.userAgent,
+          deviceType: getDeviceType(),
+        };
+
+        console.log('Sending subscription to server...');
+        await apiRequest('/api/notifications/subscribe', {
+          method: 'POST',
+          body: JSON.stringify(subscriptionData),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log('Subscription saved to server');
+
+        setIsSubscribed(true);
+        return subscription;
+      } catch (error: any) {
+        console.error('Push notification subscription error:', error);
+        // Rethrow with more context
+        throw new Error(error.message || 'Failed to enable push notifications. Please try again.');
       }
-
-      // Request permission
-      const newPermission = await Notification.requestPermission();
-      setPermission(newPermission);
-
-      if (newPermission !== 'granted') {
-        throw new Error('Permission denied');
-      }
-
-      // Get service worker registration
-      const registration = await navigator.serviceWorker.ready;
-
-      // Subscribe to push service
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKey.publicKey,
-      });
-
-      // Send subscription to server
-      const subscriptionData = {
-        endpoint: subscription.endpoint,
-        keys: {
-          p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
-          auth: arrayBufferToBase64(subscription.getKey('auth')!),
-        },
-        userAgent: navigator.userAgent,
-        deviceType: getDeviceType(),
-      };
-
-      await apiRequest('/api/notifications/subscribe', {
-        method: 'POST',
-        body: JSON.stringify(subscriptionData),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      setIsSubscribed(true);
-      return subscription;
     },
   });
 
@@ -124,6 +149,21 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   const binary = String.fromCharCode(...bytes);
   return btoa(binary);
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 function getDeviceType(): 'desktop' | 'mobile' | 'tablet' {

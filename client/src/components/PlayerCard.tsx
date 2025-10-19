@@ -276,7 +276,7 @@ export default function PlayerCard({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
+        <DialogContent className="max-w-md p-0 overflow-hidden" hideClose>
           <DialogHeader className="sr-only">
             <DialogTitle>{getPlayerFullName(playerProfile)}'s Profile</DialogTitle>
           </DialogHeader>

@@ -3433,6 +3433,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Helper function to safely parse integers
+      const safeParseInt = (value: any, fallback: number | null): number | null => {
+        if (value === undefined || value === null || value === '') return fallback;
+        const parsed = parseInt(value);
+        return isNaN(parsed) ? fallback : parsed;
+      };
+
       // Update the profile with all fields
       const updatedProfile = await storage.updateProfile(profileId, {
         firstName: req.body.firstName !== undefined ? req.body.firstName : profile.firstName,
@@ -3447,15 +3454,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allergies: req.body.allergies !== undefined ? req.body.allergies : profile.allergies,
         schoolGrade: req.body.schoolGrade !== undefined ? req.body.schoolGrade : profile.schoolGrade,
         position: req.body.position !== undefined ? req.body.position : profile.position,
-        jerseyNumber: req.body.jerseyNumber !== undefined ? parseInt(req.body.jerseyNumber) : profile.jerseyNumber,
+        jerseyNumber: safeParseInt(req.body.jerseyNumber, profile.jerseyNumber),
         teamId: teamDbId || profile.teamId,
         // Player-specific fields
-        age: req.body.age !== undefined ? req.body.age : profile.age,
+        age: safeParseInt(req.body.age, profile.age),
         height: req.body.height !== undefined ? req.body.height : profile.height,
         city: req.body.city !== undefined ? req.body.city : profile.city,
         // Coach-specific fields
         coachingExperience: req.body.coachingExperience !== undefined ? req.body.coachingExperience : profile.coachingExperience,
-        yearsExperience: req.body.yearsExperience !== undefined ? req.body.yearsExperience : profile.yearsExperience,
+        yearsExperience: safeParseInt(req.body.yearsExperience, profile.yearsExperience),
         bio: req.body.bio !== undefined ? req.body.bio : profile.bio,
         previousTeams: req.body.previousTeams !== undefined ? req.body.previousTeams : profile.previousTeams,
         playingExperience: req.body.playingExperience !== undefined ? req.body.playingExperience : profile.playingExperience,

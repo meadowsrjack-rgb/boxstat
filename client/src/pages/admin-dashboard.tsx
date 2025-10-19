@@ -166,8 +166,8 @@ export default function AdminDashboard() {
   
   // Tab management
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const tabFromUrl = urlParams.get('tab') as "overview" | "users" | "teams" | "events" | "awards" | "chats" | null;
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "teams" | "events" | "awards" | "chats">(
+  const tabFromUrl = urlParams.get('tab') as "overview" | "users" | "teams" | "events" | "awards" | "chats" | "registrations" | "payments" | "training" | "communications" | null;
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "teams" | "events" | "awards" | "chats" | "registrations" | "payments" | "training" | "communications">(
     tabFromUrl || "overview"
   );
 
@@ -464,54 +464,86 @@ export default function AdminDashboard() {
 
         {/* Navigation Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 bg-slate-800/50 p-1">
+          <TabsList className="grid w-full grid-cols-10 bg-slate-800/50 p-1 gap-1">
             <TabsTrigger 
               value="overview" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-overview"
             >
               <TrendingUp className="h-4 w-4" />
-              Overview
+              <span>Overview</span>
             </TabsTrigger>
             <TabsTrigger 
               value="users" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-users"
             >
               <Users className="h-4 w-4" />
-              Users
+              <span>Users</span>
             </TabsTrigger>
             <TabsTrigger 
               value="teams" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-teams"
             >
               <ShieldCheck className="h-4 w-4" />
-              Teams
+              <span>Teams</span>
             </TabsTrigger>
             <TabsTrigger 
               value="events" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-events"
             >
               <CalendarIcon className="h-4 w-4" />
-              Events
+              <span>Events</span>
             </TabsTrigger>
             <TabsTrigger 
               value="awards" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-awards"
             >
               <Award className="h-4 w-4" />
-              Awards
+              <span>Awards</span>
             </TabsTrigger>
             <TabsTrigger 
               value="chats" 
-              className="flex items-center gap-2 data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
               data-testid="tab-chats"
             >
               <MessageCircle className="h-4 w-4" />
-              Chats
+              <span>Chats</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="registrations" 
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              data-testid="tab-registrations"
+            >
+              <UserCheck className="h-4 w-4" />
+              <span>Registration</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="payments" 
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              data-testid="tab-payments"
+            >
+              <Star className="h-4 w-4" />
+              <span>Payments</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="training" 
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              data-testid="tab-training"
+            >
+              <Lock className="h-4 w-4" />
+              <span>Training</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="communications" 
+              className="flex flex-col items-center gap-1 py-2 text-xs data-[state=active]:bg-red-600 data-[state=active]:text-white"
+              data-testid="tab-communications"
+            >
+              <Megaphone className="h-4 w-4" />
+              <span>Comms</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1347,6 +1379,240 @@ export default function AdminDashboard() {
                         </CardContent>
                       </Card>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/* Registrations Tab */}
+          <TabsContent value="registrations" className="mt-6">
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              <Card className="border-slate-700 bg-slate-800/50">
+                <CardHeader>
+                  <CardTitle className="text-white">Player Registrations</CardTitle>
+                  <p className="text-slate-400">Manage player registration status and track enrollment</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 flex items-center gap-4">
+                    <Input
+                      placeholder="Search by name, email, or team..."
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      data-testid="input-search-registrations"
+                    />
+                    <Select defaultValue="all" data-testid="select-registration-filter">
+                      <SelectTrigger className="w-48 bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
+                        <SelectItem value="incomplete">Incomplete</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Registration management interface coming soon. Update player registration status (Active, Pending, Expired, Incomplete).
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="mt-6">
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              <Card className="border-slate-700 bg-slate-800/50">
+                <CardHeader>
+                  <CardTitle className="text-white">Payment Management</CardTitle>
+                  <p className="text-slate-400">Track payments, set packages, and manage parent accounts</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 flex items-center gap-4">
+                    <Input
+                      placeholder="Search by parent name or player name..."
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      data-testid="input-search-payments"
+                    />
+                    <Select defaultValue="all" data-testid="select-program-filter">
+                      <SelectTrigger className="w-48 bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Filter by program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Programs</SelectItem>
+                        <SelectItem value="skills-academy">Skills Academy</SelectItem>
+                        <SelectItem value="fnhtl">FNHTL</SelectItem>
+                        <SelectItem value="youth-club">Youth Club</SelectItem>
+                        <SelectItem value="high-school">High School</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select defaultValue="all" data-testid="select-payment-status">
+                      <SelectTrigger className="w-48 bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Payment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="overdue">Overdue</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Payment tracking interface coming soon. Set payment packages, track status, and manage parent billing with SportsEngine integration.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/* Training Access Tab */}
+          <TabsContent value="training" className="mt-6">
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              <Card className="border-slate-700 bg-slate-800/50">
+                <CardHeader>
+                  <CardTitle className="text-white">Training Access Control</CardTitle>
+                  <p className="text-slate-400">Grant or restrict access to training programs for players</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4 flex items-center gap-4">
+                    <Input
+                      placeholder="Search by player name or team..."
+                      className="bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      data-testid="input-search-training"
+                    />
+                    <Select defaultValue="all" data-testid="select-training-program">
+                      <SelectTrigger className="w-48 bg-slate-700 border-slate-600 text-white">
+                        <SelectValue placeholder="Select program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Programs</SelectItem>
+                        <SelectItem value="fundamentals">Fundamentals</SelectItem>
+                        <SelectItem value="advanced">Advanced Techniques</SelectItem>
+                        <SelectItem value="leadership">Leadership</SelectItem>
+                        <SelectItem value="conditioning">Conditioning</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Training access management interface coming soon. Unlock or restrict player access to specific training modules.
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Card className="border-slate-600 bg-slate-700/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-white">Active Access Grants</p>
+                            <p className="text-2xl font-bold text-green-400">0</p>
+                          </div>
+                          <Unlock className="h-8 w-8 text-green-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-slate-600 bg-slate-700/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-white">Restricted Players</p>
+                            <p className="text-2xl font-bold text-red-400">0</p>
+                          </div>
+                          <Lock className="h-8 w-8 text-red-500" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          {/* Communications Tab */}
+          <TabsContent value="communications" className="mt-6">
+            <motion.div
+              variants={tabVariants}
+              initial="hidden"
+              animate="show"
+              className="space-y-6"
+            >
+              <Card className="border-slate-700 bg-slate-800/50">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-white">Communications & Announcements</CardTitle>
+                      <p className="text-slate-400">Broadcast messages to specific audiences (teams, programs, roles)</p>
+                    </div>
+                    <Button className="bg-red-600 hover:bg-red-700 text-white" data-testid="button-create-announcement">
+                      <Megaphone className="mr-2 h-4 w-4" />
+                      Create Announcement
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <Card className="border-slate-600 bg-slate-700/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-slate-300">Total Sent</p>
+                              <p className="text-2xl font-bold text-white">0</p>
+                            </div>
+                            <Send className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-slate-600 bg-slate-700/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-slate-300">Active</p>
+                              <p className="text-2xl font-bold text-white">0</p>
+                            </div>
+                            <Activity className="h-8 w-8 text-green-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card className="border-slate-600 bg-slate-700/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-slate-300">Total Views</p>
+                              <p className="text-2xl font-bold text-white">0</p>
+                            </div>
+                            <Eye className="h-8 w-8 text-yellow-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-3">Target Audiences</h3>
+                      <div className="grid gap-2 md:grid-cols-4">
+                        <Badge className="bg-blue-600 text-white justify-center py-2">Teams</Badge>
+                        <Badge className="bg-purple-600 text-white justify-center py-2">Programs</Badge>
+                        <Badge className="bg-green-600 text-white justify-center py-2">Roles (Parents, Players, Coaches)</Badge>
+                        <Badge className="bg-orange-600 text-white justify-center py-2">All Users</Badge>
+                      </div>
+                    </div>
+                    <p className="text-slate-400 text-sm">
+                      Announcement system coming soon. Create targeted broadcasts with acknowledgment tracking.
+                    </p>
                   </div>
                 </CardContent>
               </Card>

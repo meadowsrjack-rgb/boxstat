@@ -324,7 +324,7 @@ function UsersTab({ users, organization }: any) {
   });
 
   const downloadUserTemplate = () => {
-    const csvContent = "email,firstName,lastName,phoneNumber,address,role,program\nplayer@example.com,John,Doe,555-0100,123 Main St,player,Basketball Academy\ncoach@example.com,Jane,Smith,555-0101,456 Oak Ave,coach,\nparent@example.com,Bob,Johnson,555-0102,789 Elm St,parent,";
+    const csvContent = "First name,Last name,Email,Phone,Address,Role,Status,Program/Division,Team,Awards,Rating\nJohn,Doe,player@example.com,555-0100,123 Main St,player,active,Basketball Academy,Thunder U12,5,4.5\nJane,Smith,coach@example.com,555-0101,456 Oak Ave,coach,active,,,10,5.0\nBob,Johnson,parent@example.com,555-0102,789 Elm St,parent,active,,,,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -368,22 +368,45 @@ function UsersTab({ users, organization }: any) {
           userData[header] = values[index] || '';
         });
         
+        // Map CSV column names to our data model
+        const firstName = userData['first name'] || userData['firstname'] || '';
+        const lastName = userData['last name'] || userData['lastname'] || '';
+        const email = userData['email'] || '';
+        const phone = userData['phone'] || userData['phonenumber'] || '';
+        const address = userData['address'] || '';
+        const role = userData['role'] || 'player';
+        const status = userData['status'] || 'active';
+        const program = userData['program/division'] || userData['program'] || '';
+        const teamName = userData['team'] || '';
+        const awards = userData['awards'] || '';
+        const rating = userData['rating'] || '';
+        
+        // Find team by name if provided
+        let teamId = undefined;
+        if (teamName) {
+          const team = teams.find((t: any) => t.name.toLowerCase() === teamName.toLowerCase());
+          if (team) {
+            teamId = team.id;
+          }
+        }
+        
         try {
           await apiRequest("POST", "/api/users", {
             organizationId: organization.id,
-            email: userData.email,
-            firstName: userData.firstname || userData.firstName,
-            lastName: userData.lastname || userData.lastName,
-            role: userData.role || "player",
-            phoneNumber: userData.phonenumber || userData.phoneNumber || undefined,
-            address: userData.address || undefined,
-            program: userData.program || undefined,
-            isActive: true,
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            role: role,
+            phoneNumber: phone || undefined,
+            address: address || undefined,
+            program: program || undefined,
+            teamId: teamId,
+            isActive: status.toLowerCase() === 'active',
             verified: false,
           });
           successCount++;
         } catch (error) {
-          console.error(`Failed to create user ${userData.email}:`, error);
+          console.error(`Failed to create user ${email}:`, error);
           errorCount++;
         }
       }
@@ -421,7 +444,7 @@ function UsersTab({ users, organization }: any) {
                 <DialogTitle>Bulk Upload Users</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: email, firstName, lastName, phoneNumber, address, role, program</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: First name, Last name, Email, Phone, Address, Role, Status, Program/Division, Team, Awards, Rating</p>
                 <Input
                   type="file"
                   accept=".csv"
@@ -636,7 +659,7 @@ function TeamsTab({ teams, users, organization }: any) {
   });
 
   const downloadTeamTemplate = () => {
-    const csvContent = "name,division,ageGroup,coachEmail\nThunder U12,Recreational,U12,coach@example.com\nLightning U14,Competitive,U14,coach2@example.com\nStorm U16,Competitive,U16,";
+    const csvContent = "Team Name,Division,Age Group,Coach Email\nThunder U12,Recreational,U12,coach@example.com\nLightning U14,Competitive,U14,coach2@example.com\nStorm U16,Competitive,U16,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -680,10 +703,16 @@ function TeamsTab({ teams, users, organization }: any) {
           teamData[header] = values[index] || '';
         });
         
+        // Map CSV column names to our data model
+        const teamName = teamData['team name'] || teamData['name'] || '';
+        const division = teamData['division'] || '';
+        const ageGroup = teamData['age group'] || teamData['agegroup'] || '';
+        const coachEmail = teamData['coach email'] || teamData['coachemail'] || '';
+        
         // Find coach by email if provided
         let coachId = undefined;
-        if (teamData.coachemail) {
-          const coach = coaches.find((c: any) => c.email === teamData.coachemail);
+        if (coachEmail) {
+          const coach = coaches.find((c: any) => c.email === coachEmail);
           if (coach) {
             coachId = coach.id;
           }
@@ -692,16 +721,16 @@ function TeamsTab({ teams, users, organization }: any) {
         try {
           await apiRequest("POST", "/api/teams", {
             organizationId: organization.id,
-            name: teamData.name,
-            division: teamData.division || undefined,
-            ageGroup: teamData.agegroup || teamData.ageGroup || undefined,
+            name: teamName,
+            division: division || undefined,
+            ageGroup: ageGroup || undefined,
             coachIds: coachId ? [coachId] : [],
             color: "#1E40AF",
             roster: []
           });
           successCount++;
         } catch (error) {
-          console.error(`Failed to create team ${teamData.name}:`, error);
+          console.error(`Failed to create team ${teamName}:`, error);
           errorCount++;
         }
       }
@@ -740,7 +769,7 @@ function TeamsTab({ teams, users, organization }: any) {
                   <DialogTitle>Bulk Upload Teams</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Upload a CSV file with columns: name, division, ageGroup, coachEmail</p>
+                  <p className="text-sm text-gray-600">Upload a CSV file with columns: Team Name, Division, Age Group, Coach Email</p>
                   <Input
                     type="file"
                     accept=".csv"

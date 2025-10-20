@@ -12,6 +12,10 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
 
   const params: any[] = [];
   let where = "p.profile_type='player' AND p.verified=TRUE";
+  
+  // Filter out profiles with searchable set to false
+  where += " AND (COALESCE((pp.settings->>'searchable')::boolean, true) = true)";
+  
   if (q) {
     params.push(`%${q}%`);
     where += ` AND (LOWER(p.first_name||' '||p.last_name) LIKE LOWER($${params.length}))`;

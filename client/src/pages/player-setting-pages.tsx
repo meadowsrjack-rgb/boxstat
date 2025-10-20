@@ -879,18 +879,6 @@ export function PlayerSecurityPage() {
                 description="Switch between different user profiles"
                 action={<Button variant="outline" onClick={handleSwitchProfile} data-testid="button-switch-profile">Switch</Button>} 
               />
-              <ActionRow 
-                icon={Mail} 
-                title="Change email" 
-                description="Update your email address"
-                action={<Button variant="outline" disabled data-testid="button-change-email">Coming Soon</Button>} 
-              />
-              <ActionRow 
-                icon={Key} 
-                title="Change password" 
-                description="Update your password"
-                action={<Button variant="outline" disabled data-testid="button-change-password">Coming Soon</Button>} 
-              />
             </CardContent>
           </Card>
           

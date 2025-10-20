@@ -63,20 +63,6 @@ export default function CoachSettingsPage() {
       path: "/coach-settings/connections"
     },
     { 
-      key: "billing", 
-      icon: CreditCard, 
-      label: "Billing", 
-      description: "Payment methods and subscription",
-      path: "/coach-settings/billing"
-    },
-    { 
-      key: "devices", 
-      icon: Smartphone, 
-      label: "Devices", 
-      description: "Trusted devices and app permissions",
-      path: "/coach-settings/devices"
-    },
-    { 
       key: "legal", 
       icon: FileText, 
       label: "Legal", 

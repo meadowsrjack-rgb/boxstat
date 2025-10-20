@@ -53,13 +53,6 @@ export default function PlayerSettingsPage() {
       path: "/player-settings/security"
     },
     { 
-      key: "devices", 
-      icon: Smartphone, 
-      label: "Devices", 
-      description: "Trusted devices and app permissions",
-      path: "/player-settings/devices"
-    },
-    { 
       key: "legal", 
       icon: FileText, 
       label: "Legal", 

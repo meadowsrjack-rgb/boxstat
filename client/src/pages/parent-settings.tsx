@@ -63,20 +63,6 @@ export default function ParentSettingsPage() {
       path: "/parent-settings/connections"
     },
     { 
-      key: "billing", 
-      icon: CreditCard, 
-      label: "Billing & Payments", 
-      description: "Manage subscriptions and payment methods",
-      path: "/parent-settings/billing"
-    },
-    { 
-      key: "devices", 
-      icon: Smartphone, 
-      label: "Devices", 
-      description: "Trusted devices and app permissions",
-      path: "/parent-settings/devices"
-    },
-    { 
       key: "legal", 
       icon: FileText, 
       label: "Legal", 

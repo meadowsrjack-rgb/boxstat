@@ -750,42 +750,6 @@ export function CoachPrivacyPage() {
                 onChange={(v) => { setPrivacy(p => ({ ...p, allowMessages: v })); mutation.mutate({ ...privacy, allowMessages: v }); }}
                 testId="switch-allow-messages"
               />
-              <ToggleRow 
-                label="Allow Phone Calls" 
-                description="Allow parents and administrators to call your phone number"
-                checked={privacy.allowPhoneCalls} 
-                onChange={(v) => { setPrivacy(p => ({ ...p, allowPhoneCalls: v })); mutation.mutate({ ...privacy, allowPhoneCalls: v }); }}
-                testId="switch-allow-calls"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Data Sharing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ToggleRow 
-                label="Share Information with Parents" 
-                description="Allow parents to view your coaching background and qualifications"
-                checked={privacy.shareWithParents} 
-                onChange={(v) => { setPrivacy(p => ({ ...p, shareWithParents: v })); mutation.mutate({ ...privacy, shareWithParents: v }); }}
-                testId="switch-share-parents"
-              />
-              <ToggleRow 
-                label="Share Information with Other Coaches" 
-                description="Allow other coaches in the league to view your profile"
-                checked={privacy.shareWithOtherCoaches} 
-                onChange={(v) => { setPrivacy(p => ({ ...p, shareWithOtherCoaches: v })); mutation.mutate({ ...privacy, shareWithOtherCoaches: v }); }}
-                testId="switch-share-coaches"
-              />
-              <ToggleRow 
-                label="Analytics and Improvement" 
-                description="Help improve the platform by sharing usage data"
-                checked={privacy.dataSharing} 
-                onChange={(v) => { setPrivacy(p => ({ ...p, dataSharing: v })); mutation.mutate({ ...privacy, dataSharing: v }); }}
-                testId="switch-data-sharing"
-              />
             </CardContent>
           </Card>
         </div>
@@ -796,18 +760,15 @@ export function CoachPrivacyPage() {
 
 interface CoachNotificationPrefs {
   teamUpdates: boolean;
-  scheduleChanges: boolean;
-  parentMessages: boolean;
-  adminAnnouncements: boolean;
+  eventChanges: boolean;
+  playerCheckIn: boolean;
+  playerRsvp: boolean;
+  teamMessages: boolean;
+  playerAwards: boolean;
   playerProgress: boolean;
-  attendanceAlerts: boolean;
-  emergencyNotifications: boolean;
-  paymentReminders: boolean;
   pushNotifications: boolean;
   emailNotifications: boolean;
   smsNotifications: boolean;
-  quietHoursStart: string;
-  quietHoursEnd: string;
 }
 
 export function CoachNotificationsPage() {
@@ -815,18 +776,15 @@ export function CoachNotificationsPage() {
   const [, setLocation] = useLocation();
   const [prefs, setPrefs] = useState<CoachNotificationPrefs>({
     teamUpdates: true,
-    scheduleChanges: true,
-    parentMessages: true,
-    adminAnnouncements: true,
+    eventChanges: true,
+    playerCheckIn: true,
+    playerRsvp: true,
+    teamMessages: true,
+    playerAwards: true,
     playerProgress: true,
-    attendanceAlerts: true,
-    emergencyNotifications: true,
-    paymentReminders: true,
     pushNotifications: true,
     emailNotifications: true,
     smsNotifications: false,
-    quietHoursStart: "22:00",
-    quietHoursEnd: "07:00"
   });
 
   // Fetch notification preferences
@@ -838,18 +796,15 @@ export function CoachNotificationsPage() {
     if (notificationPrefs) {
       setPrefs({
         teamUpdates: notificationPrefs.teamUpdates ?? true,
-        scheduleChanges: notificationPrefs.scheduleChanges ?? true,
-        parentMessages: notificationPrefs.parentMessages ?? true,
-        adminAnnouncements: notificationPrefs.adminAnnouncements ?? true,
+        eventChanges: notificationPrefs.eventChanges ?? true,
+        playerCheckIn: notificationPrefs.playerCheckIn ?? true,
+        playerRsvp: notificationPrefs.playerRsvp ?? true,
+        teamMessages: notificationPrefs.teamMessages ?? true,
+        playerAwards: notificationPrefs.playerAwards ?? true,
         playerProgress: notificationPrefs.playerProgress ?? true,
-        attendanceAlerts: notificationPrefs.attendanceAlerts ?? true,
-        emergencyNotifications: notificationPrefs.emergencyNotifications ?? true,
-        paymentReminders: notificationPrefs.paymentReminders ?? true,
         pushNotifications: notificationPrefs.pushNotifications ?? true,
         emailNotifications: notificationPrefs.emailNotifications ?? true,
         smsNotifications: notificationPrefs.smsNotifications ?? false,
-        quietHoursStart: notificationPrefs.quietHoursStart ?? "22:00",
-        quietHoursEnd: notificationPrefs.quietHoursEnd ?? "07:00"
       });
     }
   }, [notificationPrefs]);
@@ -916,59 +871,44 @@ export function CoachNotificationsPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5" />
-                Team & Schedule Notifications
+                Team Notifications
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <ToggleRow 
                 label="Team Updates" 
-                description="Get notified about team roster changes and announcements"
+                description="When a player sets one of your teams as their team"
                 checked={prefs.teamUpdates} 
                 onChange={(v) => setPrefs((p) => ({ ...p, teamUpdates: v }))}
                 testId="switch-team-updates"
               />
               <ToggleRow 
-                label="Schedule Changes" 
-                description="Receive alerts when practice or game schedules are modified"
-                checked={prefs.scheduleChanges} 
-                onChange={(v) => setPrefs((p) => ({ ...p, scheduleChanges: v }))}
-                testId="switch-schedule-changes"
+                label="Event Changes" 
+                description="Any changes to events in the calendar that you can see"
+                checked={prefs.eventChanges} 
+                onChange={(v) => setPrefs((p) => ({ ...p, eventChanges: v }))}
+                testId="switch-event-changes"
               />
               <ToggleRow 
-                label="Attendance Alerts" 
-                description="Get notified about player attendance and check-ins"
-                checked={prefs.attendanceAlerts} 
-                onChange={(v) => setPrefs((p) => ({ ...p, attendanceAlerts: v }))}
-                testId="switch-attendance-alerts"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Communication Notifications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ToggleRow 
-                label="Parent Messages" 
-                description="Receive notifications when parents send you messages"
-                checked={prefs.parentMessages} 
-                onChange={(v) => setPrefs((p) => ({ ...p, parentMessages: v }))}
-                testId="switch-parent-messages"
+                label="Player Check-In Alerts" 
+                description="When players in your roster check in to events"
+                checked={prefs.playerCheckIn} 
+                onChange={(v) => setPrefs((p) => ({ ...p, playerCheckIn: v }))}
+                testId="switch-player-checkin"
               />
               <ToggleRow 
-                label="Administrative Announcements" 
-                description="Get notified about league and organizational updates"
-                checked={prefs.adminAnnouncements} 
-                onChange={(v) => setPrefs((p) => ({ ...p, adminAnnouncements: v }))}
-                testId="switch-admin-announcements"
+                label="Player RSVP Alerts" 
+                description="When players in your roster RSVP to events"
+                checked={prefs.playerRsvp} 
+                onChange={(v) => setPrefs((p) => ({ ...p, playerRsvp: v }))}
+                testId="switch-player-rsvp"
               />
               <ToggleRow 
-                label="Emergency Notifications" 
-                description="Always receive critical and emergency communications"
-                checked={prefs.emergencyNotifications} 
-                onChange={(v) => setPrefs((p) => ({ ...p, emergencyNotifications: v }))}
-                testId="switch-emergency-notifications"
+                label="Team Messages" 
+                description="Notifications for messages in teams you're a part of"
+                checked={prefs.teamMessages} 
+                onChange={(v) => setPrefs((p) => ({ ...p, teamMessages: v }))}
+                testId="switch-team-messages"
               />
             </CardContent>
           </Card>
@@ -979,18 +919,18 @@ export function CoachNotificationsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <ToggleRow 
-                label="Player Progress Updates" 
-                description="Receive updates about player achievements and milestones"
+                label="Player Awards" 
+                description="When players earn badges or trophies"
+                checked={prefs.playerAwards} 
+                onChange={(v) => setPrefs((p) => ({ ...p, playerAwards: v }))}
+                testId="switch-player-awards"
+              />
+              <ToggleRow 
+                label="Player Progress" 
+                description="When players make progress toward achievements"
                 checked={prefs.playerProgress} 
                 onChange={(v) => setPrefs((p) => ({ ...p, playerProgress: v }))}
                 testId="switch-player-progress"
-              />
-              <ToggleRow 
-                label="Payment Reminders" 
-                description="Get reminded about pending payments from team families"
-                checked={prefs.paymentReminders} 
-                onChange={(v) => setPrefs((p) => ({ ...p, paymentReminders: v }))}
-                testId="switch-payment-reminders"
               />
             </CardContent>
           </Card>
@@ -1021,31 +961,6 @@ export function CoachNotificationsPage() {
                 onChange={(v) => setPrefs((p) => ({ ...p, smsNotifications: v }))}
                 testId="switch-sms-notifications"
               />
-              
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Quiet Hours</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Start Time</label>
-                    <Input
-                      type="time"
-                      value={prefs.quietHoursStart}
-                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursStart: e.target.value }))}
-                      data-testid="input-quiet-start"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">End Time</label>
-                    <Input
-                      type="time"
-                      value={prefs.quietHoursEnd}
-                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursEnd: e.target.value }))}
-                      data-testid="input-quiet-end"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Non-emergency notifications will be silenced during these hours</p>
-              </div>
             </CardContent>
           </Card>
 

@@ -35,13 +35,6 @@ export default function CoachSettingsPage() {
       path: "/coach-settings/profile"
     },
     { 
-      key: "coaching", 
-      icon: Users, 
-      label: "Coaching Info", 
-      description: "Coaching experience and qualifications",
-      path: "/coach-settings/coaching"
-    },
-    { 
       key: "privacy", 
       icon: Shield, 
       label: "Privacy", 

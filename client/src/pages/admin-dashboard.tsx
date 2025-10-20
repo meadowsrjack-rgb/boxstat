@@ -323,6 +323,17 @@ function UsersTab({ users, organization }: any) {
     },
   });
 
+  const downloadUserTemplate = () => {
+    const csvContent = "email,firstName,lastName,role,phoneNumber\nplayer@example.com,John,Doe,player,555-0100\ncoach@example.com,Jane,Smith,coach,555-0101\nparent@example.com,Bob,Johnson,parent,555-0102";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -415,7 +426,7 @@ function UsersTab({ users, organization }: any) {
                   onChange={handleBulkUpload}
                   data-testid="input-csv-upload"
                 />
-                <Button variant="outline" className="w-full" data-testid="button-download-template">
+                <Button variant="outline" className="w-full" onClick={downloadUserTemplate} data-testid="button-download-template">
                   <Download className="w-4 h-4 mr-2" />
                   Download CSV Template
                 </Button>
@@ -622,6 +633,17 @@ function TeamsTab({ teams, users, organization }: any) {
     },
   });
 
+  const downloadTeamTemplate = () => {
+    const csvContent = "name,division,ageGroup,coachEmail\nThunder U12,Recreational,U12,coach@example.com\nLightning U14,Competitive,U14,coach2@example.com\nStorm U16,Competitive,U16,";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'teams-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -723,6 +745,10 @@ function TeamsTab({ teams, users, organization }: any) {
                     onChange={handleBulkUpload}
                     data-testid="input-team-csv-upload"
                   />
+                  <Button variant="outline" className="w-full" onClick={downloadTeamTemplate} data-testid="button-download-team-template">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download CSV Template
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>

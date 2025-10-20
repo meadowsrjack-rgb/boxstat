@@ -157,16 +157,19 @@ export default function PlayerCard({
 
   const loading = isProfileId ? profileLoading : playerLoading;
 
+  // Get the account ID for queries (use playerProfile.accountId if available, otherwise use playerId if it's an account ID)
+  const accountIdForQueries = playerProfile?.accountId || (!isProfileId ? playerId : null);
+
   // Get team info
   const { data: teamInfo } = useQuery<TeamInfo>({
-    queryKey: [`/api/users/${playerId}/team`],
-    enabled: isOpen && !!playerId,
+    queryKey: [`/api/users/${accountIdForQueries}/team`],
+    enabled: isOpen && !!accountIdForQueries,
   });
 
   // Get player awards summary
   const { data: awardsSummary } = useQuery<AwardsSummary>({
-    queryKey: [`/api/users/${playerId}/awards`],
-    enabled: isOpen && !!playerId,
+    queryKey: [`/api/users/${accountIdForQueries}/awards`],
+    enabled: isOpen && !!accountIdForQueries,
   });
 
   // Get player's latest skill evaluation

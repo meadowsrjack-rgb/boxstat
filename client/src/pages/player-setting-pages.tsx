@@ -213,10 +213,13 @@ export function PlayerProfilePage() {
       
       // Force refetch for PlayerCard and other views
       queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${accountId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Invalidate team queries for both account ID and profile ID (PlayerCard might use either)
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "team"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${activeProfileId}/team`] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "awards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "tasks"] });

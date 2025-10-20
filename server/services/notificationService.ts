@@ -96,8 +96,17 @@ export class NotificationService {
       if (updates.improvementRecommendation !== undefined) setFields.improvementRecommendation = updates.improvementRecommendation;
       if (updates.paymentDue !== undefined) setFields.paymentDue = updates.paymentDue;
       if (updates.teamMessages !== undefined) setFields.teamMessages = updates.teamMessages;
+      // Coach-specific notifications
+      if (updates.teamUpdates !== undefined) setFields.teamUpdates = updates.teamUpdates;
+      if (updates.eventChanges !== undefined) setFields.eventChanges = updates.eventChanges;
+      if (updates.playerCheckIn !== undefined) setFields.playerCheckIn = updates.playerCheckIn;
+      if (updates.playerRsvp !== undefined) setFields.playerRsvp = updates.playerRsvp;
+      if (updates.playerAwards !== undefined) setFields.playerAwards = updates.playerAwards;
+      if (updates.playerProgress !== undefined) setFields.playerProgress = updates.playerProgress;
+      // Delivery methods
       if (updates.pushNotifications !== undefined) setFields.pushNotifications = updates.pushNotifications;
       if (updates.emailNotifications !== undefined) setFields.emailNotifications = updates.emailNotifications;
+      if (updates.smsNotifications !== undefined) setFields.smsNotifications = updates.smsNotifications;
       if (updates.quietHoursStart !== undefined) setFields.quietHoursStart = updates.quietHoursStart;
       if (updates.quietHoursEnd !== undefined) setFields.quietHoursEnd = updates.quietHoursEnd;
 
@@ -234,6 +243,13 @@ export class NotificationService {
       case 'improvement_recommendation': return preferences.improvementRecommendation ?? true;
       case 'payment_due': return preferences.paymentDue ?? true;
       case 'team_message': return preferences.teamMessages ?? true;
+      // Coach-specific notifications
+      case 'coach_team_update': return preferences.teamUpdates ?? true;
+      case 'coach_event_change': return preferences.eventChanges ?? true;
+      case 'coach_player_checkin': return preferences.playerCheckIn ?? true;
+      case 'coach_player_rsvp': return preferences.playerRsvp ?? true;
+      case 'coach_player_award': return preferences.playerAwards ?? true;
+      case 'coach_player_progress': return preferences.playerProgress ?? true;
       default: return true;
     }
   }
@@ -462,6 +478,80 @@ export class NotificationService {
       priority: 'normal',
       actionUrl: '/training',
       data: { recommendation }
+    });
+  }
+
+  // ===== Coach-Specific Notification Triggers =====
+
+  async notifyCoachTeamUpdate(coachUserId: string, playerName: string, teamName: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_team_update',
+      title: 'Team Roster Update',
+      message: `${playerName} has joined ${teamName}`,
+      priority: 'normal',
+      actionUrl: '/coach-dashboard',
+      data: { playerName, teamName }
+    });
+  }
+
+  async notifyCoachEventChange(coachUserId: string, eventTitle: string, changeType: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_event_change',
+      title: 'Event Updated',
+      message: `"${eventTitle}" has been ${changeType}`,
+      priority: 'normal',
+      actionUrl: '/calendar',
+      data: { eventTitle, changeType }
+    });
+  }
+
+  async notifyCoachPlayerCheckIn(coachUserId: string, playerName: string, eventTitle: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_player_checkin',
+      title: 'Player Check-In',
+      message: `${playerName} checked in to "${eventTitle}"`,
+      priority: 'normal',
+      actionUrl: '/coach-dashboard',
+      data: { playerName, eventTitle }
+    });
+  }
+
+  async notifyCoachPlayerRSVP(coachUserId: string, playerName: string, eventTitle: string, status: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_player_rsvp',
+      title: 'Player RSVP',
+      message: `${playerName} ${status} for "${eventTitle}"`,
+      priority: 'normal',
+      actionUrl: '/coach-dashboard',
+      data: { playerName, eventTitle, status }
+    });
+  }
+
+  async notifyCoachPlayerAward(coachUserId: string, playerName: string, awardName: string, awardType: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_player_award',
+      title: 'Player Achievement',
+      message: `${playerName} earned ${awardType === 'badge' ? 'the' : 'a'} ${awardName} ${awardType}!`,
+      priority: 'normal',
+      actionUrl: '/coach-dashboard',
+      data: { playerName, awardName, awardType }
+    });
+  }
+
+  async notifyCoachPlayerProgress(coachUserId: string, playerName: string, progressDescription: string): Promise<void> {
+    await this.createNotification({
+      userId: coachUserId,
+      type: 'coach_player_progress',
+      title: 'Player Progress',
+      message: `${playerName}: ${progressDescription}`,
+      priority: 'normal',
+      actionUrl: '/coach-dashboard',
+      data: { playerName, progressDescription }
     });
   }
 }

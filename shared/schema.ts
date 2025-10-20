@@ -579,7 +579,13 @@ export const notifications = pgTable("notifications", {
       "team_message",
       "team_join_request",
       "team_join_approved",
-      "team_join_rejected"
+      "team_join_rejected",
+      "coach_team_update",
+      "coach_event_change",
+      "coach_player_checkin",
+      "coach_player_rsvp",
+      "coach_player_award",
+      "coach_player_progress"
     ] 
   }).notNull(),
   title: varchar("title").notNull(),
@@ -607,8 +613,17 @@ export const notificationPreferences = pgTable("notification_preferences", {
   improvementRecommendation: boolean("improvement_recommendation").default(true),
   paymentDue: boolean("payment_due").default(true),
   teamMessages: boolean("team_messages").default(true),
+  // Coach-specific notifications
+  teamUpdates: boolean("team_updates").default(true),
+  eventChanges: boolean("event_changes").default(true),
+  playerCheckIn: boolean("player_check_in").default(true),
+  playerRsvp: boolean("player_rsvp").default(true),
+  playerAwards: boolean("player_awards").default(true),
+  playerProgress: boolean("player_progress").default(true),
+  // Delivery methods
   pushNotifications: boolean("push_notifications").default(true),
   emailNotifications: boolean("email_notifications").default(true),
+  smsNotifications: boolean("sms_notifications").default(false),
   quietHoursStart: varchar("quiet_hours_start").default("22:00"), // 10 PM
   quietHoursEnd: varchar("quiet_hours_end").default("07:00"), // 7 AM
   createdAt: timestamp("created_at").defaultNow(),

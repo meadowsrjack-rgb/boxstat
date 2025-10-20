@@ -30,6 +30,7 @@ import {
   ChevronRight,
   CalendarDays,
   List,
+  Eye,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -37,6 +38,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
+import CoachDashboard from "./coach-dashboard";
+import PlayerDashboard from "./player-dashboard";
+import ParentDashboard from "./parent-dashboard";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -157,6 +161,10 @@ export default function AdminDashboard() {
               <DollarSign className="w-4 h-4 mr-2" />
               Payments
             </TabsTrigger>
+            <TabsTrigger value="preview" data-testid="tab-preview">
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </TabsTrigger>
             <TabsTrigger value="settings" data-testid="tab-settings">
               <Settings className="w-4 h-4 mr-2" />
               Settings
@@ -242,6 +250,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="payments">
             <PaymentsTab payments={payments} users={users} organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="preview">
+            <PreviewTab />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -1791,5 +1803,65 @@ function SettingsTab({ organization }: any) {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+// Preview Tab Component
+function PreviewTab() {
+  const [previewMode, setPreviewMode] = useState<"player" | "parent" | "coach">("player");
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Dashboard Preview</CardTitle>
+          <CardDescription>Preview how different user roles see their dashboards</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 mb-6">
+            <Button
+              variant={previewMode === "player" ? "default" : "outline"}
+              onClick={() => setPreviewMode("player")}
+              data-testid="button-preview-player"
+            >
+              Player Dashboard
+            </Button>
+            <Button
+              variant={previewMode === "parent" ? "default" : "outline"}
+              onClick={() => setPreviewMode("parent")}
+              data-testid="button-preview-parent"
+            >
+              Parent Dashboard
+            </Button>
+            <Button
+              variant={previewMode === "coach" ? "default" : "outline"}
+              onClick={() => setPreviewMode("coach")}
+              data-testid="button-preview-coach"
+            >
+              Coach Dashboard
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Area */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg overflow-hidden bg-white">
+        {previewMode === "player" && (
+          <div data-testid="preview-player-dashboard">
+            <PlayerDashboard />
+          </div>
+        )}
+        {previewMode === "parent" && (
+          <div data-testid="preview-parent-dashboard">
+            <ParentDashboard />
+          </div>
+        )}
+        {previewMode === "coach" && (
+          <div data-testid="preview-coach-dashboard">
+            <CoachDashboard />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

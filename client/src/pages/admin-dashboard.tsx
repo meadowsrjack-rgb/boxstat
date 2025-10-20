@@ -324,7 +324,7 @@ function UsersTab({ users, organization }: any) {
   });
 
   const downloadUserTemplate = () => {
-    const csvContent = "email,firstName,lastName,role,phoneNumber\nplayer@example.com,John,Doe,player,555-0100\ncoach@example.com,Jane,Smith,coach,555-0101\nparent@example.com,Bob,Johnson,parent,555-0102";
+    const csvContent = "email,firstName,lastName,phoneNumber,address,role,program\nplayer@example.com,John,Doe,555-0100,123 Main St,player,Basketball Academy\ncoach@example.com,Jane,Smith,555-0101,456 Oak Ave,coach,\nparent@example.com,Bob,Johnson,555-0102,789 Elm St,parent,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -376,6 +376,8 @@ function UsersTab({ users, organization }: any) {
             lastName: userData.lastname || userData.lastName,
             role: userData.role || "player",
             phoneNumber: userData.phonenumber || userData.phoneNumber || undefined,
+            address: userData.address || undefined,
+            program: userData.program || undefined,
             isActive: true,
             verified: false,
           });
@@ -419,7 +421,7 @@ function UsersTab({ users, organization }: any) {
                 <DialogTitle>Bulk Upload Users</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: email, firstName, lastName, role, phoneNumber</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: email, firstName, lastName, phoneNumber, address, role, program</p>
                 <Input
                   type="file"
                   accept=".csv"

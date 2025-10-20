@@ -2,10 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, User } from "lucide-react";
-import logo from "@assets/UYP Logo nback_1752703900579.png";
-
-const UYP_RED = "#d82428";
+import { Users, User, Shield } from "lucide-react";
 
 export default function SelectProfileType() {
   const { user } = useAuth();
@@ -18,18 +15,25 @@ export default function SelectProfileType() {
     setLocation(`/create-profile?type=${type}`);
   };
 
+  const handleStaffLogin = () => {
+    // Redirect to admin dashboard (or staff login page if you create one)
+    setLocation('/admin');
+  };
+
   return (
     <div
       className="min-h-screen text-white flex items-center justify-center p-4"
       style={{
-        background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`,
+        background: `radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,0.15), transparent 60%), #000`,
       }}
     >
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Header */}
         <div className="text-center mb-12">
-          <img src={logo} alt="UYP Basketball" className="h-20 mx-auto mb-6" />
-          <h1 className="text-3xl font-bold mb-3">Welcome to UYP Basketball</h1>
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+            <Shield className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold mb-3">Welcome</h1>
           <p className="text-white/70">Are you joining as a parent or player?</p>
         </div>
 
@@ -44,15 +48,14 @@ export default function SelectProfileType() {
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
                 <div
-                  className="w-14 h-14 rounded-lg grid place-items-center text-white"
-                  style={{ backgroundColor: UYP_RED }}
+                  className="w-14 h-14 rounded-lg grid place-items-center text-white bg-blue-600"
                 >
                   <Users className="h-7 w-7" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-semibold text-white text-lg mb-1">Parent/Guardian</h3>
                   <p className="text-sm text-white/70">
-                    Manage your family's basketball experience, payments, and schedules
+                    Manage your family's experience, payments, and schedules
                   </p>
                 </div>
               </div>
@@ -85,6 +88,13 @@ export default function SelectProfileType() {
 
         <div className="mt-8 text-center text-sm text-white/50">
           <p>Your profile will be automatically synced with our system if you're using a registered email.</p>
+          <button
+            onClick={handleStaffLogin}
+            className="mt-4 text-white/60 hover:text-white/90 underline transition-colors"
+            data-testid="button-staff-login"
+          >
+            Staff login (Admin/Coach)
+          </button>
         </div>
       </div>
     </div>

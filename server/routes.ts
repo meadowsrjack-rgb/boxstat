@@ -3417,19 +3417,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle team assignment if teamId is provided
       let teamDbId: string | undefined = undefined;
       if (req.body.teamId && req.body.teamId.trim() !== '') {
-        const teamName = req.body.teamId;
-        const allTeams = await storage.getAllTeams();
-        const existingTeam = allTeams.find(t => t.name === teamName);
+        // teamId is sent as a string (team's numeric ID as string)
+        const teamIdNum = parseInt(req.body.teamId);
         
-        if (existingTeam) {
-          teamDbId = existingTeam.id.toString();
+        if (!isNaN(teamIdNum)) {
+          // Validate that the team exists
+          const team = await storage.getTeam(teamIdNum);
+          if (team) {
+            teamDbId = teamIdNum.toString();
+          } else {
+            return res.status(400).json({ message: "Invalid team ID" });
+          }
         } else {
-          const newTeam = await storage.createTeam({
-            name: teamName,
-            ageGroup: 'Various',
-            color: '#DC2626',
-          });
-          teamDbId = newTeam.id.toString();
+          return res.status(400).json({ message: "Team ID must be a number" });
         }
       }
       
@@ -3457,7 +3457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jerseyNumber: safeParseInt(req.body.jerseyNumber, profile.jerseyNumber),
         teamId: teamDbId || profile.teamId,
         // Player-specific fields
-        age: safeParseInt(req.body.age, profile.age),
+        age: req.body.age !== undefined ? req.body.age : profile.age,
         height: req.body.height !== undefined ? req.body.height : profile.height,
         city: req.body.city !== undefined ? req.body.city : profile.city,
         // Coach-specific fields

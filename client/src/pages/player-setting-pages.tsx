@@ -38,15 +38,15 @@ export function PlayerProfilePage() {
   const [, setLocation] = useLocation();
 
   // Fetch the active profile data
-  const { data: activeProfile, isLoading: isLoadingProfile } = useQuery({
+  const { data: activeProfile, isLoading: isLoadingProfile } = useQuery<any>({
     queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
     enabled: !!(user as any)?.activeProfileId,
   });
 
-  // Fetch current team data to display (read-only)
-  const { data: teamData } = useQuery({
-    queryKey: ["/api/users", (user as any)?.id, "team"],
-    enabled: !!(user as any)?.id
+  // Fetch all teams for team selector
+  const { data: allTeams = [] } = useQuery<{ id: number; name: string; ageGroup: string; program: string }[]>({
+    queryKey: ['/api/teams'],
+    enabled: true,
   });
 
   const [profile, setProfile] = useState({
@@ -57,7 +57,7 @@ export function PlayerProfilePage() {
     city: "",
     age: "",
     height: "",
-    schoolGrade: "",
+    teamId: "",
     phoneNumber: "",
     emergencyContact: "",
     emergencyPhone: "",
@@ -76,7 +76,7 @@ export function PlayerProfilePage() {
         city: (activeProfile as any)?.city || activeProfile.address || "",
         age: (activeProfile as any)?.age || "",
         height: (activeProfile as any)?.height || "",
-        schoolGrade: activeProfile.schoolGrade || "",
+        teamId: (activeProfile as any)?.teamId || "",
         phoneNumber: activeProfile.phoneNumber || "",
         emergencyContact: activeProfile.emergencyContact || "",
         emergencyPhone: activeProfile.emergencyPhone || "",
@@ -194,9 +194,9 @@ export function PlayerProfilePage() {
         position: updatedProfile.position || "",
         jerseyNumber: updatedProfile.jerseyNumber?.toString() || "",
         city: updatedProfile.address || "",
-        age: (user as any)?.age || "",
-        height: (user as any)?.height || "",
-        schoolGrade: updatedProfile.schoolGrade || "",
+        age: updatedProfile.age || "",
+        height: updatedProfile.height || "",
+        teamId: updatedProfile.teamId || "",
         phoneNumber: updatedProfile.phoneNumber || "",
         emergencyContact: updatedProfile.emergencyContact || "",
         emergencyPhone: updatedProfile.emergencyPhone || "",
@@ -329,7 +329,7 @@ export function PlayerProfilePage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Age</label>
                   <Select value={profile.age} onValueChange={(value) => setProfile(p => ({ ...p, age: value }))}>
@@ -352,19 +352,6 @@ export function PlayerProfilePage() {
                     <SelectContent>
                       {HEIGHT_OPTIONS.map((height) => (
                         <SelectItem key={height} value={height}>{height}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">School Grade</label>
-                  <Select value={profile.schoolGrade} onValueChange={(value) => setProfile(p => ({ ...p, schoolGrade: value }))}>
-                    <SelectTrigger data-testid="select-grade">
-                      <SelectValue placeholder="Select grade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {GRADE_OPTIONS.map((grade) => (
-                        <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -427,6 +414,22 @@ export function PlayerProfilePage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
+                <Select value={profile.teamId} onValueChange={(value) => setProfile(p => ({ ...p, teamId: value }))}>
+                  <SelectTrigger data-testid="select-team">
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allTeams.map((team) => (
+                      <SelectItem key={team.id} value={team.id.toString()}>
+                        {team.name} {team.program ? `(${team.program})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

@@ -28,7 +28,18 @@ Preferred communication style: Simple, everyday language.
 ### Database Architecture
 - **Database**: PostgreSQL with Neon serverless hosting
 - **ORM**: Drizzle ORM for type-safe operations and migrations.
-- **Schema**: Comprehensive schema supporting users, teams, events, payments, etc.
+- **Schema**: Comprehensive schema supporting users, teams, events, payments, badge/trophy system.
+- **Player Data Model**: Dual-table structure:
+  - **Profiles Table**: App user profiles with program, registration status, skill ratings (with year/quarter tracking)
+  - **Players Table**: Notion-synced roster data with app profile status indicator (yes/no)
+- **Programs**: 10 total programs including Skills Academy sub-programs (SA-Special-Needs, SA-Rookies, SA-Beginner, SA-Intermediate, SA-Advanced, SA-Elite), plus FNHTL, Youth-Club, and High-School
+- **Badge & Trophy System**: 5-tier achievement system
+  - **Prospect (Grey)**: First steps and introductory achievements
+  - **Starter (Green)**: Habit builders, early consistency
+  - **All-Star (Blue)**: Recognition and milestones
+  - **Superstar (Purple)**: Elite consistency, long-term dedication
+  - **Hall of Fame (Gold)**: Ultra-rare, lifetime-defining achievements
+  - **Trophies**: UYP Legacy (yearly org-wide) and Team (seasonal coach-awarded)
 
 ### Key Features & Design Decisions
 - **Authentication Flow**: Post-login account linking system with automatic coach detection via email domain. Users are directed to appropriate dashboards (coach, parent, or player) based on profile type.

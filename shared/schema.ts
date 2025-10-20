@@ -67,6 +67,14 @@ export const profiles = pgTable("profiles", {
   age: varchar("age"),
   height: varchar("height"),
   city: varchar("city"),
+  program: varchar("program", { 
+    enum: ["Skills-Academy", "SA-Special-Needs", "SA-Rookies", "SA-Beginner", "SA-Intermediate", "SA-Advanced", "SA-Elite", "FNHTL", "Youth-Club", "High-School"] 
+  }),
+  registrationStatus: varchar("registration_status", { enum: ["active", "not-active", "on-break"] }).default("active"),
+  // Player skill rating tracking
+  skillRating: integer("skill_rating"), // Overall skill rating (1-100)
+  ratingYear: integer("rating_year"), // Year of rating
+  ratingQuarter: varchar("rating_quarter", { enum: ["Q1", "Q2", "Q3", "Q4"] }), // Quarter of rating
   // Coach-specific fields
   coachingExperience: text("coaching_experience"),
   yearsExperience: varchar("years_experience"),
@@ -181,7 +189,9 @@ export const teams = pgTable("teams", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
   ageGroup: varchar("age_group").notNull(),
-  program: varchar("program", { enum: ["Skills-Academy", "FNHTL", "Youth-Club", "High-School-Club"] }),
+  program: varchar("program", { 
+    enum: ["Skills-Academy", "SA-Special-Needs", "SA-Rookies", "SA-Beginner", "SA-Intermediate", "SA-Advanced", "SA-Elite", "FNHTL", "Youth-Club", "High-School"] 
+  }),
   color: varchar("color").notNull().default("#1E40AF"),
   coachId: varchar("coach_id").references(() => users.id),
   division: varchar("division"),
@@ -255,10 +265,14 @@ export const attendances = pgTable("attendances", {
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
+  slug: varchar("slug").notNull().unique(), // Unique identifier for badge (e.g., "superstar-supreme", "the-debut")
   description: text("description"),
   icon: varchar("icon").notNull(),
   color: varchar("color").notNull(),
-  tier: varchar("tier", { enum: ["grey", "green", "blue", "purple", "yellow"] }).notNull(),
+  tier: varchar("tier", { 
+    enum: ["prospect", "starter", "all-star", "superstar", "hall-of-fame"] 
+  }).notNull(), // Prospect (Grey), Starter (Green), All-Star (Blue), Superstar (Purple), Hall of Fame (Gold)
+  category: varchar("category"), // e.g., "games", "practices", "awards", "online-training"
   type: varchar("type").notNull(), // MVP, Hustle, Teammate, etc.
   criteria: jsonb("criteria").notNull(),
   isActive: boolean("is_active").default(true),
@@ -268,9 +282,10 @@ export const badges = pgTable("badges", {
 export const trophies = pgTable("trophies", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
+  slug: varchar("slug").notNull().unique(), // Unique identifier for trophy (e.g., "uyp-heart-and-hustle", "mvp")
   description: text("description"),
   icon: varchar("icon").notNull(),
-  type: varchar("type", { enum: ["legacy", "team"] }).notNull(),
+  type: varchar("type", { enum: ["legacy", "team"] }).notNull(), // UYP Legacy (yearly) or Team (seasonal)
   criteria: jsonb("criteria").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -483,15 +498,30 @@ export const playerEvaluations = pgTable("player_evaluations", {
 export const players = pgTable("players", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   fullName: varchar("full_name").notNull(),
+  email: varchar("email"), // Only populated if player created via app (requires email for account)
   dob: date("dob"),
+  age: varchar("age"),
+  height: varchar("height"),
+  city: varchar("city"), // Where player is from
+  position: varchar("position"),
   jerseyNumber: varchar("jersey_number"),
   photoUrl: varchar("photo_url"),
   teamId: integer("team_id").references(() => teams.id),
+  program: varchar("program", { 
+    enum: ["Skills-Academy", "SA-Special-Needs", "SA-Rookies", "SA-Beginner", "SA-Intermediate", "SA-Advanced", "SA-Elite", "FNHTL", "Youth-Club", "High-School"] 
+  }),
+  registrationStatus: varchar("registration_status", { enum: ["active", "not-active", "on-break"] }).notNull().default("active"),
+  appProfileStatus: varchar("app_profile_status", { enum: ["yes", "no"] }).notNull().default("no"), // Whether player has app account
+  // Player skill rating tracking
+  skillRating: integer("skill_rating"), // Overall skill rating (1-100)
+  ratingYear: integer("rating_year"), // Year of rating
+  ratingQuarter: varchar("rating_quarter", { enum: ["Q1", "Q2", "Q3", "Q4"] }), // Quarter of rating
+  // Legacy fields
   status: varchar("status", { enum: ["active", "inactive", "pending"] }).notNull().default("active"),
   claimState: varchar("claim_state", { enum: ["unclaimed", "claimed", "locked"] }).notNull().default("unclaimed"),
   guardianEmail: varchar("guardian_email"),
   guardianPhone: varchar("guardian_phone"),
-  notionId: varchar("notion_id").unique(),
+  notionId: varchar("notion_id").unique(), // Link to Notion database
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,0 +1,824 @@
+database tables for player profiles in the app:
+
+players table should have name, registration status (active, not-active), app profile status (yes, no) whether the player was populated from the data i've provided or it is from the player making their own profile, program, team, email (player row will only have an email if the profile was made using the app as a new account requires an email, age, height, from, position, rating (overall skills rating and the year/quarter of that rating), awards (these should all be listed in the row of the player)
+
+ programs:
+Skills-Academy
+SA-Special-Needs
+SA-Rookies
+SA-Beginner
+SA-Intermediate
+SA-Advanced
+SA-Elite
+High-School
+Youth-Club
+FNHTL
+
+teams: Wizards
+Wolverines
+Wildcats
+Anteaters
+Dolphins
+Storm
+Vikings
+Silverswords
+Bruins
+Titans
+Trojans
+Eagles
+Dragons
+Black-Elite
+10u-Black
+12u-Red
+12u-Black
+13u-White
+13u-Black
+14u-Black
+14u-Gray
+14u-Red
+Youth-Girls-Red
+Youth-Girls-Black
+High-School-Elite
+High-School-Black
+High-School-White
+High-School-Red
+
+trophies and badges: Trophies (End of Season/Year)
+These trophies are awarded at the end of the year to recognize players for their outstanding season-long contributions.
+UYP Legacy Trophies (Yearly)
+These premier trophies represent the highest honor a player can receive. Only one recipient is selected for each award from the entire pool of players across all UYP teams, making this a truly exceptional achievement.
+The UYP Heart and Hustle Award: This yearly award recognizes the single player in all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game.
+The Spirit Award: Awarded to the one player across the entire organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court.
+Team Trophies (Seasonal)
+Awarded by the coach to recognize standout players within their own team.
+MVP (Most Valuable Player): Awarded to the player who had the most significant impact on the team's success during the season.
+Coach’s Award: Given to the player who best exemplifies the team's core values and the coach's philosophy, demonstrating coachability, dedication, and a positive attitude throughout the season.
+MIP (Most Improved Player): Awarded to the player who has shown the most significant growth and development in their skills and game sense over the course of the season.
+Defensive Player: Awarded to the player that has had the greatest defensive impact during the season.
+
+Badge System
+
+Hall of Fame (Gold) – Legends Only
+Ultra-rare, lifetime-defining achievements.
+Superstar Supreme — 10× MVPs
+
+
+Relentless — 10× Hustle
+
+
+The Linchpin — 10× Teammate
+
+
+The Paragon — 10× Student of the Game
+
+
+Dynasty Member — 5 years active
+
+
+Franchise Player — 100 total games
+
+
+FNH Hall of Famer — 100 total FNH games
+
+
+Training Titan — 250 practices or 250 skills sessions
+
+
+Immortal Ironman — Attended every one of your team’s games in a full year
+
+
+Digital Triple Crown — Completed 3 full Online Programs
+
+
+The Completer — Earned every Superstar badge
+
+Superstar (Purple) – Elite Consistency
+Long-term dedication, advanced achievements.
+Marquee Player — 5× MVPs
+
+
+The Workhorse — 5× Hustle
+
+
+The Cornerstone — 5× Teammate
+
+
+Coach on the Court — 5× Student of the Game
+
+
+Coach’s Choice — Earned all 4 major Coach Awards (MVP, Hustle, Teammate, Student) at least once
+
+
+Ironman — Played every game in a season
+
+
+The Pillar — Attended every practice in a season
+
+
+Practice Centurion — 100 practices
+
+
+Skills Specialist — 100 skills sessions
+
+
+Seventy-Five Club — 75 total games
+
+
+FNH Seventy-Five — 75 total FNH games
+
+
+Team Veteran — 3 years active
+
+
+Foundation Graduate — Completed the Online Foundation Program
+
+
+Perfect Attendance (Online) — 12 straight weeks of online training program
+
+All-Star (Blue) – Recognition & Milestones
+Mid-level consistency and role recognition.
+Game Changer — 3× MVPs
+
+
+The Engine — 3× Hustle
+
+
+The Glue — 3× Teammate
+
+
+The Protégé — 3× Student of the Game
+
+
+Practice Fiend — 50 practices
+
+
+Skills Devotee — 50 skills sessions
+
+
+Seasoned Competitor — 50 total games
+
+
+FNH Veteran — 50 total FNH games
+
+
+First Year Anniversary — 1 year active
+
+
+Digital Scholar — Completed 6 consecutive weeks of any online training program
+
+
+
+
+Starter (Green) – Habit Builders
+Rewards early consistency, coach recognition, and first streaks.
+Locked In — 10 consecutive practices
+
+
+Dedicated Grinder — 25 practices
+
+
+Skills Seeker — 25 skills sessions
+
+
+Regular Competitor — 25 total games
+
+
+FNH Regular — 25 total FNH games
+
+
+RSVP Streak — Submitted RSVPs on time for 5 straight events
+
+
+Practice Partner — Attended every scheduled practice in a single week
+
+
+Film Student — Completed 5 online videos (any type)
+Back-to-Back Sessions — Completed weekly online videos 2 weeks in a row
+
+
+Coach Awards (Awarded by Coach at any time):
+
+
+Game MVP
+
+
+Hustle Award
+
+
+Teammate Award
+
+
+Student of the Game
+
+
+Recruiter (for bringing in a new player who joins)
+
+
+
+
+
+
+
+Prospect (Grey) – First Steps
+Introductory, quick-win achievements.
+The Debut — First game played
+
+
+Friday Lights — First FNH game
+
+
+Practice Rookie — 10 practices
+
+
+Skill Starter — 10 skills sessions
+
+
+Game Planner — First RSVP to UYP event
+
+
+Checked In — Checked-in to first UYP event
+
+
+Road Warrior — Attended event at a different location
+
+
+Film Rookie — First online training video
+
+
+First Ten — 10 total games
+
+
+FNH Rookie — 10 total FNH games
+
+
+
+
+Trophies – UYP Legacy (Yearly)
+uyp-heart-and-hustle
+
+
+spirit-award
+
+
+mvp
+
+
+coaches-award
+
+
+mip
+
+
+defensive-player
+
+
+superstar-supreme
+
+
+relentless
+
+
+the-linchpin
+
+
+the-paragon
+
+
+dynasty-member
+
+
+franchise-player
+
+
+fnh-hall-of-famer
+
+
+training-titan
+
+
+immortal-ironman
+
+
+digital-triple-crown
+
+
+the-completer
+
+
+marquee-player
+
+
+the-workhorse
+
+
+the-cornerstone
+
+
+coach-on-the-court
+
+
+coaches-choice
+
+
+ironman
+
+
+the-pillar
+
+
+practice-centurion
+
+
+skills-specialist
+
+
+seventy-five-club
+
+
+fnh-seventy-five
+
+
+team-veteran
+
+
+foundation-graduate
+
+
+perfect-attendance-online
+
+
+game-changer
+
+
+the-engine
+
+
+the-glue
+
+
+the-protege
+
+
+practice-fiend
+
+
+skills-devotee
+
+
+seasoned-competitor
+
+
+fnh-veteran
+
+
+first-year-anniversary
+
+
+digital-scholar
+
+
+locked-in
+
+
+dedicated-grinder
+
+
+skills-seeker
+
+
+regular-competitor
+
+
+fnh-regular
+
+
+rsvp-streak
+
+
+practice-partner
+
+
+film-student
+
+
+back-to-back-sessions
+
+
+game-mvp
+
+
+hustle-award
+
+
+teammate-award
+
+
+student-of-the-game
+
+
+recruiter
+
+
+the-debut
+
+
+friday-lights
+
+
+practice-rookie
+
+
+skill-starter
+
+
+game-planner
+
+
+checked-in
+
+
+road-warrior
+
+
+film-rookie
+
+
+first-ten
+
+
+fnh-rookie
+
+
+For each slug above, provide:
+Color image: slug.png
+
+
+Grey image: slug-gray.png
+uyp-heart-and-hustle
+spirit-award
+mvp
+coaches-award
+mip
+defensive-player
+superstar-supreme
+relentless
+the-linchpin
+the-paragon
+dynasty-member
+franchise-player
+fnh-hall-of-famer
+training-titan
+immortal-ironman
+digital-triple-crown
+the-completer
+marquee-player
+the-workhorse
+the-cornerstone
+coach-on-the-court
+coaches-choice
+ironman
+the-pillar
+practice-centurion
+skills-specialist
+seventy-five-club
+fnh-seventy-five
+team-veteran
+foundation-graduate
+perfect-attendance-online
+game-changer
+the-engine
+the-glue
+the-protege
+practice-fiend
+skills-devotee
+seasoned-competitor
+fnh-veteran
+first-year-anniversary
+digital-scholar
+locked-in
+dedicated-grinder
+skills-seeker
+regular-competitor
+fnh-regular
+rsvp-streak
+practice-partner
+film-student
+back-to-back-sessions
+game-mvp
+hustle-award
+teammate-award
+student-of-the-game
+recruiter
+the-debut
+friday-lights
+practice-rookie
+skill-starter
+game-planner
+checked-in
+road-warrior
+film-rookie
+first-ten
+fnh-rookie
+
+Name,Status,Current Program,FNHTL Team,Youth Club Team,High School Team,Skills Academy Session
+Allen Yang,Active,Skills Academy ( Friday Night Hoops (,,,,
+Leo Mashati,Active,Skills Academy (,,,,
+Christian Kim,Active,Skills Academy (,,,,
+Maxwell Wong,Active,Skills Academy (,,,,
+Eason Shu,Active,Skills Academy (,,,,
+Atlas Waldman,Active,Skills Academy (,,,,
+Kaylee Khuu,Active,Skills Academy (,,,,
+Caleb Ling,Active,Skills Academy (,,,,
+Nolan Reynolds,Active,Skills Academy (,,,,
+Mahdi Maaz,Active,Skills Academy (,,,,
+Taylee Tran,Active,Skills Academy (,,,,
+Jayden Vuong,Active,Skills Academy ( Friday Night Hoops (,,,,
+Miles Romney,Active,Skills Academy (,,,,
+Carmen Abdelshafy,Active,Skills Academy (,,,,
+Jaylen Wang,Active,Skills Academy (,,,,
+Rutvi Rathi,Active,Skills Academy (,,,,
+Huntley Line,Active,Skills Academy (,,,,
+Anant Goenka,Active,Skills Academy (,,,,
+John,Active,Skills Academy (,,,,
+Austin Meau,Active,Skills Academy (,,,,
+Adam Meau,Active,Skills Academy (,,,,
+Yushi Me,Active,Skills Academy (,,,,
+Jayden Jain,Active,Skills Academy (,,,,
+James Kim,Active,Skills Academy (,,,,
+Sarina Jain,Active,Skills Academy (,,,,
+Aanya Prashant,Active,Skills Academy (,,,,
+Ethan Kim,Active,Skills Academy (,,,,
+Yaman Ozdemir,Active,Skills Academy (,,,,
+William Yi,Active,Skills Academy (,,,,
+Jacob Wang,Active,Youth Club (,,12u Black (,,
+Adrian Sepas-Khah,Not Active,Skills Academy (,,,,
+Dylan Reynolds,On Break,Skills Academy (,,,,
+Maximus Sadek,Active,Skills Academy (,,,,
+Elena,Active,Skills Academy (,,,,
+Finley Brtis,Active,Skills Academy ( Friday Night Hoops (,,,,
+Landon Brtis,Active,Skills Academy ( Friday Night Hoops (,,,,
+Nimrat Rooprai,Active,Skills Academy (,,,,
+Lucas Shevchenko,Active,Skills Academy (,,,,
+Yusuf Aydin,Active,Youth Club (,,12u Black (,,
+Ameen Elbiali,Active,Skills Academy (,,,,
+Evan Houng,Active,Skills Academy (,,,,
+Gina Clark,Active,Skills Academy ( FNHTL (,,,,
+Parsa Nekooei,Not Active,Skills Academy (,,,,
+Lane Overly,Active,Skills Academy (,,,,
+Julie Wang,Active,Skills Academy (,,,,
+Marcus Liu,Active,Skills Academy (,,,,
+Jayden Welch,Active,High School Club (,,,High-School-Elite (,
+Tyler Brown,Active,FNHTL ( Friday Night Hoops (,,,,
+Hasan Merchant,Active,Friday Night Hoops (,,,,
+Hanson Hoekstra,Not Active,FNHTL ( Friday Night Hoops (,,,,
+Brandon Do,Active,Youth Club (,,10u Black (,,
+Kaiden Wang,Active,Youth Club (,,10u Black (,,
+Yi Han,Active,Youth Club (,,10u Black (,,
+Benjamin Wong,Active,Youth Club (,,10u Black (,,
+Ethan Fu,Active,Youth Club (,,10u Black (,,
+Matheo Adame,Active,Youth Club (,,10u Black (,,
+Victor Ching,Active,Youth Club (,,,,
+Artin Jabensari,Active,Youth Club (,,10u Black (,,
+Jay Lee,Active,Youth Club (,,,,
+Louise Feng,Active,Youth Club (,,10u Black (,,
+Kahlil Jackson,Active,Youth Club (,,10u Black (,,
+Justin Walker,Not Active,Youth Club (,,,,
+Terrence Kuang,Active,Youth Club (,,10u Black (,,
+Vinay Gopalkrishnan,Active,Youth Club (,,10u Black (,,
+Myko Petrulivicius,Active,Youth Club (,,10u Black (,,
+Bren Chan,Active,FNHTL ( Friday Night Hoops (,,,,
+Landan Chan,Not Active,Friday Night Hoops (,,,,
+Edison Chang,Active,Friday Night Hoops (,,,,
+Lazar Manitasevic,Active,Friday Night Hoops (,,,,
+Max Magana,Active,FNHTL ( Friday Night Hoops (,,,,
+Kingston Sakiyah Morrow,Active,Friday Night Hoops (,,,,
+Andre Farzin,Active,Friday Night Hoops (,,,,
+Aiden Bansod,Active,FNHTL ( Friday Night Hoops (,,,,
+Eli Sommerfield,Active,Friday Night Hoops (,,,,
+Anthony Encinas,Active,FNHTL ( Friday Night Hoops (,,,,
+OhSeong Kwon,Active,Friday Night Hoops (,,,,
+Matthew Nishimura,Active,Friday Night Hoops (,,,,
+Kai Chan,Not Active,FNHTL ( Friday Night Hoops (,,,,
+Nikolas Shevchenko,Not Active,Friday Night Hoops (,,,,
+Nischal Bhandaklar,Active,Friday Night Hoops (,,,,
+Adrian Farzin,Active,FNHTL ( Friday Night Hoops (,,,,
+Isaac Chung,Active,Friday Night Hoops (,,,,
+Aarnav Parnaik,Active,FNHTL ( Friday Night Hoops (,,,,
+Nathan Kim,Active,FNHTL ( Friday Night Hoops (,,,,
+Mike Jing,Active,FNHTL ( Friday Night Hoops (,,,,
+TY T,Active,Friday Night Hoops (,,,,
+Ze-Sheon Chang,Active,FNHTL ( Friday Night Hoops (,,10u Black (,,
+Ayan Parnaik,Active,Friday Night Hoops (,,,,
+Ian Pan,Active,Friday Night Hoops (,,,,
+Jude Chun,Active,Friday Night Hoops (,,,,
+Adam Goodman,Active,FNHTL ( Friday Night Hoops (,,,,
+Josue Reyes,Active,Friday Night Hoops (,,,,
+Isaak Liao,Active,Friday Night Hoops (,,,,
+Ethan Wang,Active,Friday Night Hoops (,,,,
+Aaron Le,Active,FNHTL ( Friday Night Hoops (,,,,
+Roberto Valdes,Active,Friday Night Hoops (,,,,
+Xander Bilios,Active,FNHTL ( Friday Night Hoops (,,,,
+Nathaniel King,Active,Friday Night Hoops (,,,,
+Grayson Runtu,Active,Friday Night Hoops (,,,,
+Jacob Truong,Active,Friday Night Hoops (,,,,
+Uliana Shvets,Not Active,Friday Night Hoops (,,,,
+Zhubin Ansari,Active,FNHTL ( Friday Night Hoops (,,,,
+Abigail Lee,Active,FNHTL (,,,,
+Anderson Lee,Active,Friday Night Hoops (,,,,
+AJ Pauly,Active,Friday Night Hoops (,,,,
+Satyak Singh,Active,Friday Night Hoops (,,,,
+Daniel Bogdanov,Active,Friday Night Hoops (,,,,
+Zachary Gewain,Active,Friday Night Hoops (,,,,
+Celeste Calleres,On Break,FNHTL ( Friday Night Hoops (,,,,
+Fernando Saavedra,Not Active,Friday Night Hoops (,,,,
+Nivaan Satheesh,Active,FNHTL ( Friday Night Hoops (,,,,
+Hirad Homayounfar,Active,FNHTL ( Friday Night Hoops (,,,,
+Zak Kuzmits,Active,Friday Night Hoops (,,,,
+Darius Lee,Active,Friday Night Hoops (,,,,
+Ezra Perez,Active,Friday Night Hoops (,,,,
+Kota Takahashi,Active,FNHTL ( Friday Night Hoops (,,,,
+Artin Vahidi,Active,FNHTL ( Friday Night Hoops (,,,,
+Omar El ghebn,Active,FNHTL ( Friday Night Hoops (,,,,
+Gabe Mischler,Active,FNHTL ( Friday Night Hoops (,,,,
+Landon Centeno,Active,FNHTL ( Friday Night Hoops (,,,,
+Saif Ali,Active,Friday Night Hoops (,,,,
+Reagan Huang,Active,FNHTL ( Friday Night Hoops (,,,,
+King Smith,Active,Friday Night Hoops (,,,,
+Ethan Agnel Terry,Active,Friday Night Hoops (,,,,
+Steven Fu,Active,Friday Night Hoops (,,,,
+Kira Vu-hoang,Active,Friday Night Hoops (,,,,
+Trey Maestrado,Active,Friday Night Hoops (,,,,
+Camilla Vasquez,Active,FNHTL ( Friday Night Hoops (,,,,
+Michael Sun,Not Active,Friday Night Hoops (,,,,
+Ellen Wang,Active,Youth Club (,,12u Black ( Youth Girls Red (,,
+Joopy Salem,Active,Youth Club (,,,,
+Bryson Vuong,Active,Youth Club (,,,,
+Andrew Cho,Active,Youth Club (,,12u Black (,,
+Nathan Pimental,Active,Youth Club (,,,,
+Ethan Nguyen,Active,Youth Club (,,,,
+Logan Taylor,Active,Youth Club (,,12u Black (,,
+Bryce Nourparvar,Active,Youth Club (,,12u Black (,,
+Ahmed Bal,Active,Youth Club (,,12u Black (,,
+Robert Melnich,Active,Youth Club (,,12u Black (,,
+Isaiah Hucko,Active,Youth Club (,,12u Red (,,
+Neel Harihar,Active,Youth Club (,,12u Red (,,
+Devon West,Active,Youth Club (,,12u Red (,,
+Zoey Ou,Not Active,Youth Club (,,,,
+Samuel Leka,Active,Youth Club (,,12u Red (,,
+Justin Tang,Active,Youth Club (,,12u Red (,,
+Parsa Sohrabnejad,Active,Youth Club (,,12u Red (,,
+Ken Ang,Active,Youth Club (,,12u Red (,,
+Sophia Wu,Active,Youth Club (,,Youth Girls Black ( Youth Girls Red (,,
+Lilah Dome,Active,Youth Club (,,Youth Girls Black (,,
+Aalya Aggarwal,Active,Youth Club (,,Youth Girls Red (,,
+Alexa Ikei,Active,Youth Club (,,Youth Girls Black (,,
+Stella LeClerc,Active,Youth Club (,,Youth Girls Black (,,
+Scarlett White,Active,Youth Club (,,Youth Girls Red (,,
+Kayla Le,Active,Youth Club (,,Youth Girls Red (,,
+Maya Welsh,Active,Youth Club (,,Youth Girls Black ( Youth Girls Red (,,
+Ava Lancaster,Active,Youth Club (,,Youth Girls Red (,,
+Macey Nourparvar,Active,Youth Club (,,Youth Girls Black (,,
+Audrey Chamoun,Active,Youth Club (,,Youth Girls Black (,,
+Saman Zarif Farrokhi,Active,Youth Club (,,13u White (,,
+Julian De La Morra,Active,Youth Club (,,13u White (,,
+William Wang,Not Active,Youth Club (,,,,
+Armin Saffari,Active,Youth Club (,,13u White (,,
+Arta HajiAmiri,Active,Youth Club (,,13u White (,,
+AJ Nelson,Active,Youth Club (,,13u White (,,
+Gleb Leonov,Active,Youth Club (,,13u White (,,
+Jarron Ou,Not Active,Youth Club (,,,,
+Jayden Lavayen,Active,Youth Club (,,13u Black (,,
+Marcus Lopez,Active,Youth Club (,,,,
+Matthew Lee,Active,Youth Club (,,13u Black (,,
+Neo Hua,Active,Youth Club (,,13u Black (,,
+Mason Ho,Active,Youth Club (,,13u Black (,,
+Jayden Kim,Not Active,Youth Club (,,13u Black (,,
+Sulaiman Syed,Active,Youth Club (,,13u Black (,,
+Aston Hsu,Active,Youth Club (,,13u Black (,,
+Nolan Fajana,Active,Youth Club (,,13u Black (,,
+Collin Doherty,Active,Youth Club (,,14u Black (,,
+Rey Mccrary,Active,Youth Club (,,14u Black (,,
+Jacob Roberts,Active,Youth Club (,,14u Black (,,
+Christopher Gutierrez,Active,Youth Club (,,14u Black (,,
+Rohan Kane,Active,Youth Club (,,14u Black (,,
+Peter Do,Active,Youth Club (,,14u Black (,,
+Evan Zhang,Active,Youth Club (,,14u Black (,,
+Jeremy Hou,Active,Youth Club (,,14u Black (,,
+Arad Alipoor,Active,Youth Club (,,14u Black (,,
+Sahil Ganatra,Active,Youth Club (,,14u Gray (,,
+Kaya Ochoa,Active,Youth Club (,,14u Gray (,,
+Christopher Huang,Active,Youth Club (,,14u Gray (,,
+Damian Garcia,Active,Youth Club (,,14u Gray (,,
+Joshua Gima,Active,Youth Club (,,14u Gray (,,
+Armin Chaboki,Active,Youth Club (,,14u Gray (,,
+Matteo Aguirre,Active,Youth Club (,,14u Gray (,,
+Jonathan Zhu,Active,Youth Club (,,14u Black (,,
+Darius Lee,Active,Youth Club (,,14u Gray (,,
+Jakub Clevland,Active,Youth Club (,,14u Red (,,
+Sebastian Gomez,Active,Youth Club (,,14u Red (,,
+Devang Krishnankutty,Active,Youth Club (,,14u Red (,,
+Nick Kim,Active,Youth Club (,,14u Red (,,
+Sergio Yang,Active,Youth Club (,,14u Red (,,
+Harry Zhang,Active,Youth Club (,,14u Red (,,
+Jaden Kim,Active,Youth Club (,,14u Red (,,
+Alessandro Arellano,Active,Youth Club (,,14u Red (,,
+Joseph Ramos-Castro,Active,Youth Club (,,14u Red (,,
+Zachary Angeles,Active,Youth Club (,,Black Elite (,,
+Cayden Snyder,Active,Youth Club (,,Black Elite (,,
+Ryan Reynolds,Active,,,Black Elite (,,
+Jake Wurtz,Active,Youth Club (,,Black Elite (,,
+Deen Salhab,Active,Youth Club (,,Black Elite (,,
+Gavin Chuanico,Active,Youth Club (,,Black Elite (,,
+Sahai Singh,Active,High School Club (,,Untitled (,,
+Prethish Thangaiah,Active,High School Club (,,Untitled (,,
+Justin Zhang,Active,High School Club (,,,High-School-Red (,
+Vinay Jagtiani,Active,High School Club (,,Untitled (,,
+Jordan Chang,Active,High School Club (,,,High-School-Red (,
+Matt Guiol,Active,High School Club (,,,High-School-Red (,
+Grayson Moye,Active,High School Club (,,,High-School-Red (,
+Isaiah Trias,Active,High School Club (,,Untitled (,High-School-Red (,
+Logan Esguerra,Active,High School Club (,,Untitled (,,
+Viyan Bhatia,Active,Youth Club (,,10u Black (,,
+Ethan Weintraub,Active,Youth Club (,,Black Elite (,,
+Robert Zhang,Active,Youth Club (,,14u Gray (,,
+Brandon Wong,Active,Youth Club ( FNHTL (,,,,
+Jayden,Active,,,,,
+Bryan Ke,Active,Youth Club (,,12u Black (,,
+Eli Sommerfield,Active,Friday Night Hoops (,,,,
+Josiah Hernandez,Active,Friday Night Hoops (,,,,
+Nathan Truong,Active,Friday Night Hoops (,,,,
+Aceson Dy,Active,Friday Night Hoops (,,,,
+Jaxson Mendoza,Active,Friday Night Hoops (,,,,
+Jayden Huang,Active,Youth Club (,,12u Black (,,
+Deyvan Lehl,Active,Youth Club (,,12u Black (,,
+Henry Shao,Active,Youth Club (,,Black Elite (,,
+Ethan Mendoza,Active,Youth Club (,,14u Red (,,
+Harrison Zhou,Active,FNHTL ( Friday Night Hoops (,,,,
+Noah Chen,Active,FNHTL (,,,,
+Noyan Emami,Active,FNHTL ( Friday Night Hoops (,,,,
+Kyle Wang,Active,FNHTL ( Friday Night Hoops (,,,,
+Jaida Ismail,Not Active,FNHTL ( Friday Night Hoops (,,,,
+Tallia Ismail,Not Active,FNHTL ( Friday Night Hoops (,,,,
+Sherlock Lee,Active,FNHTL ( Friday Night Hoops (,,,,
+Miles Bettingen,Active,FNHTL ( Friday Night Hoops (,,,,
+Saif Lai,Active,FNHTL ( Friday Night Hoops (,,,,
+Matteo Hernandez,Active,FNHTL ( Friday Night Hoops (,,,,
+Ayden Kajiwara,Active,FNHTL ( Friday Night Hoops (,,,,
+Ben Balanza,Active,FNHTL ( Friday Night Hoops (,,,,
+Erza Perez,Active,FNHTL ( Friday Night Hoops (,,,,
+Austin Chu,Active,FNHTL ( Friday Night Hoops (,,,,
+Zak Kumitz,Active,FNHTL ( Friday Night Hoops (,,,,
+DaSonti Keys,Active,FNHTL ( Friday Night Hoops (,,,,
+Derrick Nguyen,Active,FNHTL ( Friday Night Hoops (,,,,
+Matthew Dominguez,Active,FNHTL ( Friday Night Hoops (,,,,
+Matthew Swavley,Active,FNHTL ( Friday Night Hoops (,,,,
+Daniel Tang,Active,Friday Night Hoops (,,,,
+Yulin Wesley Wang,Active,Youth Club (,,12u Red (,,
+,Active,,,,,
+Michael Jiang,Active,Skills Academy (,,,,
+Eren Turan,Active,Youth Club (,,13u Black (,,
+Kevin Feng,Active,Friday Night Hoops (,,,,
+Eason Chen,Active,Friday Night Hoops (,,,,
+Benjamin Gomez,Active,Friday Night Hoops (,,,,
+Colin Im,Active,Friday Night Hoops (,,,,
+Neil Kara,Active,,,,,
+Ethan Barela,Active,,,,,
+Timothy  Oh,Active,,,,,
+Aston Hsu,Active,,,,,
+Vivash Potlachervu,Active,,,,,
+Youssef Hammad,Active,,,,,
+Yahya Hammad,Active,,,,,
+Bond KHANG TRUONG,Active,,,,,
+Sunny Tue Minh Nguyen,Active,,,,,
+Mio Phi Phong Nguyen,Active,,,,,
+Rio Hao Nhien Nguyen,Active,,,,,
+John（Jingheng） Wang,Active,,,,,
+Pari Selvakkumaran,Active,,,,,
+Gabriel  Kydd,Active,,,,,
+Ethan  Barela,Active,,,,,
+Kaveh Elkhatieb,Active,,,,,
+Cole Ricks,Active,,,,,
+Maxwell Brueseke,Active,,,,,
+Kai Jin,Active,,,,,
+Lomax Escarmant,Active,,,,,
+Kevin Bae,Active,,,,,
+Jakub  Cleveland,Active,,,,,
+Daniel  Tang,Active,,,,,
+Harrison Zhou,Active,,,,,
+Elizabeth  Zhou,Active,,,,,
+Harrison  Zhou,Active,,,,,
+Harry (Yihan) Zhang,Active,,,,,
+Mason Shokrian,Active,,,,,
+Jacob Azer,Active,,,,,
+Miles Brettingen,Active,,,,,
+Salman Albawardi,Active,,,,,
+Isaiah Alexander,Active,,,,,
+George  Pei,Active,,,,,
+Austin Pei,Active,,,,,
+Ethan  Beizaee,Active,,,,,
+My (Cherry) Nguyen,Active,,,,,
+Daniel Jang,Active,,,,,
+Ethan Beizaee,Active,,,,,
+
+
+

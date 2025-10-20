@@ -323,18 +323,66 @@ function UsersTab({ users, organization }: any) {
     },
   });
 
-  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
       
-      toast({ title: `Processing ${lines.length - 1} users from CSV...` });
-      // In a real implementation, you'd parse and create users here
+      if (lines.length < 2) {
+        toast({ 
+          title: "Invalid CSV", 
+          description: "CSV file must contain headers and at least one row of data",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const dataLines = lines.slice(1);
+      
+      toast({ title: `Processing ${dataLines.length} users from CSV...` });
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const line of dataLines) {
+        const values = line.split(',').map(v => v.trim());
+        const userData: any = {};
+        
+        headers.forEach((header, index) => {
+          userData[header] = values[index] || '';
+        });
+        
+        try {
+          await apiRequest("POST", "/api/users", {
+            organizationId: organization.id,
+            email: userData.email,
+            firstName: userData.firstname || userData.firstName,
+            lastName: userData.lastname || userData.lastName,
+            role: userData.role || "player",
+            phoneNumber: userData.phonenumber || userData.phoneNumber || undefined,
+            isActive: true,
+            verified: false,
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create user ${userData.email}:`, error);
+          errorCount++;
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      
+      toast({ 
+        title: "Bulk Upload Complete", 
+        description: `Successfully created ${successCount} users. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        variant: errorCount > 0 ? "destructive" : "default"
+      });
+      
       setIsBulkUploadOpen(false);
     };
     reader.readAsText(file);
@@ -574,14 +622,74 @@ function TeamsTab({ teams, users, organization }: any) {
     },
   });
 
-  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
-      toast({ title: "Processing teams from CSV..." });
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast({ 
+          title: "Invalid CSV", 
+          description: "CSV file must contain headers and at least one row of data",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const dataLines = lines.slice(1);
+      
+      toast({ title: `Processing ${dataLines.length} teams from CSV...` });
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const line of dataLines) {
+        const values = line.split(',').map(v => v.trim());
+        const teamData: any = {};
+        
+        headers.forEach((header, index) => {
+          teamData[header] = values[index] || '';
+        });
+        
+        // Find coach by email if provided
+        let coachId = undefined;
+        if (teamData.coachemail) {
+          const coach = coaches.find((c: any) => c.email === teamData.coachemail);
+          if (coach) {
+            coachId = coach.id;
+          }
+        }
+        
+        try {
+          await apiRequest("POST", "/api/teams", {
+            organizationId: organization.id,
+            name: teamData.name,
+            division: teamData.division || undefined,
+            ageGroup: teamData.agegroup || teamData.ageGroup || undefined,
+            coachIds: coachId ? [coachId] : [],
+            color: "#1E40AF",
+            roster: []
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create team ${teamData.name}:`, error);
+          errorCount++;
+        }
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      
+      toast({ 
+        title: "Bulk Upload Complete", 
+        description: `Successfully created ${successCount} teams. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        variant: errorCount > 0 ? "destructive" : "default"
+      });
+      
       setIsBulkUploadOpen(false);
     };
     reader.readAsText(file);

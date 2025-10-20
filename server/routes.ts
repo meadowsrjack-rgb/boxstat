@@ -7,7 +7,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import Stripe from "stripe";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { insertEventSchema, insertAnnouncementSchema, insertMessageReactionSchema, insertMessageSchema, insertTeamMessageSchema, insertPaymentSchema, insertPurchaseSchema, insertFamilyMemberSchema, insertTaskCompletionSchema, insertAnnouncementAcknowledgmentSchema, insertPlayerTaskSchema, insertPlayerPointsSchema, users, userBadges, badges, userTrophies, purchases, coachTeams, teams, profiles, accounts, followedNotionPlayers, insertFollowedNotionPlayerSchema } from "@shared/schema";
-import { eq, count, and, inArray, desc } from "drizzle-orm";
+import { eq, count, and, or, inArray, desc } from "drizzle-orm";
 import { db } from "./db";
 import { z } from "zod";
 import { awardsService } from "./awards.service";
@@ -3489,6 +3489,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         relationship: req.body.relationship !== undefined ? req.body.relationship : profile.relationship,
       });
       
+      // Notify coaches if player joined a new team
+      if (teamDbId && teamDbId !== profile.teamId && profile.profileType === 'player') {
+        try {
+          const team = await storage.getTeam(parseInt(teamDbId));
+          if (team) {
+            // Get all coaches for this team
+            const coachAssignments = await db
+              .select()
+              .from(coachTeams)
+              .where(eq(coachTeams.teamId, team.id));
+            
+            // Notify each coach
+            for (const assignment of coachAssignments) {
+              await notificationService.notifyCoachTeamUpdate(
+                assignment.coachId,
+                `${profile.firstName} ${profile.lastName}`,
+                team.name
+              );
+            }
+          }
+        } catch (notificationError) {
+          console.error('Error sending team update notification:', notificationError);
+          // Don't fail the request if notification fails
+        }
+      }
+      
       res.json(updatedProfile);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -4397,6 +4423,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (notificationError) {
           console.error("Error sending check-in confirmation notification:", notificationError);
         }
+      }
+      
+      // Notify coaches about player RSVP or check-in
+      try {
+        const event = await storage.getEvent(parseInt(eventId));
+        const userProfiles = await storage.getAccountProfiles(userId);
+        const playerProfile = userProfiles.find(p => p.profileType === 'player');
+        
+        if (event && playerProfile && playerProfile.teamId) {
+          // Get coaches for this team
+          const coachAssignments = await db
+            .select()
+            .from(coachTeams)
+            .where(eq(coachTeams.teamId, parseInt(playerProfile.teamId)));
+          
+          // Notify each coach
+          for (const assignment of coachAssignments) {
+            if (type === "advance") {
+              await notificationService.notifyCoachPlayerRSVP(
+                assignment.coachId,
+                `${playerProfile.firstName} ${playerProfile.lastName}`,
+                event.title,
+                'confirmed their attendance'
+              );
+            } else if (type === "onsite") {
+              await notificationService.notifyCoachPlayerCheckIn(
+                assignment.coachId,
+                `${playerProfile.firstName} ${playerProfile.lastName}`,
+                event.title
+              );
+            }
+          }
+        }
+      } catch (coachNotificationError) {
+        console.error('Error sending coach notification:', coachNotificationError);
+        // Don't fail the request if coach notification fails
       }
       
       res.json(checkin);

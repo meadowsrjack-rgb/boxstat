@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { users, userBadges, userTrophies, attendances, events } from "@shared/schema";
+import { users, userBadges, userTrophies, attendances, events, profiles, coachTeams, badges } from "@shared/schema";
 import { eq, and, count, sql } from "drizzle-orm";
 import { notificationService } from "./services/notificationService";
 
@@ -178,6 +178,9 @@ export class AwardsService {
               award.name,
               award.description
             );
+            
+            // Notify coaches about the player's achievement
+            await this.notifyCoachesAboutPlayerAward(userId, award.name, 'badge');
           } catch (notificationError) {
             console.error("Error sending badge notification:", notificationError);
           }
@@ -205,6 +208,9 @@ export class AwardsService {
               actionUrl: '/trophies-badges',
               data: { trophyName: award.name, trophyDescription: award.description }
             });
+            
+            // Notify coaches about the player's achievement
+            await this.notifyCoachesAboutPlayerAward(userId, award.name, 'trophy');
           } catch (notificationError) {
             console.error("Error sending trophy notification:", notificationError);
           }
@@ -332,6 +338,42 @@ export class AwardsService {
       }
     } catch (error) {
       console.error("Error checking trophy progress:", error);
+    }
+  }
+
+  /**
+   * Notify coaches about a player's award achievement
+   */
+  private async notifyCoachesAboutPlayerAward(userId: string, awardName: string, awardType: 'badge' | 'trophy'): Promise<void> {
+    try {
+      // Get the player's profiles
+      const userProfiles = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.accountId, userId));
+      
+      const playerProfile = userProfiles.find(p => p.profileType === 'player');
+      
+      if (playerProfile && playerProfile.teamId) {
+        // Get coaches for this team
+        const coachAssignments = await db
+          .select()
+          .from(coachTeams)
+          .where(eq(coachTeams.teamId, parseInt(playerProfile.teamId)));
+        
+        // Notify each coach
+        for (const assignment of coachAssignments) {
+          await notificationService.notifyCoachPlayerAward(
+            assignment.coachId,
+            `${playerProfile.firstName} ${playerProfile.lastName}`,
+            awardName,
+            awardType
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error notifying coaches about player award:', error);
+      // Don't throw - we don't want to fail the award process if coach notification fails
     }
   }
 }

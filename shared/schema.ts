@@ -569,6 +569,7 @@ export const notifications = pgTable("notifications", {
     enum: [
       "event_rsvp_available", 
       "event_checkin_available", 
+      "event_checkin_complete",
       "event_reminder", 
       "trophy_progress", 
       "badge_earned", 

@@ -194,7 +194,7 @@ export function CoachProfilePage() {
       
       toast({ 
         title: "Saved", 
-        description: "Your changes have been saved."
+        description: "Your profile changes have been saved."
       });
     },
     onError: (error: any) => {
@@ -206,8 +206,7 @@ export function CoachProfilePage() {
     },
   });
 
-  // Auto-save on field blur
-  const handleFieldBlur = () => {
+  const handleSaveChanges = () => {
     mutation.mutate(profile);
   };
 
@@ -290,7 +289,6 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.firstName}
                     onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
-                    onBlur={handleFieldBlur}
                     placeholder="Enter first name"
                     data-testid="input-first-name"
                   />
@@ -300,7 +298,6 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.lastName}
                     onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
-                    onBlur={handleFieldBlur}
                     placeholder="Enter last name"
                     data-testid="input-last-name"
                   />
@@ -316,7 +313,6 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.email}
                     onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))}
-                    onBlur={handleFieldBlur}
                     placeholder="Enter email address"
                     type="email"
                     data-testid="input-email"
@@ -330,7 +326,6 @@ export function CoachProfilePage() {
                   <Input
                     value={profile.phoneNumber}
                     onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
-                    onBlur={handleFieldBlur}
                     placeholder="Enter phone number"
                     data-testid="input-phone"
                   />
@@ -345,7 +340,6 @@ export function CoachProfilePage() {
                 <Input
                   value={profile.city}
                   onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
-                  onBlur={handleFieldBlur}
                   placeholder="Enter your city"
                   data-testid="input-city"
                 />
@@ -364,7 +358,7 @@ export function CoachProfilePage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Years of Experience</label>
-                <Select value={profile.yearsExperience} onValueChange={(value) => { setProfile(p => ({ ...p, yearsExperience: value })); handleFieldBlur(); }}>
+                <Select value={profile.yearsExperience} onValueChange={(value) => setProfile(p => ({ ...p, yearsExperience: value }))}>
                   <SelectTrigger data-testid="select-years-experience">
                     <SelectValue placeholder="Select experience level" />
                   </SelectTrigger>
@@ -381,7 +375,6 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.bio}
                   onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))}
-                  onBlur={handleFieldBlur}
                   placeholder="Tell players and parents about your coaching background and approach"
                   rows={4}
                   data-testid="textarea-bio"
@@ -394,7 +387,6 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.previousTeams}
                   onChange={(e) => setProfile(p => ({ ...p, previousTeams: e.target.value }))}
-                  onBlur={handleFieldBlur}
                   placeholder="List previous teams or organizations you've coached"
                   rows={3}
                   data-testid="textarea-previous-teams"
@@ -406,7 +398,6 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.playingExperience}
                   onChange={(e) => setProfile(p => ({ ...p, playingExperience: e.target.value }))}
-                  onBlur={handleFieldBlur}
                   placeholder="Describe your playing background"
                   rows={3}
                   data-testid="textarea-playing-experience"
@@ -418,7 +409,6 @@ export function CoachProfilePage() {
                 <Textarea
                   value={profile.philosophy}
                   onChange={(e) => setProfile(p => ({ ...p, philosophy: e.target.value }))}
-                  onBlur={handleFieldBlur}
                   placeholder="Share your coaching philosophy and what's important to you"
                   rows={4}
                   data-testid="textarea-philosophy"
@@ -426,6 +416,18 @@ export function CoachProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end pb-6">
+            <Button
+              onClick={handleSaveChanges}
+              disabled={mutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white px-8"
+              data-testid="button-save-profile"
+            >
+              {mutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

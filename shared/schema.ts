@@ -130,7 +130,7 @@ export interface Event {
   organizationId: string;
   title: string;
   description?: string;
-  eventType: string; // Configurable: "practice", "game", etc.
+  eventType?: string; // Configurable: "practice", "game", etc.
   startTime: Date;
   endTime: Date;
   location: string;
@@ -144,7 +144,7 @@ export const insertEventSchema = z.object({
   organizationId: z.string(),
   title: z.string().min(1),
   description: z.string().optional(),
-  eventType: z.string().min(1),
+  eventType: z.string().optional(),
   startTime: z.string(), // ISO date string
   endTime: z.string(), // ISO date string
   location: z.string().min(1),

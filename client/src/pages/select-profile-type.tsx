@@ -24,8 +24,7 @@ export default function SelectProfileType() {
     if (role === "admin") {
       setLocation('/admin');
     } else {
-      // For coach, you could create a coach dashboard or redirect to admin with limited permissions
-      setLocation('/admin');
+      setLocation('/coach-dashboard');
     }
   };
 

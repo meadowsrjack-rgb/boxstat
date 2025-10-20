@@ -1,27 +1,40 @@
-# UYP Basketball League Mobile App
+# Sports Management Platform
 
-A comprehensive Progressive Web App (PWA) for the UYP Basketball youth league based in Costa Mesa, CA. This application provides a complete digital platform for team and family management with robust authentication, Google Calendar integration, and multi-profile support.
+A comprehensive Progressive Web App (PWA) for youth sports organizations. This white-label platform provides a complete digital solution for team management, event scheduling, player development tracking, and family communication.
 
-## 🏀 Features
+## ✨ Features
 
 ### Core Functionality
-- **Progressive Web App (PWA)** - Installable on iOS devices with native app experience
-- **Google Calendar Integration** - Real-time sync with UYP's calendar (upyourperformance@gmail.com)
-- **Multi-Profile System** - Single accounts support multiple user types (Parent, Player, Coach)
-- **Real-time Team Chat** - WebSocket-powered team communication
-- **QR Code Check-ins** - Secure gym entry and attendance tracking
-- **Payment Integration** - SportsEngine payment processing for fees and registrations
+- **White-Label Branding** - Customize with your organization's logo, colors, and terminology
+- **Multi-Organization Support** - Each organization gets their own branded instance
+- **Admin Management** - Comprehensive admin tools for managing all aspects of your organization
+- **Progressive Web App (PWA)** - Installable on mobile devices with native app experience
+- **Multi-Role System** - Supports Admin, Coach, Player, and Parent profiles
+- **Real-time Team Chat** - Instant communication for teams and families
+- **Event Management** - Schedule practices, games, and tournaments
+- **Attendance Tracking** - QR code check-ins and event attendance
 
 ### User Types & Features
-- **Parents**: Family management, payment processing, child profile management
-- **Players**: Skill tracking, trophies/badges, team communication, schedule viewing
-- **Coaches**: Team management, QR code scanning, announcements, curriculum access
+- **Admins**: Full control over organization settings, branding, users, teams, events, payments, and awards
+- **Coaches**: Team management, roster oversight, announcements, and player development tracking
+- **Parents**: Family management, view schedules, payments, and child progress
+- **Players**: View schedules, track achievements, team communication, and skill development
 
-### Advanced Features
-- **Trophies & Badges System** - Tiered achievement tracking (Grey → Green → Blue → Purple → Yellow)
-- **Skills Ratings** - Individual player performance tracking with progress bars
-- **Event Management** - Practices, games, tournaments, camps, and skills sessions
-- **Demo Mode** - Full-featured demo system for testing and presentations
+### White-Label Customization
+- **Custom Branding**: Upload your logo and set primary/secondary colors
+- **Sport Configuration**: Configure for any sport (basketball, soccer, baseball, etc.)
+- **Custom Terminology**: Customize terms like "player/athlete", "coach/trainer", "practice/training"
+- **Program Management**: Create and manage your own programs, age groups, and divisions
+- **Feature Toggles**: Enable/disable payments, awards, messaging, events, and training modules
+
+### Management Features
+- **User Management**: Create and manage admin, coach, player, and parent accounts
+- **Team Management**: Create teams, assign coaches, manage rosters
+- **Event Scheduling**: Schedule games, practices, tournaments with automated notifications
+- **Payment Tracking**: Track registration fees, uniform costs, and other payments
+- **Awards System**: Create custom badges and trophies for player recognition
+- **Announcements**: Organization-wide or team-specific announcements
+- **Messaging**: Real-time team chat and communication
 
 ## 🛠 Tech Stack
 
@@ -36,163 +49,114 @@ A comprehensive Progressive Web App (PWA) for the UYP Basketball youth league ba
 ### Backend
 - **Node.js** with Express.js framework
 - **TypeScript** with ESM modules
-- **PostgreSQL** with Neon serverless hosting
-- **Drizzle ORM** for type-safe database operations
-- **WebSocket** support for real-time features
+- **In-Memory Storage** (easily extendable to PostgreSQL or other databases)
 
-### External Integrations
-- **Replit Auth** with OpenID Connect
-- **Google Calendar API** for event synchronization
-- **SportsEngine** for payment processing
-- **Express Sessions** with PostgreSQL storage
+### Features
+- **PWA Support** for offline functionality and mobile installation
+- **Real-time Updates** via WebSocket connections
+- **Responsive Design** optimized for mobile, tablet, and desktop
+- **Dark Mode** support (optional)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
-- PostgreSQL database
-- Google Calendar API credentials
-- Replit Auth setup
-
-### Environment Variables
-```bash
-DATABASE_URL=your_postgresql_connection_string
-GOOGLE_CALENDAR_API_KEY=your_google_calendar_api_key
-GOOGLE_CALENDAR_ID=upyourperformance@gmail.com
-```
+- Node.js 18+ installed
+- npm or yarn package manager
 
 ### Installation
-1. Clone the repository
+
+1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd uyp-basketball-app
+git clone <your-repo-url>
+cd sports-management-platform
 ```
 
-2. Install dependencies
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Set up environment variables
-```bash
-cp .env.example .env
-# Edit .env with your actual values
-```
-
-4. Initialize the database
-```bash
-npm run db:push
-```
-
-5. Start the development server
+3. Start the development server:
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5000`
+4. Open your browser to `http://localhost:5000`
 
-## 📱 PWA Installation
+### Default Admin Access
+The platform comes with a default organization and admin account:
+- **Organization**: My Sports Organization
+- **Subdomain**: default
+- **Admin Email**: admin@example.com
+
+You can customize the organization settings from the Admin Dashboard.
+
+## 📱 Installation as PWA
 
 ### iOS Installation
-1. Open the app in Safari
-2. Tap the Share button
-3. Select "Add to Home Screen"
-4. The app will install as a native-like experience
+1. Open the app in **Safari** (not Chrome or other browsers)
+2. Tap the **Share** button at the bottom
+3. Scroll down and tap **"Add to Home Screen"**
+4. Tap **"Add"** in the top right corner
+5. Launch the app from your home screen
 
-### Features
-- Offline functionality with service worker
-- Native-like interface without browser chrome
-- Apple Touch Icons optimized for iOS
-- Standalone display mode
+### Android Installation
+1. Open the app in Chrome or Edge
+2. Tap the menu (three dots)
+3. Select **"Add to Home Screen"** or **"Install App"**
+4. Tap **"Install"** to confirm
+5. Launch the app from your app drawer or home screen
 
-## 🗄 Database Schema
+## 🎨 Customization
 
-The application uses a comprehensive PostgreSQL schema with:
-- **Users & Teams** - Core user and team management
-- **Events & Attendance** - Calendar integration and check-ins
-- **Trophies & Badges** - Achievement tracking system
-- **Payments** - SportsEngine integration
-- **Messages** - Team communication
-- **Profiles** - Multi-profile account system
+### Organization Setup
+1. Log in as an admin
+2. Navigate to Admin Dashboard > Organization Settings
+3. Customize:
+   - Organization name and subdomain
+   - Sport type
+   - Logo and brand colors
+   - Terminology (customize labels for players, coaches, etc.)
+   - Enable/disable features
 
-## 🔄 Google Calendar Sync
+### Program Management
+1. Navigate to Admin Dashboard > Programs
+2. Create programs specific to your organization
+3. Define age groups and divisions
+4. Assign teams to programs
 
-- **Automatic Sync** - Hourly scheduled synchronization
-- **Real-time Events** - 100+ events synced from UYP's calendar
-- **Smart Categorization** - Automatic event type detection
-- **Team Assignment** - Events automatically assigned to appropriate teams
+### User Management
+1. Navigate to Admin Dashboard > Users
+2. Create accounts for coaches, players, and parents
+3. Assign users to teams
+4. Manage permissions and access levels
 
-## 👥 Demo Mode
+## 🏗 Architecture
 
-The application includes a comprehensive demo system:
-- **Profile Selection** - Switch between Parent, Player, and Coach views
-- **Sample Data** - Realistic demo data for all features
-- **Full Functionality** - All features work in demo mode
-- **Testing Interface** - "Test New Account Signup" for development
+### Data Models
+- **Organization**: Multi-tenant model with branding and configuration
+- **User**: Unified user model supporting admin, coach, player, and parent roles
+- **Team**: Teams with multiple coaches and players
+- **Event**: Flexible events (practices, games, tournaments, etc.)
+- **Award**: Custom badges and trophies for recognition
+- **Payment**: Track fees and payments
+- **Program**: Configurable programs for different age groups/skill levels
 
-## 🏆 Achievement System
-
-### Trophy Tiers
-- **Legacy Trophies** - Season-end achievements
-- **Team Trophies** - Collaborative accomplishments
-
-### Badge Categories
-- **Grey** - Participation (Rookie, Team Player)
-- **Green** - Effort (Hustle, Improvement)
-- **Blue** - Skills (Sharp Shooter, Defensive Wall)
-- **Purple** - Leadership (Team Captain, Mentor)
-- **Yellow** - Elite (Hall of Famer, Champion)
-
-## 🔐 Security Features
-
-- **Replit Auth** - Secure OpenID Connect authentication
-- **Session Management** - PostgreSQL-based session storage
-- **API Protection** - Authenticated routes with proper middleware
-- **Data Validation** - Zod schemas for all data inputs
-
-## 📈 Development
-
-### Scripts
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run db:push      # Push schema changes to database
-npm run db:generate  # Generate migration files
-```
-
-### Project Structure
-```
-├── client/          # React frontend application
-├── server/          # Express.js backend API
-├── shared/          # Shared types and schemas
-├── attached_assets/ # Project assets and images
-└── replit.md       # Project documentation and preferences
-```
-
-## 🚢 Deployment
-
-The application is optimized for deployment on Replit with:
-- **Automatic Builds** - Vite builds optimized static assets
-- **Database Migrations** - Drizzle handles schema updates
-- **Environment Configuration** - Secure environment variable management
-- **Health Checks** - Built-in monitoring and error handling
-
-## 📝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Storage
+The platform uses in-memory storage by default for simplicity and portability. For production use, you can easily extend the `IStorage` interface in `server/storage-impl.ts` to use PostgreSQL, MongoDB, or any other database.
 
 ## 📄 License
 
-This project is proprietary software developed for UYP Basketball League.
+This project is available for use by sports organizations. Please contact for commercial licensing options.
 
-## 🤝 Support
+## 🤝 Contributing
 
-For support and questions, contact the development team or refer to the project documentation in `replit.md`.
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📞 Support
+
+For support, please contact your organization administrator or the platform maintainer.
 
 ---
 
-**UYP Basketball League** - Empowering young athletes through technology and community.
+Built with ❤️ for youth sports organizations

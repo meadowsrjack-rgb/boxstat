@@ -873,20 +873,6 @@ export function PlayerSecurityPage() {
         <div className="p-6">
           <Card>
             <CardHeader>
-              <CardTitle>Account Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ActionRow 
-                icon={Users} 
-                title="Switch Profile" 
-                description="Switch between different user profiles"
-                action={<Button variant="outline" onClick={handleSwitchProfile} data-testid="button-switch-profile">Switch</Button>} 
-              />
-            </CardContent>
-          </Card>
-          
-          <Card className="mt-6">
-            <CardHeader>
               <CardTitle className="text-red-600 dark:text-red-400">Danger Zone</CardTitle>
             </CardHeader>
             <CardContent>

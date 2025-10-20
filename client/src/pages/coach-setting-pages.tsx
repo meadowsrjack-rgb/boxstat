@@ -1195,28 +1195,6 @@ export function CoachSecurityPage() {
             </CardContent>
           </Card>
 
-          {/* Profile Switching */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <h3 className="text-md font-medium">Switch Profile</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Access your other profiles or switch to a different account</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setLocation("/profile-selection")}
-                  data-testid="button-switch-profile"
-                >
-                  Switch Profile
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Account Activity */}
           <Card>
             <CardHeader>

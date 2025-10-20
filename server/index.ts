@@ -1,18 +1,11 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
 import { registerRoutes } from "./routes";
-import { ensureAuxTables } from "./boot";
 import { setupVite, serveStatic, log } from "./vite";
-import { initializeScheduler } from "./scheduler";
-import { notionService } from "./notion";
-import { notificationScheduler } from "./services/notificationScheduler";
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-
-// Ensure auxiliary DB tables exist
-ensureAuxTables().catch(err => console.error('ensureAuxTables failed', err));
 
 // Serve static files from public directory (for trophies, assets, etc.)
 const publicPath = path.resolve(import.meta.dirname, "..", "public");
@@ -79,17 +72,9 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-    // Initialize calendar sync scheduler after server starts
-    initializeScheduler();
-    
-    // Initialize notification scheduler
-    notificationScheduler.start();
-    
-    // Initialize Notion sync on startup
-    if (process.env.NOTION_API_KEY && process.env.NOTION_DB_ID) {
-      notionService.syncFromNotion().catch(error => {
-        console.error('Failed to sync from Notion on startup:', error);
-      });
-    }
+    console.log('✅ Sports Management Platform ready!');
+    console.log('📝 In-memory storage initialized');
+    console.log('👤 Default admin user: admin@example.com');
+    console.log('🏢 Default organization: My Sports Organization');
   });
 })();

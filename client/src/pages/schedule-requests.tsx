@@ -50,6 +50,7 @@ interface SportsEngineTeam {
   id: string;
   name: string;
   ageGroup: string;
+  program?: string;
   season: string;
   division: string;
   coachName: string;
@@ -199,7 +200,12 @@ export default function ScheduleRequests() {
                           <SelectContent>
                             {teams.map(team => (
                               <SelectItem key={team.id} value={team.id}>
-                                {team.name} ({team.ageGroup})
+                                <div className="flex items-center gap-2">
+                                  <span>{team.name}</span>
+                                  <span className="text-gray-500">
+                                    {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>

@@ -9,6 +9,7 @@ interface TeamData {
   id: number;
   name: string;
   ageGroup: string;
+  program?: string;
   division?: string;
   coachNames?: string;
   players: Array<{
@@ -87,7 +88,9 @@ export default function TeamRoster({ teamId, onPlayerClick }: TeamRosterProps) {
             {team.name}
           </CardTitle>
           <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">{team.ageGroup}</Badge>
+            <Badge variant="outline">
+              {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+            </Badge>
             {team.division && (
               <Badge variant="outline">{team.division}</Badge>
             )}
@@ -170,7 +173,9 @@ export default function TeamRoster({ teamId, onPlayerClick }: TeamRosterProps) {
               <dl className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-gray-600">Age Group:</dt>
-                  <dd className="font-medium">{team.ageGroup}</dd>
+                  <dd className="font-medium">
+                    {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                  </dd>
                 </div>
                 {team.division && (
                   <div className="flex justify-between">

@@ -69,6 +69,7 @@ interface TeamInfo {
   id: number;
   name: string;
   ageGroup: string;
+  program?: string;
   color: string;
 }
 

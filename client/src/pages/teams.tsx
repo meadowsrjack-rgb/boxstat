@@ -24,6 +24,7 @@ type TeamCard = {
   id: number;
   name: string;
   age_group: string;
+  program?: string;
   color: string;
   roster_count: number;
   coach_name: string | null;

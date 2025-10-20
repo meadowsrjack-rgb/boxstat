@@ -87,6 +87,7 @@ type TeamData = {
   id: number;
   name: string;
   ageGroup: string;
+  program?: string;
   coach?: UserAccount;
   players: UserAccount[];
   description?: string;
@@ -943,7 +944,11 @@ export default function AdminDashboard() {
                         <CardHeader className="pb-2">
                           <div className="flex items-center justify-between">
                             <CardTitle className="text-lg text-white">{team.name}</CardTitle>
-                            <Badge className="bg-blue-600 text-white">{team.ageGroup}</Badge>
+                            {team.program === 'Youth-Club' ? (
+                              <span className="text-sm text-gray-400">Youth Club</span>
+                            ) : (
+                              <Badge className="bg-blue-600 text-white">{team.ageGroup}</Badge>
+                            )}
                           </div>
                         </CardHeader>
                         <CardContent>

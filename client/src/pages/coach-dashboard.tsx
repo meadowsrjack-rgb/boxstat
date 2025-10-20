@@ -59,6 +59,7 @@ type CoachTeam = {
   id: number;
   name: string;
   ageGroup?: string;
+  program?: string;
   inviteCode?: string;
   roster: Array<{
     id: number;
@@ -881,7 +882,9 @@ function RosterTab({
                 <CardContent className="p-4 flex items-center justify-between">
                   <div>
                     <div className="font-semibold text-gray-900">{team.name}</div>
-                    <div className="text-sm text-gray-500">{team.ageGroup}</div>
+                    <div className="text-sm text-gray-500">
+                      {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                    </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
                 </CardContent>
@@ -918,7 +921,9 @@ function RosterTab({
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="font-medium">{team.name}</span>
-                      <span className="text-sm text-gray-500 ml-2">{team.ageGroup}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                      </span>
                     </div>
                   </SelectItem>
                 ))}

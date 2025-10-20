@@ -46,6 +46,7 @@ interface PlayerSearchResponse {
 interface TeamResult {
   id: string;
   name: string;
+  program?: string;
   roster_count: number;
   roster: any[];
 }

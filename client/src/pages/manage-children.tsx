@@ -64,6 +64,7 @@ interface Team {
   id: number;
   name: string;
   ageGroup: string;
+  program?: string;
   description?: string;
 }
 
@@ -373,7 +374,12 @@ export default function ManageChildren() {
                           <SelectContent>
                             {teams.map((team) => (
                               <SelectItem key={team.id} value={team.id.toString()}>
-                                {team.name} - {team.ageGroup}
+                                <div className="flex items-center gap-2">
+                                  <span>{team.name}</span>
+                                  <span className="text-gray-500">
+                                    {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                                  </span>
+                                </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -580,7 +586,12 @@ export default function ManageChildren() {
                       <SelectContent>
                         {teams.map((team) => (
                           <SelectItem key={team.id} value={team.id.toString()}>
-                            {team.name} - {team.ageGroup}
+                            <div className="flex items-center gap-2">
+                              <span>{team.name}</span>
+                              <span className="text-gray-500">
+                                {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                              </span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

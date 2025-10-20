@@ -77,7 +77,8 @@ Preferred communication style: Simple, everyday language.
 
 ### Real-time Features
 - **WebSocket**: Native WebSocket support for real-time communication.
-- **Google Calendar API**: For syncing UYP's calendar and event data.
+- **Google Calendar API**: For syncing UYP's calendar and event data to the app (inbound sync only).
+  - **Note**: User-to-personal-calendar export (outbound sync) was considered but Google Calendar connector integration was dismissed. This feature would require manual API key setup if needed in the future.
 
 ### UI & Development
 - **Radix UI**: Accessible component primitives.

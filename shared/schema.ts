@@ -55,12 +55,17 @@ export interface User {
   profileImageUrl?: string;
   dateOfBirth?: string;
   phoneNumber?: string;
+  address?: string;
   
   // Specific fields based on role
   teamId?: string;
   jerseyNumber?: number;
   position?: string;
   program?: string; // Configurable, set by organization
+  
+  // Performance metrics
+  rating?: number;
+  awardsCount?: number;
   
   // Security
   passcode?: string; // 4-digit PIN for quick switching
@@ -82,10 +87,13 @@ export const insertUserSchema = z.object({
   profileImageUrl: z.string().optional(),
   dateOfBirth: z.string().optional(),
   phoneNumber: z.string().optional(),
+  address: z.string().optional(),
   teamId: z.string().optional(),
   jerseyNumber: z.number().optional(),
   position: z.string().optional(),
   program: z.string().optional(),
+  rating: z.number().optional(),
+  awardsCount: z.number().optional(),
   passcode: z.string().length(4).optional(),
   isActive: z.boolean().default(true),
   verified: z.boolean().default(false),

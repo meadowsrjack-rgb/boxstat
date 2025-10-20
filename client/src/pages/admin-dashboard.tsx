@@ -480,8 +480,14 @@ function UsersTab({ users, organization }: any) {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Address</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Program</TableHead>
+              <TableHead>Team</TableHead>
+              <TableHead>Awards</TableHead>
+              <TableHead>Rating</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -490,6 +496,8 @@ function UsersTab({ users, organization }: any) {
               <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                 <TableCell data-testid={`text-username-${user.id}`}>{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.email}</TableCell>
+                <TableCell>{user.phoneNumber || "-"}</TableCell>
+                <TableCell>{user.address || "-"}</TableCell>
                 <TableCell>
                   <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                     {user.role}
@@ -500,6 +508,10 @@ function UsersTab({ users, organization }: any) {
                     {user.isActive ? "Active" : "Inactive"}
                   </Badge>
                 </TableCell>
+                <TableCell>{user.program || "-"}</TableCell>
+                <TableCell>{user.teamId || "-"}</TableCell>
+                <TableCell>{user.awardsCount || 0}</TableCell>
+                <TableCell>{user.rating || "-"}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
                     <Edit className="w-4 h-4" />

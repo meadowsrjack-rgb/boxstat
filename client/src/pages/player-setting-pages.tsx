@@ -1435,9 +1435,7 @@ export function PlayerLegalPage() {
                 
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
                   <div className="space-y-2 text-sm">
-                    <p><strong>Email:</strong> <a href="mailto:legal@uyp.basketball" className="text-blue-600 dark:text-blue-400 hover:underline">legal@uyp.basketball</a></p>
-                    <p><strong>Subject Line:</strong> Legal/Privacy Question - Player Account</p>
-                    <p><strong>Response Time:</strong> Within 5 business days</p>
+                    <p><strong>Email:</strong> <a href="mailto:info@upyourperformance.org" className="text-blue-600 dark:text-blue-400 hover:underline">info@upyourperformance.org</a></p>
                   </div>
                 </div>
 

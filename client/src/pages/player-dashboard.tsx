@@ -1648,6 +1648,33 @@ function TeamBlock() {
                 </div>
               ) : (
                 <div className="max-h-64 overflow-y-auto">
+                  {/* Coach Entry - Always at the top */}
+                  {coachInfo && (
+                    <div 
+                      className="p-3 border-b border-gray-200 bg-red-50 flex items-center justify-between"
+                      data-testid="coach-roster-entry"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={coachInfo.profileImageUrl} />
+                          <AvatarFallback className="text-xs bg-red-600 text-white">
+                            {coachInfo.firstName?.[0]}{coachInfo.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-semibold text-gray-900 flex items-center gap-2" data-testid="text-coach-roster-name">
+                            {coachInfo.firstName} {coachInfo.lastName}
+                            <span className="px-2 py-0.5 text-xs font-medium bg-red-600 text-white rounded">COACH</span>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            Team Coach
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Player Entries */}
                   {teamPlayers.map((player: any, index: number) => {
                     const playerKey = player.appAccountId || player.notionId || `player-${index}`;
                     const playerName = player.name || `${player.firstName} ${player.lastName}`;

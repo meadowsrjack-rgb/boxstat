@@ -2,12 +2,15 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, User, Shield } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, User, Shield, UserCog } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function SelectProfileType() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedType, setSelectedType] = useState<"parent" | "player" | null>(null);
+  const [showStaffDialog, setShowStaffDialog] = useState(false);
 
   const handleSelectType = (type: "parent" | "player") => {
     setSelectedType(type);
@@ -15,9 +18,15 @@ export default function SelectProfileType() {
     setLocation(`/create-profile?type=${type}`);
   };
 
-  const handleStaffLogin = () => {
-    // Redirect to admin dashboard (or staff login page if you create one)
-    setLocation('/admin');
+  const handleStaffSelection = (role: "admin" | "coach") => {
+    setShowStaffDialog(false);
+    // Redirect to appropriate dashboard
+    if (role === "admin") {
+      setLocation('/admin');
+    } else {
+      // For coach, you could create a coach dashboard or redirect to admin with limited permissions
+      setLocation('/admin');
+    }
   };
 
   return (
@@ -89,7 +98,7 @@ export default function SelectProfileType() {
         <div className="mt-8 text-center text-sm text-white/50">
           <p>Your profile will be automatically synced with our system if you're using a registered email.</p>
           <button
-            onClick={handleStaffLogin}
+            onClick={() => setShowStaffDialog(true)}
             className="mt-4 text-white/60 hover:text-white/90 underline transition-colors"
             data-testid="button-staff-login"
           >
@@ -97,6 +106,52 @@ export default function SelectProfileType() {
           </button>
         </div>
       </div>
+
+      {/* Staff Login Dialog */}
+      <Dialog open={showStaffDialog} onOpenChange={setShowStaffDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Select Your Role</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-4">
+            <Card
+              onClick={() => handleStaffSelection("admin")}
+              className="cursor-pointer bg-white/5 border-white/10 hover:bg-white/[0.07] transition"
+              data-testid="card-admin-role"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-blue-600 grid place-items-center text-white">
+                    <Shield className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white text-lg">Administrator</h3>
+                    <p className="text-sm text-white/60">Full access to all features and settings</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card
+              onClick={() => handleStaffSelection("coach")}
+              className="cursor-pointer bg-white/5 border-white/10 hover:bg-white/[0.07] transition"
+              data-testid="card-coach-role"
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-lg bg-green-600 grid place-items-center text-white">
+                    <UserCog className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white text-lg">Coach</h3>
+                    <p className="text-sm text-white/60">Manage teams, events, and player progress</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

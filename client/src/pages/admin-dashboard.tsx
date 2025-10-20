@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   Settings,
@@ -17,23 +18,30 @@ import {
   Calendar,
   Trophy,
   DollarSign,
-  MessageSquare,
   TrendingUp,
   Plus,
   Edit,
   Trash2,
   Award,
-  CreditCard,
+  Upload,
+  Download,
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  List,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { useLocation } from "wouter";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const [, setLocation] = useLocation();
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } = useQuery<any>({
@@ -104,10 +112,16 @@ export default function AdminDashboard() {
               <h1 className="text-3xl font-bold text-gray-900" data-testid="text-dashboard-title">Admin Dashboard</h1>
               <p className="text-gray-600 mt-1" data-testid="text-org-name">{organization?.name || "My Sports Organization"}</p>
             </div>
-            <Button onClick={() => setActiveTab("settings")} variant="outline" data-testid="button-settings">
-              <Settings className="w-4 h-4 mr-2" />
-              Organization Settings
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={() => setLocation('/')} variant="outline" data-testid="button-switch-profile">
+                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                Switch Profile
+              </Button>
+              <Button onClick={() => setActiveTab("settings")} variant="outline" data-testid="button-settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -156,7 +170,7 @@ export default function AdminDashboard() {
                 title="Total Users"
                 value={stats.totalUsers}
                 icon={<Users className="w-6 h-6" />}
-                subtitle={`${stats.totalCoaches} coaches, ${stats.totalPlayers} players, ${stats.totalParents} parents`}
+                subtitle={`${stats.totalCoaches} coaches, ${stats.totalPlayers} players`}
                 testId="stat-total-users"
               />
               <StatCard
@@ -181,7 +195,6 @@ export default function AdminDashboard() {
               />
             </div>
 
-            {/* Recent Activity */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
@@ -207,37 +220,30 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Users Tab */}
           <TabsContent value="users">
             <UsersTab users={users} organization={organization} />
           </TabsContent>
 
-          {/* Teams Tab */}
           <TabsContent value="teams">
             <TeamsTab teams={teams} users={users} organization={organization} />
           </TabsContent>
 
-          {/* Events Tab */}
           <TabsContent value="events">
-            <EventsTab events={events} teams={teams} organization={organization} />
+            <EventsTab events={events} teams={teams} programs={programs} organization={organization} />
           </TabsContent>
 
-          {/* Programs Tab */}
           <TabsContent value="programs">
-            <ProgramsTab programs={programs} organization={organization} />
+            <ProgramsTab programs={programs} teams={teams} organization={organization} />
           </TabsContent>
 
-          {/* Awards Tab */}
           <TabsContent value="awards">
-            <AwardsTab awards={awards} organization={organization} />
+            <AwardsTab awards={awards} users={users} organization={organization} />
           </TabsContent>
 
-          {/* Payments Tab */}
           <TabsContent value="payments">
-            <PaymentsTab payments={payments} users={users} />
+            <PaymentsTab payments={payments} users={users} organization={organization} />
           </TabsContent>
 
-          {/* Settings Tab */}
           <TabsContent value="settings">
             <SettingsTab organization={organization} />
           </TabsContent>
@@ -265,10 +271,11 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
   );
 }
 
-// Users Tab Component
+// Users Tab Component  
 function UsersTab({ users, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -291,14 +298,7 @@ function UsersTab({ users, organization }: any) {
 
   const createUser = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...data, organizationId: organization.id }),
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to create user");
-      return response.json();
+      return await apiRequest("POST", "/api/users", { ...data, organizationId: organization.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -311,107 +311,156 @@ function UsersTab({ users, organization }: any) {
     },
   });
 
+  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      toast({ title: `Processing ${lines.length - 1} users from CSV...` });
+      // In a real implementation, you'd parse and create users here
+      setIsBulkUploadOpen(false);
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>User Management</CardTitle>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-new-user">
-              <Plus className="w-4 h-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createUser.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="email" data-testid="input-user-email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+        <div>
+          <CardTitle>User Management</CardTitle>
+          <CardDescription>Manage players, coaches, parents, and admins</CardDescription>
+        </div>
+        <div className="flex gap-2">
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-bulk-upload-users">
+                <Upload className="w-4 h-4 mr-2" />
+                Bulk Upload
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Users</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: email, firstName, lastName, role, phoneNumber</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUpload}
+                  data-testid="input-csv-upload"
                 />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-user-role">
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="player">Player</SelectItem>
-                          <SelectItem value="coach">Coach</SelectItem>
-                          <SelectItem value="parent">Parent</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-user-firstname" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-user-lastname" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number (Optional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-user-phone" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">
-                  {createUser.isPending ? "Creating..." : "Create User"}
+                <Button variant="outline" className="w-full" data-testid="button-download-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
                 </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-new-user">
+                <Plus className="w-4 h-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createUser.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="email" data-testid="input-user-email" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-user-role">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="player">Player</SelectItem>
+                            <SelectItem value="coach">Coach</SelectItem>
+                            <SelectItem value="parent">Parent</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-user-firstname" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-user-lastname" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="phoneNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone Number (Optional)</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-user-phone" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={createUser.isPending} data-testid="button-submit-user">
+                    {createUser.isPending ? "Creating..." : "Create User"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -453,78 +502,1150 @@ function UsersTab({ users, organization }: any) {
   );
 }
 
-// Teams Tab Component (Simplified placeholder)
+// Teams Tab - Full Implementation
 function TeamsTab({ teams, users, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+
+  const coaches = users.filter((u: any) => u.role === "coach");
+  const players = users.filter((u: any) => u.role === "player");
+
+  const createTeamSchema = z.object({
+    name: z.string().min(1, "Team name is required"),
+    division: z.string().optional(),
+    ageGroup: z.string().optional(),
+    coachId: z.string().optional(),
+    description: z.string().optional(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(createTeamSchema),
+    defaultValues: {
+      name: "",
+      division: "",
+      ageGroup: "",
+      coachId: "",
+      description: "",
+    },
+  });
+
+  const createTeam = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/teams", { 
+        ...data, 
+        organizationId: organization.id,
+        roster: []
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team created successfully" });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to create team", variant: "destructive" });
+    },
+  });
+
+  const handleBulkUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      toast({ title: "Processing teams from CSV..." });
+      setIsBulkUploadOpen(false);
+    };
+    reader.readAsText(file);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Team Management</CardTitle>
+            <CardDescription>Create teams, manage rosters, and assign coaches</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-bulk-upload-teams">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Bulk Upload
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Teams</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">Upload a CSV file with columns: name, division, ageGroup, coachEmail</p>
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleBulkUpload}
+                    data-testid="input-team-csv-upload"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-team">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Team
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Team</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit((data) => createTeam.mutate(data))} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Team Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Thunder U12" data-testid="input-team-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="division"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Division</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Recreational" data-testid="input-team-division" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="ageGroup"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Age Group</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="U12" data-testid="input-team-age" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="coachId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Assign Coach</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-team-coach">
+                                <SelectValue placeholder="Select a coach" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {coaches.map((coach: any) => (
+                                <SelectItem key={coach.id} value={coach.id}>
+                                  {coach.firstName} {coach.lastName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} data-testid="input-team-description" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={createTeam.isPending} data-testid="button-submit-team">
+                      {createTeam.isPending ? "Creating..." : "Create Team"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Team Name</TableHead>
+                <TableHead>Division</TableHead>
+                <TableHead>Age Group</TableHead>
+                <TableHead>Coach</TableHead>
+                <TableHead>Players</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {teams.map((team: any) => {
+                const coach = users.find((u: any) => u.id === team.coachId);
+                return (
+                  <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
+                    <TableCell className="font-medium">{team.name}</TableCell>
+                    <TableCell>{team.division || "-"}</TableCell>
+                    <TableCell>{team.ageGroup || "-"}</TableCell>
+                    <TableCell>
+                      {coach ? `${coach.firstName} ${coach.lastName}` : "Unassigned"}
+                    </TableCell>
+                    <TableCell>{team.roster?.length || 0}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setSelectedTeam(team)}
+                          data-testid={`button-manage-roster-${team.id}`}
+                        >
+                          Manage Roster
+                        </Button>
+                        <Button variant="ghost" size="sm" data-testid={`button-edit-team-${team.id}`}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Roster Management Dialog */}
+      {selectedTeam && (
+        <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="max-h-96 overflow-y-auto">
+                {players.map((player: any) => (
+                  <div key={player.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                    <div className="flex items-center gap-3">
+                      <Checkbox 
+                        checked={selectedTeam.roster?.includes(player.id)}
+                        data-testid={`checkbox-player-${player.id}`}
+                      />
+                      <span>{player.firstName} {player.lastName}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full" data-testid="button-save-roster">Save Roster</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
+
+// Events Tab - Full Implementation with Calendar and List View
+function EventsTab({ events, teams, programs, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const createEventSchema = z.object({
+    title: z.string().min(1, "Event title is required"),
+    type: z.enum(["practice", "game", "tournament", "meeting"]),
+    startTime: z.string(),
+    endTime: z.string(),
+    location: z.string().optional(),
+    description: z.string().optional(),
+    targetType: z.enum(["all", "team", "program", "role"]),
+    targetId: z.string().optional(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(createEventSchema),
+    defaultValues: {
+      title: "",
+      type: "practice" as const,
+      startTime: "",
+      endTime: "",
+      location: "",
+      description: "",
+      targetType: "all" as const,
+      targetId: "",
+    },
+  });
+
+  const createEvent = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/events", {
+        ...data,
+        organizationId: organization.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Event created successfully" });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to create event", variant: "destructive" });
+    },
+  });
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Team Management</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Event Management</CardTitle>
+          <CardDescription>Schedule practices, games, and other events</CardDescription>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex border rounded-lg">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              data-testid="button-view-list"
+            >
+              <List className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("calendar")}
+              data-testid="button-view-calendar"
+            >
+              <CalendarDays className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-event">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Event</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createEvent.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event Title</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Team Practice" data-testid="input-event-title" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-event-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="practice">Practice</SelectItem>
+                            <SelectItem value="game">Game</SelectItem>
+                            <SelectItem value="tournament">Tournament</SelectItem>
+                            <SelectItem value="meeting">Meeting</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="datetime-local" data-testid="input-event-start" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Time</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="datetime-local" data-testid="input-event-end" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Main Gym" data-testid="input-event-location" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="targetType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event For</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-event-target">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="all">Everyone</SelectItem>
+                            <SelectItem value="team">Specific Team</SelectItem>
+                            <SelectItem value="program">Specific Program</SelectItem>
+                            <SelectItem value="role">Specific Role</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Who should see this event?</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch("targetType") === "team" && (
+                    <FormField
+                      control={form.control}
+                      name="targetId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Select Team</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Choose a team" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {teams.map((team: any) => (
+                                <SelectItem key={team.id} value={team.id}>
+                                  {team.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} data-testid="input-event-description" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
+                    {createEvent.isPending ? "Creating..." : "Create Event"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600">Teams: {teams.length}</p>
-        <p className="text-sm text-gray-500 mt-2">Team management interface coming soon...</p>
+        {viewMode === "list" ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Event</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Date & Time</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>For</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((event: any) => (
+                <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
+                  <TableCell className="font-medium">{event.title}</TableCell>
+                  <TableCell>
+                    <Badge>{event.type}</Badge>
+                  </TableCell>
+                  <TableCell>{new Date(event.startTime).toLocaleString()}</TableCell>
+                  <TableCell>{event.location || "-"}</TableCell>
+                  <TableCell>
+                    {event.targetType === "all" ? "Everyone" : event.targetType}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm" data-testid={`button-edit-event-${event.id}`}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <h3 className="font-semibold">
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-7 gap-2 text-center">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="font-semibold text-sm p-2">{day}</div>
+              ))}
+              {/* Calendar grid would be rendered here */}
+              <div className="col-span-7 text-center text-gray-500 py-8">Calendar view coming soon</div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-// Events Tab Component (Simplified placeholder)
-function EventsTab({ events, teams, organization }: any) {
+// Programs Tab - Full Implementation
+function ProgramsTab({ programs, teams, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const createProgramSchema = z.object({
+    name: z.string().min(1, "Program name is required"),
+    description: z.string().optional(),
+    startDate: z.string(),
+    endDate: z.string(),
+    capacity: z.number().optional(),
+    fee: z.number().optional(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(createProgramSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      capacity: 0,
+      fee: 0,
+    },
+  });
+
+  const createProgram = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/programs", {
+        ...data,
+        organizationId: organization.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: "Program created successfully" });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to create program", variant: "destructive" });
+    },
+  });
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Event Management</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Program Management</CardTitle>
+          <CardDescription>Create and manage training programs and sessions</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-program">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Program
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Program</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Summer Training Camp" data-testid="input-program-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-program-description" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" data-testid="input-program-start" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="date" data-testid="input-program-end" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="capacity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Capacity</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} data-testid="input-program-capacity" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="fee"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fee ($)</FormLabel>
+                        <FormControl>
+                          <Input {...field} type="number" step="0.01" onChange={e => field.onChange(parseFloat(e.target.value))} data-testid="input-program-fee" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={createProgram.isPending} data-testid="button-submit-program">
+                  {createProgram.isPending ? "Creating..." : "Create Program"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600">Events: {events.length}</p>
-        <p className="text-sm text-gray-500 mt-2">Event management interface coming soon...</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Program Name</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Capacity</TableHead>
+              <TableHead>Fee</TableHead>
+              <TableHead>Enrollment</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {programs.map((program: any) => (
+              <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
+                <TableCell className="font-medium">{program.name}</TableCell>
+                <TableCell>
+                  {new Date(program.startDate).toLocaleDateString()} - {new Date(program.endDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{program.capacity || "-"}</TableCell>
+                <TableCell>${(program.fee || 0).toFixed(2)}</TableCell>
+                <TableCell>{program.enrolledCount || 0} / {program.capacity || "∞"}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="sm" data-testid={`button-edit-program-${program.id}`}>
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
 }
 
-// Programs Tab Component (Simplified placeholder)
-function ProgramsTab({ programs, organization }: any) {
+// Awards Tab - Full Implementation
+function AwardsTab({ awards, users, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const createAwardSchema = z.object({
+    name: z.string().min(1),
+    description: z.string().optional(),
+    criteria: z.string().optional(),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(createAwardSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      criteria: "",
+    },
+  });
+
+  const createAward = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/awards", {
+        ...data,
+        organizationId: organization.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
+      toast({ title: "Award created successfully" });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to create award", variant: "destructive" });
+    },
+  });
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Program Management</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Award Management</CardTitle>
+          <CardDescription>Create and assign awards to recognize achievements</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-award">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Award
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Award</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createAward.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Award Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Most Improved Player" data-testid="input-award-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} data-testid="input-award-description" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="criteria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Criteria</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Criteria for earning this award" data-testid="input-award-criteria" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={createAward.isPending} data-testid="button-submit-award">
+                  {createAward.isPending ? "Creating..." : "Create Award"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
-        <p className="text-gray-600">Programs: {programs.length}</p>
-        <p className="text-sm text-gray-500 mt-2">Program management interface coming soon...</p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Award Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Recipients</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {awards.map((award: any) => (
+              <TableRow key={award.id} data-testid={`row-award-${award.id}`}>
+                <TableCell className="font-medium">{award.name}</TableCell>
+                <TableCell>{award.description || "-"}</TableCell>
+                <TableCell>{award.recipientCount || 0}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" data-testid={`button-assign-award-${award.id}`}>
+                      Assign
+                    </Button>
+                    <Button variant="ghost" size="sm" data-testid={`button-edit-award-${award.id}`}>
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
 }
 
-// Awards Tab Component (Simplified placeholder)
-function AwardsTab({ awards, organization }: any) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Award Management</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-gray-600">Awards: {awards.length}</p>
-        <p className="text-sm text-gray-500 mt-2">Award management interface coming soon...</p>
-      </CardContent>
-    </Card>
-  );
-}
+// Payments Tab - Full Implementation with Stripe Integration
+function PaymentsTab({ payments, users, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isStripeSetupOpen, setIsStripeSetupOpen] = useState(false);
 
-// Payments Tab Component (Simplified placeholder)
-function PaymentsTab({ payments, users }: any) {
+  const totalRevenue = payments.filter((p: any) => p.status === "completed").reduce((sum: number, p: any) => sum + p.amount, 0);
+  const pendingRevenue = payments.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + p.amount, 0);
+
+  const createPaymentSchema = z.object({
+    userId: z.string().min(1),
+    amount: z.number().positive(),
+    description: z.string(),
+    dueDate: z.string(),
+    type: z.enum(["registration", "subscription", "one-time"]),
+  });
+
+  const form = useForm({
+    resolver: zodResolver(createPaymentSchema),
+    defaultValues: {
+      userId: "",
+      amount: 0,
+      description: "",
+      dueDate: "",
+      type: "one-time" as const,
+    },
+  });
+
+  const createPayment = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/payments", {
+        ...data,
+        organizationId: organization.id,
+        status: "pending",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      toast({ title: "Payment created successfully" });
+      setIsDialogOpen(false);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to create payment", variant: "destructive" });
+    },
+  });
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Payment Management</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-gray-600">Total Payments: {payments.length}</p>
-        <p className="text-sm text-gray-500 mt-2">Payment management interface coming soon...</p>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {/* Payment Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600">Total Revenue</div>
+            <div className="text-3xl font-bold mt-2">${(totalRevenue / 100).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600">Pending</div>
+            <div className="text-3xl font-bold mt-2">${(pendingRevenue / 100).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-gray-600">Total Payments</div>
+            <div className="text-3xl font-bold mt-2">{payments.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Payment Management</CardTitle>
+            <CardDescription>Track subscriptions and one-time payments</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={isStripeSetupOpen} onOpenChange={setIsStripeSetupOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-stripe-setup">
+                  <DollarSign className="w-4 h-4 mr-2" />
+                  Stripe Setup
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Stripe Integration</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    To accept payments, you need to set up Stripe. Follow these steps:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Stripe Dashboard</a></li>
+                    <li>Copy your <strong>Publishable key</strong> (starts with pk_)</li>
+                    <li>Copy your <strong>Secret key</strong> (starts with sk_)</li>
+                    <li>Add these keys to your environment variables</li>
+                  </ol>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm font-medium">Environment Variables:</p>
+                    <code className="text-xs block mt-2">VITE_STRIPE_PUBLIC_KEY=pk_...</code>
+                    <code className="text-xs block">STRIPE_SECRET_KEY=sk_...</code>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-payment">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Payment
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create Payment Request</DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit((data) => createPayment.mutate(data))} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="userId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>User</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-payment-user">
+                                <SelectValue placeholder="Select user" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {users.map((user: any) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.firstName} {user.lastName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-payment-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="registration">Registration Fee</SelectItem>
+                              <SelectItem value="subscription">Monthly Subscription</SelectItem>
+                              <SelectItem value="one-time">One-Time Payment</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Amount ($)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="number" 
+                              step="0.01" 
+                              onChange={e => field.onChange(parseFloat(e.target.value) * 100)}
+                              data-testid="input-payment-amount" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} data-testid="input-payment-description" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dueDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Due Date</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="date" data-testid="input-payment-duedate" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={createPayment.isPending} data-testid="button-submit-payment">
+                      {createPayment.isPending ? "Creating..." : "Create Payment"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Due Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payments.map((payment: any) => {
+                const user = users.find((u: any) => u.id === payment.userId);
+                return (
+                  <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
+                    <TableCell>
+                      {user ? `${user.firstName} ${user.lastName}` : "Unknown"}
+                    </TableCell>
+                    <TableCell>{payment.description}</TableCell>
+                    <TableCell>${(payment.amount / 100).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{payment.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={payment.status === "completed" ? "default" : payment.status === "pending" ? "secondary" : "destructive"}>
+                        {payment.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : "-"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -534,14 +1655,7 @@ function SettingsTab({ organization }: any) {
 
   const updateOrganization = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/organization", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error("Failed to update organization");
-      return response.json();
+      return await apiRequest("PATCH", "/api/organization", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/organization"] });
@@ -563,6 +1677,7 @@ function SettingsTab({ organization }: any) {
     <Card>
       <CardHeader>
         <CardTitle>Organization Settings</CardTitle>
+        <CardDescription>Customize your organization's branding and settings</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">

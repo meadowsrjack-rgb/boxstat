@@ -1266,7 +1266,6 @@ export function CoachConnectionsPage() {
   const [, setLocation] = useLocation();
   const [connections, setConnections] = useState({
     googleCalendar: false,
-    outlook: false,
     slack: false,
     zoom: false,
     stripeConnect: false,
@@ -1283,7 +1282,6 @@ export function CoachConnectionsPage() {
     if (connectionSettings) {
       setConnections({
         googleCalendar: connectionSettings.googleCalendar ?? false,
-        outlook: connectionSettings.outlook ?? false,
         slack: connectionSettings.slack ?? false,
         zoom: connectionSettings.zoom ?? false,
         stripeConnect: connectionSettings.stripeConnect ?? false,
@@ -1384,19 +1382,11 @@ export function CoachConnectionsPage() {
             <div className="space-y-4">
               <ConnectionCard
                 title="Google Calendar"
-                description="Sync your coaching schedule and team events with Google Calendar"
+                description="Export your visible UYP events to your personal Google Calendar"
                 icon={<Calendar className="h-5 w-5" />}
                 service="googleCalendar"
                 connected={connections.googleCalendar}
                 testId="button-google-calendar"
-              />
-              <ConnectionCard
-                title="Microsoft Outlook"
-                description="Integrate with Outlook calendar for seamless scheduling"
-                icon={<Calendar className="h-5 w-5" />}
-                service="outlook"
-                connected={connections.outlook}
-                testId="button-outlook"
               />
             </div>
           </div>

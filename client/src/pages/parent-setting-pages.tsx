@@ -1460,7 +1460,6 @@ export function ParentConnectionsPage() {
 
   const [connections, setConnections] = useState({
     googleCalendar: false,
-    outlookCalendar: false,
     appleCalendar: false,
     stripePayments: false,
     venmoPayments: false,
@@ -1536,30 +1535,13 @@ export function ParentConnectionsPage() {
                   </div>
                   <div>
                     <div className="font-medium text-gray-900 dark:text-gray-100">Google Calendar</div>
-                    <div className="text-sm text-gray-500">Sync team schedules and events</div>
+                    <div className="text-sm text-gray-500">Export your visible UYP events to your personal Google Calendar</div>
                   </div>
                 </div>
                 <Switch
                   checked={connections.googleCalendar}
                   onCheckedChange={(checked) => toggleConnectionMutation.mutate({ service: "googleCalendar", connect: checked })}
                   data-testid="switch-google-calendar"
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-blue-700 rounded-lg flex items-center justify-center">
-                    <Mail className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-gray-100">Outlook Calendar</div>
-                    <div className="text-sm text-gray-500">Sync with Microsoft Outlook</div>
-                  </div>
-                </div>
-                <Switch
-                  checked={connections.outlookCalendar}
-                  onCheckedChange={(checked) => toggleConnectionMutation.mutate({ service: "outlookCalendar", connect: checked })}
-                  data-testid="switch-outlook-calendar"
                 />
               </div>
 

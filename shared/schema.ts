@@ -101,7 +101,7 @@ export interface Team {
   id: string;
   organizationId: string;
   name: string;
-  ageGroup: string;
+  ageGroup?: string;
   program?: string; // Configurable by organization
   color: string;
   coachIds: string[]; // Multiple coaches can manage a team
@@ -112,7 +112,7 @@ export interface Team {
 export const insertTeamSchema = z.object({
   organizationId: z.string(),
   name: z.string().min(1),
-  ageGroup: z.string().min(1),
+  ageGroup: z.string().optional(),
   program: z.string().optional(),
   color: z.string().default("#1E40AF"),
   coachIds: z.array(z.string()).default([]),

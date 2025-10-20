@@ -163,25 +163,24 @@ export default function CreateProfile() {
         calculatedAge = age.toString();
       }
 
-      // Create profile without team assignment
-      const response = await fetch("/api/profiles", {
+      // Create user profile using the users endpoint
+      const response = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          profileType,
+          organizationId: (user as any)?.organizationId || "default-org",
+          email: (user as any)?.email || "",
+          role: profileType,
           firstName: data.firstName,
           lastName: data.lastName,
           phoneNumber: data.phoneNumber,
           dateOfBirth: data.dateOfBirth,
           jerseyNumber: jerseyNum,
-          // teamId removed - will be set via join request
-          age: calculatedAge,
-          height: data.height,
-          city: data.city,
           position: data.position,
-          profileImageUrl: null, // Default to null so Avatar shows initials until manually uploaded
-          verified: isVerified, // Pass verification status from Notion claim
+          program: undefined,
+          isActive: true,
+          verified: isVerified,
         }),
       });
 
@@ -195,7 +194,7 @@ export default function CreateProfile() {
       return profileData;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/profiles", (user as any)?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
@@ -203,11 +202,15 @@ export default function CreateProfile() {
         description: "Your profile has been successfully created.",
       });
 
-      // Redirect based on profile type
-      if (data.profileType === "player") {
+      // Redirect based on role
+      if (data.role === "player") {
         setLocation("/player-dashboard");
-      } else {
+      } else if (data.role === "parent") {
         setLocation("/parent-dashboard");
+      } else if (data.role === "coach") {
+        setLocation("/coach-dashboard");
+      } else if (data.role === "admin") {
+        setLocation("/admin");
       }
     },
     onError: (error: Error) => {

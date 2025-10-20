@@ -15,7 +15,10 @@ import {
   Gauge,
   MapPin,
   Award,
-  Trophy
+  Trophy,
+  Phone,
+  AlertCircle,
+  Heart
 } from "lucide-react";
 
 interface PlayerCardProps {
@@ -125,11 +128,11 @@ export default function PlayerCard({
         profileImageUrl: playerData.profile_image_url,
         phoneNumber: playerData.phone_number,
         dateOfBirth: playerData.dateOfBirth,
-        emergencyContact: null,
-        emergencyPhone: null,
+        emergencyContact: playerData.emergency_contact,
+        emergencyPhone: playerData.emergency_phone,
         address: playerData.city,
-        medicalInfo: null,
-        allergies: null,
+        medicalInfo: playerData.medical_info,
+        allergies: playerData.allergies,
         schoolGrade: playerData.schoolGrade,
         position: playerData.position,
         jerseyNumber: playerData.jerseyNumber,
@@ -432,6 +435,66 @@ export default function PlayerCard({
                 />
               </div>
             </div>
+
+            {/* Emergency Contact & Medical Information - Coach View Only */}
+            {isCoach && (playerProfile.emergencyContact || playerProfile.emergencyPhone || playerProfile.medicalInfo || playerProfile.allergies) && (
+              <div className="px-6 pb-6 space-y-4">
+                <div className="border-t border-gray-200 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    Emergency & Medical Information
+                  </h3>
+                  
+                  {/* Emergency Contact */}
+                  {(playerProfile.emergencyContact || playerProfile.emergencyPhone) && (
+                    <div className="bg-red-50 border border-red-100 rounded-lg p-3 mb-3">
+                      <div className="flex items-start gap-2">
+                        <Phone className="h-4 w-4 text-red-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-red-900 mb-1">Emergency Contact</p>
+                          {playerProfile.emergencyContact && (
+                            <p className="text-sm text-gray-900">{playerProfile.emergencyContact}</p>
+                          )}
+                          {playerProfile.emergencyPhone && (
+                            <p className="text-sm text-gray-900 font-medium">
+                              <a href={`tel:${playerProfile.emergencyPhone}`} className="hover:underline">
+                                {playerProfile.emergencyPhone}
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Medical Information */}
+                  {playerProfile.medicalInfo && (
+                    <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                      <div className="flex items-start gap-2">
+                        <Heart className="h-4 w-4 text-blue-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-blue-900 mb-1">Medical Information</p>
+                          <p className="text-sm text-gray-900 whitespace-pre-wrap">{playerProfile.medicalInfo}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Allergies */}
+                  {playerProfile.allergies && (
+                    <div className="bg-orange-50 border border-orange-100 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-orange-600 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-orange-900 mb-1">Allergies</p>
+                          <p className="text-sm text-gray-900 whitespace-pre-wrap">{playerProfile.allergies}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Coach Actions */}
             {isCoach && (

@@ -909,6 +909,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/players/:playerId/profile', isAuthenticated, async (req: any, res) => {
     try {
       const playerId = req.params.playerId;
+      const requestingUserId = req.user.claims.sub;
+      
+      // Check if requesting user is a coach by checking their active profile or user type
+      const requestingUser = await storage.getUser(requestingUserId);
+      let isCoach = requestingUser?.userType === 'coach';
+      
+      // If not a coach at user level, check their active profile
+      if (!isCoach && requestingUser?.activeProfileId) {
+        const activeProfile = await storage.getProfile(requestingUser.activeProfileId);
+        isCoach = activeProfile?.profileType === 'coach';
+      }
       
       // First try to get from regular users table
       let player = await storage.getUser(playerId);
@@ -935,6 +946,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           parent_email: null,
           account_email: player.email,
           phone_number: player.phoneNumber,
+          // Only include sensitive information for coaches
+          emergency_contact: isCoach ? player.emergencyContact : null,
+          emergency_phone: isCoach ? player.emergencyPhone : null,
+          medical_info: isCoach ? player.medicalInfo : null,
+          allergies: isCoach ? player.allergies : null,
           registration_status: null,
           session: null
         };

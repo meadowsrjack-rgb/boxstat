@@ -427,23 +427,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
-  // WEBSOCKET SERVER SETUP
+  // HTTP SERVER SETUP
   // =============================================
   
   const server = createServer(app);
-  wss = new WebSocketServer({ server });
   
-  wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
-    
-    ws.on('message', (message) => {
-      console.log('Received:', message.toString());
-    });
-    
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
-    });
-  });
+  // Note: WebSocket server disabled to avoid conflicts with Vite HMR
+  // Uncomment if you need WebSocket functionality for real-time updates
+  // wss = new WebSocketServer({ server });
+  // wss.on('connection', (ws) => {
+  //   console.log('WebSocket client connected');
+  //   ws.on('message', (message) => {
+  //     console.log('Received:', message.toString());
+  //   });
+  //   ws.on('close', () => {
+  //     console.log('WebSocket client disconnected');
+  //   });
+  // });
   
   return server;
 }

@@ -158,15 +158,6 @@ export function setupNotificationRoutes(app: Express) {
         eventReminders: true,
         trophyProgress: true,
         badgeEarned: true,
-        trainingReminders: true,
-        skillsEvaluation: true,
-        improvementRecommendation: true,
-        paymentDue: true,
-        teamMessages: true,
-        pushNotifications: true,
-        emailNotifications: true,
-        quietHoursStart: "22:00",
-        quietHoursEnd: "07:00"
       };
 
       res.json(preferences || defaultPreferences);

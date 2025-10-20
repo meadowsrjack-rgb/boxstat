@@ -615,12 +615,6 @@ interface NotificationPrefs {
   eventCheckin: boolean;
   trophyProgress: boolean;
   badgeEarned: boolean;
-  trainingReminders: boolean;
-  teamMessages: boolean;
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  quietHoursStart: string;
-  quietHoursEnd: string;
 }
 
 export function PlayerNotificationsPage() {
@@ -632,12 +626,6 @@ export function PlayerNotificationsPage() {
     eventCheckin: true,
     trophyProgress: true,
     badgeEarned: true,
-    trainingReminders: true,
-    teamMessages: true,
-    pushNotifications: true,
-    emailNotifications: true,
-    quietHoursStart: "22:00",
-    quietHoursEnd: "07:00"
   });
 
   // Fetch notification preferences
@@ -653,12 +641,6 @@ export function PlayerNotificationsPage() {
         eventCheckin: notificationPrefs.eventCheckin ?? true,
         trophyProgress: notificationPrefs.trophyProgress ?? true,
         badgeEarned: notificationPrefs.badgeEarned ?? true,
-        trainingReminders: notificationPrefs.trainingReminders ?? true,
-        teamMessages: notificationPrefs.teamMessages ?? true,
-        pushNotifications: notificationPrefs.pushNotifications ?? true,
-        emailNotifications: notificationPrefs.emailNotifications ?? true,
-        quietHoursStart: notificationPrefs.quietHoursStart ?? "22:00",
-        quietHoursEnd: notificationPrefs.quietHoursEnd ?? "07:00"
       });
     }
   }, [notificationPrefs]);
@@ -761,71 +743,6 @@ export function PlayerNotificationsPage() {
                 onChange={(v) => setPrefs((p) => ({ ...p, badgeEarned: v }))}
                 testId="switch-badge-earned"
               />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Training & Team</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ToggleRow 
-                label="Training reminders" 
-                checked={prefs.trainingReminders} 
-                onChange={(v) => setPrefs((p) => ({ ...p, trainingReminders: v }))}
-                testId="switch-training-reminders"
-              />
-              <ToggleRow 
-                label="Team messages" 
-                checked={prefs.teamMessages} 
-                onChange={(v) => setPrefs((p) => ({ ...p, teamMessages: v }))}
-                testId="switch-team-messages"
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ToggleRow 
-                label="Push notifications" 
-                checked={prefs.pushNotifications} 
-                onChange={(v) => setPrefs((p) => ({ ...p, pushNotifications: v }))}
-                testId="switch-push-notifications"
-              />
-              <ToggleRow 
-                label="Email notifications" 
-                checked={prefs.emailNotifications} 
-                onChange={(v) => setPrefs((p) => ({ ...p, emailNotifications: v }))}
-                testId="switch-email-notifications"
-              />
-              
-              <div className="space-y-2 pt-4 border-t">
-                <h4 className="font-medium text-sm text-gray-700 dark:text-gray-300">Quiet Hours</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">No notifications will be sent during these hours</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-600 dark:text-gray-400">Start time</label>
-                    <Input
-                      type="time"
-                      value={prefs.quietHoursStart}
-                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursStart: e.target.value }))}
-                      data-testid="input-quiet-start"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-gray-600 dark:text-gray-400">End time</label>
-                    <Input
-                      type="time"
-                      value={prefs.quietHoursEnd}
-                      onChange={(e) => setPrefs(p => ({ ...p, quietHoursEnd: e.target.value }))}
-                      data-testid="input-quiet-end"
-                    />
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
 

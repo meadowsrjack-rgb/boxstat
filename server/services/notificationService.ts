@@ -80,28 +80,33 @@ export class NotificationService {
 
   async updateNotificationPreferences(userId: string, updates: Partial<InsertNotificationPreferences>): Promise<void> {
     try {
+      // Build a set object that only includes fields that were actually provided
+      const setFields: any = {
+        updatedAt: new Date()
+      };
+      
+      // Only update fields that are explicitly provided in the updates object
+      if (updates.eventRsvp !== undefined) setFields.eventRsvp = updates.eventRsvp;
+      if (updates.eventCheckin !== undefined) setFields.eventCheckin = updates.eventCheckin;
+      if (updates.eventReminders !== undefined) setFields.eventReminders = updates.eventReminders;
+      if (updates.trophyProgress !== undefined) setFields.trophyProgress = updates.trophyProgress;
+      if (updates.badgeEarned !== undefined) setFields.badgeEarned = updates.badgeEarned;
+      if (updates.trainingReminders !== undefined) setFields.trainingReminders = updates.trainingReminders;
+      if (updates.skillsEvaluation !== undefined) setFields.skillsEvaluation = updates.skillsEvaluation;
+      if (updates.improvementRecommendation !== undefined) setFields.improvementRecommendation = updates.improvementRecommendation;
+      if (updates.paymentDue !== undefined) setFields.paymentDue = updates.paymentDue;
+      if (updates.teamMessages !== undefined) setFields.teamMessages = updates.teamMessages;
+      if (updates.pushNotifications !== undefined) setFields.pushNotifications = updates.pushNotifications;
+      if (updates.emailNotifications !== undefined) setFields.emailNotifications = updates.emailNotifications;
+      if (updates.quietHoursStart !== undefined) setFields.quietHoursStart = updates.quietHoursStart;
+      if (updates.quietHoursEnd !== undefined) setFields.quietHoursEnd = updates.quietHoursEnd;
+
       await db.insert(notificationPreferences).values({
         userId,
         ...updates
       } as InsertNotificationPreferences).onConflictDoUpdate({
         target: notificationPreferences.userId,
-        set: {
-          eventRsvp: updates.eventRsvp,
-          eventCheckin: updates.eventCheckin,
-          eventReminders: updates.eventReminders,
-          trophyProgress: updates.trophyProgress,
-          badgeEarned: updates.badgeEarned,
-          trainingReminders: updates.trainingReminders,
-          skillsEvaluation: updates.skillsEvaluation,
-          improvementRecommendation: updates.improvementRecommendation,
-          paymentDue: updates.paymentDue,
-          teamMessages: updates.teamMessages,
-          pushNotifications: updates.pushNotifications,
-          emailNotifications: updates.emailNotifications,
-          quietHoursStart: updates.quietHoursStart,
-          quietHoursEnd: updates.quietHoursEnd,
-          updatedAt: new Date()
-        }
+        set: setFields
       });
     } catch (error) {
       console.error('Error updating notification preferences:', error);

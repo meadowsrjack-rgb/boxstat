@@ -169,6 +169,98 @@ class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.users.set(adminUser.id, adminUser);
+    
+    // Create test users for preview demonstration
+    const parentUser: User = {
+      id: "parent-1",
+      organizationId: "default-org",
+      email: "sarah.johnson@example.com",
+      role: "parent",
+      firstName: "Sarah",
+      lastName: "Johnson",
+      phoneNumber: "(555) 123-4567",
+      isActive: true,
+      verified: true,
+      registrationType: "my_child",
+      packageSelected: "youth-club-full-season",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(parentUser.id, parentUser);
+    
+    const playerUser1: User = {
+      id: "player-1",
+      organizationId: "default-org",
+      email: "michael.johnson@temp.com",
+      role: "player",
+      firstName: "Michael",
+      lastName: "Johnson",
+      dateOfBirth: "2010-03-15",
+      gender: "male",
+      accountHolderId: "parent-1",
+      registrationType: "my_child",
+      packageSelected: "youth-club-full-season",
+      teamAssignmentStatus: "pending",
+      isActive: true,
+      verified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(playerUser1.id, playerUser1);
+    
+    const playerUser2: User = {
+      id: "player-2",
+      organizationId: "default-org",
+      email: "emma.johnson@temp.com",
+      role: "player",
+      firstName: "Emma",
+      lastName: "Johnson",
+      dateOfBirth: "2012-07-22",
+      gender: "female",
+      accountHolderId: "parent-1",
+      registrationType: "my_child",
+      packageSelected: "youth-club-full-season",
+      teamAssignmentStatus: "pending",
+      isActive: true,
+      verified: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(playerUser2.id, playerUser2);
+    
+    const coachUser: User = {
+      id: "coach-1",
+      organizationId: "default-org",
+      email: "john.smith@example.com",
+      role: "coach",
+      firstName: "John",
+      lastName: "Smith",
+      phoneNumber: "(555) 987-6543",
+      isActive: true,
+      verified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(coachUser.id, coachUser);
+    
+    const independentPlayer: User = {
+      id: "player-3",
+      organizationId: "default-org",
+      email: "alex.rodriguez@example.com",
+      role: "player",
+      firstName: "Alex",
+      lastName: "Rodriguez",
+      dateOfBirth: "2009-11-08",
+      gender: "male",
+      registrationType: "myself",
+      packageSelected: "high-school-elite",
+      teamAssignmentStatus: "assigned",
+      isActive: true,
+      verified: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(independentPlayer.id, independentPlayer);
   }
   
   // Organization operations

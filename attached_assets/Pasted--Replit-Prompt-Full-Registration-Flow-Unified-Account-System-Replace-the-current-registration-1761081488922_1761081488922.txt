@@ -1,0 +1,183 @@
+🧠 Replit Prompt — Full Registration Flow + Unified Account System
+
+Replace the current registration, “Create Player Profile,” and profile-selection pages with a new SportsEngine-style registration flow.
+After completion, users land on a Unified Account Page that contains payments, messages, settings, and clickable player cards.
+All registration data must automatically push to the local database (Users table) managed by the Admin Profile.
+The admin will later assign each player to a team.
+
+⸻
+
+🔹 1. Registration Flow Overview
+
+Step 1 — Registration Intent
+
+Ask:
+
+“Who are you registering for today?”
+▢ Myself
+▢ My child or another player
+
+Save the selection as registrationType.
+
+⸻
+
+Step 2 — User & Player Information
+
+If “Myself”:
+Show a Player Information Form
+	•	First Name, Last Name
+	•	Email
+	•	Phone (optional)
+	•	Birthdate (optional)
+	•	Gender (optional)
+
+If “My child or another player”:
+	1.	Parent/Guardian Form
+	•	First Name, Last Name
+	•	Email
+	•	Phone (optional)
+	•	Birthdate (optional)
+	2.	Player Form
+	•	First Name, Last Name
+	•	Birthdate (optional)
+	•	Gender (optional)
+	•	“+ Add Another Player” button to register multiple players under the same account
+
+⸻
+
+Step 3 — Program / Package Selection
+
+Add a Payment & Program Selection section before account creation.
+	•	Display available packages/programs (fetched or placeholder list) created by the Admin Profile.
+Example:
+	•	“Elite Training – $149/month”
+	•	“Development Program – $99/month”
+	•	“Tournament Prep – $59/week”
+	•	Users must choose one package per player or one package for the account depending on the flow.
+	•	Include a note:
+“Payment processing will be completed once packages are finalized.”
+	•	Create a placeholder for future Stripe/webhook integration.
+(No live payment yet; just store the selected package ID or name.)
+
+⸻
+
+Step 4 — Review & Confirm
+
+Display a summary of:
+	•	Account information
+	•	Player information
+	•	Selected package(s)
+
+Include Edit and Continue buttons.
+
+⸻
+
+Step 5 — Create Account
+
+Prompt for:
+	•	Password (min 8 chars, 1 uppercase + number/symbol)
+	•	Terms of Service / Privacy checkbox
+	•	Marketing opt-in (optional)
+Button: Create Account
+
+After submission:
+	•	Validate input
+	•	Save account and player records to the local database (Users table).
+	•	Link any selected package IDs to the account or player records.
+	•	Flag these entries as “pending team assignment” for the admin to review and assign teams.
+
+⸻
+
+Step 6 — Email Verification
+
+Show message:
+
+“A verification link has been sent to your email. Please verify to continue.”
+
+After verification, redirect user to the Unified Account Page.
+
+⸻
+
+🔹 2. Unified Account Page (Post-Registration Landing)
+
+This replaces both the old player-profile creation and profile-selection pages.
+
+Header / Top Section
+	•	Welcome, [Account Holder Name]!
+	•	Payment Summary (next due date, status – placeholder until Stripe integration)
+	•	Notifications / Messages
+	•	Upcoming Events or Calendar Preview
+
+Navigation Tabs
+	•	Home (default dashboard)
+	•	Payments
+	•	Messages
+	•	Settings
+
+Player Cards Section
+	•	Show all linked player profiles as clickable cards:
+	•	Player photo or initials
+	•	Player name + team (if assigned)
+	•	Program / Package selected
+	•	Upcoming event summary
+	•	Add “+ Add Another Player” button for future registrations.
+	•	When a card is clicked → open that player’s existing Player Dashboard (stats, trophies, achievements, etc.).
+	•	Include a “Back to Account” button within each player dashboard.
+
+⸻
+
+🔹 3. Database Integration Requirements
+
+Once account creation completes:
+	•	Write all user and player data to the local database.
+	•	Target table: Users (or appropriate user entity table).
+	•	Each record should contain:
+	•	account_id
+	•	registrationType
+	•	account_holder_name
+	•	email
+	•	phone
+	•	package_selected (placeholder value)
+	•	player_profiles[] (array of linked player objects)
+	•	status (e.g., “pending team assignment”)
+	•	The Admin Profile can view these new entries and manually assign teams.
+
+⸻
+
+🔹 4. Logic & Behavior
+
+Condition	Behavior
+registrationType == "myself"	Create single player profile linked directly to account ID.
+registrationType == "my child"	Create parent account and link one or more player profiles.
+After verification	Redirect to Unified Account Page with dynamic data display.
+
+
+⸻
+
+🔹 5. UI / UX Notes
+	•	Clean, mobile-first design mirroring SportsEngine simplicity.
+	•	Remove or disable legacy Create Player Profile and Profile Selection components.
+	•	Use conditional rendering to show only relevant fields per registration type.
+	•	Ensure navigation is smooth and cached locally.
+	•	Keep placeholders for future Stripe checkout and webhook connections.
+
+⸻
+
+🔹 6. Future-Proof Extensions
+	•	Enable secondary guardian invites.
+	•	Connect Stripe webhooks to update payment status and package billing automatically.
+	•	Add admin function for bulk team assignment and program tracking.
+	•	Introduce coach / tournament dashboards using same data structure.
+
+⸻
+
+✅ Expected Outcome
+	1.	The old registration and profile pages are removed.
+	2.	Users see a SportsEngine-style question (“Myself” or “My child”).
+	3.	They complete forms → select a program/package → create account.
+	4.	Their information (auto-pushed to local Users table) awaits admin team assignment.
+	5.	After email verification, they land on the Unified Account Page, which shows:
+	•	“Welcome, [Account Holder Name]”
+	•	Payments, Messages, Settings
+	•	Clickable Player Cards linked to their dashboards
+	•	Placeholder for Stripe payment integration.

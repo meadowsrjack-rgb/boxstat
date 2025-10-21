@@ -36,6 +36,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // REGISTRATION ROUTES
+  // =============================================
+  
+  app.post('/api/registration/complete', async (req: any, res) => {
+    try {
+      const { registrationType, parentInfo, players, packageId, password } = req.body;
+      
+      const organizationId = "default-org"; // In production, this would be determined by subdomain
+      
+      // Create parent account if registering for child
+      let accountHolderId: string | undefined;
+      if (registrationType === "my_child" && parentInfo) {
+        const parent = await storage.createUser({
+          organizationId,
+          email: parentInfo.email,
+          role: "parent",
+          firstName: parentInfo.firstName,
+          lastName: parentInfo.lastName,
+          phoneNumber: parentInfo.phoneNumber,
+          dateOfBirth: parentInfo.dateOfBirth,
+          password,
+          registrationType,
+          packageSelected: packageId,
+          isActive: true,
+          verified: false,
+        });
+        accountHolderId = parent.id;
+      }
+      
+      // Create player profiles
+      const createdPlayers = [];
+      for (const player of players) {
+        const playerUser = await storage.createUser({
+          organizationId,
+          email: registrationType === "myself" ? (parentInfo?.email || players[0]?.email || "") : `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`,
+          role: "player",
+          firstName: player.firstName,
+          lastName: player.lastName,
+          dateOfBirth: player.dateOfBirth,
+          gender: player.gender,
+          registrationType,
+          accountHolderId,
+          packageSelected: packageId,
+          teamAssignmentStatus: "pending",
+          password: registrationType === "myself" ? password : undefined,
+          isActive: true,
+          verified: false,
+        });
+        createdPlayers.push(playerUser);
+      }
+      
+      res.json({
+        success: true,
+        message: "Registration successful",
+        accountHolderId: accountHolderId || createdPlayers[0]?.id,
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: error.message || "Registration failed" });
+    }
+  });
+  
+  // Get users by account holder (for unified account page)
+  app.get('/api/account/players', isAuthenticated, async (req: any, res) => {
+    const { id } = req.user;
+    const user = await storage.getUser(id);
+    
+    if (user?.role === "parent") {
+      // Get all players linked to this parent
+      const allUsers = await storage.getUsersByOrganization(user.organizationId);
+      const linkedPlayers = allUsers.filter(u => u.accountHolderId === id && u.role === "player");
+      res.json(linkedPlayers);
+    } else if (user?.role === "player") {
+      // Return self
+      res.json([user]);
+    } else {
+      res.json([]);
+    }
+  });
+  
+  // =============================================
   // ORGANIZATION ROUTES
   // =============================================
   

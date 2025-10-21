@@ -20,6 +20,8 @@ import PlayerDetailPage from "@/pages/player-detail";
 import TeamDetails from "@/pages/team-details";
 import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
+import RegistrationFlow from "@/pages/registration-flow";
+import UnifiedAccount from "@/pages/unified-account";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -146,6 +148,7 @@ function Router() {
       <Switch>
         <Route path="/privacy" component={PrivacySettingsPage} />
         <Route path="/teams" component={Teams} />
+        <Route path="/registration" component={RegistrationFlow} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>
@@ -185,33 +188,14 @@ function Router() {
     <Switch>
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
+      <Route path="/registration" component={RegistrationFlow} />
       <Route path="/" component={() => {
-        // Check if user has existing profiles
-        const userId = (user as any)?.id;
-        const { data: profiles, isLoading: profilesLoading } = useQuery<Profile[]>({
-          queryKey: [`/api/profiles/${userId}`],
-          enabled: !!userId,
-        });
-        
-        if (profilesLoading) {
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
-              <div className="text-white text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-                <p>Loading your profiles...</p>
-              </div>
-            </div>
-          );
+        // Redirect to unified account page for authenticated users
+        if ((user as any)?.role === "admin") {
+          setLocation("/admin-dashboard");
+          return null;
         }
-        
-        // If user has profiles, show profile selection page
-        if (profiles && profiles.length > 0) {
-          return <ProfileSelection />;
-        }
-        
-        // If user has no profiles, redirect to create profile
-        setLocation("/create-profile");
-        return null;
+        return <UnifiedAccount />;
       }} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {

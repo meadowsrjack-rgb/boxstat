@@ -42,6 +42,8 @@ export interface Organization {
 // =============================================
 
 export type UserRole = "admin" | "coach" | "player" | "parent";
+export type RegistrationType = "myself" | "my_child";
+export type TeamAssignmentStatus = "pending" | "assigned";
 
 export interface User {
   id: string;
@@ -56,6 +58,13 @@ export interface User {
   dateOfBirth?: string;
   phoneNumber?: string;
   address?: string;
+  gender?: string;
+  
+  // Registration flow fields
+  registrationType?: RegistrationType; // "myself" or "my_child"
+  accountHolderId?: string; // For players linked to a parent account
+  packageSelected?: string; // Selected program/package ID
+  teamAssignmentStatus?: TeamAssignmentStatus; // "pending" or "assigned"
   
   // Specific fields based on role
   teamId?: string;
@@ -69,6 +78,7 @@ export interface User {
   
   // Security
   passcode?: string; // 4-digit PIN for quick switching
+  password?: string; // Hashed password for account login
   
   // Status
   isActive: boolean;
@@ -88,6 +98,11 @@ export const insertUserSchema = z.object({
   dateOfBirth: z.string().optional(),
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
+  gender: z.string().optional(),
+  registrationType: z.enum(["myself", "my_child"]).optional(),
+  accountHolderId: z.string().optional(),
+  packageSelected: z.string().optional(),
+  teamAssignmentStatus: z.enum(["pending", "assigned"]).optional(),
   teamId: z.string().optional(),
   jerseyNumber: z.number().optional(),
   position: z.string().optional(),
@@ -95,6 +110,7 @@ export const insertUserSchema = z.object({
   rating: z.number().optional(),
   awardsCount: z.number().optional(),
   passcode: z.string().length(4).optional(),
+  password: z.string().optional(),
   isActive: z.boolean().default(true),
   verified: z.boolean().default(false),
 });
@@ -321,6 +337,8 @@ export interface Program {
   organizationId: string;
   name: string;
   description?: string;
+  price?: number; // Price in cents (e.g., 14900 for $149.00)
+  pricingModel?: string; // "monthly", "weekly", "one-time", etc.
   ageGroups: string[]; // e.g., ["8-10", "11-13", "14-17"]
   isActive: boolean;
   createdAt: Date;
@@ -330,6 +348,8 @@ export const insertProgramSchema = z.object({
   organizationId: z.string(),
   name: z.string().min(1),
   description: z.string().optional(),
+  price: z.number().optional(),
+  pricingModel: z.string().optional(),
   ageGroups: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
 });

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2053,37 +2053,41 @@ function PreviewTab({ users }: { users: any[] }) {
                     <>
                       {users.filter((u: any) => u.role === "parent").length > 0 && (
                         <>
-                          <SelectLabel>Parents</SelectLabel>
-                          {users.filter((u: any) => u.role === "parent").map((user: any) => (
-                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                              {user.firstName} {user.lastName} ({user.email})
-                            </SelectItem>
-                          ))}
+                          <SelectGroup>
+                            <SelectLabel>Parents</SelectLabel>
+                            {users.filter((u: any) => u.role === "parent").map((user: any) => (
+                              <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
+                                {user.firstName} {user.lastName} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                           <SelectSeparator />
                         </>
                       )}
                       
                       {users.filter((u: any) => u.role === "player").length > 0 && (
                         <>
-                          <SelectLabel>Players</SelectLabel>
-                          {users.filter((u: any) => u.role === "player").map((user: any) => (
-                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                              {user.firstName} {user.lastName} {user.accountHolderId && "(Child)"}
-                            </SelectItem>
-                          ))}
+                          <SelectGroup>
+                            <SelectLabel>Players</SelectLabel>
+                            {users.filter((u: any) => u.role === "player").map((user: any) => (
+                              <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
+                                {user.firstName} {user.lastName} {user.accountHolderId && "(Child)"}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                           <SelectSeparator />
                         </>
                       )}
                       
                       {users.filter((u: any) => u.role === "coach").length > 0 && (
-                        <>
+                        <SelectGroup>
                           <SelectLabel>Coaches</SelectLabel>
                           {users.filter((u: any) => u.role === "coach").map((user: any) => (
                             <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
                               {user.firstName} {user.lastName} ({user.email})
                             </SelectItem>
                           ))}
-                        </>
+                        </SelectGroup>
                       )}
                     </>
                   )}

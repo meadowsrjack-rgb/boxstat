@@ -40,7 +40,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { useLocation } from "wouter";
 import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
-import ParentDashboard from "./parent-dashboard";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -1985,7 +1984,7 @@ function SettingsTab({ organization }: any) {
 
 // Preview Tab Component
 function PreviewTab() {
-  const [previewMode, setPreviewMode] = useState<"player" | "parent" | "coach">("player");
+  const [previewMode, setPreviewMode] = useState<"player" | "coach">("player");
 
   return (
     <div className="space-y-6">
@@ -2004,13 +2003,6 @@ function PreviewTab() {
               Player Dashboard
             </Button>
             <Button
-              variant={previewMode === "parent" ? "default" : "outline"}
-              onClick={() => setPreviewMode("parent")}
-              data-testid="button-preview-parent"
-            >
-              Parent Dashboard
-            </Button>
-            <Button
               variant={previewMode === "coach" ? "default" : "outline"}
               onClick={() => setPreviewMode("coach")}
               data-testid="button-preview-coach"
@@ -2026,11 +2018,6 @@ function PreviewTab() {
         {previewMode === "player" && (
           <div data-testid="preview-player-dashboard">
             <PlayerDashboard />
-          </div>
-        )}
-        {previewMode === "parent" && (
-          <div data-testid="preview-parent-dashboard">
-            <ParentDashboard />
           </div>
         )}
         {previewMode === "coach" && (

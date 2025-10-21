@@ -28,17 +28,6 @@ import { useToast } from "@/hooks/use-toast";
 
 const UYP_RED = "#d82428";
 
-const parentProfileSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phoneNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(),
-  jerseyNumber: z.string().optional(),
-  height: z.string().optional(),
-  city: z.string().optional(),
-  position: z.string().optional(),
-});
-
 const playerProfileSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -59,16 +48,13 @@ export default function CreateProfile() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
-  const urlParams = new URLSearchParams(searchParams);
-  const profileType = (urlParams.get('type') as "parent" | "player") || "parent";
-  
   const [isClaiming, setIsClaiming] = useState(false);
   const [claimEmail, setClaimEmail] = useState((user as any)?.email || "");
   const [claimData, setClaimData] = useState<any>(null);
   const [isVerified, setIsVerified] = useState(false); // Track if profile was verified via Notion
 
   const form = useForm<ProfileForm>({
-    resolver: zodResolver(profileType === "parent" ? parentProfileSchema : playerProfileSchema),
+    resolver: zodResolver(playerProfileSchema),
     defaultValues: {
       firstName: (user as any)?.firstName || "",
       lastName: (user as any)?.lastName || "",
@@ -100,10 +86,8 @@ export default function CreateProfile() {
       const data = await response.json();
       
       if (data.found && data.records && data.records.length > 0) {
-        // Find matching record for the profile type
-        const matchingRecord = data.records.find((r: any) => 
-          r.personType === profileType
-        ) || data.records[0];
+        // Get first matching record
+        const matchingRecord = data.records[0];
         
         setClaimData(matchingRecord);
         setIsVerified(true); // Mark as verified since email was found in Notion database
@@ -122,12 +106,12 @@ export default function CreateProfile() {
         
         toast({
           title: "Account Found!",
-          description: `We found your ${profileType} account and pre-filled your information.`,
+          description: "We found your player account and pre-filled your information.",
         });
       } else {
         toast({
           title: "No Account Found",
-          description: `We couldn't find a ${profileType} account with email ${claimEmail}. Please fill in your details manually.`,
+          description: `We couldn't find a player account with email ${claimEmail}. Please fill in your details manually.`,
           variant: "destructive",
         });
       }
@@ -171,7 +155,7 @@ export default function CreateProfile() {
         body: JSON.stringify({
           organizationId: (user as any)?.organizationId || "default-org",
           email: (user as any)?.email || "",
-          role: profileType,
+          role: "player",
           firstName: data.firstName,
           lastName: data.lastName,
           phoneNumber: data.phoneNumber,
@@ -205,12 +189,12 @@ export default function CreateProfile() {
       // Redirect based on role
       if (data.role === "player") {
         setLocation("/player-dashboard");
-      } else if (data.role === "parent") {
-        setLocation("/parent-dashboard");
       } else if (data.role === "coach") {
         setLocation("/coach-dashboard");
       } else if (data.role === "admin") {
         setLocation("/admin");
+      } else {
+        setLocation("/player-dashboard");
       }
     },
     onError: (error: Error) => {
@@ -244,7 +228,7 @@ export default function CreateProfile() {
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold">Create {profileType === "parent" ? "Parent" : "Player"} Profile</h1>
+            <h1 className="text-2xl font-bold">Create Player Profile</h1>
             <p className="text-sm text-white/70">Complete your profile information</p>
           </div>
         </div>
@@ -316,58 +300,56 @@ export default function CreateProfile() {
                   )}
                 />
 
-                {profileType === "player" && (
-                  <>
-                    <FormField
-                      control={form.control}
-                      name="dateOfBirth"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-white">Date of Birth</FormLabel>
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-white">Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+                          data-testid="input-dob"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="jerseyNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-white">Jersey Number</FormLabel>
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={field.onChange}
+                        >
                           <FormControl>
-                            <Input
-                              {...field}
-                              type="date"
-                              className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                              data-testid="input-dob"
-                            />
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-jersey">
+                              <SelectValue placeholder="Select number" />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="jerseyNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-white">Jersey Number</FormLabel>
-                            <Select
-                              value={field.value || ""}
-                              onValueChange={field.onChange}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-jersey">
-                                  <SelectValue placeholder="Select number" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-[200px]">
-                                {Array.from({ length: 99 }, (_, i) => i + 1).map((num) => (
-                                  <SelectItem key={num} value={num.toString()}>
-                                    {num}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                          <SelectContent className="max-h-[200px]">
+                            {Array.from({ length: 99 }, (_, i) => i + 1).map((num) => (
+                              <SelectItem key={num} value={num.toString()}>
+                                {num}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                      <FormField
-                        control={form.control}
-                        name="position"
+                  <FormField
+                    control={form.control}
+                    name="position"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-white">Position</FormLabel>
@@ -450,8 +432,6 @@ export default function CreateProfile() {
                         )}
                       />
                     </div>
-                  </>
-                )}
 
                 <Button
                   type="submit"

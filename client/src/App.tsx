@@ -11,7 +11,6 @@ import Teams from "@/pages/teams";
 import PrivacySettingsPage from "@/pages/privacy";
 import Landing from "@/pages/landing";
 import AccountSetup from "@/pages/account-setup";
-import ParentDashboard from "@/pages/parent-dashboard";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import CoachDashboard from "@/pages/coach-dashboard";
@@ -32,7 +31,6 @@ import CoachTeamMessages from "@/pages/coach-team-messages";
 import CoachParentMessages from "@/pages/coach-parent-messages";
 import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
-import ParentSettingsPage from "@/pages/parent-settings";
 import PlayerSettingsPage from "@/pages/player-settings";
 import CoachSettingsPage from "@/pages/coach-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
@@ -50,7 +48,7 @@ import { useQuery } from "@tanstack/react-query";
 
 type Profile = {
   id: string;
-  profileType: "parent" | "player" | "coach";
+  profileType: "player" | "coach";
   firstName: string;
   lastName: string;
 };
@@ -81,18 +79,6 @@ import {
   CoachDangerPage 
 } from "@/pages/coach-setting-pages";
 
-import { 
-  ParentProfilePage, 
-  ParentFamilyPage, 
-  ParentPrivacyPage, 
-  ParentNotificationsPage, 
-  ParentSecurityPage, 
-  ParentConnectionsPage, 
-  ParentBillingPage, 
-  ParentDevicesPage, 
-  ParentLegalPage, 
-  ParentDangerPage 
-} from "@/pages/parent-setting-pages";
 
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
   const { data: profiles, isLoading } = useQuery<any[]>({
@@ -235,14 +221,11 @@ function Router() {
             return <PlayerDashboard />;
           case "coach":
             return <CoachDashboard />;
-          case "parent":
           default:
-            return <ParentDashboard />;
+            return <PlayerDashboard />;
         }
       }} />
       <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
-      <Route path="/parent-dashboard" component={() => <ParentDashboard />} />
-      <Route path="/parent/dashboard" component={() => <ParentDashboard />} />
       <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
       <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
       <Route path="/admin" component={() => <AdminDashboard />} />
@@ -255,7 +238,6 @@ function Router() {
       {/* Routes available to all authenticated users */}
       <Route path="/profile" component={Profile} />
       <Route path="/settings" component={SettingsPage} />
-      <Route path="/parent-settings" component={ParentSettingsPage} />
       <Route path="/player-settings" component={PlayerSettingsPage} />
       <Route path="/coach-settings" component={CoachSettingsPage} />
       
@@ -280,17 +262,6 @@ function Router() {
       <Route path="/coach-settings/legal" component={CoachLegalPage} />
       <Route path="/coach-settings/danger" component={CoachDangerPage} />
       
-      {/* Individual Parent Setting Pages */}
-      <Route path="/parent-settings/profile" component={ParentProfilePage} />
-      <Route path="/parent-settings/family" component={ParentFamilyPage} />
-      <Route path="/parent-settings/privacy" component={ParentPrivacyPage} />
-      <Route path="/parent-settings/notifications" component={ParentNotificationsPage} />
-      <Route path="/parent-settings/security" component={ParentSecurityPage} />
-      <Route path="/parent-settings/connections" component={ParentConnectionsPage} />
-      <Route path="/parent-settings/billing" component={ParentBillingPage} />
-      <Route path="/parent-settings/devices" component={ParentDevicesPage} />
-      <Route path="/parent-settings/legal" component={ParentLegalPage} />
-      <Route path="/parent-settings/danger" component={ParentDangerPage} />
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
       <Route path="/calendar-sync" component={CalendarSync} />

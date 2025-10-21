@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectSeparator, SelectLabel } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users">
-            <UsersTab users={users} organization={organization} />
+            <UsersTab users={users} teams={teams} organization={organization} />
           </TabsContent>
 
           <TabsContent value="teams">
@@ -286,7 +286,7 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
 }
 
 // Users Tab Component  
-function UsersTab({ users, organization }: any) {
+function UsersTab({ users, teams, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -1148,7 +1148,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </FormItem>
                     )}
                   />
-                  {form.watch("targetType") === "team" && (
+                  {(form.watch("targetType") === "team" || form.watch("targetType") === "program" || form.watch("targetType") === "role") && (
                     <FormField
                       control={form.control}
                       name="targetId"
@@ -2051,27 +2051,40 @@ function PreviewTab({ users }: { users: any[] }) {
                     </div>
                   ) : (
                     <>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">Parents</div>
-                      {users.filter((u: any) => u.role === "parent").map((user: any) => (
-                        <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                          {user.firstName} {user.lastName} ({user.email}) - Parent
-                        </SelectItem>
-                      ))}
+                      {users.filter((u: any) => u.role === "parent").length > 0 && (
+                        <>
+                          <SelectLabel>Parents</SelectLabel>
+                          {users.filter((u: any) => u.role === "parent").map((user: any) => (
+                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </SelectItem>
+                          ))}
+                          <SelectSeparator />
+                        </>
+                      )}
                       
-                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 border-t mt-2 pt-2">Players</div>
-                      {users.filter((u: any) => u.role === "player").map((user: any) => (
-                        <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                          {user.firstName} {user.lastName} ({user.email}) - Player
-                          {user.accountHolderId && " (Child Account)"}
-                        </SelectItem>
-                      ))}
+                      {users.filter((u: any) => u.role === "player").length > 0 && (
+                        <>
+                          <SelectLabel>Players</SelectLabel>
+                          {users.filter((u: any) => u.role === "player").map((user: any) => (
+                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
+                              {user.firstName} {user.lastName} {user.accountHolderId && "(Child)"}
+                            </SelectItem>
+                          ))}
+                          <SelectSeparator />
+                        </>
+                      )}
                       
-                      <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 border-t mt-2 pt-2">Coaches</div>
-                      {users.filter((u: any) => u.role === "coach").map((user: any) => (
-                        <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                          {user.firstName} {user.lastName} ({user.email}) - Coach
-                        </SelectItem>
-                      ))}
+                      {users.filter((u: any) => u.role === "coach").length > 0 && (
+                        <>
+                          <SelectLabel>Coaches</SelectLabel>
+                          {users.filter((u: any) => u.role === "coach").map((user: any) => (
+                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
                     </>
                   )}
                 </SelectContent>

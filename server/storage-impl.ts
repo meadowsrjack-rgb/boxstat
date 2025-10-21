@@ -253,7 +253,7 @@ class MemStorage implements IStorage {
       dateOfBirth: "2009-11-08",
       gender: "male",
       registrationType: "myself",
-      packageSelected: "high-school-elite",
+      packageSelected: "hs-club-full",
       teamAssignmentStatus: "assigned",
       isActive: true,
       verified: true,
@@ -261,6 +261,307 @@ class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     this.users.set(independentPlayer.id, independentPlayer);
+    
+    // Create default packages
+    const packages: Program[] = [
+      // HS Club
+      {
+        id: "hs-club-full",
+        organizationId: "default-org",
+        name: "HS Club - Pay in Full",
+        description: "High School Club full season payment",
+        price: 207000, // $2,070
+        pricingModel: "one-time",
+        category: "HS Club",
+        ageGroups: ["14-18"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "hs-club-installments",
+        organizationId: "default-org",
+        name: "HS Club - Installment Plan",
+        description: "High School Club payment plan (4 installments)",
+        price: 237000, // $2,370 total
+        pricingModel: "installments",
+        installments: 4,
+        installmentPrice: 59250, // $592.50
+        category: "HS Club",
+        ageGroups: ["14-18"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - K-7th
+      {
+        id: "sa-k7-monthly",
+        organizationId: "default-org",
+        name: "Skills Academy K-7th - Monthly",
+        description: "Monthly enrollment for K-7th grade division",
+        price: 20500, // $205
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["5-13"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "sa-k7-3month",
+        organizationId: "default-org",
+        name: "Skills Academy K-7th - 3 Month",
+        description: "Pay in full for 3 months (K-7th grade)",
+        price: 58500, // $585
+        pricingModel: "one-time",
+        duration: "3 months",
+        category: "Skills Academy",
+        ageGroups: ["5-13"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - Elite
+      {
+        id: "sa-elite-monthly",
+        organizationId: "default-org",
+        name: "SA Elite - Monthly",
+        description: "Skills Academy Elite program monthly",
+        price: 23500, // $235
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - Advanced
+      {
+        id: "sa-advanced-monthly",
+        organizationId: "default-org",
+        name: "SA Advanced - Monthly",
+        description: "Skills Academy Advanced program monthly",
+        price: 23500, // $235
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - Intermediate
+      {
+        id: "sa-intermediate-monthly",
+        organizationId: "default-org",
+        name: "SA Intermediate - Monthly",
+        description: "Skills Academy Intermediate program monthly",
+        price: 23500, // $235
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - Beginner
+      {
+        id: "sa-beginner-monthly",
+        organizationId: "default-org",
+        name: "SA Beginner - Monthly",
+        description: "Skills Academy Beginner program monthly",
+        price: 23500, // $235
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Skills Academy - Special Needs
+      {
+        id: "sa-special-needs-monthly",
+        organizationId: "default-org",
+        name: "SA Special Needs - Monthly",
+        description: "Skills Academy Special Needs program monthly",
+        price: 22500, // $225
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Skills Academy",
+        ageGroups: ["5-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Youth Club
+      {
+        id: "youth-club-3month",
+        organizationId: "default-org",
+        name: "Youth Club - 3 Month",
+        description: "Youth Club 3-month pay in full",
+        price: 90000, // $900
+        pricingModel: "one-time",
+        duration: "3 months",
+        category: "Youth Club",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "youth-club-6month",
+        organizationId: "default-org",
+        name: "Youth Club - 6 Month",
+        description: "Youth Club 6-month pay in full",
+        price: 165000, // $1,650
+        pricingModel: "one-time",
+        duration: "6 months",
+        category: "Youth Club",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "youth-club-monthly",
+        organizationId: "default-org",
+        name: "Youth Club - Monthly",
+        description: "Youth Club monthly enrollment",
+        price: 32500, // $325
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Youth Club",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // FNH - The League
+      {
+        id: "fnh-monthly",
+        organizationId: "default-org",
+        name: "FNH - The League Monthly",
+        description: "Friday Night Hoops league monthly",
+        price: 16500, // $165
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "FNH",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // FNH + SA Combo
+      {
+        id: "fnh-sa-combo-monthly",
+        organizationId: "default-org",
+        name: "FNH + SA Combo - Monthly",
+        description: "Friday Night Hoops + Skills Academy combo monthly",
+        price: 26500, // $265
+        pricingModel: "monthly",
+        duration: "1 month",
+        category: "Combo",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "fnh-sa-combo-3month",
+        organizationId: "default-org",
+        name: "FNH + SA Combo - 3 Month",
+        description: "Friday Night Hoops + Skills Academy combo 3-month pay in full",
+        price: 76500, // $765
+        pricingModel: "one-time",
+        duration: "3 months",
+        category: "Combo",
+        ageGroups: ["8-14"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Private Training
+      {
+        id: "private-training-member",
+        organizationId: "default-org",
+        name: "Private Training - UYP Member",
+        description: "One-on-one private training for UYP members",
+        price: 8500, // $85
+        pricingModel: "per-session",
+        duration: "per hour",
+        category: "Training",
+        ageGroups: [],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "private-training-nonmember",
+        organizationId: "default-org",
+        name: "Private Training - Non-UYP",
+        description: "One-on-one private training for non-members",
+        price: 12000, // $120
+        pricingModel: "per-session",
+        duration: "per hour",
+        category: "Training",
+        ageGroups: [],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Camp
+      {
+        id: "camp-early-bird",
+        organizationId: "default-org",
+        name: "Camp - Early Bird",
+        description: "Summer camp early bird pricing (until May 1, 2025)",
+        price: 24500, // $245
+        pricingModel: "one-time",
+        category: "Camp",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "camp-regular",
+        organizationId: "default-org",
+        name: "Camp - Regular Price",
+        description: "Summer camp regular pricing",
+        price: 29500, // $295
+        pricingModel: "one-time",
+        category: "Camp",
+        ageGroups: ["8-17"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      
+      // Foundation Program
+      {
+        id: "foundation-flat",
+        organizationId: "default-org",
+        name: "Foundation Program - Flat Rate",
+        description: "Foundation program single session",
+        price: 9500, // $95
+        pricingModel: "per-session",
+        category: "Foundation",
+        ageGroups: ["5-10"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+      {
+        id: "foundation-12week",
+        organizationId: "default-org",
+        name: "Foundation Program - 12 Week",
+        description: "Foundation program 12-week pay in full (discounted)",
+        price: 25000, // $250
+        pricingModel: "one-time",
+        duration: "12 weeks",
+        category: "Foundation",
+        ageGroups: ["5-10"],
+        isActive: true,
+        createdAt: new Date(),
+      },
+    ];
+    
+    packages.forEach(pkg => this.programs.set(pkg.id, pkg));
   }
   
   // Organization operations

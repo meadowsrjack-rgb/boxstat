@@ -338,7 +338,11 @@ export interface Program {
   name: string;
   description?: string;
   price?: number; // Price in cents (e.g., 14900 for $149.00)
-  pricingModel?: string; // "monthly", "weekly", "one-time", etc.
+  pricingModel?: string; // "one-time", "monthly", "installments", etc.
+  duration?: string; // "1 month", "3 months", "6 months", "12 weeks", "per hour", etc.
+  installments?: number; // Number of installments if pricing model is "installments"
+  installmentPrice?: number; // Price per installment in cents
+  category?: string; // "HS Club", "Skills Academy", "Youth Club", "FNH", "Training", etc.
   ageGroups: string[]; // e.g., ["8-10", "11-13", "14-17"]
   isActive: boolean;
   createdAt: Date;
@@ -350,6 +354,10 @@ export const insertProgramSchema = z.object({
   description: z.string().optional(),
   price: z.number().optional(),
   pricingModel: z.string().optional(),
+  duration: z.string().optional(),
+  installments: z.number().optional(),
+  installmentPrice: z.number().optional(),
+  category: z.string().optional(),
   ageGroups: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
 });

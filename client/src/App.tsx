@@ -22,6 +22,7 @@ import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
 import RegistrationFlow from "@/pages/registration-flow";
 import UnifiedAccount from "@/pages/unified-account";
+import LoginPage from "@/pages/login";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -149,6 +150,8 @@ function Router() {
         <Route path="/privacy" component={PrivacySettingsPage} />
         <Route path="/teams" component={Teams} />
         <Route path="/registration" component={RegistrationFlow} />
+        <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegistrationFlow} />
         <Route path="/" component={Landing} />
         <Route component={Landing} />
       </Switch>

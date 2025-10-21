@@ -131,44 +131,46 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="overview" data-testid="tab-overview">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="users" data-testid="tab-users">
-              <Users className="w-4 h-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="teams" data-testid="tab-teams">
-              <Users className="w-4 h-4 mr-2" />
-              Teams
-            </TabsTrigger>
-            <TabsTrigger value="events" data-testid="tab-events">
-              <Calendar className="w-4 h-4 mr-2" />
-              Events
-            </TabsTrigger>
-            <TabsTrigger value="programs" data-testid="tab-programs">
-              <Award className="w-4 h-4 mr-2" />
-              Programs
-            </TabsTrigger>
-            <TabsTrigger value="awards" data-testid="tab-awards">
-              <Trophy className="w-4 h-4 mr-2" />
-              Awards
-            </TabsTrigger>
-            <TabsTrigger value="payments" data-testid="tab-payments">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="preview" data-testid="tab-preview">
-              <Eye className="w-4 h-4 mr-2" />
-              Preview
-            </TabsTrigger>
-            <TabsTrigger value="settings" data-testid="tab-settings">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
+              <TabsTrigger value="overview" data-testid="tab-overview">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="users" data-testid="tab-users">
+                <Users className="w-4 h-4 mr-2" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="teams" data-testid="tab-teams">
+                <Users className="w-4 h-4 mr-2" />
+                Teams
+              </TabsTrigger>
+              <TabsTrigger value="events" data-testid="tab-events">
+                <Calendar className="w-4 h-4 mr-2" />
+                Events
+              </TabsTrigger>
+              <TabsTrigger value="programs" data-testid="tab-programs">
+                <Award className="w-4 h-4 mr-2" />
+                Programs
+              </TabsTrigger>
+              <TabsTrigger value="awards" data-testid="tab-awards">
+                <Trophy className="w-4 h-4 mr-2" />
+                Awards
+              </TabsTrigger>
+              <TabsTrigger value="payments" data-testid="tab-payments">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Payments
+              </TabsTrigger>
+              <TabsTrigger value="preview" data-testid="tab-preview">
+                <Eye className="w-4 h-4 mr-2" />
+                Preview
+              </TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">

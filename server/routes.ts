@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import Stripe from "stripe";
 import {
   insertUserSchema,
   insertTeamSchema,

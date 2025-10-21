@@ -158,9 +158,9 @@ export default function AdminDashboard() {
                 <Trophy className="w-4 h-4 mr-2" />
                 Awards
               </TabsTrigger>
-              <TabsTrigger value="payments" data-testid="tab-payments">
+              <TabsTrigger value="packages" data-testid="tab-packages">
                 <DollarSign className="w-4 h-4 mr-2" />
-                Payments
+                Packages
               </TabsTrigger>
               <TabsTrigger value="preview" data-testid="tab-preview">
                 <Eye className="w-4 h-4 mr-2" />
@@ -250,8 +250,8 @@ export default function AdminDashboard() {
             <AwardsTab awards={awards} users={users} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="payments">
-            <PaymentsTab payments={payments} users={users} organization={organization} />
+          <TabsContent value="packages">
+            <PackagesTab packages={programs} organization={organization} />
           </TabsContent>
 
           <TabsContent value="preview">
@@ -1578,185 +1578,208 @@ function AwardsTab({ awards, users, organization }: any) {
   );
 }
 
-// Payments Tab - Full Implementation with Stripe Integration
-function PaymentsTab({ payments, users, organization }: any) {
+// Packages Tab - Package Management
+function PackagesTab({ packages, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isStripeSetupOpen, setIsStripeSetupOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<any>(null);
 
-  const totalRevenue = payments.filter((p: any) => p.status === "completed").reduce((sum: number, p: any) => sum + p.amount, 0);
-  const pendingRevenue = payments.filter((p: any) => p.status === "pending").reduce((sum: number, p: any) => sum + p.amount, 0);
-
-  const createPaymentSchema = z.object({
-    userId: z.string().min(1),
-    amount: z.number().positive(),
-    description: z.string(),
-    dueDate: z.string(),
-    type: z.enum(["registration", "subscription", "one-time"]),
+  const createPackageSchema = z.object({
+    name: z.string().min(1, "Package name is required"),
+    description: z.string().optional(),
+    price: z.number().min(0, "Price must be positive"),
+    pricingModel: z.string().min(1, "Pricing model is required"),
+    duration: z.string().optional(),
+    installments: z.number().optional(),
+    installmentPrice: z.number().optional(),
+    category: z.string().optional(),
+    ageGroups: z.string().optional(),
   });
 
   const form = useForm({
-    resolver: zodResolver(createPaymentSchema),
+    resolver: zodResolver(createPackageSchema),
     defaultValues: {
-      userId: "",
-      amount: 0,
+      name: "",
       description: "",
-      dueDate: "",
-      type: "one-time" as const,
+      price: 0,
+      pricingModel: "one-time",
+      duration: "",
+      installments: 0,
+      installmentPrice: 0,
+      category: "",
+      ageGroups: "",
     },
   });
 
-  const createPayment = useMutation({
+  const createPackage = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/payments", {
+      const packageData = {
         ...data,
+        price: Math.round(data.price * 100), // Convert to cents
+        installmentPrice: data.installmentPrice ? Math.round(data.installmentPrice * 100) : undefined,
+        ageGroups: data.ageGroups ? data.ageGroups.split(',').map((s: string) => s.trim()) : [],
         organizationId: organization.id,
-        status: "pending",
-      });
+        isActive: true,
+      };
+      
+      if (editingPackage) {
+        return await apiRequest("PATCH", `/api/programs/${editingPackage.id}`, packageData);
+      }
+      return await apiRequest("POST", "/api/programs", packageData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
-      toast({ title: "Payment created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: editingPackage ? "Package updated successfully" : "Package created successfully" });
       setIsDialogOpen(false);
+      setEditingPackage(null);
       form.reset();
     },
     onError: () => {
-      toast({ title: "Failed to create payment", variant: "destructive" });
+      toast({ title: "Failed to save package", variant: "destructive" });
     },
   });
 
+  const deletePackage = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/programs/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: "Package deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete package", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (pkg: any) => {
+    setEditingPackage(pkg);
+    form.reset({
+      name: pkg.name,
+      description: pkg.description || "",
+      price: pkg.price / 100,
+      pricingModel: pkg.pricingModel || "one-time",
+      duration: pkg.duration || "",
+      installments: pkg.installments || 0,
+      installmentPrice: pkg.installmentPrice ? pkg.installmentPrice / 100 : 0,
+      category: pkg.category || "",
+      ageGroups: pkg.ageGroups?.join(', ') || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleNewPackage = () => {
+    setEditingPackage(null);
+    form.reset();
+    setIsDialogOpen(true);
+  };
+
+  const groupedPackages = packages.reduce((acc: any, pkg: any) => {
+    const category = pkg.category || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(pkg);
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6">
-      {/* Payment Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600">Total Revenue</div>
-            <div className="text-3xl font-bold mt-2">${(totalRevenue / 100).toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600">Pending</div>
-            <div className="text-3xl font-bold mt-2">${(pendingRevenue / 100).toFixed(2)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-gray-600">Total Payments</div>
-            <div className="text-3xl font-bold mt-2">{payments.length}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Payment Management</CardTitle>
-            <CardDescription>Track subscriptions and one-time payments</CardDescription>
+            <CardTitle>Package Management</CardTitle>
+            <CardDescription>Manage programs and packages available during registration</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Dialog open={isStripeSetupOpen} onOpenChange={setIsStripeSetupOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" data-testid="button-stripe-setup">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Stripe Setup
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Stripe Integration</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    To accept payments, you need to set up Stripe. Follow these steps:
-                  </p>
-                  <ol className="list-decimal list-inside space-y-2 text-sm">
-                    <li>Go to <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Stripe Dashboard</a></li>
-                    <li>Copy your <strong>Publishable key</strong> (starts with pk_)</li>
-                    <li>Copy your <strong>Secret key</strong> (starts with sk_)</li>
-                    <li>Add these keys to your environment variables</li>
-                  </ol>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <p className="text-sm font-medium">Environment Variables:</p>
-                    <code className="text-xs block mt-2">VITE_STRIPE_PUBLIC_KEY=pk_...</code>
-                    <code className="text-xs block">STRIPE_SECRET_KEY=sk_...</code>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button data-testid="button-create-payment">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Payment
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Create Payment Request</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit((data) => createPayment.mutate(data))} className="space-y-4">
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setEditingPackage(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleNewPackage} data-testid="button-create-package">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Package
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingPackage ? "Edit Package" : "Create Package"}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit((data) => createPackage.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Package Name *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., HS Club - Pay in Full" data-testid="input-package-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Package description" data-testid="input-package-description" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="userId"
+                      name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>User</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-payment-user">
-                                <SelectValue placeholder="Select user" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {users.map((user: any) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.firstName} {user.lastName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
+                          <FormLabel>Category</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., HS Club, Skills Academy" data-testid="input-package-category" />
+                          </FormControl>
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
-                      name="type"
+                      name="pricingModel"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Payment Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormLabel>Pricing Model *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <SelectTrigger data-testid="select-payment-type">
+                              <SelectTrigger data-testid="select-package-pricing-model">
                                 <SelectValue />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="registration">Registration Fee</SelectItem>
-                              <SelectItem value="subscription">Monthly Subscription</SelectItem>
-                              <SelectItem value="one-time">One-Time Payment</SelectItem>
+                              <SelectItem value="one-time">One-Time</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="installments">Installments</SelectItem>
+                              <SelectItem value="per-session">Per Session</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormItem>
                       )}
                     />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="amount"
+                      name="price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Amount ($)</FormLabel>
+                          <FormLabel>Price ($) *</FormLabel>
                           <FormControl>
                             <Input 
                               {...field} 
                               type="number" 
                               step="0.01" 
-                              onChange={e => field.onChange(parseFloat(e.target.value) * 100)}
-                              data-testid="input-payment-amount" 
+                              onChange={e => field.onChange(parseFloat(e.target.value))}
+                              data-testid="input-package-price" 
                             />
                           </FormControl>
                           <FormMessage />
@@ -1765,75 +1788,142 @@ function PaymentsTab({ payments, users, organization }: any) {
                     />
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="duration"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Description</FormLabel>
+                          <FormLabel>Duration</FormLabel>
                           <FormControl>
-                            <Textarea {...field} data-testid="input-payment-description" />
+                            <Input {...field} placeholder="e.g., 3 months, per hour" data-testid="input-package-duration" />
                           </FormControl>
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="dueDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Due Date</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" data-testid="input-payment-duedate" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={createPayment.isPending} data-testid="button-submit-payment">
-                      {createPayment.isPending ? "Creating..." : "Create Payment"}
-                    </Button>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+                  </div>
+                  {form.watch("pricingModel") === "installments" && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="installments"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Installments</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                onChange={e => field.onChange(parseInt(e.target.value))}
+                                data-testid="input-package-installments" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="installmentPrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price per Installment ($)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number" 
+                                step="0.01" 
+                                onChange={e => field.onChange(parseFloat(e.target.value))}
+                                data-testid="input-package-installment-price" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                  <FormField
+                    control={form.control}
+                    name="ageGroups"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Age Groups (comma-separated)</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., 8-10, 11-13, 14-17" data-testid="input-package-age-groups" />
+                        </FormControl>
+                        <FormDescription>Optional: Specify age groups for this package</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={createPackage.isPending} data-testid="button-submit-package">
+                    {createPackage.isPending ? "Saving..." : (editingPackage ? "Update Package" : "Create Package")}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payments.map((payment: any) => {
-                const user = users.find((u: any) => u.id === payment.userId);
-                return (
-                  <TableRow key={payment.id} data-testid={`row-payment-${payment.id}`}>
-                    <TableCell>
-                      {user ? `${user.firstName} ${user.lastName}` : "Unknown"}
-                    </TableCell>
-                    <TableCell>{payment.description}</TableCell>
-                    <TableCell>${(payment.amount / 100).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{payment.type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={payment.status === "completed" ? "default" : payment.status === "pending" ? "secondary" : "destructive"}>
-                        {payment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {payment.dueDate ? new Date(payment.dueDate).toLocaleDateString() : "-"}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="space-y-6">
+            {Object.entries(groupedPackages).map(([category, pkgs]: [string, any]) => (
+              <div key={category}>
+                <h3 className="font-semibold text-lg mb-3">{category}</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Model</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pkgs.map((pkg: any) => (
+                      <TableRow key={pkg.id} data-testid={`row-package-${pkg.id}`}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{pkg.name}</div>
+                            {pkg.description && <div className="text-sm text-gray-600">{pkg.description}</div>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div>${(pkg.price / 100).toFixed(2)}</div>
+                            {pkg.pricingModel === "installments" && pkg.installmentPrice && (
+                              <div className="text-sm text-gray-600">
+                                {pkg.installments} × ${(pkg.installmentPrice / 100).toFixed(2)}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{pkg.pricingModel}</Badge>
+                        </TableCell>
+                        <TableCell>{pkg.duration || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEdit(pkg)}
+                              data-testid={`button-edit-package-${pkg.id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => deletePackage.mutate(pkg.id)}
+                              data-testid={`button-delete-package-${pkg.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -272,7 +272,7 @@ class MemStorage implements IStorage {
         description: "High School Club full season payment",
         price: 207000, // $2,070
         pricingModel: "one-time",
-        category: "HS Club",
+        category: "High School Club",
         ageGroups: ["14-18"],
         isActive: true,
         createdAt: new Date(),
@@ -286,7 +286,7 @@ class MemStorage implements IStorage {
         pricingModel: "installments",
         installments: 4,
         installmentPrice: 59250, // $592.50
-        category: "HS Club",
+        category: "High School Club",
         ageGroups: ["14-18"],
         isActive: true,
         createdAt: new Date(),
@@ -445,7 +445,7 @@ class MemStorage implements IStorage {
         price: 16500, // $165
         pricingModel: "monthly",
         duration: "1 month",
-        category: "FNH",
+        category: "Youth Club",
         ageGroups: ["8-14"],
         isActive: true,
         createdAt: new Date(),
@@ -460,7 +460,7 @@ class MemStorage implements IStorage {
         price: 26500, // $265
         pricingModel: "monthly",
         duration: "1 month",
-        category: "Combo",
+        category: "Youth Club",
         ageGroups: ["8-14"],
         isActive: true,
         createdAt: new Date(),
@@ -473,7 +473,7 @@ class MemStorage implements IStorage {
         price: 76500, // $765
         pricingModel: "one-time",
         duration: "3 months",
-        category: "Combo",
+        category: "Youth Club",
         ageGroups: ["8-14"],
         isActive: true,
         createdAt: new Date(),
@@ -488,7 +488,7 @@ class MemStorage implements IStorage {
         price: 8500, // $85
         pricingModel: "per-session",
         duration: "per hour",
-        category: "Training",
+        category: "Private Training",
         ageGroups: [],
         isActive: true,
         createdAt: new Date(),
@@ -501,7 +501,7 @@ class MemStorage implements IStorage {
         price: 12000, // $120
         pricingModel: "per-session",
         duration: "per hour",
-        category: "Training",
+        category: "Private Training",
         ageGroups: [],
         isActive: true,
         createdAt: new Date(),
@@ -515,7 +515,7 @@ class MemStorage implements IStorage {
         description: "Summer camp early bird pricing (until May 1, 2025)",
         price: 24500, // $245
         pricingModel: "one-time",
-        category: "Camp",
+        category: "Camps",
         ageGroups: ["8-17"],
         isActive: true,
         createdAt: new Date(),
@@ -527,7 +527,7 @@ class MemStorage implements IStorage {
         description: "Summer camp regular pricing",
         price: 29500, // $295
         pricingModel: "one-time",
-        category: "Camp",
+        category: "Camps",
         ageGroups: ["8-17"],
         isActive: true,
         createdAt: new Date(),

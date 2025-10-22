@@ -567,13 +567,12 @@ function UsersTab({ users, teams, organization }: any) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Active</TableHead>
+              <TableHead>Registered</TableHead>
+              <TableHead>Stripe ID</TableHead>
               <TableHead>Program</TableHead>
               <TableHead>Team</TableHead>
-              <TableHead>Awards</TableHead>
-              <TableHead>Rating</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -583,7 +582,6 @@ function UsersTab({ users, teams, organization }: any) {
                 <TableCell data-testid={`text-username-${user.id}`}>{user.firstName} {user.lastName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.phoneNumber || "-"}</TableCell>
-                <TableCell>{user.address || "-"}</TableCell>
                 <TableCell>
                   <Badge variant={user.role === "admin" ? "default" : "secondary"}>
                     {user.role}
@@ -591,13 +589,25 @@ function UsersTab({ users, teams, organization }: any) {
                 </TableCell>
                 <TableCell>
                   <Badge variant={user.isActive ? "default" : "secondary"}>
-                    {user.isActive ? "Active" : "Inactive"}
+                    {user.isActive ? "Yes" : "No"}
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={user.hasRegistered ? "default" : "outline"}>
+                    {user.hasRegistered ? "Yes" : "No"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {user.stripeCustomerId ? (
+                    <span className="text-green-600" title={user.stripeCustomerId}>
+                      {user.stripeCustomerId.substring(0, 12)}...
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
                 </TableCell>
                 <TableCell>{user.program || "-"}</TableCell>
                 <TableCell>{user.teamId || "-"}</TableCell>
-                <TableCell>{user.awardsCount || 0}</TableCell>
-                <TableCell>{user.rating || "-"}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
                     <Edit className="w-4 h-4" />

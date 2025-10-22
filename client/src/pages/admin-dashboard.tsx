@@ -1592,7 +1592,7 @@ function PackagesTab({ packages, organization }: any) {
     duration: z.string().optional(),
     installments: z.number().optional(),
     installmentPrice: z.number().optional(),
-    category: z.string().optional(),
+    category: z.string().min(1, "Program type is required"),
     ageGroups: z.string().optional(),
   });
 
@@ -1736,10 +1736,24 @@ function PackagesTab({ packages, organization }: any) {
                       name="category"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., HS Club, Skills Academy" data-testid="input-package-category" />
-                          </FormControl>
+                          <FormLabel>Program Type *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-package-category">
+                                <SelectValue placeholder="Select program type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Skills Academy">Skills Academy</SelectItem>
+                              <SelectItem value="Youth Club">Youth Club</SelectItem>
+                              <SelectItem value="High School Club">High School Club</SelectItem>
+                              <SelectItem value="Online Training">Online Training</SelectItem>
+                              <SelectItem value="Private Training">Private Training</SelectItem>
+                              <SelectItem value="Camps">Camps</SelectItem>
+                              <SelectItem value="Foundation">Foundation</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -1762,6 +1776,7 @@ function PackagesTab({ packages, organization }: any) {
                               <SelectItem value="per-session">Per Session</SelectItem>
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

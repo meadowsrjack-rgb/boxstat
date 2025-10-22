@@ -74,12 +74,7 @@ export const queryClient = new QueryClient({
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-      networkMode: 'online',
-    },
-    mutations: {
-      retry: 1,
-      networkMode: 'online',
+      retry: false,
     },
   },
 });

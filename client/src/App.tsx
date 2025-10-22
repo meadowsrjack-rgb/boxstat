@@ -3,7 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 
-import { useAuth } from "@/hooks/useAuth";
+// TEMPORARILY DISABLED FOR DEBUGGING
+// import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 
 // Pages
@@ -84,26 +85,33 @@ import {
 
 
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
-  const { data: profiles, isLoading } = useQuery<any[]>({
-    queryKey: ['/api/profiles/me'],
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-  });
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
-
-  // If no profiles exist, show the NoProfiles fallback page
-  if (!profiles || profiles.length === 0) {
-    return <NoProfiles />;
-  }
-
-  // Profiles exist, render the wrapped component
+  // Temporarily disable profile check to isolate error
   return <>{children}</>;
+  
+  // const { data: profiles, isLoading } = useQuery<any[]>({
+  //   queryKey: ['/api/profiles/me'],
+  //   staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  // });
+
+  // if (isLoading) {
+  //   return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // }
+
+  // // If no profiles exist, show the NoProfiles fallback page
+  // if (!profiles || profiles.length === 0) {
+  //   return <NoProfiles />;
+  // }
+
+  // // Profiles exist, render the wrapped component
+  // return <>{children}</>;
 }
 
 function Router() {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  // Temporarily disable useAuth to isolate the error
+  const user = null;
+  const isLoading = false;
+  const isAuthenticated = false;
+  // const { user, isLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   
   // Check if user needs profile setup
@@ -305,8 +313,10 @@ function Router() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <>
+        <Router />
+        <Toaster />
+      </>
     </QueryClientProvider>
   );
 }

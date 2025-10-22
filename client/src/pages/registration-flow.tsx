@@ -350,6 +350,10 @@ function ParentInfoStep({
   onSubmit: (data: ParentInfo) => void;
   onBack: () => void;
 }) {
+  const { toast } = useToast();
+  const [emailCheckData, setEmailCheckData] = useState<any>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  
   const form = useForm<ParentInfo>({
     resolver: zodResolver(parentInfoSchema),
     defaultValues: {
@@ -360,6 +364,34 @@ function ParentInfoStep({
       dateOfBirth: "",
     },
   });
+
+  const checkEmail = async (email: string) => {
+    if (!email || !email.includes('@')) return;
+    
+    setIsCheckingEmail(true);
+    try {
+      const response = await apiRequest("POST", "/api/registration/check-email", {
+        email,
+        organizationId: "default-org",
+      });
+      
+      if (response.exists && response.stripeCustomer) {
+        setEmailCheckData(response);
+        toast({
+          title: "Existing Customer Found!",
+          description: "We found your payment history. Your subscription details are shown below.",
+        });
+      } else if (response.exists) {
+        setEmailCheckData({ exists: true, hasRegistered: response.hasRegistered });
+      } else {
+        setEmailCheckData(null);
+      }
+    } catch (error) {
+      console.error("Error checking email:", error);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   return (
     <Form {...form}>
@@ -400,12 +432,84 @@ function ParentInfoStep({
             <FormItem>
               <FormLabel>Email *</FormLabel>
               <FormControl>
-                <Input {...field} type="email" data-testid="input-parent-email" />
+                <Input 
+                  {...field} 
+                  type="email" 
+                  data-testid="input-parent-email"
+                  onBlur={(e) => {
+                    field.onBlur();
+                    checkEmail(e.target.value);
+                  }}
+                />
               </FormControl>
+              {isCheckingEmail && (
+                <p className="text-sm text-gray-600">Checking for existing account...</p>
+              )}
               <FormMessage />
             </FormItem>
           )}
         />
+
+        {/* Display Stripe customer information if found */}
+        {emailCheckData?.stripeCustomer && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3" data-testid="stripe-customer-info">
+            <div className="flex items-start gap-2">
+              <Check className="w-5 h-5 text-green-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-green-900">Welcome Back!</h4>
+                <p className="text-sm text-green-800">We found your payment history.</p>
+              </div>
+            </div>
+            
+            {emailCheckData.stripeCustomer.subscriptions?.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-900">Active Subscriptions:</p>
+                {emailCheckData.stripeCustomer.subscriptions.map((sub: any) => (
+                  <div key={sub.id} className="bg-white rounded p-3 text-sm">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">${(sub.amount / 100).toFixed(2)}/{sub.interval}</p>
+                        <p className="text-gray-600">Status: {sub.status}</p>
+                      </div>
+                      <div className="text-right text-xs text-gray-600">
+                        Next payment: {new Date(sub.currentPeriodEnd * 1000).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {emailCheckData.stripeCustomer.payments?.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-900">Recent Payments:</p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {emailCheckData.stripeCustomer.payments.slice(0, 5).map((payment: any) => (
+                    <div key={payment.id} className="bg-white rounded p-2 text-xs flex justify-between">
+                      <span>{payment.packageName || 'Payment'}</span>
+                      <div className="text-right">
+                        <span className="font-medium">${(payment.amount / 100).toFixed(2)}</span>
+                        <span className="ml-2 text-gray-600">
+                          {new Date(payment.created * 1000).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {emailCheckData?.exists && !emailCheckData?.stripeCustomer && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-900">
+              {emailCheckData.hasRegistered 
+                ? "This email has an existing account. You can proceed with registration or login instead."
+                : "This email is in our system but hasn't completed registration yet."}
+            </p>
+          </div>
+        )}
 
         <FormField
           control={form.control}

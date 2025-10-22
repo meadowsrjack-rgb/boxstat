@@ -78,6 +78,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // REGISTRATION ROUTES
   // =============================================
   
+  // Check if user exists by email (for pre-registration check)
+  app.post('/api/registration/check-email', async (req: any, res) => {
+    try {
+      const { email, organizationId } = req.body;
+      const user = await storage.getUserByEmail(email, organizationId || "default-org");
+      
+      if (!user) {
+        return res.json({ exists: false });
+      }
+      
+      // User exists - check if they have Stripe customer ID
+      if (user.stripeCustomerId && stripe) {
+        try {
+          // Fetch Stripe customer with subscriptions
+          const customer = await stripe.customers.retrieve(user.stripeCustomerId, {
+            expand: ['subscriptions'],
+          });
+          
+          // Fetch recent payment intents
+          const paymentIntents = await stripe.paymentIntents.list({
+            customer: user.stripeCustomerId,
+            limit: 10,
+          });
+          
+          const subscriptions = (customer as any).subscriptions?.data || [];
+          const activeSubscriptions = subscriptions.filter((sub: any) => sub.status === 'active');
+          
+          return res.json({
+            exists: true,
+            hasRegistered: user.hasRegistered || false,
+            stripeCustomer: {
+              id: user.stripeCustomerId,
+              subscriptions: activeSubscriptions.map((sub: any) => ({
+                id: sub.id,
+                status: sub.status,
+                currentPeriodEnd: sub.current_period_end,
+                priceId: sub.items.data[0]?.price.id,
+                amount: sub.items.data[0]?.price.unit_amount,
+                interval: sub.items.data[0]?.price.recurring?.interval,
+              })),
+              payments: paymentIntents.data.map((pi: any) => ({
+                id: pi.id,
+                amount: pi.amount,
+                status: pi.status,
+                created: pi.created,
+                packageId: pi.metadata.packageId,
+                packageName: pi.metadata.packageName,
+              })),
+            },
+          });
+        } catch (stripeError: any) {
+          console.error("Error fetching Stripe data:", stripeError);
+          return res.json({
+            exists: true,
+            hasRegistered: user.hasRegistered || false,
+            stripeError: "Could not fetch payment information",
+          });
+        }
+      }
+      
+      // User exists but no Stripe data
+      return res.json({
+        exists: true,
+        hasRegistered: user.hasRegistered || false,
+      });
+    } catch (error: any) {
+      console.error("Check email error:", error);
+      res.status(500).json({ message: "Error checking email" });
+    }
+  });
+  
   app.post('/api/registration/complete', async (req: any, res) => {
     try {
       const { registrationType, parentInfo, players, packageId, password } = req.body;
@@ -98,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           password,
           registrationType,
           packageSelected: packageId,
+          hasRegistered: true,
           isActive: true,
           verified: false,
         });
@@ -119,6 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           accountHolderId,
           packageSelected: packageId,
           teamAssignmentStatus: "pending",
+          hasRegistered: true,
           password: registrationType === "myself" ? password : undefined,
           isActive: true,
           verified: false,

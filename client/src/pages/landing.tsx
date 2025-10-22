@@ -101,7 +101,7 @@ export default function Landing() {
         {/* Bottom Content */}
         <div className="px-4 sm:px-6 lg:px-8 text-center pb-6 mb-[100px]" style={{ paddingBottom: '24px' }}>
           {/* Call to Action Buttons */}
-          <div className="space-y-4 pt-[20px] pb-[20px]">
+          <div className="space-y-4 pt-[0px] pb-[0px] mt-[20px] mb-[20px]">
             {/* Primary CTA Button - Made more red */}
             <Button 
               size="lg" 

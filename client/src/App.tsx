@@ -1,6 +1,4 @@
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -304,9 +302,9 @@ function Router() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <Router />
       <Toaster />
-    </QueryClientProvider>
+    </>
   );
 }

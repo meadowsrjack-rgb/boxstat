@@ -184,12 +184,6 @@ export default function AdminDashboard() {
                 testId="stat-total-users"
               />
               <StatCard
-                title="Teams"
-                value={stats.totalTeams}
-                icon={<Users className="w-6 h-6" />}
-                testId="stat-total-teams"
-              />
-              <StatCard
                 title="Events"
                 value={stats.totalEvents}
                 icon={<Calendar className="w-6 h-6" />}

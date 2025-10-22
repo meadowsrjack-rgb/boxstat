@@ -141,34 +141,6 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Carousel Indicators */}
-          <div className="flex space-x-2 mb-8 justify-center">
-            {carouselFeatures.map((_, index) => (
-              <motion.button
-                key={index}
-                onClick={() => {
-                  if (!isAnimating && index !== currentSlide) {
-                    setIsAnimating(true);
-                    setSwipeDirection(index > currentSlide ? 'left' : 'right');
-                    setTimeout(() => {
-                      setCurrentSlide(index);
-                      setIsAnimating(false);
-                      setSwipeDirection(null);
-                    }, 300);
-                  }
-                }}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide 
-                    ? 'bg-black scale-110' 
-                    : 'bg-black/40 hover:bg-black/60'
-                }`}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
-
           {/* Call to Action Buttons */}
           <div className="space-y-4">
             {/* Primary CTA Button - Made more red */}

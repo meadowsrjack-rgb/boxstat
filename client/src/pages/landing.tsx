@@ -15,7 +15,7 @@ const carouselFeatures = [
   },
   {
     title: "Train smarter.",
-    description: "Player development and team management unified."
+    description: "Player development and team management simplified."
   }
 ];
 

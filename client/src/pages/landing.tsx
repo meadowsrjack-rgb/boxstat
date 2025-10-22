@@ -2,8 +2,6 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import webBackgroundPath from "@assets/boxstat web_1761172100402.png";
-import mobileBackgroundPath from "@assets/boxstat mobile_1761172100404.png";
 
 const carouselFeatures = [
   {
@@ -79,29 +77,13 @@ export default function Landing() {
 
   return (
     <div 
-      className="relative min-h-screen overflow-hidden"
+      className="relative min-h-screen overflow-hidden bg-white"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background Images - Mobile and Web */}
-      <div className="absolute inset-0 z-0">
-        {/* Mobile Background - visible only on mobile */}
-        <img 
-          src={mobileBackgroundPath} 
-          alt="Background"
-          className="absolute inset-0 w-full h-full object-cover md:hidden"
-        />
-        {/* Desktop Background - visible only on desktop */}
-        <img 
-          src={webBackgroundPath} 
-          alt="Background"
-          className="absolute inset-0 w-full h-full object-cover hidden md:block"
-        />
-      </div>
-
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative min-h-screen flex flex-col">
 
 
         {/* Spacer to push content to bottom */}

@@ -2,8 +2,8 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import logoPath from "@assets/UYP Logo nback_1752703900579.png";
-import videoPath from "@assets/Add a heading_1753743034117.mp4";
+import webBackgroundPath from "@assets/boxstat web_1761172100402.png";
+import mobileBackgroundPath from "@assets/boxstat mobile_1761172100404.png";
 
 const carouselFeatures = [
   {
@@ -84,19 +84,20 @@ export default function Landing() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Video Background */}
+      {/* Background Images - Mobile and Web */}
       <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover"
-        >
-          <source src={videoPath} type="video/mp4" />
-        </video>
-        {/* Dark overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-black/60"></div>
+        {/* Mobile Background - visible only on mobile */}
+        <img 
+          src={mobileBackgroundPath} 
+          alt="Background"
+          className="absolute inset-0 w-full h-full object-cover md:hidden"
+        />
+        {/* Desktop Background - visible only on desktop */}
+        <img 
+          src={webBackgroundPath} 
+          alt="Background"
+          className="absolute inset-0 w-full h-full object-cover hidden md:block"
+        />
       </div>
 
       {/* Content */}
@@ -137,10 +138,10 @@ export default function Landing() {
                   }}
                   className="text-center"
                 >
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-black mb-6">
                     {carouselFeatures[currentSlide].title}
                   </h1>
-                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">
+                  <p className="text-sm sm:text-base text-gray-800 leading-relaxed font-light">
                     {carouselFeatures[currentSlide].description}
                   </p>
                 </motion.div>
@@ -166,8 +167,8 @@ export default function Landing() {
                 }}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   index === currentSlide 
-                    ? 'bg-white scale-110' 
-                    : 'bg-white/40 hover:bg-white/60'
+                    ? 'bg-black scale-110' 
+                    : 'bg-black/40 hover:bg-black/60'
                 }`}
                 whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.9 }}
@@ -189,11 +190,11 @@ export default function Landing() {
             </Button>
 
             {/* Secondary Text/Link */}
-            <div className="text-white/80 text-sm">
+            <div className="text-gray-700 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
                 onClick={() => window.location.href = '/api/login'}
-                className="text-white font-semibold underline hover:text-gray-200 transition-colors"
+                className="text-black font-semibold underline hover:text-gray-600 transition-colors"
                 data-testid="button-sign-in"
               >
                 SIGN IN

@@ -15,7 +15,7 @@ const carouselFeatures = [
   },
   {
     title: "Train smarter.",
-    description: "Access a library of expert drills and training videos to elevate your game on and off the court."
+    description: "Player development and team management unified."
   }
 ];
 
@@ -91,7 +91,6 @@ export default function Landing() {
           className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[450px] lg:h-[450px] object-contain opacity-100"
         />
       </div>
-
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
 
@@ -103,7 +102,7 @@ export default function Landing() {
         <div className="px-4 sm:px-6 lg:px-8 text-center pb-6 mb-[100px]" style={{ paddingBottom: '24px' }}>
           {/* Carousel Content */}
           <div 
-            className="mb-12 min-h-[120px] flex items-center justify-center relative overflow-hidden"
+            className="min-h-[120px] flex items-center justify-center relative overflow-hidden font-medium text-[18px] mt-[20px] mb-[20px]"
             style={{ marginTop: '24px' }}
           >
             <div className="max-w-lg mx-auto w-full">

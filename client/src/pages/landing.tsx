@@ -90,9 +90,8 @@ export default function Landing() {
           alt="BoxStat Logo"
           className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[450px] lg:h-[450px] object-contain opacity-100"
         />
-        <p className="text-black font-bold text-xl sm:text-2xl text-center mt-4 px-4">
-          Player development and team management unified.
-        </p>
+        <p className="text-black text-xl sm:text-2xl text-center px-4 mt-[40px] mb-[40px] pt-[0px] pb-[0px] font-medium">Player development &
+        team management unified.</p>
       </div>
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">

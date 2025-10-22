@@ -84,12 +84,15 @@ export default function Landing() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Background Logo */}
-      <div className="absolute inset-x-0 top-[40%] -translate-y-1/2 flex justify-center z-20">
+      <div className="absolute inset-x-0 top-[40%] -translate-y-1/2 flex flex-col items-center justify-center z-20">
         <img 
           src={logoPath} 
           alt="BoxStat Logo"
           className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[450px] lg:h-[450px] object-contain opacity-100"
         />
+        <p className="text-black font-bold text-xl sm:text-2xl text-center mt-4 px-4">
+          Player development and team management unified.
+        </p>
       </div>
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">

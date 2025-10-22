@@ -141,7 +141,7 @@ export default function Landing() {
           </div>
 
           {/* Call to Action Buttons */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-[20px] pb-[20px]">
             {/* Primary CTA Button - Made more red */}
             <Button 
               size="lg" 

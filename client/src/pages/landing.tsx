@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import logoPath from "@assets/boxstat logo_1761172433576.png";
 
 const carouselFeatures = [
   {
@@ -82,8 +83,17 @@ export default function Landing() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {/* Background Logo */}
+      <div className="absolute inset-0 flex items-center justify-center z-0">
+        <img 
+          src={logoPath} 
+          alt="BoxStat Logo"
+          className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[450px] lg:h-[450px] object-contain opacity-100"
+        />
+      </div>
+
       {/* Content */}
-      <div className="relative min-h-screen flex flex-col">
+      <div className="relative z-10 min-h-screen flex flex-col">
 
 
         {/* Spacer to push content to bottom */}

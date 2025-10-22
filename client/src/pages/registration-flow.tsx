@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,7 +12,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, CreditCard } from "lucide-react";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+
+// Initialize Stripe
+const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
+  : null;
 
 // Form schemas for each step
 const registrationIntentSchema = z.object({
@@ -71,8 +78,10 @@ export default function RegistrationFlow() {
     players: Player[];
     packageId?: string;
     password?: string;
+    paymentCompleted?: boolean;
   }>({
     players: [],
+    paymentCompleted: false,
   });
 
   // Fetch available programs/packages
@@ -80,7 +89,7 @@ export default function RegistrationFlow() {
     queryKey: ["/api/programs"],
   });
 
-  const totalSteps = registrationData.registrationType === "myself" ? 4 : 5;
+  const totalSteps = registrationData.registrationType === "myself" ? 5 : 6;
 
   const registrationMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -155,7 +164,9 @@ export default function RegistrationFlow() {
             {(currentStep === 3 && registrationData.registrationType === "myself") ||
              (currentStep === 4 && registrationData.registrationType === "my_child") && "Select Program/Package"}
             {(currentStep === 4 && registrationData.registrationType === "myself") ||
-             (currentStep === 5 && registrationData.registrationType === "my_child") && "Create Account"}
+             (currentStep === 5 && registrationData.registrationType === "my_child") && "Payment"}
+            {(currentStep === 5 && registrationData.registrationType === "myself") ||
+             (currentStep === 6 && registrationData.registrationType === "my_child") && "Create Account"}
             {currentStep > totalSteps && "Email Verification"}
           </CardTitle>
         </CardHeader>
@@ -221,9 +232,23 @@ export default function RegistrationFlow() {
             />
           )}
 
-          {/* Account Creation */}
+          {/* Payment Step */}
           {((currentStep === 4 && registrationData.registrationType === "myself") ||
             (currentStep === 5 && registrationData.registrationType === "my_child")) && (
+            <PaymentStep
+              packageId={registrationData.packageId || ""}
+              programs={programs}
+              onPaymentComplete={() => {
+                setRegistrationData({ ...registrationData, paymentCompleted: true });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Account Creation */}
+          {((currentStep === 5 && registrationData.registrationType === "myself") ||
+            (currentStep === 6 && registrationData.registrationType === "my_child")) && (
             <AccountCreationStep
               onSubmit={handleSubmitRegistration}
               onBack={handleBack}
@@ -339,7 +364,7 @@ function ParentInfoStep({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="firstName"
@@ -353,7 +378,6 @@ function ParentInfoStep({
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="lastName"
@@ -392,7 +416,6 @@ function ParentInfoStep({
               <FormControl>
                 <Input {...field} type="tel" data-testid="input-parent-phone" />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -406,7 +429,6 @@ function ParentInfoStep({
               <FormControl>
                 <Input {...field} type="date" data-testid="input-parent-dob" />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -429,7 +451,7 @@ function ParentInfoStep({
 function PlayerInfoStep({
   onSubmit,
   onBack,
-  isSelf = false,
+  isSelf,
 }: {
   onSubmit: (data: PlayerInfo) => void;
   onBack: () => void;
@@ -448,7 +470,7 @@ function PlayerInfoStep({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="firstName"
@@ -462,7 +484,6 @@ function PlayerInfoStep({
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="lastName"
@@ -487,7 +508,6 @@ function PlayerInfoStep({
               <FormControl>
                 <Input {...field} type="date" data-testid="input-player-dob" />
               </FormControl>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -498,9 +518,9 @@ function PlayerInfoStep({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Gender</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger data-testid="select-gender">
+                  <SelectTrigger data-testid="select-player-gender">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                 </FormControl>
@@ -511,7 +531,6 @@ function PlayerInfoStep({
                   <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
             </FormItem>
           )}
         />
@@ -542,124 +561,46 @@ function PlayerListStep({
   onNext: () => void;
   onBack: () => void;
 }) {
-  const [isAddingPlayer, setIsAddingPlayer] = useState(players.length === 0);
-  const form = useForm<PlayerInfo>({
-    resolver: zodResolver(playerInfoSchema),
-    defaultValues: {
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+
+  const addPlayer = () => {
+    const newPlayer: Player = {
+      id: `player-${Date.now()}`,
       firstName: "",
       lastName: "",
       dateOfBirth: "",
       gender: "",
-    },
-  });
-
-  const handleAddPlayer = (data: PlayerInfo) => {
-    const newPlayer: Player = {
-      ...data,
-      id: `player-${Date.now()}`,
     };
-    onUpdate([...players, newPlayer]);
-    setIsAddingPlayer(false);
-    form.reset();
+    setEditingPlayer(newPlayer);
   };
 
-  const handleRemovePlayer = (id: string) => {
-    onUpdate(players.filter((p) => p.id !== id));
+  const savePlayer = (playerData: PlayerInfo) => {
+    if (editingPlayer) {
+      const updatedPlayer = { ...editingPlayer, ...playerData };
+      const existingIndex = players.findIndex(p => p.id === editingPlayer.id);
+      
+      if (existingIndex >= 0) {
+        const updatedPlayers = [...players];
+        updatedPlayers[existingIndex] = updatedPlayer;
+        onUpdate(updatedPlayers);
+      } else {
+        onUpdate([...players, updatedPlayer]);
+      }
+      
+      setEditingPlayer(null);
+    }
   };
 
-  if (isAddingPlayer) {
+  const removePlayer = (id: string) => {
+    onUpdate(players.filter(p => p.id !== id));
+  };
+
+  if (editingPlayer) {
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleAddPlayer)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="firstName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>First Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} data-testid="input-player-first-name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="lastName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Last Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} data-testid="input-player-last-name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="dateOfBirth"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Date of Birth</FormLabel>
-                <FormControl>
-                  <Input {...field} type="date" data-testid="input-player-dob" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gender</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <FormControl>
-                    <SelectTrigger data-testid="select-gender">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                    <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="flex justify-between pt-4">
-            <Button
-              type="button"
-              onClick={() => {
-                if (players.length > 0) {
-                  setIsAddingPlayer(false);
-                } else {
-                  onBack();
-                }
-              }}
-              variant="outline"
-              data-testid="button-cancel-add-player"
-            >
-              {players.length > 0 ? "Cancel" : "Back"}
-            </Button>
-            <Button type="submit" data-testid="button-save-player">
-              Add Player
-            </Button>
-          </div>
-        </form>
-      </Form>
+      <PlayerInfoStep
+        onSubmit={savePlayer}
+        onBack={() => setEditingPlayer(null)}
+      />
     );
   }
 
@@ -667,44 +608,59 @@ function PlayerListStep({
     <div className="space-y-4">
       <div className="space-y-3">
         {players.map((player) => (
-          <Card key={player.id} data-testid={`player-card-${player.id}`}>
-            <CardContent className="p-4 flex justify-between items-center">
-              <div>
-                <h4 className="font-semibold">{player.firstName} {player.lastName}</h4>
-                <p className="text-sm text-gray-600">
-                  {player.dateOfBirth && `DOB: ${player.dateOfBirth}`}
-                  {player.gender && ` | ${player.gender}`}
-                </p>
-              </div>
+          <div
+            key={player.id}
+            className="flex items-center justify-between p-4 border rounded-lg"
+            data-testid={`player-card-${player.id}`}
+          >
+            <div>
+              <p className="font-medium">{player.firstName} {player.lastName}</p>
+              <p className="text-sm text-gray-600">
+                {player.dateOfBirth && new Date(player.dateOfBirth).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex gap-2">
               <Button
-                onClick={() => handleRemovePlayer(player.id)}
-                variant="ghost"
+                type="button"
                 size="sm"
+                variant="outline"
+                onClick={() => setEditingPlayer(player)}
+                data-testid={`button-edit-player-${player.id}`}
+              >
+                Edit
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                onClick={() => removePlayer(player.id)}
                 data-testid={`button-remove-player-${player.id}`}
               >
                 Remove
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
       <Button
-        onClick={() => setIsAddingPlayer(true)}
+        type="button"
         variant="outline"
+        onClick={addPlayer}
         className="w-full"
-        data-testid="button-add-another-player"
+        data-testid="button-add-player"
       >
         <UserPlus className="w-4 h-4 mr-2" />
-        Add Another Player
+        Add Player
       </Button>
 
       <div className="flex justify-between pt-4">
-        <Button onClick={onBack} variant="outline" data-testid="button-back">
+        <Button type="button" onClick={onBack} variant="outline" data-testid="button-back">
           <ChevronLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
         <Button
+          type="button"
           onClick={onNext}
           disabled={players.length === 0}
           data-testid="button-next"
@@ -728,7 +684,18 @@ function PackageSelectionStep({
 }) {
   const form = useForm<PackageSelection>({
     resolver: zodResolver(packageSelectionSchema),
+    defaultValues: {
+      packageId: "",
+    },
   });
+
+  // Group programs by category
+  const groupedPrograms = programs.reduce((acc: any, program: any) => {
+    const category = program.category || "Other";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(program);
+    return acc;
+  }, {});
 
   return (
     <Form {...form}>
@@ -738,43 +705,57 @@ function PackageSelectionStep({
           name="packageId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Select a Program/Package *</FormLabel>
+              <FormLabel>Select Program/Package *</FormLabel>
               <FormControl>
-                <div className="space-y-3">
-                  {programs.length === 0 ? (
-                    <p className="text-gray-500 text-sm">No programs available at this time.</p>
-                  ) : (
-                    programs.map((program) => (
-                      <button
-                        key={program.id}
-                        type="button"
-                        onClick={() => field.onChange(program.id)}
-                        className={`w-full p-4 border-2 rounded-lg text-left transition-all ${
-                          field.value === program.id
-                            ? "border-blue-600 bg-blue-50"
-                            : "border-gray-200 hover:border-blue-300"
-                        }`}
-                        data-testid={`package-option-${program.id}`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold text-lg">{program.name}</h3>
-                            {program.description && (
-                              <p className="text-sm text-gray-600 mt-1">{program.description}</p>
-                            )}
-                          </div>
-                          {program.price && (
-                            <div className="text-right">
-                              <p className="font-bold text-lg">${(program.price / 100).toFixed(2)}</p>
-                              {program.pricingModel && (
-                                <p className="text-xs text-gray-500">/{program.pricingModel}</p>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {Object.entries(groupedPrograms).map(([category, categoryPrograms]: [string, any]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-sm text-gray-700 mb-2">{category}</h3>
+                      {categoryPrograms.map((program: any) => (
+                        <button
+                          key={program.id}
+                          type="button"
+                          onClick={() => field.onChange(program.id)}
+                          className={`w-full text-left p-4 border-2 rounded-lg mb-2 transition-all ${
+                            field.value === program.id
+                              ? "border-blue-600 bg-blue-50"
+                              : "border-gray-200 hover:border-blue-300"
+                          }`}
+                          data-testid={`option-package-${program.id}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Package className="w-5 h-5 text-blue-600" />
+                                <h4 className="font-semibold">{program.name}</h4>
+                              </div>
+                              {program.description && (
+                                <p className="text-sm text-gray-600 mt-1">{program.description}</p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 text-sm">
+                                <span className="font-medium text-blue-600">
+                                  ${(program.price / 100).toFixed(2)}
+                                </span>
+                                {program.pricingModel && (
+                                  <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                    {program.pricingModel}
+                                  </span>
+                                )}
+                                {program.duration && (
+                                  <span className="text-gray-600">{program.duration}</span>
+                                )}
+                              </div>
+                              {program.pricingModel === "installments" && program.installmentPrice && (
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {program.installments} payments of ${(program.installmentPrice / 100).toFixed(2)}
+                                </p>
                               )}
                             </div>
-                          )}
-                        </div>
-                      </button>
-                    ))
-                  )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </FormControl>
               <FormDescription>
@@ -797,6 +778,163 @@ function PackageSelectionStep({
         </div>
       </form>
     </Form>
+  );
+}
+
+// Payment Step Component
+function PaymentStep({
+  packageId,
+  programs,
+  onPaymentComplete,
+  onBack,
+}: {
+  packageId: string;
+  programs: any[];
+  onPaymentComplete: () => void;
+  onBack: () => void;
+}) {
+  const { toast } = useToast();
+  const [clientSecret, setClientSecret] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const selectedPackage = programs.find(p => p.id === packageId);
+
+  useEffect(() => {
+    if (!selectedPackage) return;
+
+    // Create payment intent
+    apiRequest("POST", "/api/create-payment-intent", {
+      amount: selectedPackage.price,
+      packageId: selectedPackage.id,
+      packageName: selectedPackage.name,
+    })
+      .then((data: any) => {
+        setClientSecret(data.clientSecret);
+        setIsLoading(false);
+      })
+      .catch((error: any) => {
+        toast({
+          title: "Error",
+          description: "Failed to initialize payment. Please try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      });
+  }, [selectedPackage]);
+
+  if (isLoading || !clientSecret) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+        <p className="mt-4 text-gray-600">Preparing payment...</p>
+      </div>
+    );
+  }
+
+  if (!stripePromise) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Stripe is not configured. Please contact support.</p>
+        <Button onClick={onBack} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {selectedPackage && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <h3 className="font-semibold mb-1">{selectedPackage.name}</h3>
+          <p className="text-2xl font-bold text-blue-600">
+            ${(selectedPackage.price / 100).toFixed(2)}
+          </p>
+          {selectedPackage.pricingModel === "installments" && (
+            <p className="text-sm text-gray-600 mt-1">
+              {selectedPackage.installments} payments of ${(selectedPackage.installmentPrice / 100).toFixed(2)}
+            </p>
+          )}
+        </div>
+      )}
+
+      <Elements stripe={stripePromise} options={{ clientSecret }}>
+        <CheckoutForm onPaymentComplete={onPaymentComplete} onBack={onBack} />
+      </Elements>
+    </div>
+  );
+}
+
+// Checkout Form Component (uses Stripe hooks)
+function CheckoutForm({
+  onPaymentComplete,
+  onBack,
+}: {
+  onPaymentComplete: () => void;
+  onBack: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.origin + "/registration",
+      },
+      redirect: "if_required",
+    });
+
+    if (error) {
+      toast({
+        title: "Payment Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      toast({
+        title: "Payment Successful",
+        description: "Your payment has been processed successfully!",
+      });
+      onPaymentComplete();
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      <div className="flex justify-between pt-4">
+        <Button
+          type="button"
+          onClick={onBack}
+          variant="outline"
+          disabled={isProcessing}
+          data-testid="button-back"
+        >
+          <ChevronLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+        <Button
+          type="submit"
+          disabled={!stripe || isProcessing}
+          data-testid="button-pay"
+        >
+          <CreditCard className="w-4 h-4 mr-2" />
+          {isProcessing ? "Processing..." : "Pay Now"}
+        </Button>
+      </div>
+    </form>
   );
 }
 

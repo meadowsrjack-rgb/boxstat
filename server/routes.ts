@@ -37,6 +37,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // STRIPE PAYMENT ROUTES
+  // =============================================
+  
+  // Initialize Stripe
+  const stripe = process.env.STRIPE_SECRET_KEY 
+    ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-11-20.acacia" })
+    : null;
+  
+  app.post("/api/create-payment-intent", async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    try {
+      const { amount, packageId, packageName } = req.body;
+      
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount), // Amount should already be in cents
+        currency: "usd",
+        metadata: {
+          packageId: packageId || "",
+          packageName: packageName || "",
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error: any) {
+      res.status(500).json({ 
+        error: "Error creating payment intent", 
+        message: error.message 
+      });
+    }
+  });
+  
+  // =============================================
   // REGISTRATION ROUTES
   // =============================================
   

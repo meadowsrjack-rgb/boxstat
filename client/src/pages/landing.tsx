@@ -100,7 +100,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-6 mb-[100px]" style={{ paddingBottom: '24px' }}>
+        <div className="px-4 sm:px-6 lg:px-8 text-center pb-6 mb-[200px]" style={{ paddingBottom: '24px' }}>
           {/* Carousel Content */}
           <div 
             className="mb-12 min-h-[120px] flex items-center justify-center relative overflow-hidden"

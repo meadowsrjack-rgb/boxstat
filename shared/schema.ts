@@ -65,6 +65,7 @@ export interface User {
   accountHolderId?: string; // For players linked to a parent account
   packageSelected?: string; // Selected program/package ID
   teamAssignmentStatus?: TeamAssignmentStatus; // "pending" or "assigned"
+  hasRegistered?: boolean; // Whether they have registered in the app
   
   // Specific fields based on role
   teamId?: string;
@@ -75,6 +76,9 @@ export interface User {
   // Performance metrics
   rating?: number;
   awardsCount?: number;
+  
+  // Payment information
+  stripeCustomerId?: string; // Stripe Customer ID for payment tracking
   
   // Security
   passcode?: string; // 4-digit PIN for quick switching
@@ -103,12 +107,14 @@ export const insertUserSchema = z.object({
   accountHolderId: z.string().optional(),
   packageSelected: z.string().optional(),
   teamAssignmentStatus: z.enum(["pending", "assigned"]).optional(),
+  hasRegistered: z.boolean().optional(),
   teamId: z.string().optional(),
   jerseyNumber: z.number().optional(),
   position: z.string().optional(),
   program: z.string().optional(),
   rating: z.number().optional(),
   awardsCount: z.number().optional(),
+  stripeCustomerId: z.string().optional(),
   passcode: z.string().length(4).optional(),
   password: z.string().optional(),
   isActive: z.boolean().default(true),

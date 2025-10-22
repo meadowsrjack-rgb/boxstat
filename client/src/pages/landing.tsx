@@ -84,7 +84,7 @@ export default function Landing() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Background Logo */}
-      <div className="absolute inset-x-0 top-[25%] -translate-y-1/2 flex justify-center z-0">
+      <div className="absolute inset-x-0 top-[75%] -translate-y-1/2 flex justify-center z-20">
         <img 
           src={logoPath} 
           alt="BoxStat Logo"
@@ -100,46 +100,6 @@ export default function Landing() {
 
         {/* Bottom Content */}
         <div className="px-4 sm:px-6 lg:px-8 text-center pb-6 mb-[100px]" style={{ paddingBottom: '24px' }}>
-          {/* Carousel Content */}
-          <div 
-            className="min-h-[120px] flex items-center justify-center relative overflow-hidden font-medium text-[18px] mt-[20px] mb-[20px]"
-            style={{ marginTop: '24px' }}
-          >
-            <div className="max-w-lg mx-auto w-full">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentSlide}
-                  initial={{
-                    x: swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0,
-                    opacity: 0
-                  }}
-                  animate={{
-                    x: 0,
-                    opacity: 1
-                  }}
-                  exit={{
-                    x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : 0,
-                    opacity: 0
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 300,
-                    damping: 30,
-                    duration: 0.5
-                  }}
-                  className="text-center"
-                >
-                  <h1 className="text-2xl sm:text-3xl font-bold text-black mb-6">
-                    {carouselFeatures[currentSlide].title}
-                  </h1>
-                  <p className="text-sm sm:text-base text-gray-800 leading-relaxed font-light">
-                    {carouselFeatures[currentSlide].description}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
           {/* Call to Action Buttons */}
           <div className="space-y-4 pt-[20px] pb-[20px]">
             {/* Primary CTA Button - Made more red */}

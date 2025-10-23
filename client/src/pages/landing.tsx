@@ -84,7 +84,7 @@ export default function Landing() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Background Logo */}
-      <div className="absolute inset-x-0 top-[5%] -translate-y-1/2 flex flex-col items-center justify-center z-20 pt-[0px] pb-[0px] mt-[300px] mb-[300px]">
+      <div className="absolute inset-x-0 top-[5%] -translate-y-1/2 flex flex-col items-center justify-center z-20 pt-[0px] pb-[0px] mt-[100px] mb-[300px]">
         <img 
           src={logoPath} 
           alt="BoxStat Logo"
@@ -101,7 +101,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pt-[0px] pb-[80px] mt-[50px] mb-[80px]" style={{ paddingBottom: '24px' }}>
+        <div className="px-4 sm:px-6 lg:px-8 text-center pt-[0px] pb-[80px] mt-[50px] mb-[130px]" style={{ paddingBottom: '24px' }}>
           {/* Call to Action Buttons */}
           <div className="space-y-4 pt-[0px] pb-[0px] mt-[0px] mb-[20px]">
             {/* Primary CTA Button - Made more red */}

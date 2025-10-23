@@ -34,9 +34,8 @@ const isAuthenticated = (req: any, res: any, next: any) => {
     };
     next();
   } else {
-    // Default to admin for non-authenticated requests during development
-    req.user = { id: "admin-1", organizationId: "default-org", role: "admin" };
-    next();
+    // Return 401 for unauthenticated requests
+    res.status(401).json({ error: "Not authenticated" });
   }
 };
 
@@ -108,8 +107,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/auth/logout', (req: any, res) => {
     req.session.destroy((err: any) => {
       if (err) {
+        console.error("Logout error:", err);
         return res.status(500).json({ success: false, message: "Logout failed" });
       }
+      // Clear the session cookie
+      res.clearCookie('connect.sid');
       res.json({ success: true });
     });
   });

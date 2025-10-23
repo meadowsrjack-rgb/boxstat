@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import {
   UserPlus,
   DollarSign,
@@ -17,6 +19,7 @@ import {
 
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   // Fetch current user
   const { data: user } = useQuery<any>({
@@ -49,6 +52,20 @@ export default function UnifiedAccount() {
     // Store the player ID and navigate to player dashboard
     localStorage.setItem("selectedPlayerId", playerId);
     setLocation("/player-dashboard");
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout", {});
+      toast({ title: "Signed out successfully" });
+      setLocation("/");
+    } catch (error) {
+      toast({ 
+        title: "Sign out failed", 
+        description: "Please try again",
+        variant: "destructive" 
+      });
+    }
   };
 
   if (playersLoading) {
@@ -348,7 +365,12 @@ export default function UnifiedAccount() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <Button variant="outline" className="w-full" data-testid="button-logout">
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleSignOut}
+                    data-testid="button-logout"
+                  >
                     Sign Out
                   </Button>
                 </div>

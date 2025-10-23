@@ -29,6 +29,7 @@ import {
   Send,
   UserCheck,
   ChevronRight,
+  ChevronLeft,
   MapPin,
   Copy,
   Gauge,
@@ -372,7 +373,18 @@ export default function CoachDashboard() {
       {/* Top Bar */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
-          <div className="flex items-center justify-end gap-1">
+          <div className="flex items-center justify-between gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+              onClick={() => setLocation("/unified-account")}
+              aria-label="Back to Account"
+              data-testid="button-back-to-account"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100 relative" aria-label="Notifications" data-testid="button-notifications">
@@ -416,6 +428,7 @@ export default function CoachDashboard() {
             >
               <MoreHorizontal className="h-6 w-6" />
             </Button>
+            </div>
           </div>
         </div>
       </header>

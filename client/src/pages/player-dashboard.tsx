@@ -22,6 +22,7 @@ import {
   Shirt,
   User,
   ChevronRight,
+  ChevronLeft,
   Calendar as CalendarIcon,
   MessageCircle,
   Send,
@@ -782,7 +783,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       {/* Top Bar (QR removed) */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12"
+              onClick={() => setLocation("/unified-account")}
+              aria-label="Back to Account"
+              data-testid="button-back-to-account"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button
               variant="ghost"
@@ -792,6 +804,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             >
               <MoreHorizontal className="h-12 w-12" />
             </Button>
+            </div>
           </div>
         </div>
       </header>

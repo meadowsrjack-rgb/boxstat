@@ -218,30 +218,6 @@ export default function AdminDashboard() {
                 testId="stat-total-revenue"
               />
             </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Button onClick={() => setActiveTab("users")} className="flex flex-col h-20" data-testid="button-add-user">
-                  <Plus className="w-6 h-6 mb-2" />
-                  Add User
-                </Button>
-                <Button onClick={() => setActiveTab("teams")} className="flex flex-col h-20" data-testid="button-create-team">
-                  <Plus className="w-6 h-6 mb-2" />
-                  Create Team
-                </Button>
-                <Button onClick={() => setActiveTab("events")} className="flex flex-col h-20" data-testid="button-schedule-event">
-                  <Calendar className="w-6 h-6 mb-2" />
-                  Schedule Event
-                </Button>
-                <Button onClick={() => setActiveTab("programs")} className="flex flex-col h-20" data-testid="button-add-program">
-                  <Plus className="w-6 h-6 mb-2" />
-                  Add Program
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="users">

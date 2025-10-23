@@ -20,7 +20,7 @@ export default function Landing() {
 
         {/* Tagline */}
         <div className="px-4 text-center mb-8">
-          <p className="text-lg font-medium text-[#000000] mt-[0px] mb-[0px]" style={{ fontFamily: 'Montserrat, sans-serif' }}>Player development and 
+          <p className="text-lg text-[#000000] mt-[0px] mb-[0px] font-bold text-center" style={{ fontFamily: 'Montserrat, sans-serif' }}>Player development and 
           sports management converge.</p>
         </div>
 

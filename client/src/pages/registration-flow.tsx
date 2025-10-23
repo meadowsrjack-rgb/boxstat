@@ -762,6 +762,7 @@ function PlayerInfoStep({
 }) {
   // Prefill data from Stripe if available
   const prefillData = emailCheckData?.stripeCustomer?.prefillData || {};
+  const [isUnderAge, setIsUnderAge] = useState(false);
   
   const form = useForm<PlayerInfo>({
     resolver: zodResolver(playerInfoSchema),
@@ -772,6 +773,26 @@ function PlayerInfoStep({
       gender: "",
     },
   });
+
+  // Calculate age when DOB changes (only for "myself" registration)
+  const dateOfBirth = form.watch("dateOfBirth");
+  
+  useEffect(() => {
+    if (isSelf && dateOfBirth) {
+      const birthDate = new Date(dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      setIsUnderAge(age < 18);
+    } else {
+      setIsUnderAge(false);
+    }
+  }, [dateOfBirth, isSelf]);
 
   return (
     <Form {...form}>
@@ -814,6 +835,16 @@ function PlayerInfoStep({
               <FormControl>
                 <Input {...field} type="date" data-testid="input-player-dob" />
               </FormControl>
+              {isUnderAge && (
+                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md" data-testid="age-warning">
+                  <p className="text-sm text-yellow-800 font-medium">
+                    ⚠️ Players under 18 years old must have a parent or guardian register on their behalf.
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Please go back and select "I'm registering my child" to continue.
+                  </p>
+                </div>
+              )}
             </FormItem>
           )}
         />
@@ -846,7 +877,7 @@ function PlayerInfoStep({
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
-          <Button type="submit" data-testid="button-next">
+          <Button type="submit" disabled={isUnderAge} data-testid="button-next">
             Next
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>

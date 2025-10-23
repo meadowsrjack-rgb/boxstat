@@ -229,9 +229,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/registration/complete', async (req: any, res) => {
     try {
-      const { registrationType, parentInfo, players, packageId, password } = req.body;
+      const { registrationType, parentInfo, players, packageId, password, email } = req.body;
       
       const organizationId = "default-org"; // In production, this would be determined by subdomain
+      
+      // Hash the password
+      const hashedPassword = password ? hashPassword(password) : undefined;
       
       // Create parent account if registering for child
       let accountHolderId: string | undefined;
@@ -240,11 +243,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           organizationId,
           email: parentInfo.email,
           role: "parent",
+          userType: "parent",
           firstName: parentInfo.firstName,
           lastName: parentInfo.lastName,
           phoneNumber: parentInfo.phoneNumber,
           dateOfBirth: parentInfo.dateOfBirth,
-          password,
+          password: hashedPassword,
           registrationType,
           packageSelected: packageId,
           hasRegistered: true,
@@ -257,10 +261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create player profiles
       const createdPlayers = [];
       for (const player of players) {
+        const playerEmail = registrationType === "myself" 
+          ? (email || parentInfo?.email || players[0]?.email || "") 
+          : `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`;
+          
         const playerUser = await storage.createUser({
           organizationId,
-          email: registrationType === "myself" ? (parentInfo?.email || players[0]?.email || "") : `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`,
-          role: "player",
+          email: playerEmail,
+          role: registrationType === "myself" ? "parent" : "player",
+          userType: registrationType === "myself" ? "parent" : "player",
           firstName: player.firstName,
           lastName: player.lastName,
           dateOfBirth: player.dateOfBirth,
@@ -270,7 +279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           packageSelected: packageId,
           teamAssignmentStatus: "pending",
           hasRegistered: true,
-          password: registrationType === "myself" ? password : undefined,
+          password: registrationType === "myself" ? hashedPassword : undefined,
           isActive: true,
           verified: false,
         });

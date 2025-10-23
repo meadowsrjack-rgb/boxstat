@@ -20,9 +20,8 @@ export default function Landing() {
 
         {/* Tagline */}
         <div className="px-4 text-center mb-8">
-          <p className="text-gray-700 text-lg font-medium" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-            Sports management and player development unified.
-          </p>
+          <p className="text-lg font-medium text-[#000000] mt-[0px] mb-[0px]" style={{ fontFamily: 'Montserrat, sans-serif' }}>Player development and 
+          sports management converge.</p>
         </div>
 
         {/* Spacer to push content to bottom */}

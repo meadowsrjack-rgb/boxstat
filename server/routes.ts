@@ -126,6 +126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-11-20.acacia" })
     : null;
   
+  // Verify Stripe mode on initialization
+  if (stripe && process.env.STRIPE_SECRET_KEY) {
+    const keyPrefix = process.env.STRIPE_SECRET_KEY.substring(0, 8);
+    const mode = keyPrefix.startsWith('sk_test') ? '🧪 TEST' : '🔴 LIVE';
+    console.log(`Stripe initialized in ${mode} mode (key: ${keyPrefix}...)`);
+  }
+  
   app.post("/api/create-payment-intent", async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });

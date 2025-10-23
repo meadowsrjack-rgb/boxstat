@@ -213,6 +213,7 @@ export default function RegistrationFlow() {
           {currentStep === 3 && registrationData.registrationType === "myself" && (
             <PlayerInfoStep
               email={registrationData.email}
+              emailCheckData={registrationData.emailCheckData}
               onSubmit={(data) => {
                 setRegistrationData({
                   ...registrationData,
@@ -254,6 +255,7 @@ export default function RegistrationFlow() {
             (currentStep === 5 && registrationData.registrationType === "my_child")) && (
             <PackageSelectionStep
               programs={programs}
+              emailCheckData={registrationData.emailCheckData}
               onSubmit={(data) => {
                 setRegistrationData({ ...registrationData, packageId: data.packageId });
                 handleNext();
@@ -268,7 +270,12 @@ export default function RegistrationFlow() {
             <PaymentStep
               packageId={registrationData.packageId || ""}
               programs={programs}
+              emailCheckData={registrationData.emailCheckData}
               onPaymentComplete={() => {
+                setRegistrationData({ ...registrationData, paymentCompleted: true });
+                handleNext();
+              }}
+              onSkip={() => {
                 setRegistrationData({ ...registrationData, paymentCompleted: true });
                 handleNext();
               }}
@@ -569,13 +576,16 @@ function ParentInfoStep({
   onSubmit: (data: ParentInfo) => void;
   onBack: () => void;
 }) {
+  // Prefill data from Stripe if available
+  const prefillData = emailCheckData?.stripeCustomer?.prefillData || {};
+  
   const form = useForm<ParentInfo>({
     resolver: zodResolver(parentInfoSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
-      email: email || "",
-      phoneNumber: "",
+      firstName: prefillData.firstName || "",
+      lastName: prefillData.lastName || "",
+      email: email || prefillData.email || "",
+      phoneNumber: prefillData.phone || "",
       dateOfBirth: "",
     },
   });
@@ -739,20 +749,25 @@ function ParentInfoStep({
 
 function PlayerInfoStep({
   email,
+  emailCheckData,
   onSubmit,
   onBack,
   isSelf,
 }: {
   email?: string;
+  emailCheckData?: any;
   onSubmit: (data: PlayerInfo) => void;
   onBack: () => void;
   isSelf?: boolean;
 }) {
+  // Prefill data from Stripe if available
+  const prefillData = emailCheckData?.stripeCustomer?.prefillData || {};
+  
   const form = useForm<PlayerInfo>({
     resolver: zodResolver(playerInfoSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      firstName: prefillData.firstName || "",
+      lastName: prefillData.lastName || "",
       dateOfBirth: "",
       gender: "",
     },
@@ -966,13 +981,31 @@ function PlayerListStep({
 
 function PackageSelectionStep({
   programs,
+  emailCheckData,
   onSubmit,
   onBack,
 }: {
   programs: any[];
+  emailCheckData?: any;
   onSubmit: (data: PackageSelection) => void;
   onBack: () => void;
 }) {
+  // Get active subscriptions from Stripe
+  const activeSubscriptions = emailCheckData?.stripeCustomer?.subscriptions || [];
+  const lastPayment = emailCheckData?.stripeCustomer?.payments?.[0];
+  
+  // Function to check if a program is recommended (matches Stripe subscription)
+  const isRecommended = (program: any) => {
+    // Check if any active subscription matches this program
+    return activeSubscriptions.some((sub: any) => {
+      // Match by product ID or price ID
+      return sub.productId === program.stripeProductId || 
+             sub.priceId === program.stripePriceId ||
+             // Match by package ID in payment metadata
+             (lastPayment?.packageId === program.id);
+    });
+  };
+  
   const form = useForm<PackageSelection>({
     resolver: zodResolver(packageSelectionSchema),
     defaultValues: {
@@ -988,6 +1021,17 @@ function PackageSelectionStep({
     return acc;
   }, {});
 
+  // Sort programs to show recommended ones first
+  Object.keys(groupedPrograms).forEach(category => {
+    groupedPrograms[category].sort((a: any, b: any) => {
+      const aRecommended = isRecommended(a);
+      const bRecommended = isRecommended(b);
+      if (aRecommended && !bRecommended) return -1;
+      if (!aRecommended && bRecommended) return 1;
+      return 0;
+    });
+  });
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -1002,7 +1046,9 @@ function PackageSelectionStep({
                   {Object.entries(groupedPrograms).map(([category, categoryPrograms]: [string, any]) => (
                     <div key={category}>
                       <h3 className="font-semibold text-sm text-gray-700 mb-2">{category}</h3>
-                      {categoryPrograms.map((program: any) => (
+                      {categoryPrograms.map((program: any) => {
+                        const recommended = isRecommended(program);
+                        return (
                         <button
                           key={program.id}
                           type="button"
@@ -1010,6 +1056,8 @@ function PackageSelectionStep({
                           className={`w-full text-left p-4 border-2 rounded-lg mb-2 transition-all ${
                             field.value === program.id
                               ? "border-blue-600 bg-blue-50"
+                              : recommended 
+                              ? "border-green-500 bg-green-50 hover:border-green-600"
                               : "border-gray-200 hover:border-blue-300"
                           }`}
                           data-testid={`option-package-${program.id}`}
@@ -1017,8 +1065,13 @@ function PackageSelectionStep({
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <Package className="w-5 h-5 text-blue-600" />
+                                <Package className={`w-5 h-5 ${recommended ? 'text-green-600' : 'text-blue-600'}`} />
                                 <h4 className="font-semibold">{program.name}</h4>
+                                {recommended && (
+                                  <span className="ml-2 text-xs font-medium px-2 py-1 bg-green-600 text-white rounded-full">
+                                    Recommended
+                                  </span>
+                                )}
                               </div>
                               {program.description && (
                                 <p className="text-sm text-gray-600 mt-1">{program.description}</p>
@@ -1044,7 +1097,8 @@ function PackageSelectionStep({
                             </div>
                           </div>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   ))}
                 </div>
@@ -1076,12 +1130,16 @@ function PackageSelectionStep({
 function PaymentStep({
   packageId,
   programs,
+  emailCheckData,
   onPaymentComplete,
+  onSkip,
   onBack,
 }: {
   packageId: string;
   programs: any[];
+  emailCheckData?: any;
   onPaymentComplete: () => void;
+  onSkip: () => void;
   onBack: () => void;
 }) {
   const { toast } = useToast();
@@ -1089,9 +1147,24 @@ function PaymentStep({
   const [isLoading, setIsLoading] = useState(true);
 
   const selectedPackage = programs.find(p => p.id === packageId);
+  const needsPayment = emailCheckData?.stripeCustomer?.needsPayment !== false;
+
+  // Auto-skip payment if not needed
+  useEffect(() => {
+    if (!needsPayment) {
+      toast({
+        title: "Payment Up to Date",
+        description: "Your payment is current. Proceeding to account setup.",
+      });
+      // Small delay to show the message
+      setTimeout(() => {
+        onSkip();
+      }, 1500);
+    }
+  }, [needsPayment, onSkip]);
 
   useEffect(() => {
-    if (!selectedPackage) return;
+    if (!selectedPackage || !needsPayment) return;
 
     // Create payment intent
     apiRequest("POST", "/api/create-payment-intent", {
@@ -1111,7 +1184,28 @@ function PaymentStep({
         });
         setIsLoading(false);
       });
-  }, [selectedPackage]);
+  }, [selectedPackage, needsPayment]);
+
+  // If payment not needed, show status message
+  if (!needsPayment) {
+    return (
+      <div className="text-center py-8">
+        <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+          <Check className="w-8 h-8 text-green-600" />
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Payment Current</h3>
+        <p className="text-gray-600 mb-4">
+          Your payment is up to date. No payment is needed at this time.
+        </p>
+        {emailCheckData?.stripeCustomer?.nextPaymentDate && (
+          <p className="text-sm text-gray-500">
+            Next payment due: {new Date(emailCheckData.stripeCustomer.nextPaymentDate).toLocaleDateString()}
+          </p>
+        )}
+        <p className="text-sm text-gray-400 mt-4">Proceeding to account setup...</p>
+      </div>
+    );
+  }
 
   if (isLoading || !clientSecret) {
     return (

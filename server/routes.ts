@@ -162,58 +162,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, organizationId } = req.body;
       const user = await storage.getUserByEmail(email, organizationId || "default-org");
       
-      if (!user) {
-        return res.json({ exists: false });
-      }
+      let stripeData = null;
+      let stripeCustomerId = user?.stripeCustomerId;
       
-      // User exists - check if they have Stripe customer ID
-      if (user.stripeCustomerId && stripe) {
+      // Search Stripe for customer by email (even if no user exists)
+      if (stripe) {
         try {
-          // Fetch Stripe customer with subscriptions
-          const customer = await stripe.customers.retrieve(user.stripeCustomerId, {
-            expand: ['subscriptions'],
-          });
+          // First try to get customer by ID if user has one
+          if (stripeCustomerId) {
+            const customer = await stripe.customers.retrieve(stripeCustomerId, {
+              expand: ['subscriptions'],
+            });
+            stripeData = customer;
+          } else {
+            // Search for customer by email
+            const customers = await stripe.customers.list({
+              email: email,
+              limit: 1,
+            });
+            
+            if (customers.data.length > 0) {
+              stripeCustomerId = customers.data[0].id;
+              const customer = await stripe.customers.retrieve(stripeCustomerId, {
+                expand: ['subscriptions'],
+              });
+              stripeData = customer;
+            }
+          }
           
-          // Fetch recent payment intents
-          const paymentIntents = await stripe.paymentIntents.list({
-            customer: user.stripeCustomerId,
-            limit: 10,
-          });
-          
-          const subscriptions = (customer as any).subscriptions?.data || [];
-          const activeSubscriptions = subscriptions.filter((sub: any) => sub.status === 'active');
-          
-          return res.json({
-            exists: true,
-            hasRegistered: user.hasRegistered || false,
-            stripeCustomer: {
-              id: user.stripeCustomerId,
-              subscriptions: activeSubscriptions.map((sub: any) => ({
-                id: sub.id,
-                status: sub.status,
-                currentPeriodEnd: sub.current_period_end,
-                priceId: sub.items.data[0]?.price.id,
-                amount: sub.items.data[0]?.price.unit_amount,
-                interval: sub.items.data[0]?.price.recurring?.interval,
-              })),
-              payments: paymentIntents.data.map((pi: any) => ({
-                id: pi.id,
-                amount: pi.amount,
-                status: pi.status,
-                created: pi.created,
-                packageId: pi.metadata.packageId,
-                packageName: pi.metadata.packageName,
-              })),
-            },
-          });
+          if (stripeData) {
+            // Fetch recent payment intents
+            const paymentIntents = await stripe.paymentIntents.list({
+              customer: stripeCustomerId,
+              limit: 10,
+            });
+            
+            const subscriptions = (stripeData as any).subscriptions?.data || [];
+            const activeSubscriptions = subscriptions.filter((sub: any) => sub.status === 'active');
+            
+            // Find most recent successful payment
+            const successfulPayments = paymentIntents.data.filter((pi: any) => pi.status === 'succeeded');
+            const lastPayment = successfulPayments.length > 0 ? successfulPayments[0] : null;
+            const lastPaymentDate = lastPayment ? new Date(lastPayment.created * 1000) : null;
+            
+            // Calculate next payment date (28 days from last payment)
+            let nextPaymentDate = null;
+            let paymentOverdue = false;
+            if (lastPaymentDate) {
+              nextPaymentDate = new Date(lastPaymentDate);
+              nextPaymentDate.setDate(nextPaymentDate.getDate() + 28);
+              paymentOverdue = new Date() > nextPaymentDate;
+            }
+            
+            // Extract prefill data from Stripe customer
+            const prefillData = {
+              firstName: (stripeData as any).metadata?.firstName || (stripeData as any).name?.split(' ')[0] || '',
+              lastName: (stripeData as any).metadata?.lastName || (stripeData as any).name?.split(' ').slice(1).join(' ') || '',
+              phone: (stripeData as any).phone || '',
+              email: (stripeData as any).email || email,
+            };
+            
+            return res.json({
+              exists: !!user,
+              hasRegistered: user?.hasRegistered || false,
+              stripeCustomer: {
+                id: stripeCustomerId,
+                prefillData,
+                lastPaymentDate,
+                nextPaymentDate,
+                paymentOverdue,
+                needsPayment: !lastPayment || paymentOverdue,
+                subscriptions: activeSubscriptions.map((sub: any) => ({
+                  id: sub.id,
+                  status: sub.status,
+                  currentPeriodEnd: sub.current_period_end,
+                  priceId: sub.items.data[0]?.price.id,
+                  amount: sub.items.data[0]?.price.unit_amount,
+                  interval: sub.items.data[0]?.price.recurring?.interval,
+                  productId: sub.items.data[0]?.price.product,
+                })),
+                payments: paymentIntents.data.map((pi: any) => ({
+                  id: pi.id,
+                  amount: pi.amount,
+                  status: pi.status,
+                  created: pi.created,
+                  packageId: pi.metadata.packageId,
+                  packageName: pi.metadata.packageName,
+                })),
+              },
+            });
+          }
         } catch (stripeError: any) {
           console.error("Error fetching Stripe data:", stripeError);
-          return res.json({
-            exists: true,
-            hasRegistered: user.hasRegistered || false,
-            stripeError: "Could not fetch payment information",
-          });
+          if (user) {
+            return res.json({
+              exists: true,
+              hasRegistered: user.hasRegistered || false,
+              stripeError: "Could not fetch payment information",
+            });
+          }
         }
+      }
+      
+      // No user and no Stripe data
+      if (!user) {
+        return res.json({ exists: false });
       }
       
       // User exists but no Stripe data

@@ -84,33 +84,6 @@ export default function PlayerSettingsPage() {
           </div>
         </div>
 
-        {/* Switch Profile Button */}
-        <div className="p-6 pb-0">
-          <Card className="bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 border-red-200 dark:border-red-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 shadow-sm">
-                    <Users className="h-6 w-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Switch Profile</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Access your other profiles or switch accounts</p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/profile-selection")}
-                  className="bg-white dark:bg-gray-800"
-                  data-testid="button-switch-profile"
-                >
-                  Switch
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Vertical Settings List */}
         <div className="p-6 space-y-3">
           {settingsItems.map((item) => (

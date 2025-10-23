@@ -128,10 +128,6 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button onClick={() => setLocation('/')} variant="outline" data-testid="button-switch-profile">
-                <ArrowLeftRight className="w-4 h-4 mr-2" />
-                Switch Profile
-              </Button>
               <Button onClick={() => setActiveTab("settings")} variant="outline" data-testid="button-settings">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings

@@ -758,10 +758,6 @@ function SecuritySection() {
   const [passcodeOpen, setPasscodeOpen] = useState(false);
   const [, setLocation] = useLocation();
 
-  const handleSwitchProfile = () => {
-    setLocation('/profile-selection');
-  };
-
   const handleLogout = async () => {
     try {
       await fetch('/api/logout', { 
@@ -783,7 +779,6 @@ function SecuritySection() {
 
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
-          <ActionRow icon={Users} title="Switch Profile" action={<Button variant="outline" onClick={handleSwitchProfile}>Switch</Button>} />
           <ActionRow icon={Lock} title="Profile Passcode" action={<Button variant="outline" onClick={() => setPasscodeOpen(true)}>Set</Button>} />
           <ActionRow icon={Mail} title="Change email" action={<Button variant="outline" onClick={() => setEmailOpen(true)}>Update</Button>} />
           <ActionRow icon={Key} title="Change password" action={<Button variant="outline" onClick={() => setPwOpen(true)}>Update</Button>} />

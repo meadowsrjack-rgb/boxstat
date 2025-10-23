@@ -79,6 +79,8 @@ export interface User {
   
   // Payment information
   stripeCustomerId?: string; // Stripe Customer ID for payment tracking
+  lastPaymentDate?: Date; // Date of last payment received
+  nextPaymentDate?: Date; // Expected date of next payment (28 days from last)
   
   // Security
   passcode?: string; // 4-digit PIN for quick switching
@@ -115,6 +117,8 @@ export const insertUserSchema = z.object({
   rating: z.number().optional(),
   awardsCount: z.number().optional(),
   stripeCustomerId: z.string().optional(),
+  lastPaymentDate: z.date().optional(),
+  nextPaymentDate: z.date().optional(),
   passcode: z.string().length(4).optional(),
   password: z.string().optional(),
   isActive: z.boolean().default(true),

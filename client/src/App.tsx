@@ -191,9 +191,35 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - always accessible */}
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegistrationFlow} />
+      <Route path="/logout" component={() => {
+        // Handle logout
+        useEffect(() => {
+          fetch('/api/auth/logout', { method: 'POST' })
+            .then(() => {
+              queryClient.clear();
+              window.location.href = '/';
+            })
+            .catch(() => {
+              window.location.href = '/';
+            });
+        }, []);
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p>Logging out...</p>
+            </div>
+          </div>
+        );
+      }} />
+      
+      {/* Protected routes */}
       <Route path="/unified-account" component={UnifiedAccount} />
       <Route path="/" component={() => {
         // Redirect to unified account page for authenticated users

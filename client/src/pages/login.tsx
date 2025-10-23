@@ -30,7 +30,8 @@ export default function LoginPage() {
           title: "Login Successful",
           description: "Welcome back!",
         });
-        setLocation("/");
+        // Force a page reload to ensure auth state is updated
+        window.location.href = "/unified-account";
       } else {
         throw new Error(response.message || "Login failed");
       }

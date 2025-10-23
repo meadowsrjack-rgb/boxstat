@@ -160,15 +160,36 @@ class MemStorage implements IStorage {
       id: "admin-1",
       organizationId: "default-org",
       email: "admin@example.com",
+      password: Buffer.from("admin123").toString('base64'), // Password: admin123
       role: "admin",
       firstName: "Admin",
       lastName: "User",
       isActive: true,
       verified: true,
+      hasRegistered: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
     this.users.set(adminUser.id, adminUser);
+    
+    // Create a test user account
+    const testUser: User = {
+      id: "test-1",
+      organizationId: "default-org",
+      email: "test@example.com",
+      password: Buffer.from("test123").toString('base64'), // Password: test123
+      role: "parent",
+      userType: "parent",
+      firstName: "Test",
+      lastName: "User",
+      phoneNumber: "555-0123",
+      isActive: true,
+      verified: true,
+      hasRegistered: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(testUser.id, testUser);
     
     // Create test users for preview demonstration
     const parentUser: User = {

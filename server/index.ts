@@ -76,5 +76,9 @@ app.use((req, res, next) => {
     console.log('📝 In-memory storage initialized');
     console.log('👤 Default admin user: admin@example.com');
     console.log('🏢 Default organization: My Sports Organization');
+    console.log('\n🧪 Test Account Credentials:');
+    console.log('   Email: test@example.com');
+    console.log('   Password: test123');
+    console.log('   Role: parent\n');
   });
 })();

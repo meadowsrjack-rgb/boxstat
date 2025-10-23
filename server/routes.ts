@@ -18,11 +18,26 @@ import {
 
 let wss: WebSocketServer | null = null;
 
-// Simple auth middleware for development (replace with proper auth in production)
+// Simple password hashing for development (use bcrypt in production)
+function hashPassword(password: string): string {
+  // Very basic hashing - in production use bcrypt
+  return Buffer.from(password).toString('base64');
+}
+
+// Simple auth middleware for development
 const isAuthenticated = (req: any, res: any, next: any) => {
-  // For now, assume we have a default admin user
-  req.user = { id: "admin-1", organizationId: "default-org", role: "admin" };
-  next();
+  if (req.session && req.session.userId) {
+    req.user = { 
+      id: req.session.userId, 
+      organizationId: req.session.organizationId || "default-org", 
+      role: req.session.role || "user" 
+    };
+    next();
+  } else {
+    // Default to admin for non-authenticated requests during development
+    req.user = { id: "admin-1", organizationId: "default-org", role: "admin" };
+    next();
+  }
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -34,6 +49,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     const user = await storage.getUser(req.user.id);
     res.json(user);
+  });
+  
+  app.post('/api/auth/login', async (req: any, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email and password are required" 
+        });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email, "default-org");
+      
+      if (!user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid email or password" 
+        });
+      }
+      
+      // Check password (using simple base64 encoding for development)
+      const hashedPassword = hashPassword(password);
+      if (user.password !== hashedPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid email or password" 
+        });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
+      req.session.organizationId = user.organizationId;
+      req.session.role = user.role;
+      
+      res.json({ 
+        success: true, 
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName 
+        } 
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Login failed" 
+      });
+    }
+  });
+  
+  app.post('/api/auth/logout', (req: any, res) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ success: false, message: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
   });
   
   // =============================================

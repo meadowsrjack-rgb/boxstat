@@ -81,7 +81,7 @@ export default function UnifiedAccount() {
                 Admin
               </Button>
               <Button
-                onClick={() => setLocation("/coach-settings/profile")}
+                onClick={() => setLocation("/coach-dashboard")}
                 variant="outline"
                 data-testid="button-coach"
               >

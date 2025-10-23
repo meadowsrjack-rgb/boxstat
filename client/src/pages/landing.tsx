@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoPath from "@assets/2_1761253787293.png";
 
+import BoxStats from "@assets/BoxStats.png";
+
 const carouselFeatures = [
   {
     title: "Stay informed.",
@@ -88,7 +90,7 @@ export default function Landing() {
         {/* Logo at top */}
         <div className="flex justify-center pt-12 pb-6">
           <img 
-            src={logoPath} 
+            src={BoxStats} 
             alt="BoxStat Logo" 
             className="h-72 w-72 object-contain mt-[100px] mb-[100px]"
           />

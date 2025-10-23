@@ -167,7 +167,7 @@ export default function UnifiedAccount() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold">My Players</h2>
                 <Button
-                  onClick={() => setLocation("/registration")}
+                  onClick={() => setLocation("/add-player")}
                   variant="outline"
                   data-testid="button-add-player"
                 >
@@ -183,7 +183,7 @@ export default function UnifiedAccount() {
                     <h3 className="text-lg font-semibold mb-2">No Players Yet</h3>
                     <p className="text-gray-600 mb-4">Add your first player to get started</p>
                     <Button
-                      onClick={() => setLocation("/registration")}
+                      onClick={() => setLocation("/add-player")}
                       data-testid="button-add-first-player"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />

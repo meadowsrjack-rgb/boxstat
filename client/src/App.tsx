@@ -22,6 +22,7 @@ import Chat from "@/pages/chat";
 import RegistrationFlow from "@/pages/registration-flow";
 import UnifiedAccount from "@/pages/unified-account";
 import LoginPage from "@/pages/login";
+import AddPlayer from "@/pages/add-player";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -221,6 +222,7 @@ function Router() {
       
       {/* Protected routes */}
       <Route path="/unified-account" component={UnifiedAccount} />
+      <Route path="/add-player" component={AddPlayer} />
       <Route path="/" component={() => {
         // Redirect to unified account page for authenticated users
         if ((user as any)?.role === "admin") {

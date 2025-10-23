@@ -192,7 +192,7 @@ export default function Landing() {
             <div className="text-white/80 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
-                onClick={() => setLocation('/sign-in')}
+                onClick={() => setLocation('/login')}
                 className="text-white font-semibold underline hover:text-gray-200 transition-colors"
                 data-testid="button-sign-in"
               >

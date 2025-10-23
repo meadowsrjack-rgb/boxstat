@@ -84,7 +84,7 @@ export default function Landing() {
       onTouchEnd={handleTouchEnd}
     >
       {/* Background Logo */}
-      <div className="absolute inset-x-0 top-[25%] -translate-y-1/2 flex flex-col items-center justify-center z-20 pt-[0px] pb-[0px] mt-[300px] mb-[300px]">
+      <div className="absolute inset-x-0 top-[10%] -translate-y-1/2 flex flex-col items-center justify-center z-20 pt-[0px] pb-[0px] mt-[300px] mb-[300px]">
         <img 
           src={logoPath} 
           alt="BoxStat Logo"

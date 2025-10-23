@@ -144,51 +144,6 @@ function Router() {
     );
   }
 
-  // Only show landing page if we're not loading and definitely not authenticated
-  if (!isLoading && !user) {
-    console.log("User not authenticated, showing landing page");
-    return (
-      <Switch>
-        <Route path="/privacy" component={PrivacySettingsPage} />
-        <Route path="/teams" component={Teams} />
-        <Route path="/registration" component={RegistrationFlow} />
-        <Route path="/login" component={LoginPage} />
-        <Route path="/register" component={RegistrationFlow} />
-        <Route path="/" component={Landing} />
-        <Route component={Landing} />
-      </Switch>
-    );
-  }
-  
-  // If still loading, show loading state
-  if (isLoading) {
-    console.log("Authentication loading, showing spinner");
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-700 flex items-center justify-center">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Always redirect authenticated users to profile selection if they haven't completed setup
-  // This ensures new users go through profile selection after sign-in
-  console.log('User data for profile check:', user);
-  console.log('Profile completed status:', (user as any)?.profileCompleted);
-  console.log('IsAuthenticated:', isAuthenticated);
-  console.log('IsLoading:', isLoading);
-  
-  const hasCompletedProfileSetup = (user as any)?.profileCompleted === true;
-  
-  // Authenticated users go directly to payments (profiles pre-created from GoHighLevel)
-  console.log('User authenticated, directing to main app with pre-created profiles');
-  
-  console.log('User has completed profile setup, proceeding to dashboard');
-
-  // This section is handled above - users without completed profiles go to profile selection
-
   return (
     <Switch>
       {/* Public routes - always accessible */}
@@ -219,17 +174,24 @@ function Router() {
         );
       }} />
       
+      {/* Landing page - always accessible at root */}
+      <Route path="/" component={Landing} />
+      
       {/* Protected routes */}
-      <Route path="/unified-account" component={UnifiedAccount} />
-      <Route path="/add-player" component={AddPlayer} />
-      <Route path="/" component={() => {
-        // Redirect to unified account page for authenticated users
+      <Route path="/account" component={() => {
+        if (!user) {
+          setLocation("/login");
+          return null;
+        }
+        // Redirect to appropriate dashboard based on user role
         if ((user as any)?.role === "admin") {
           setLocation("/admin-dashboard");
           return null;
         }
         return <UnifiedAccount />;
       }} />
+      <Route path="/unified-account" component={UnifiedAccount} />
+      <Route path="/add-player" component={AddPlayer} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {
           case "admin":

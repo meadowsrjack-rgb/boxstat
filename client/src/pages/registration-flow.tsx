@@ -111,7 +111,7 @@ export default function RegistrationFlow() {
       });
       // Redirect to account page after short delay
       setTimeout(() => {
-        setLocation("/unified-account");
+        setLocation("/account");
       }, 1000);
     },
     onError: (error: any) => {

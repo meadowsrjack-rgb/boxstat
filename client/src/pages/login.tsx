@@ -31,7 +31,7 @@ export default function LoginPage() {
           description: "Welcome back!",
         });
         // Force a page reload to ensure auth state is updated
-        window.location.href = "/unified-account";
+        window.location.href = "/account";
       } else {
         throw new Error(response.message || "Login failed");
       }

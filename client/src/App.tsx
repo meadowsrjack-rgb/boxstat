@@ -40,7 +40,6 @@ import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
 import TestRoute from "@/pages/test-route";
 import NotFound from "@/pages/not-found";
-import ProfileSelection from "@/pages/profile-selection";
 import CreateProfile from "@/pages/create-profile";
 import SelectProfileType from "@/pages/select-profile-type";
 import PaymentsTab from "@/pages/payments";
@@ -295,7 +294,6 @@ function Router() {
       {/* New profile selection flow */}
       <Route path="/select-profile-type" component={SelectProfileType} />
       {/* Legacy routes for compatibility during transition */}
-      <Route path="/profile-selection" component={ProfileSelection} />
       <Route path="/create-profile" component={CreateProfile} />
       <Route path="/family-onboarding" component={FamilyOnboarding} />
       

@@ -2,7 +2,8 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import logoPath from "@assets/boxstat logo_1761172433576.png";
+import logoPath from "@assets/UYP Logo nback_1752703900579.png";
+import videoPath from "@assets/Add a heading_1753743034117.mp4";
 
 const carouselFeatures = [
   {
@@ -15,7 +16,7 @@ const carouselFeatures = [
   },
   {
     title: "Train smarter.",
-    description: "Player development and team management simplified."
+    description: "Access a library of expert drills and training videos to elevate your game on and off the court."
   }
 ];
 
@@ -78,21 +79,26 @@ export default function Landing() {
 
   return (
     <div 
-      className="relative min-h-screen overflow-hidden bg-white"
+      className="relative min-h-screen overflow-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Background Logo */}
-      <div className="absolute inset-x-0 top-[5%] -translate-y-1/2 flex flex-col items-center justify-center z-20 pt-[0px] pb-[0px] mt-[150px] mb-[300px]">
-        <img 
-          src={logoPath} 
-          alt="BoxStat Logo"
-          className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[450px] lg:h-[450px] object-contain opacity-100"
-        />
-        <p className="text-black text-xl sm:text-2xl text-center px-4 font-medium pl-[30px] pr-[30px] pt-[0px] pb-[0px] mt-[100px] mb-[0px]">Player development &
-        team management unified.</p>
+      {/* Video Background */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src={videoPath} type="video/mp4" />
+        </video>
+        {/* Dark overlay to ensure text readability */}
+        <div className="absolute inset-0 bg-black/60"></div>
       </div>
+
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
 
@@ -101,9 +107,77 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pt-[0px] pb-[40px] mt-[50px] mb-[0px]">
+        <div className="px-4 sm:px-6 lg:px-8 text-center pb-6" style={{ paddingBottom: '24px' }}>
+          {/* Carousel Content */}
+          <div 
+            className="mb-12 min-h-[120px] flex items-center justify-center relative overflow-hidden"
+            style={{ marginTop: '24px' }}
+          >
+            <div className="max-w-lg mx-auto w-full">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentSlide}
+                  initial={{
+                    x: swipeDirection === 'left' ? 400 : swipeDirection === 'right' ? -400 : 0,
+                    opacity: 0
+                  }}
+                  animate={{
+                    x: 0,
+                    opacity: 1
+                  }}
+                  exit={{
+                    x: swipeDirection === 'left' ? -400 : swipeDirection === 'right' ? 400 : 0,
+                    opacity: 0
+                  }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    duration: 0.5
+                  }}
+                  className="text-center"
+                >
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-6 drop-shadow-lg">
+                    {carouselFeatures[currentSlide].title}
+                  </h1>
+                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed drop-shadow-md font-light">
+                    {carouselFeatures[currentSlide].description}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Carousel Indicators */}
+          <div className="flex space-x-2 mb-8 justify-center">
+            {carouselFeatures.map((_, index) => (
+              <motion.button
+                key={index}
+                onClick={() => {
+                  if (!isAnimating && index !== currentSlide) {
+                    setIsAnimating(true);
+                    setSwipeDirection(index > currentSlide ? 'left' : 'right');
+                    setTimeout(() => {
+                      setCurrentSlide(index);
+                      setIsAnimating(false);
+                      setSwipeDirection(null);
+                    }, 300);
+                  }
+                }}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  index === currentSlide 
+                    ? 'bg-white scale-110' 
+                    : 'bg-white/40 hover:bg-white/60'
+                }`}
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            ))}
+          </div>
+
           {/* Call to Action Buttons */}
-          <div className="space-y-4 pt-[0px] pb-[0px] mt-[0px] mb-[20px]">
+          <div className="space-y-4">
             {/* Primary CTA Button - Made more red */}
             <Button 
               size="lg" 
@@ -115,11 +189,11 @@ export default function Landing() {
             </Button>
 
             {/* Secondary Text/Link */}
-            <div className="text-gray-700 text-sm">
+            <div className="text-white/80 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
                 onClick={() => window.location.href = '/api/login'}
-                className="text-black font-semibold underline hover:text-gray-600 transition-colors"
+                className="text-white font-semibold underline hover:text-gray-200 transition-colors"
                 data-testid="button-sign-in"
               >
                 SIGN IN

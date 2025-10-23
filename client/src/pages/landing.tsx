@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import logoPath from "@assets/2_1761253787293.png";
-
-import BoxStats from "@assets/BoxStats.png";
+import logoPath from "@assets/BoxStats_1761255444178.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -14,7 +12,7 @@ export default function Landing() {
         {/* Logo at top */}
         <div className="flex justify-center pt-12 pb-6">
           <img 
-            src={BoxStats} 
+            src={logoPath} 
             alt="BoxStat Logo" 
             className="h-72 w-72 object-contain mt-[100px] mb-[100px]"
           />

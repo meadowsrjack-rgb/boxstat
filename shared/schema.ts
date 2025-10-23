@@ -373,3 +373,29 @@ export const insertProgramSchema = z.object({
 });
 
 export type InsertProgram = z.infer<typeof insertProgramSchema>;
+
+// =============================================
+// Package Selection Schema (Family Registration)
+// =============================================
+
+export interface PackageSelection {
+  id: string;
+  organizationId: string;
+  parentUserId: string; // The parent/guardian making the selection
+  childUserId: string; // The child/player for whom the package is selected
+  programId: string; // The selected program/package
+  isPaid: boolean; // Whether payment has been completed
+  paymentId?: string; // Reference to the payment record
+  createdAt: Date;
+}
+
+export const insertPackageSelectionSchema = z.object({
+  organizationId: z.string(),
+  parentUserId: z.string(),
+  childUserId: z.string(),
+  programId: z.string(),
+  isPaid: z.boolean().default(false),
+  paymentId: z.string().optional(),
+});
+
+export type InsertPackageSelection = z.infer<typeof insertPackageSelectionSchema>;

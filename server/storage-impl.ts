@@ -10,6 +10,7 @@ import {
   type Message,
   type Payment,
   type Program,
+  type PackageSelection,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -20,6 +21,7 @@ import {
   type InsertMessage,
   type InsertPayment,
   type InsertProgram,
+  type InsertPackageSelection,
 } from "@shared/schema";
 
 // =============================================
@@ -102,6 +104,14 @@ export interface IStorage {
   createProgram(program: InsertProgram): Promise<Program>;
   updateProgram(id: string, updates: Partial<Program>): Promise<Program | undefined>;
   deleteProgram(id: string): Promise<void>;
+  
+  // Package Selection operations
+  getPackageSelection(id: string): Promise<PackageSelection | undefined>;
+  getPackageSelectionsByParent(parentUserId: string): Promise<PackageSelection[]>;
+  getPackageSelectionsByChild(childUserId: string): Promise<PackageSelection[]>;
+  createPackageSelection(selection: InsertPackageSelection): Promise<PackageSelection>;
+  updatePackageSelection(id: string, updates: Partial<PackageSelection>): Promise<PackageSelection | undefined>;
+  deletePackageSelection(id: string): Promise<void>;
 }
 
 // =============================================
@@ -120,6 +130,7 @@ class MemStorage implements IStorage {
   private messages: Map<string, Message> = new Map();
   private payments: Map<string, Payment> = new Map();
   private programs: Map<string, Program> = new Map();
+  private packageSelections: Map<string, PackageSelection> = new Map();
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -969,6 +980,47 @@ class MemStorage implements IStorage {
   
   async deleteProgram(id: string): Promise<void> {
     this.programs.delete(id);
+  }
+  
+  // Package Selection operations
+  async getPackageSelection(id: string): Promise<PackageSelection | undefined> {
+    return this.packageSelections.get(id);
+  }
+  
+  async getPackageSelectionsByParent(parentUserId: string): Promise<PackageSelection[]> {
+    return Array.from(this.packageSelections.values()).filter(
+      selection => selection.parentUserId === parentUserId
+    );
+  }
+  
+  async getPackageSelectionsByChild(childUserId: string): Promise<PackageSelection[]> {
+    return Array.from(this.packageSelections.values()).filter(
+      selection => selection.childUserId === childUserId
+    );
+  }
+  
+  async createPackageSelection(selection: InsertPackageSelection): Promise<PackageSelection> {
+    const newSelection: PackageSelection = {
+      ...selection,
+      id: this.generateId(),
+      isPaid: selection.isPaid ?? false,
+      createdAt: new Date(),
+    };
+    this.packageSelections.set(newSelection.id, newSelection);
+    return newSelection;
+  }
+  
+  async updatePackageSelection(id: string, updates: Partial<PackageSelection>): Promise<PackageSelection | undefined> {
+    const selection = this.packageSelections.get(id);
+    if (!selection) return undefined;
+    
+    const updated = { ...selection, ...updates };
+    this.packageSelections.set(id, updated);
+    return updated;
+  }
+  
+  async deletePackageSelection(id: string): Promise<void> {
+    this.packageSelections.delete(id);
   }
 }
 

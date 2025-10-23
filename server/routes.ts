@@ -14,6 +14,7 @@ import {
   insertMessageSchema,
   insertPaymentSchema,
   insertProgramSchema,
+  insertPackageSelectionSchema,
 } from "@shared/schema";
 
 let wss: WebSocketServer | null = null;
@@ -743,8 +744,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PROGRAM ROUTES
   // =============================================
   
-  app.get('/api/programs', isAuthenticated, async (req: any, res) => {
-    const { organizationId } = req.user;
+  app.get('/api/programs', async (req: any, res) => {
+    // Allow unauthenticated access during registration
+    const organizationId = req.user?.organizationId || 'default-org';
     const programs = await storage.getProgramsByOrganization(organizationId);
     res.json(programs);
   });
@@ -778,6 +780,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     await storage.deleteProgram(req.params.id);
     res.json({ success: true });
+  });
+  
+  // =============================================
+  // PACKAGE SELECTION ROUTES (Family Registration)
+  // =============================================
+  
+  app.get('/api/family/package-selections', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+      const selections = await storage.getPackageSelectionsByParent(userId);
+      res.json(selections);
+    } catch (error: any) {
+      console.error("Error fetching package selections:", error);
+      res.status(500).json({ error: "Failed to fetch package selections" });
+    }
+  });
+  
+  app.post('/api/family/package-selections', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: parentUserId, organizationId } = req.user;
+      const { selections } = req.body;
+      
+      if (!Array.isArray(selections) || selections.length === 0) {
+        return res.status(400).json({ error: "selections must be a non-empty array" });
+      }
+      
+      // Validate and create each selection
+      const createdSelections = [];
+      for (const selection of selections) {
+        const selectionData = insertPackageSelectionSchema.parse({
+          organizationId,
+          parentUserId,
+          childUserId: selection.childUserId,
+          programId: selection.programId,
+          isPaid: false,
+        });
+        
+        const created = await storage.createPackageSelection(selectionData);
+        createdSelections.push(created);
+      }
+      
+      res.json(createdSelections);
+    } catch (error: any) {
+      console.error("Error creating package selections:", error);
+      res.status(500).json({ error: "Failed to create package selections", details: error.message });
+    }
   });
   
   // =============================================

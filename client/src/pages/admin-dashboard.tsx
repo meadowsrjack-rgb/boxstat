@@ -39,6 +39,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
@@ -47,6 +48,18 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
+
+  // Fetch current user for role-based access control
+  const { data: currentUser, isLoading: userLoading } = useQuery<any>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (!userLoading && currentUser && currentUser.role !== "admin") {
+      setLocation("/unified-account");
+    }
+  }, [currentUser, userLoading, setLocation]);
 
   // Fetch organization data
   const { data: organization, isLoading: orgLoading } = useQuery<any>({

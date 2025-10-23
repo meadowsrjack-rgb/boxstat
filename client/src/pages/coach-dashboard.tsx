@@ -102,6 +102,13 @@ export default function CoachDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Redirect non-coach and non-admin users
+  useEffect(() => {
+    if (currentUser && currentUser.role !== "coach" && currentUser.role !== "admin") {
+      setLocation("/unified-account");
+    }
+  }, [currentUser, setLocation]);
   
   // Enhanced calendar state
   const [selectedDate, setSelectedDate] = useState(new Date());

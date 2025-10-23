@@ -72,22 +72,26 @@ export default function UnifiedAccount() {
               <p className="text-gray-600 mt-1">Manage your account and players</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setLocation("/admin-dashboard")}
-                variant="outline"
-                data-testid="button-admin"
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Admin
-              </Button>
-              <Button
-                onClick={() => setLocation("/coach-dashboard")}
-                variant="outline"
-                data-testid="button-coach"
-              >
-                <User className="w-4 h-4 mr-2" />
-                Coach
-              </Button>
+              {user?.role === "admin" && (
+                <Button
+                  onClick={() => setLocation("/admin-dashboard")}
+                  variant="outline"
+                  data-testid="button-admin"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              )}
+              {(user?.role === "admin" || user?.role === "coach") && (
+                <Button
+                  onClick={() => setLocation("/coach-dashboard")}
+                  variant="outline"
+                  data-testid="button-coach"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Coach
+                </Button>
+              )}
             </div>
           </div>
 

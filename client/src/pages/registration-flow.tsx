@@ -107,9 +107,12 @@ export default function RegistrationFlow() {
     onSuccess: () => {
       toast({
         title: "Registration Successful!",
-        description: "A verification link has been sent to your email. Please verify to continue.",
+        description: "Welcome! Redirecting to your account...",
       });
-      setCurrentStep(totalSteps + 1); // Move to verification step
+      // Redirect to account page after short delay
+      setTimeout(() => {
+        setLocation("/unified-account");
+      }, 1000);
     },
     onError: (error: any) => {
       toast({

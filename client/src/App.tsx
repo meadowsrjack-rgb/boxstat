@@ -2,9 +2,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-
-// TEMPORARILY DISABLED FOR DEBUGGING
-// import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
 
 // Pages
@@ -107,11 +105,7 @@ function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function Router() {
-  // Temporarily disable useAuth to isolate the error
-  const user = null;
-  const isLoading = false;
-  const isAuthenticated = false;
-  // const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   
   // Check if user needs profile setup
@@ -200,6 +194,7 @@ function Router() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
+      <Route path="/unified-account" component={UnifiedAccount} />
       <Route path="/" component={() => {
         // Redirect to unified account page for authenticated users
         if ((user as any)?.role === "admin") {

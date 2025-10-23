@@ -238,6 +238,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create parent account if registering for child
       let accountHolderId: string | undefined;
+      let primaryUser: any = null;
+      
       if (registrationType === "my_child" && parentInfo) {
         const parent = await storage.createUser({
           organizationId,
@@ -256,6 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           verified: false,
         });
         accountHolderId = parent.id;
+        primaryUser = parent;
       }
       
       // Create player profiles
@@ -284,12 +287,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           verified: false,
         });
         createdPlayers.push(playerUser);
+        
+        // For "myself" registration, the player is the primary user
+        if (registrationType === "myself" && !primaryUser) {
+          primaryUser = playerUser;
+        }
+      }
+      
+      // Automatically log in the user by setting up session
+      if (primaryUser) {
+        req.session.userId = primaryUser.id;
+        req.session.save((err: any) => {
+          if (err) {
+            console.error("Session save error:", err);
+          }
+        });
       }
       
       res.json({
         success: true,
         message: "Registration successful",
         accountHolderId: accountHolderId || createdPlayers[0]?.id,
+        user: primaryUser,
       });
     } catch (error: any) {
       console.error("Registration error:", error);

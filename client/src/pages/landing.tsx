@@ -101,7 +101,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pt-[0px] pb-[80px] mt-[50px] mb-[180px]" style={{ paddingBottom: '24px' }}>
+        <div className="px-4 sm:px-6 lg:px-8 text-center pt-[0px] pb-[40px] mt-[50px] mb-[0px]">
           {/* Call to Action Buttons */}
           <div className="space-y-4 pt-[0px] pb-[0px] mt-[0px] mb-[20px]">
             {/* Primary CTA Button - Made more red */}

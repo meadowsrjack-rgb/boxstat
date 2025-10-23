@@ -22,6 +22,10 @@ const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY
   : null;
 
 // Form schemas for each step
+const emailEntrySchema = z.object({
+  email: z.string().email("Valid email is required"),
+});
+
 const registrationIntentSchema = z.object({
   registrationType: z.enum(["myself", "my_child"]),
 });
@@ -73,6 +77,8 @@ export default function RegistrationFlow() {
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [registrationData, setRegistrationData] = useState<{
+    email?: string;
+    emailCheckData?: any;
     registrationType?: "myself" | "my_child";
     parentInfo?: ParentInfo;
     players: Player[];
@@ -89,7 +95,7 @@ export default function RegistrationFlow() {
     queryKey: ["/api/programs"],
   });
 
-  const totalSteps = registrationData.registrationType === "myself" ? 5 : 6;
+  const totalSteps = registrationData.registrationType === "myself" ? 6 : 7;
 
   const registrationMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -157,34 +163,53 @@ export default function RegistrationFlow() {
             </span>
           </div>
           <CardTitle>
-            {currentStep === 1 && "Who are you registering for?"}
-            {currentStep === 2 && registrationData.registrationType === "myself" && "Your Information"}
-            {currentStep === 2 && registrationData.registrationType === "my_child" && "Parent/Guardian Information"}
-            {currentStep === 3 && registrationData.registrationType === "my_child" && "Player Information"}
-            {(currentStep === 3 && registrationData.registrationType === "myself") ||
-             (currentStep === 4 && registrationData.registrationType === "my_child") && "Select Program/Package"}
+            {currentStep === 1 && "Enter Your Email"}
+            {currentStep === 2 && "Who are you registering for?"}
+            {currentStep === 3 && registrationData.registrationType === "myself" && "Your Information"}
+            {currentStep === 3 && registrationData.registrationType === "my_child" && "Parent/Guardian Information"}
+            {currentStep === 4 && registrationData.registrationType === "my_child" && "Player Information"}
             {(currentStep === 4 && registrationData.registrationType === "myself") ||
-             (currentStep === 5 && registrationData.registrationType === "my_child") && "Payment"}
+             (currentStep === 5 && registrationData.registrationType === "my_child") && "Select Program/Package"}
             {(currentStep === 5 && registrationData.registrationType === "myself") ||
-             (currentStep === 6 && registrationData.registrationType === "my_child") && "Create Account"}
+             (currentStep === 6 && registrationData.registrationType === "my_child") && "Payment"}
+            {(currentStep === 6 && registrationData.registrationType === "myself") ||
+             (currentStep === 7 && registrationData.registrationType === "my_child") && "Create Account"}
             {currentStep > totalSteps && "Email Verification"}
           </CardTitle>
         </CardHeader>
 
         <CardContent>
-          {/* Step 1: Registration Intent */}
+          {/* Step 1: Email Entry */}
           {currentStep === 1 && (
-            <RegistrationIntentStep
-              onSubmit={(data) => {
-                setRegistrationData({ ...registrationData, registrationType: data.registrationType });
+            <EmailEntryStep
+              onSubmit={(data, emailCheckData) => {
+                setRegistrationData({ 
+                  ...registrationData, 
+                  email: data.email,
+                  emailCheckData: emailCheckData 
+                });
                 handleNext();
               }}
             />
           )}
 
-          {/* Step 2: User Information */}
-          {currentStep === 2 && registrationData.registrationType === "myself" && (
+          {/* Step 2: Registration Intent */}
+          {currentStep === 2 && (
+            <RegistrationIntentStep
+              email={registrationData.email}
+              emailCheckData={registrationData.emailCheckData}
+              onSubmit={(data) => {
+                setRegistrationData({ ...registrationData, registrationType: data.registrationType });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 3: User Information */}
+          {currentStep === 3 && registrationData.registrationType === "myself" && (
             <PlayerInfoStep
+              email={registrationData.email}
               onSubmit={(data) => {
                 setRegistrationData({
                   ...registrationData,
@@ -197,8 +222,10 @@ export default function RegistrationFlow() {
             />
           )}
 
-          {currentStep === 2 && registrationData.registrationType === "my_child" && (
+          {currentStep === 3 && registrationData.registrationType === "my_child" && (
             <ParentInfoStep
+              email={registrationData.email}
+              emailCheckData={registrationData.emailCheckData}
               onSubmit={(data) => {
                 setRegistrationData({ ...registrationData, parentInfo: data });
                 handleNext();
@@ -207,8 +234,8 @@ export default function RegistrationFlow() {
             />
           )}
 
-          {/* Step 3: Player Information (for "my_child" flow) */}
-          {currentStep === 3 && registrationData.registrationType === "my_child" && (
+          {/* Step 4: Player Information (for "my_child" flow) */}
+          {currentStep === 4 && registrationData.registrationType === "my_child" && (
             <PlayerListStep
               players={registrationData.players}
               onUpdate={(players) => {
@@ -220,8 +247,8 @@ export default function RegistrationFlow() {
           )}
 
           {/* Package Selection */}
-          {((currentStep === 3 && registrationData.registrationType === "myself") ||
-            (currentStep === 4 && registrationData.registrationType === "my_child")) && (
+          {((currentStep === 4 && registrationData.registrationType === "myself") ||
+            (currentStep === 5 && registrationData.registrationType === "my_child")) && (
             <PackageSelectionStep
               programs={programs}
               onSubmit={(data) => {
@@ -233,8 +260,8 @@ export default function RegistrationFlow() {
           )}
 
           {/* Payment Step */}
-          {((currentStep === 4 && registrationData.registrationType === "myself") ||
-            (currentStep === 5 && registrationData.registrationType === "my_child")) && (
+          {((currentStep === 5 && registrationData.registrationType === "myself") ||
+            (currentStep === 6 && registrationData.registrationType === "my_child")) && (
             <PaymentStep
               packageId={registrationData.packageId || ""}
               programs={programs}
@@ -247,8 +274,8 @@ export default function RegistrationFlow() {
           )}
 
           {/* Account Creation */}
-          {((currentStep === 5 && registrationData.registrationType === "myself") ||
-            (currentStep === 6 && registrationData.registrationType === "my_child")) && (
+          {((currentStep === 6 && registrationData.registrationType === "myself") ||
+            (currentStep === 7 && registrationData.registrationType === "my_child")) && (
             <AccountCreationStep
               onSubmit={handleSubmitRegistration}
               onBack={handleBack}
@@ -282,7 +309,162 @@ export default function RegistrationFlow() {
 
 // Step Components
 
-function RegistrationIntentStep({ onSubmit }: { onSubmit: (data: RegistrationIntent) => void }) {
+function EmailEntryStep({ 
+  onSubmit 
+}: { 
+  onSubmit: (data: { email: string }, emailCheckData: any) => void 
+}) {
+  const { toast } = useToast();
+  const [emailCheckData, setEmailCheckData] = useState<any>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  
+  const form = useForm<{ email: string }>({
+    resolver: zodResolver(emailEntrySchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const checkEmail = async (email: string) => {
+    if (!email || !email.includes('@')) return null;
+    
+    setIsCheckingEmail(true);
+    try {
+      const response = await apiRequest("/api/registration/check-email", {
+        method: "POST",
+        data: {
+          email,
+          organizationId: "default-org",
+        },
+      });
+      
+      if (response.exists && response.stripeCustomer) {
+        setEmailCheckData(response);
+        toast({
+          title: "Welcome Back!",
+          description: "We found your account and payment history.",
+        });
+      } else if (response.exists) {
+        setEmailCheckData({ exists: true, hasRegistered: response.hasRegistered });
+        toast({
+          title: "Account Found",
+          description: response.hasRegistered ? "We found your account." : "Email exists in our system.",
+        });
+      } else {
+        setEmailCheckData(null);
+      }
+      return response;
+    } catch (error) {
+      console.error("Error checking email:", error);
+      return null;
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const handleSubmit = async (data: { email: string }) => {
+    const checkData = await checkEmail(data.email);
+    onSubmit(data, checkData);
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <CardDescription>
+          Please enter your email address to get started. We'll check if you have an existing account with us.
+        </CardDescription>
+        
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address *</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  type="email"
+                  placeholder="your@email.com"
+                  data-testid="input-email"
+                  disabled={isCheckingEmail}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Show existing user info if found */}
+        {emailCheckData?.exists && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h4 className="font-semibold text-blue-900 mb-2">Account Found</h4>
+            {emailCheckData.hasRegistered && (
+              <p className="text-sm text-blue-700">
+                This email is already registered in our system.
+              </p>
+            )}
+            
+            {emailCheckData.stripeCustomer && (
+              <div className="mt-3 space-y-2">
+                <h5 className="font-medium text-blue-900">Payment History:</h5>
+                {emailCheckData.activeSubscriptions?.length > 0 && (
+                  <div className="text-sm">
+                    <p className="font-medium text-green-700">Active Subscriptions:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      {emailCheckData.activeSubscriptions.map((sub: any, idx: number) => (
+                        <li key={idx} className="text-blue-700">
+                          {sub.product} - ${(sub.amount / 100).toFixed(2)}/
+                          {sub.interval}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {emailCheckData.recentPayments?.length > 0 && (
+                  <div className="text-sm mt-2">
+                    <p className="font-medium text-blue-900">Recent Payments:</p>
+                    <ul className="list-disc list-inside ml-2">
+                      {emailCheckData.recentPayments.slice(0, 3).map((payment: any, idx: number) => (
+                        <li key={idx} className="text-blue-700">
+                          ${(payment.amount / 100).toFixed(2)} on{" "}
+                          {new Date(payment.created * 1000).toLocaleDateString()} - {payment.status}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button 
+            type="submit" 
+            disabled={isCheckingEmail}
+            data-testid="button-continue-email"
+          >
+            {isCheckingEmail ? "Checking..." : "Continue"}
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function RegistrationIntentStep({ 
+  email,
+  emailCheckData,
+  onSubmit,
+  onBack,
+}: { 
+  email?: string;
+  emailCheckData?: any;
+  onSubmit: (data: RegistrationIntent) => void;
+  onBack: () => void;
+}) {
   const form = useForm<RegistrationIntent>({
     resolver: zodResolver(registrationIntentSchema),
   });
@@ -290,6 +472,24 @@ function RegistrationIntentStep({ onSubmit }: { onSubmit: (data: RegistrationInt
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {email && (
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Email:</span> {email}
+            </p>
+          </div>
+        )}
+
+        {emailCheckData?.exists && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              {emailCheckData.hasRegistered 
+                ? "We found your existing account. Continue to add a new registration."
+                : "Email found in our system. Continue to complete your registration."}
+            </p>
+          </div>
+        )}
+        
         <FormField
           control={form.control}
           name="registrationType"
@@ -338,60 +538,44 @@ function RegistrationIntentStep({ onSubmit }: { onSubmit: (data: RegistrationInt
             </FormItem>
           )}
         />
+
+        <div className="flex justify-start">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            data-testid="button-back"
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        </div>
       </form>
     </Form>
   );
 }
 
 function ParentInfoStep({
+  email,
+  emailCheckData,
   onSubmit,
   onBack,
 }: {
+  email?: string;
+  emailCheckData?: any;
   onSubmit: (data: ParentInfo) => void;
   onBack: () => void;
 }) {
-  const { toast } = useToast();
-  const [emailCheckData, setEmailCheckData] = useState<any>(null);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  
   const form = useForm<ParentInfo>({
     resolver: zodResolver(parentInfoSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
-      email: "",
+      email: email || "",
       phoneNumber: "",
       dateOfBirth: "",
     },
   });
-
-  const checkEmail = async (email: string) => {
-    if (!email || !email.includes('@')) return;
-    
-    setIsCheckingEmail(true);
-    try {
-      const response = await apiRequest("POST", "/api/registration/check-email", {
-        email,
-        organizationId: "default-org",
-      });
-      
-      if (response.exists && response.stripeCustomer) {
-        setEmailCheckData(response);
-        toast({
-          title: "Existing Customer Found!",
-          description: "We found your payment history. Your subscription details are shown below.",
-        });
-      } else if (response.exists) {
-        setEmailCheckData({ exists: true, hasRegistered: response.hasRegistered });
-      } else {
-        setEmailCheckData(null);
-      }
-    } catch (error) {
-      console.error("Error checking email:", error);
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  };
 
   return (
     <Form {...form}>
@@ -436,15 +620,13 @@ function ParentInfoStep({
                   {...field} 
                   type="email" 
                   data-testid="input-parent-email"
-                  onBlur={(e) => {
-                    field.onBlur();
-                    checkEmail(e.target.value);
-                  }}
+                  readOnly
+                  className="bg-gray-50"
                 />
               </FormControl>
-              {isCheckingEmail && (
-                <p className="text-sm text-gray-600">Checking for existing account...</p>
-              )}
+              <FormDescription className="text-xs text-gray-500">
+                Email verified in previous step
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -553,10 +735,12 @@ function ParentInfoStep({
 }
 
 function PlayerInfoStep({
+  email,
   onSubmit,
   onBack,
   isSelf,
 }: {
+  email?: string;
   onSubmit: (data: PlayerInfo) => void;
   onBack: () => void;
   isSelf?: boolean;

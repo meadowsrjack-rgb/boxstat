@@ -219,12 +219,12 @@ export function CoachProfilePage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setLocation("/coach-settings")}
+              onClick={() => setLocation("/unified-account")}
               className="text-gray-600 hover:text-gray-900"
-              data-testid="button-back-to-settings"
+              data-testid="button-back-to-account"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              Back to Account
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">

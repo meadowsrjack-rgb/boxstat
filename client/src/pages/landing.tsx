@@ -90,7 +90,7 @@ export default function Landing() {
           <img 
             src={logoPath} 
             alt="BoxStat Logo" 
-            className="h-48 w-48 object-contain"
+            className="h-48 w-48 object-contain mt-[100px] mb-[100px]"
           />
         </div>
 

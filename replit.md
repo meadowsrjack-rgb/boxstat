@@ -3,6 +3,11 @@
 ## Overview
 This cross-platform mobile application for the UYP Basketball youth league provides tailored interfaces for Parents and Players. It aims to streamline league operations, enhance communication, and offer a comprehensive platform for managing schedules, player development, and team activities. Built with a modern full-stack architecture, it uses React/TypeScript for the frontend, Express.js for the backend, and PostgreSQL for the database. The application focuses on improving user experience through PWA features, secure authentication, and robust data management, while also providing tools for coaches and administrators to manage teams and player development effectively.
 
+## Recent Changes (October 2025)
+- **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.
+- **Child Profile Display Fix**: Added GET /api/profile/:id endpoint to fetch child profiles. Player dashboard now correctly displays child's name ("Hey, [ChildName]") instead of parent's name after registration. Uses activeProfileId to determine which profile to show.
+- **Package Selection Flow**: After family registration, package selections are saved and users redirect to /payments for Stripe Checkout. Webhook marks packages as paid on completion.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

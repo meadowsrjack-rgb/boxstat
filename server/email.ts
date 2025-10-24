@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = 'BoxStat <onboarding@boxstat.app>';
-const DOMAIN = process.env.REPLIT_DOMAINS?.split(',')[0] || 'boxstat.app';
+const DOMAIN = 'boxstat.app';
 
 export interface SendVerificationEmailParams {
   email: string;

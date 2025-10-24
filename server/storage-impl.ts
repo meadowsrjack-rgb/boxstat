@@ -1141,6 +1141,7 @@ class DatabaseStorage implements IStorage {
       jerseyNumber: user.jerseyNumber,
       position: user.position,
       passcode: user.passcode,
+      password: user.password,
       stripeCustomerId: user.stripeCustomerId,
       userType: user.role,
       createdAt: new Date().toISOString(),

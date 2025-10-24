@@ -4,6 +4,7 @@
 This cross-platform mobile application for the UYP Basketball youth league provides tailored interfaces for Parents and Players. It aims to streamline league operations, enhance communication, and offer a comprehensive platform for managing schedules, player development, and team activities. Built with a modern full-stack architecture, it uses React/TypeScript for the frontend, Express.js for the backend, and PostgreSQL for the database. The application focuses on improving user experience through PWA features, secure authentication, and robust data management, while also providing tools for coaches and administrators to manage teams and player development effectively.
 
 ## Recent Changes (October 2025)
+- **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.
 - **Child Profile Display Fix**: Added GET /api/profile/:id endpoint to fetch child profiles. Player dashboard now correctly displays child's name ("Hey, [ChildName]") instead of parent's name after registration. Uses activeProfileId to determine which profile to show.
 - **Package Selection Flow**: After family registration, package selections are saved and users redirect to /payments for Stripe Checkout. Webhook marks packages as paid on completion.
@@ -57,12 +58,7 @@ Preferred communication style: Simple, everyday language.
   - **High School** (4 teams): High-School-Elite, High-School-Red, High-School-Black, High-School-White
 - **Roster Management**: Coach dashboards display all Notion players for their teams, indicating players without app accounts and disabling actions for them. **App team assignments always take precedence over Notion data** - if a player changes their team in the app, the app assignment overrides what Notion says.
 - **Notion Sync**: Syncs player data from Notion database on startup and automatically every 24 hours at 2 AM Pacific Time. Pulls from 4 team columns: Youth Club Team, High School Team, FNHTL Team, and Skills Academy Session. Players read from Current Program, Grade, Status, and Session fields.
-- **Event & Scheduling**: Handles various event types, integrated with Google Calendar for hourly sync. Features an enhanced calendar UI with color-coded events and a sliding drawer for details. Players can RSVP to events within a specific window and check-in using device GPS location (within 200m of event).
-  - **Tag-Based Event Filtering**: Events can be tagged for targeted visibility. Tags are parsed from Google Calendar event descriptions and stored in the database. Three tag levels:
-    - **Org-Level**: UYP (all), Leadership (coaches), Coaches (coaches), Parents (parents), Players (players)
-    - **Program-Level**: Skills-Academy, FNHTL, Youth-Club, High-School (shows to profiles in that program)
-    - **Team-Level**: Specific team names like Youth-Girls-Black, 10u-Black (shows to players on team, parents with children on team, coaches assigned to team)
-  - Events without tags show to everyone (legacy behavior). Team name matching is normalized to handle spaces vs hyphens.
+- **Event & Scheduling**: Handles various event types managed by admins and coaches within the app. Features an enhanced calendar UI with color-coded events and a sliding drawer for details. Players can RSVP to events within a specific window and check-in using device GPS location (within 200m of event). Events can be created individually via the admin dashboard or bulk uploaded via CSV.
 - **Payment Integration**: Uses SportsEngine for secure payment processing (league fees, uniforms, tournaments) with transaction tracking and quick pay options.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities. Player dashboard includes skills progress and interactive trophy/badge counters. Coach dashboard features a QR code scanner for player check-ins and team management. Player Mode restricts access to pricing/payment options.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for various aspects, exportable as PDF or shareable via Web Share API.
@@ -82,8 +78,6 @@ Preferred communication style: Simple, everyday language.
 
 ### Real-time Features
 - **WebSocket**: Native WebSocket support for real-time communication.
-- **Google Calendar API**: For syncing UYP's calendar and event data to the app (inbound sync only).
-  - **Note**: User-to-personal-calendar export (outbound sync) was considered but Google Calendar connector integration was dismissed. This feature would require manual API key setup if needed in the future.
 
 ### UI & Development
 - **Radix UI**: Accessible component primitives.

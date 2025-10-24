@@ -54,7 +54,6 @@ type Profile = {
   firstName: string;
   lastName: string;
 };
-import CalendarSync from "@/pages/calendar-sync";
 import PhotoUpload from "@/pages/photo-upload";
 
 // Individual Setting Pages
@@ -243,7 +242,6 @@ function Router() {
       
       <Route path="/team" component={TeamDetails} />
       <Route path="/schedule" component={Schedule} />
-      <Route path="/calendar-sync" component={CalendarSync} />
       <Route path="/chat" component={Chat} />
       <Route path="/training" component={Training} />
       <Route path="/training-library" component={TrainingLibrary} />

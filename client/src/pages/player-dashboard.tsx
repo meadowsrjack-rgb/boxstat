@@ -410,6 +410,35 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       }),
   });
 
+  // Use active profile if available (for parents), otherwise use currentUser (for players)
+  const displayProfile = activeProfile || currentUser;
+  
+  // Update editable profile when display profile data changes
+  useEffect(() => {
+    if (displayProfile) {
+      const cityValue = displayProfile.city || displayProfile.address || "";
+      setEditableProfile(prev => ({
+        ...prev,
+        firstName: displayProfile.firstName || "",
+        lastName: displayProfile.lastName || "",
+        teamName: displayProfile.teamName || "",
+        age: displayProfile.age || "",
+        height: displayProfile.height || "",
+        location: cityValue,
+        city: cityValue,
+        position: displayProfile.position || "",
+        jerseyNumber: displayProfile.jerseyNumber?.toString() || "",
+      }));
+    }
+  }, [displayProfile]);
+
+  // Save tab to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem('playerDashboardTab', activeTab);
+    }
+  }, [activeTab]);
+
   // Real-time triggers (unchanged)
   useEffect(() => {
     if (!currentUser?.id) return;

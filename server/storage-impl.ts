@@ -112,6 +112,7 @@ export interface IStorage {
   createPackageSelection(selection: InsertPackageSelection): Promise<PackageSelection>;
   updatePackageSelection(id: string, updates: Partial<PackageSelection>): Promise<PackageSelection | undefined>;
   deletePackageSelection(id: string): Promise<void>;
+  markPackageSelectionPaid(id: string): Promise<PackageSelection | undefined>;
 }
 
 // =============================================
@@ -1021,6 +1022,15 @@ class MemStorage implements IStorage {
   
   async deletePackageSelection(id: string): Promise<void> {
     this.packageSelections.delete(id);
+  }
+  
+  async markPackageSelectionPaid(id: string): Promise<PackageSelection | undefined> {
+    const selection = this.packageSelections.get(id);
+    if (!selection) return undefined;
+    
+    const updated = { ...selection, isPaid: true };
+    this.packageSelections.set(id, updated);
+    return updated;
   }
 }
 

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
@@ -167,6 +167,182 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       res.status(500).json({ 
         error: "Error creating payment intent", 
+        message: error.message 
+      });
+    }
+  });
+  
+  app.post("/api/payments/checkout-session", isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Fetch all unpaid package selections for the user
+      const packageSelections = await storage.getPackageSelectionsByParent(req.user.id);
+      const unpaidSelections = packageSelections.filter(selection => !selection.isPaid);
+      
+      if (unpaidSelections.length === 0) {
+        return res.status(404).json({ error: "No unpaid package selections found" });
+      }
+      
+      // Build line items
+      const lineItems = [];
+      for (const selection of unpaidSelections) {
+        const program = await storage.getProgram(selection.programId);
+        if (program && program.price) {
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: program.name,
+              },
+              unit_amount: program.price, // Price is already in cents
+            },
+            quantity: 1,
+          });
+        }
+      }
+      
+      if (lineItems.length === 0) {
+        return res.status(404).json({ error: "No valid programs found for selections" });
+      }
+      
+      // Create or retrieve Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUser(user.id, { stripeCustomerId });
+      }
+      
+      // Get origin for URLs
+      const origin = `${req.protocol}://${req.get('host')}`;
+      
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${origin}/payments?success=true`,
+        cancel_url: `${origin}/payments?canceled=true`,
+        metadata: {
+          userId: user.id,
+          packageSelectionIds: unpaidSelections.map(s => s.id).join(','),
+        },
+      });
+      
+      res.json({
+        sessionUrl: session.url,
+        sessionId: session.id,
+      });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({
+        error: "Error creating checkout session",
+        message: error.message,
+      });
+    }
+  });
+  
+  // Stripe webhook endpoint (PUBLIC - no authentication)
+  app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    
+    if (!webhookSecret) {
+      console.error("⚠️ STRIPE_WEBHOOK_SECRET is not configured");
+      return res.status(400).json({ 
+        error: "Webhook secret not configured",
+        message: "Set STRIPE_WEBHOOK_SECRET environment variable for webhook verification" 
+      });
+    }
+    
+    let event: Stripe.Event;
+    
+    try {
+      // Verify webhook signature
+      event = stripe.webhooks.constructEvent(req.body, sig as string, webhookSecret);
+    } catch (err: any) {
+      console.error("⚠️ Webhook signature verification failed:", err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+    
+    // Handle the event
+    try {
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        console.log("✅ Checkout session completed:", session.id);
+        
+        // Extract metadata
+        const userId = session.metadata?.userId;
+        const selectionIds = session.metadata?.packageSelectionIds;
+        
+        if (!userId || !selectionIds) {
+          console.error("Missing metadata in checkout session:", { userId, selectionIds });
+          return res.status(400).json({ 
+            error: "Missing required metadata",
+            received: { userId, selectionIds }
+          });
+        }
+        
+        // Mark each package selection as paid
+        const selectionIdArray = selectionIds.split(',');
+        for (const selectionId of selectionIdArray) {
+          const updated = await storage.markPackageSelectionPaid(selectionId.trim());
+          if (updated) {
+            console.log(`✅ Marked package selection ${selectionId} as paid`);
+          } else {
+            console.error(`⚠️ Could not find package selection ${selectionId}`);
+          }
+        }
+        
+        // Optionally create a payment record
+        if (session.amount_total) {
+          try {
+            await storage.createPayment({
+              organizationId: "default-org",
+              userId,
+              amount: session.amount_total / 100, // Convert from cents to dollars
+              currency: 'usd',
+              paymentType: 'stripe_checkout',
+              status: 'completed',
+              description: `Stripe Checkout Session: ${session.id}`,
+            });
+            console.log(`✅ Created payment record for user ${userId}`);
+          } catch (paymentError: any) {
+            console.error("Error creating payment record:", paymentError);
+            // Don't fail the webhook if payment record creation fails
+          }
+        }
+        
+        return res.json({ received: true });
+      }
+      
+      // Handle other event types
+      console.log(`ℹ️ Unhandled event type: ${event.type}`);
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error("Error processing webhook event:", error);
+      return res.status(500).json({ 
+        error: "Error processing webhook",
         message: error.message 
       });
     }

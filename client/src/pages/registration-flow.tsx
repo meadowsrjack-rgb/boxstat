@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, CreditCard } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, CreditCard, Mail } from "lucide-react";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
@@ -189,6 +189,23 @@ export default function RegistrationFlow() {
         </CardHeader>
 
         <CardContent>
+          {/* Email Verification Reminder Banner */}
+          {currentStep > 1 && currentStep <= totalSteps && registrationData.email && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="verification-reminder">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm">Verify Your Email</h4>
+                  <p className="text-xs text-blue-700 mt-1">
+                    We sent a verification email to <strong>{registrationData.email}</strong>. 
+                    Please check your inbox (and spam folder) and click the verification link. 
+                    You can continue registration while we verify your email.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Step 1: Email Entry */}
           {currentStep === 1 && (
             <EmailEntryStep

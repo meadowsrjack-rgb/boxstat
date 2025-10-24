@@ -867,7 +867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // "myself" registration - update existing user with full details
         const player = players[0];
         primaryUser = await storage.updateUser(existingUser.id, {
-          role: "parent", // Self-registering player is considered parent
+          role: "player",
           firstName: player.firstName,
           lastName: player.lastName,
           dateOfBirth: sanitizeDate(player.dateOfBirth),
@@ -876,6 +876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           packageSelected: packageId,
           teamAssignmentStatus: "pending",
           hasRegistered: true,
+          registrationType: "myself",
         });
       }
       
@@ -912,16 +913,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Add player to account (for parents adding children)
+  // Add player to account (for parents and admins adding players)
   app.post('/api/account/players', isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.user;
       const user = await storage.getUser(id);
       
-      if (!user || user.role !== "parent") {
+      if (!user || (user.role !== "parent" && user.role !== "admin")) {
         return res.status(403).json({ 
           success: false, 
-          message: "Only parent accounts can add players" 
+          message: "Only parent and admin accounts can add players" 
         });
       }
       

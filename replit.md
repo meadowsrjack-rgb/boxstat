@@ -16,6 +16,12 @@ This cross-platform mobile application for the UYP Basketball youth league provi
     - Removed emojis and excessive styling from emails
     - Table-based HTML layout for better compatibility
     - Subject lines: "Verify Your Email Address - BoxStat" and "Your Secure Login Link - BoxStat"
+    - **Email Template Updates** (Oct 24, 2025):
+      - Replaced red banner with BoxStat logo for better branding
+      - Logo served from `/assets/logo` endpoint (120px height, auto width)
+      - Centered headings for improved visual hierarchy
+      - Clean, professional design to reduce spam filtering
+      - Verification and magic link buttons tested and working correctly
   - **Registration Flow Enhancement** (Oct 24, 2025):
     - Users can now continue registration BEFORE email verification (non-blocking flow)
     - Verification reminder banner displayed on registration steps 2+

@@ -149,6 +149,15 @@ export default function RegistrationFlow() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLocation("/")}
+            className="absolute top-4 left-4 p-2"
+            data-testid="button-back-to-home"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
           <div className="flex items-center justify-between mb-4">
             <div className="flex gap-2">
               {Array.from({ length: totalSteps }).map((_, i) => (

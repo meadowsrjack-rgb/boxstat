@@ -4,6 +4,14 @@
 This cross-platform mobile application for the UYP Basketball youth league provides tailored interfaces for Parents and Players. It aims to streamline league operations, enhance communication, and offer a comprehensive platform for managing schedules, player development, and team activities. Built with a modern full-stack architecture, it uses React/TypeScript for the frontend, Express.js for the backend, and PostgreSQL for the database. The application focuses on improving user experience through PWA features, secure authentication, and robust data management, while also providing tools for coaches and administrators to manage teams and player development effectively.
 
 ## Recent Changes (October 2025)
+- **Authentication System Overhaul**: Implemented complete email verification and magic link system using Resend.
+  - Email verification required before login (24-hour token expiry)
+  - Magic link passwordless login (15-minute token expiry)
+  - Removed Replit Auth integration - BoxStat now manages its own authentication
+  - Users verified through boxstat.app domain
+  - Database schema updated with verification fields (verified, verificationToken, verificationExpiry, magicLinkToken, magicLinkExpiry)
+  - Backend endpoints: GET /api/auth/verify-email, POST /api/auth/request-magic-link, GET /api/auth/magic-link-login
+  - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.
 - **Child Profile Display Fix**: Added GET /api/profile/:id endpoint to fetch child profiles. Player dashboard now correctly displays child's name ("Hey, [ChildName]") instead of parent's name after registration. Uses activeProfileId to determine which profile to show.
@@ -67,7 +75,10 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Authentication & Security
-- **Replit Auth**: OpenID Connect-based authentication.
+- **Custom Authentication**: Email/password with email verification via Resend
+- **Magic Links**: Passwordless login via email (15-minute expiry)
+- **Resend**: Email service for verification and magic link emails
+- **Future**: Google OAuth and Apple Sign-In (packages installed, not yet configured)
 
 ### Payment Processing
 - **SportsEngine**: For payment processing, customer management, and transaction handling.

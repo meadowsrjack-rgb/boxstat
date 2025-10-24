@@ -23,6 +23,8 @@ import RegistrationFlow from "@/pages/registration-flow";
 import UnifiedAccount from "@/pages/unified-account";
 import LoginPage from "@/pages/login";
 import AddPlayer from "@/pages/add-player";
+import VerifyEmail from "@/pages/verify-email";
+import MagicLinkLogin from "@/pages/magic-link-login";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -172,6 +174,8 @@ function Router() {
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />
       <Route path="/register" component={RegistrationFlow} />
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/magic-link-login" component={MagicLinkLogin} />
       <Route path="/logout" component={() => {
         // Handle logout
         useEffect(() => {

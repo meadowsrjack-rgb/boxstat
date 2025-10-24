@@ -86,9 +86,19 @@ export interface User {
   passcode?: string; // 4-digit PIN for quick switching
   password?: string; // Hashed password for account login
   
+  // Email verification & magic links
+  verified: boolean;
+  verificationToken?: string;
+  verificationExpiry?: Date;
+  magicLinkToken?: string;
+  magicLinkExpiry?: Date;
+  
+  // OAuth providers
+  googleId?: string;
+  appleId?: string;
+  
   // Status
   isActive: boolean;
-  verified: boolean;
   
   createdAt: Date;
   updatedAt: Date;
@@ -121,8 +131,14 @@ export const insertUserSchema = z.object({
   nextPaymentDate: z.date().optional(),
   passcode: z.string().length(4).optional(),
   password: z.string().optional(),
-  isActive: z.boolean().default(true),
   verified: z.boolean().default(false),
+  verificationToken: z.string().optional(),
+  verificationExpiry: z.date().optional(),
+  magicLinkToken: z.string().optional(),
+  magicLinkExpiry: z.date().optional(),
+  googleId: z.string().optional(),
+  appleId: z.string().optional(),
+  isActive: z.boolean().default(true),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

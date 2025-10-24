@@ -305,6 +305,13 @@ export const users = pgTable("users", {
         youthClubTeam: varchar("youth_club_team"),
         linkedAccountId: varchar("linked_account_id"),
         activeProfileId: varchar("active_profile_id"),
+        verified: boolean().default(false),
+        verificationToken: varchar("verification_token"),
+        verificationExpiry: timestamp("verification_expiry", { mode: 'string' }),
+        magicLinkToken: varchar("magic_link_token"),
+        magicLinkExpiry: timestamp("magic_link_expiry", { mode: 'string' }),
+        googleId: varchar("google_id"),
+        appleId: varchar("apple_id"),
 }, (table) => [
         foreignKey({
                         columns: [table.linkedAccountId],

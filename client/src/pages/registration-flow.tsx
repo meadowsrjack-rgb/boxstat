@@ -104,15 +104,13 @@ export default function RegistrationFlow() {
         data,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      // Move to verification step
+      setCurrentStep(totalSteps + 1);
       toast({
         title: "Registration Successful!",
-        description: "Welcome! Redirecting to your account...",
+        description: "Please check your email to verify your account.",
       });
-      // Redirect to account page after short delay
-      setTimeout(() => {
-        setLocation("/account");
-      }, 1000);
     },
     onError: (error: any) => {
       toast({

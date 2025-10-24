@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import Stripe from "stripe";
+import * as emailService from "./email";
+import crypto from "crypto";
 import {
   insertUserSchema,
   insertTeamSchema,
@@ -91,6 +93,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Check if email is verified
+      if (!user.verified) {
+        return res.status(403).json({
+          success: false,
+          message: "Please verify your email before logging in. Check your inbox for the verification link.",
+          requiresVerification: true,
+        });
+      }
+      
       // Set session
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
@@ -125,6 +136,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.clearCookie('connect.sid');
       res.json({ success: true });
     });
+  });
+  
+  // Email verification endpoint
+  app.get('/api/auth/verify-email', async (req: any, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ success: false, message: "Verification token is required" });
+      }
+      
+      // Find user by verification token
+      const allUsers = await storage.getUsersByOrganization("default-org");
+      const user = allUsers.find(u => u.verificationToken === token);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Invalid verification token" });
+      }
+      
+      // Check if token is expired (24 hours)
+      if (user.verificationExpiry && new Date() > user.verificationExpiry) {
+        return res.status(400).json({ success: false, message: "Verification token has expired" });
+      }
+      
+      // Mark user as verified
+      await storage.updateUser(user.id, {
+        verified: true,
+        verificationToken: undefined,
+        verificationExpiry: undefined,
+      });
+      
+      res.json({ success: true, message: "Email verified successfully! You can now log in." });
+    } catch (error: any) {
+      console.error("Email verification error:", error);
+      res.status(500).json({ success: false, message: "Verification failed" });
+    }
+  });
+  
+  // Request magic link
+  app.post('/api/auth/request-magic-link', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email, "default-org");
+      
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({ success: true, message: "If an account exists with that email, a magic link has been sent." });
+      }
+      
+      // Check if verified
+      if (!user.verified) {
+        return res.status(403).json({ success: false, message: "Please verify your email first before using magic link login." });
+      }
+      
+      // Generate cryptographically secure magic link token (valid for 15 minutes)
+      const magicLinkToken = crypto.randomBytes(32).toString('hex');
+      const magicLinkExpiry = new Date(Date.now() + 15 * 60 * 1000);
+      
+      // Update user with magic link token
+      await storage.updateUser(user.id, {
+        magicLinkToken,
+        magicLinkExpiry,
+      });
+      
+      // Send magic link email
+      await emailService.sendMagicLink({
+        email: user.email,
+        firstName: user.firstName,
+        magicLinkToken,
+      });
+      
+      res.json({ success: true, message: "If an account exists with that email, a magic link has been sent." });
+    } catch (error: any) {
+      console.error("Magic link request error:", error);
+      res.status(500).json({ success: false, message: "Failed to send magic link" });
+    }
+  });
+  
+  // Magic link login endpoint
+  app.get('/api/auth/magic-link-login', async (req: any, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ success: false, message: "Magic link token is required" });
+      }
+      
+      // Find user by magic link token
+      const allUsers = await storage.getUsersByOrganization("default-org");
+      const user = allUsers.find(u => u.magicLinkToken === token);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Invalid magic link" });
+      }
+      
+      // Check if token is expired (15 minutes)
+      if (user.magicLinkExpiry && new Date() > user.magicLinkExpiry) {
+        return res.status(400).json({ success: false, message: "Magic link has expired. Please request a new one." });
+      }
+      
+      // Clear magic link token
+      await storage.updateUser(user.id, {
+        magicLinkToken: undefined,
+        magicLinkExpiry: undefined,
+      });
+      
+      // Set session
+      req.session.userId = user.id;
+      req.session.organizationId = user.organizationId;
+      req.session.role = user.role;
+      
+      res.json({ 
+        success: true, 
+        message: "Logged in successfully!",
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName 
+        } 
+      });
+    } catch (error: any) {
+      console.error("Magic link login error:", error);
+      res.status(500).json({ success: false, message: "Login failed" });
+    }
   });
   
   // =============================================
@@ -485,6 +628,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash the password
       const hashedPassword = password ? hashPassword(password) : undefined;
       
+      // Generate cryptographically secure verification token (valid for 24 hours)
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
       // Create parent account if registering for child
       let accountHolderId: string | undefined;
       let primaryUser: any = null;
@@ -504,9 +651,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasRegistered: true,
           isActive: true,
           verified: false,
+          verificationToken,
+          verificationExpiry,
         });
         accountHolderId = parent.id;
         primaryUser = parent;
+        
+        // Send verification email to parent
+        await emailService.sendVerificationEmail({
+          email: parent.email,
+          firstName: parent.firstName,
+          verificationToken,
+        });
       }
       
       // Create player profiles
@@ -532,30 +688,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           password: registrationType === "myself" ? hashedPassword : undefined,
           isActive: true,
           verified: false,
+          verificationToken: registrationType === "myself" ? verificationToken : undefined,
+          verificationExpiry: registrationType === "myself" ? verificationExpiry : undefined,
         });
         createdPlayers.push(playerUser);
         
         // For "myself" registration, the player is the primary user
         if (registrationType === "myself" && !primaryUser) {
           primaryUser = playerUser;
+          
+          // Send verification email to self-registering player
+          await emailService.sendVerificationEmail({
+            email: playerEmail,
+            firstName: player.firstName,
+            verificationToken,
+          });
         }
       }
       
-      // Automatically log in the user by setting up session
-      if (primaryUser) {
-        req.session.userId = primaryUser.id;
-        req.session.save((err: any) => {
-          if (err) {
-            console.error("Session save error:", err);
-          }
-        });
-      }
+      // DON'T automatically log in - user needs to verify email first
       
       res.json({
         success: true,
-        message: "Registration successful",
-        accountHolderId: accountHolderId || createdPlayers[0]?.id,
-        user: primaryUser,
+        message: "Registration successful! Please check your email to verify your account.",
+        requiresVerification: true,
+        email: primaryUser?.email,
       });
     } catch (error: any) {
       console.error("Registration error:", error);

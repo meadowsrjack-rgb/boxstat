@@ -912,6 +912,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add player to account (for parents adding children)
+  app.post('/api/account/players', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.user;
+      const user = await storage.getUser(id);
+      
+      if (!user || user.role !== "parent") {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Only parent accounts can add players" 
+        });
+      }
+      
+      const { firstName, lastName, dateOfBirth, gender, packageId } = req.body;
+      
+      // Validate required fields
+      if (!firstName || !lastName) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "First name and last name are required" 
+        });
+      }
+      
+      // Create player email (temporary email pattern)
+      const playerEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@temp.com`;
+      
+      // Create child player user
+      const playerUser = await storage.createUser({
+        organizationId: user.organizationId,
+        email: playerEmail,
+        role: "player",
+        firstName,
+        lastName,
+        dateOfBirth: dateOfBirth || null,
+        gender: gender || null,
+        accountHolderId: id,
+        packageSelected: packageId || null,
+        teamAssignmentStatus: "pending",
+        hasRegistered: true,
+        verified: true, // Child profiles are auto-verified through parent
+        isActive: true,
+      });
+      
+      res.json({
+        success: true,
+        player: playerUser,
+        message: "Player added successfully"
+      });
+    } catch (error: any) {
+      console.error("Add player error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to add player" 
+      });
+    }
+  });
+  
   // Get profile by ID
   app.get('/api/profile/:id', isAuthenticated, async (req: any, res) => {
     try {

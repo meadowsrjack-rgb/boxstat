@@ -241,43 +241,24 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // ---- Early guard
   const currentUser = user as UserType | null;
   
-  // Update editable profile when user data changes
-  useEffect(() => {
-    if (currentUser) {
-      const cityValue = currentUser.city || currentUser.address || "";
-      setEditableProfile(prev => ({
-        ...prev,
-        firstName: currentUser.firstName || "",
-        lastName: currentUser.lastName || "",
-        teamName: currentUser.teamName || "",
-        age: currentUser.age || "",
-        height: currentUser.height || "",
-        location: cityValue, // Use city/address for location
-        city: cityValue, // Also set city field for display
-        position: currentUser.position || "",
-        jerseyNumber: currentUser.jerseyNumber?.toString() || "",
-      }));
-    }
-  }, [currentUser]);
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
-    );
-  }
+  // Fetch active profile if parent has activeProfileId
+  const activeProfileId = (currentUser as any)?.activeProfileId;
+  const { data: activeProfile, isLoading: isLoadingActiveProfile } = useQuery<UserType>({
+    queryKey: [`/api/profile/${activeProfileId}`],
+    queryFn: async () => {
+      const res = await fetch(`/api/profile/${activeProfileId}`, {
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Failed to fetch active profile");
+      return res.json();
+    },
+    enabled: !!activeProfileId,
+  });
 
-  // Save tab to localStorage when it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem('playerDashboardTab', activeTab);
-    }
-  }, [activeTab]);
-
-  // ---- Data
+  // ---- Data (moved before early return to avoid hooks order issues)
   const { data: childProfiles } = useQuery({
-    queryKey: ["/api/child-profiles", currentUser.id],
-    enabled: !!currentUser.id,
+    queryKey: ["/api/child-profiles", currentUser?.id],
+    enabled: !!currentUser?.id,
   });
 
   const selectedChildId = childId?.toString() || urlParams.get("childId") || undefined;
@@ -460,7 +441,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   }, [currentUser?.id, userTeam?.id, queryClient]);
 
   // Helpers
-  const initials = `${(currentChild?.firstName || currentUser.firstName || "").charAt(0)}${(currentChild?.lastName || currentUser.lastName || "").charAt(0)}`.toUpperCase();
+  const initials = `${(displayProfile.firstName || "").charAt(0)}${(displayProfile.lastName || "").charAt(0)}`.toUpperCase();
 
   const todayEvents = useMemo(() => {
     const today = new Date();
@@ -815,13 +796,13 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
             <ProfileAvatarRing
-              src={currentUser.profileImageUrl || currentChild?.profileImageUrl}
+              src={displayProfile.profileImageUrl}
               initials={initials}
               size={88}
             />
           </div>
           <div className="text-sm text-gray-600">
-            Hey, <span className="font-semibold text-gray-900">{currentChild?.firstName || currentUser.firstName}</span>
+            Hey, <span className="font-semibold text-gray-900">{displayProfile.firstName}</span>
           </div>
         </div>
 
@@ -1088,7 +1069,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           textShadow: "0 1px 0 rgba(255,255,255,0.6)",
                         }}
                       >
-                        {(currentChild?.firstName || currentUser.firstName || "Jack")} {(currentChild?.lastName || currentUser.lastName || "Meadows")}
+                        {displayProfile.firstName || "Jack"} {displayProfile.lastName || "Meadows"}
                       </h1>
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
@@ -1781,9 +1762,13 @@ function SaveProfile({
   const currentUser = user as UserType;
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Use activeProfileId if available (for parents editing children), otherwise use current user ID
+  const profileId = (currentUser as any)?.activeProfileId || currentUser.id;
+  
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await fetch(`/api/users/${currentUser.id}/profile`, {
+      const res = await fetch(`/api/profile/${profileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -1794,7 +1779,9 @@ function SaveProfile({
     },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved." });
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setIsEditingProfile(false);
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),

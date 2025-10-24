@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, varchar, integer, timestamp, text, boolean, date, serial, foreignKey, unique } from "drizzle-orm/pg-core";
+import { pgTable, varchar, integer, timestamp, text, boolean, date, serial, foreignKey, unique, real, numeric, jsonb, doublePrecision } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // =============================================
@@ -155,6 +155,127 @@ export const users = pgTable("users", {
 }, (table) => [
   unique("users_email_unique").on(table.email),
 ]);
+
+// Teams table
+export const teams = pgTable("teams", {
+  id: serial().primaryKey().notNull(),
+  name: varchar().notNull(),
+  ageGroup: varchar("age_group").notNull(),
+  color: varchar().default('#1E40AF').notNull(),
+  coachId: varchar("coach_id"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  division: varchar({ length: 100 }),
+  coachNames: varchar("coach_names", { length: 255 }),
+  notionId: varchar("notion_id", { length: 255 }),
+  program: varchar(),
+}, (table) => [
+  unique("teams_notion_id_key").on(table.notionId),
+]);
+
+// Events table
+export const events = pgTable("events", {
+  id: serial().primaryKey().notNull(),
+  title: varchar().notNull(),
+  description: text(),
+  eventType: varchar("event_type").notNull(),
+  startTime: timestamp("start_time", { mode: 'string' }).notNull(),
+  endTime: timestamp("end_time", { mode: 'string' }).notNull(),
+  location: varchar().notNull(),
+  teamId: integer("team_id"),
+  opponentTeam: varchar("opponent_team"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  childProfileId: integer("child_profile_id"),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringType: varchar("recurring_type"),
+  recurringEndDate: timestamp("recurring_end_date", { mode: 'string' }),
+  playerId: varchar("player_id"),
+  googleEventId: text("google_event_id"),
+  lastSyncedAt: timestamp("last_synced_at", { mode: 'string' }),
+  isActive: boolean("is_active").default(true),
+  latitude: doublePrecision(),
+  longitude: doublePrecision(),
+  tags: text().array(),
+});
+
+// Attendances table
+export const attendances = pgTable("attendances", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  eventId: integer("event_id").notNull(),
+  checkedInAt: timestamp("checked_in_at", { mode: 'string' }).defaultNow(),
+  qrCodeData: varchar("qr_code_data").notNull(),
+  type: varchar().default('advance'),
+  latitude: numeric(),
+  longitude: numeric(),
+});
+
+// Badges table
+export const badges = pgTable("badges", {
+  id: serial().primaryKey().notNull(),
+  name: varchar().notNull(),
+  description: text(),
+  icon: varchar().notNull(),
+  color: varchar().notNull(),
+  criteria: jsonb().notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  slug: varchar(),
+  tier: varchar(),
+  category: varchar(),
+  type: varchar(),
+}, (table) => [
+  unique("badges_slug_key").on(table.slug),
+]);
+
+// User Badges table
+export const userBadges = pgTable("user_badges", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  badgeId: integer("badge_id"),
+  earnedAt: timestamp("earned_at", { mode: 'string' }).defaultNow(),
+  profileId: varchar("profile_id"),
+  badgeType: varchar("badge_type", { length: 50 }),
+});
+
+// Announcements table
+export const announcements = pgTable("announcements", {
+  id: serial().primaryKey().notNull(),
+  title: varchar().notNull(),
+  content: text().notNull(),
+  authorId: varchar("author_id").notNull(),
+  teamId: integer("team_id"),
+  priority: varchar().default('medium'),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Messages table
+export const messages = pgTable("messages", {
+  id: serial().primaryKey().notNull(),
+  senderId: varchar("sender_id").notNull(),
+  content: text().notNull(),
+  teamId: integer("team_id").notNull(),
+  messageType: varchar("message_type").default('text'),
+  isModerated: boolean("is_moderated").default(false),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Payments table
+export const payments = pgTable("payments", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  amount: real().notNull(),
+  currency: varchar().default('usd'),
+  paymentType: varchar("payment_type").notNull(),
+  stripePaymentId: varchar("stripe_payment_id"),
+  status: varchar().default('pending'),
+  description: text(),
+  dueDate: date("due_date"),
+  paidAt: timestamp("paid_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  sportsEnginePaymentId: varchar("sports_engine_payment_id"),
+  sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
+});
 
 export const insertUserSchema = z.object({
   organizationId: z.string(),

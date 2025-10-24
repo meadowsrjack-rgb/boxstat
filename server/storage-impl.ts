@@ -1621,8 +1621,8 @@ class DatabaseStorage implements IStorage {
         duration: '3 months',
         isActive: true,
         category: 'youth',
+        ageGroups: [],
         createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         id: 'skills-academy',
@@ -1633,8 +1633,8 @@ class DatabaseStorage implements IStorage {
         duration: '2 months',
         isActive: true,
         category: 'training',
+        ageGroups: [],
         createdAt: new Date(),
-        updatedAt: new Date(),
       },
       {
         id: 'elite-training',
@@ -1645,8 +1645,8 @@ class DatabaseStorage implements IStorage {
         duration: '3 months',
         isActive: true,
         category: 'elite',
+        ageGroups: [],
         createdAt: new Date(),
-        updatedAt: new Date(),
       },
     ];
     return programs;

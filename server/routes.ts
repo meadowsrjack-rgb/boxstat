@@ -194,6 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verified: false,
         verificationToken,
         verificationExpiry,
+        isActive: true,
       });
       
       // Send verification email

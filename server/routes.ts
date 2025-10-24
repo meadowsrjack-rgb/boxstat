@@ -581,6 +581,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get profile by ID
+  app.get('/api/profile/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const profileId = req.params.id;
+      const profile = await storage.getUser(profileId);
+      
+      if (!profile) {
+        return res.status(404).json({ error: 'Profile not found' });
+      }
+      
+      res.json(profile);
+    } catch (error: any) {
+      res.status(500).json({ error: 'Failed to fetch profile', message: error.message });
+    }
+  });
+
   // Update player profile (for parents updating child profiles or players updating self)
   app.patch('/api/profile/:id', isAuthenticated, async (req: any, res) => {
     try {

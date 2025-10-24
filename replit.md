@@ -11,6 +11,20 @@ This cross-platform mobile application for the UYP Basketball youth league provi
   - Users verified through boxstat.app domain
   - Database schema updated with verification fields (verified, verificationToken, verificationExpiry, magicLinkToken, magicLinkExpiry)
   - Backend endpoints: GET /api/auth/verify-email, POST /api/auth/request-magic-link, GET /api/auth/magic-link-login
+  - **Email Deliverability Improvements** (Oct 24, 2025):
+    - Professional email templates with plain text versions to avoid spam filters
+    - Removed emojis and excessive styling from emails
+    - Table-based HTML layout for better compatibility
+    - Subject lines: "Verify Your Email Address - BoxStat" and "Your Secure Login Link - BoxStat"
+  - **Registration Flow Enhancement** (Oct 24, 2025):
+    - Users can now continue registration BEFORE email verification (non-blocking flow)
+    - Verification reminder banner displayed on registration steps 2+
+    - After email verification, backend checks Stripe for existing customer data
+    - If Stripe customer found, automatically prefills user name and phone number
+    - Success message indicates when Stripe data was found and used
+  - **Security Fix** (Oct 24, 2025):
+    - Tokens now properly cleared using `null` instead of `undefined` after verification/login
+    - Prevents potential token reuse issues
   - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.
@@ -34,8 +48,9 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js
 - **Language**: TypeScript with ESM modules
-- **Authentication**: Replit Auth with OpenID Connect
+- **Authentication**: Custom email/password with email verification and magic link login (Resend)
 - **Session Management**: Express sessions with PostgreSQL storage
+- **Payment Processing**: Stripe for payment intents, subscriptions, and customer management
 - **Real-time Communication**: WebSocket support for features like team chat.
 - **API Design**: RESTful endpoints.
 
@@ -56,7 +71,13 @@ Preferred communication style: Simple, everyday language.
   - **Trophies**: UYP Legacy (yearly org-wide) and Team (seasonal coach-awarded)
 
 ### Key Features & Design Decisions
-- **Authentication Flow**: Post-login account linking system with automatic coach detection via email domain. Users are directed to appropriate dashboards (coach, parent, or player) based on profile type.
+- **Authentication Flow**: 
+  - Email/password authentication with required email verification before login
+  - Magic link passwordless login option (15-minute expiry)
+  - Non-blocking registration flow - users can fill out registration form while awaiting email verification
+  - Stripe customer data lookup and auto-prefill after email verification
+  - Post-login account linking system with automatic coach detection via email domain
+  - Users directed to appropriate dashboards (coach, parent, or player) based on profile type
 - **User Management**: Single Parent account with linked child profiles. Implements a Dual Mode System (Parent/Player) secured by a 4-digit PIN. Users can delete their profiles (parent, player, or coach) from settings.
 - **Player Profile Management**: Profiles require verification to become public/searchable, linking with the Notion database via email matching. Profiles start as unverified and are filtered from public search results until verified. All required fields must be completed (name, date of birth, jersey number, team, height, city, position).
 - **Team Management**: Teams are organized into four programs with rosters synced from Notion databases. Players can directly select and be assigned to teams without approval. Coaches join existing teams from a comprehensive list and can manually add/remove players.
@@ -67,7 +88,7 @@ Preferred communication style: Simple, everyday language.
 - **Roster Management**: Coach dashboards display all Notion players for their teams, indicating players without app accounts and disabling actions for them. **App team assignments always take precedence over Notion data** - if a player changes their team in the app, the app assignment overrides what Notion says.
 - **Notion Sync**: Syncs player data from Notion database on startup and automatically every 24 hours at 2 AM Pacific Time. Pulls from 4 team columns: Youth Club Team, High School Team, FNHTL Team, and Skills Academy Session. Players read from Current Program, Grade, Status, and Session fields.
 - **Event & Scheduling**: Handles various event types managed by admins and coaches within the app. Features an enhanced calendar UI with color-coded events and a sliding drawer for details. Players can RSVP to events within a specific window and check-in using device GPS location (within 200m of event). Events can be created individually via the admin dashboard or bulk uploaded via CSV.
-- **Payment Integration**: Uses SportsEngine for secure payment processing (league fees, uniforms, tournaments) with transaction tracking and quick pay options.
+- **Payment Integration**: Uses Stripe for secure payment processing (league fees, uniforms, tournaments) with transaction tracking, subscription management, and customer data integration.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball branding with a red theme, and PWA capabilities. Player dashboard includes skills progress and interactive trophy/badge counters. Coach dashboard features a QR code scanner for player check-ins and team management. Player Mode restricts access to pricing/payment options.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5 scale) for various aspects, exportable as PDF or shareable via Web Share API.
 - **Coach Settings**: Coaching experience includes years of experience, bio, previous teams coached, playing experience, and coaching philosophy. Team management functionality is centralized in the Coach Dashboard's Team tab.

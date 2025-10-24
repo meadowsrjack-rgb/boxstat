@@ -265,8 +265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Prefill user data from Stripe if available
             const updateData: any = {
               verified: true,
-              verificationToken: undefined,
-              verificationExpiry: undefined,
+              verificationToken: null,
+              verificationExpiry: null,
             };
             
             // Extract first and last name from Stripe name if user doesn't have them
@@ -299,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!stripeCustomerData) {
         await storage.updateUser(user.id, {
           verified: true,
-          verificationToken: undefined,
-          verificationExpiry: undefined,
+          verificationToken: null,
+          verificationExpiry: null,
         });
       }
       
@@ -387,8 +387,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear magic link token
       await storage.updateUser(user.id, {
-        magicLinkToken: undefined,
-        magicLinkExpiry: undefined,
+        magicLinkToken: null,
+        magicLinkExpiry: null,
       });
       
       // Set session

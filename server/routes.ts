@@ -775,6 +775,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const organizationId = "default-org";
       
+      // Helper function to sanitize date strings (convert empty strings to null)
+      const sanitizeDate = (date: any) => {
+        if (!date || date === '') return null;
+        return date;
+      };
+      
       // Determine the primary email (where verification was sent)
       const primaryEmail = registrationType === "my_child" 
         ? parentInfo?.email 
@@ -818,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: parentInfo.firstName,
           lastName: parentInfo.lastName,
           phoneNumber: parentInfo.phoneNumber,
-          dateOfBirth: parentInfo.dateOfBirth,
+          dateOfBirth: sanitizeDate(parentInfo.dateOfBirth),
           password: hashedPassword,
           packageSelected: packageId,
           hasRegistered: true,
@@ -836,7 +842,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: "player",
             firstName: player.firstName,
             lastName: player.lastName,
-            dateOfBirth: player.dateOfBirth,
+            dateOfBirth: sanitizeDate(player.dateOfBirth),
             gender: player.gender,
             accountHolderId,
             packageSelected: packageId,
@@ -854,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: "parent", // Self-registering player is considered parent
           firstName: player.firstName,
           lastName: player.lastName,
-          dateOfBirth: player.dateOfBirth,
+          dateOfBirth: sanitizeDate(player.dateOfBirth),
           gender: player.gender,
           password: hashedPassword,
           packageSelected: packageId,

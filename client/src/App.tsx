@@ -81,6 +81,27 @@ import {
 } from "@/pages/coach-setting-pages";
 
 
+// Protected Route wrapper - redirects to landing if not authenticated
+function ProtectedRoute({ component: Component }: { component: React.ComponentType<any> }) {
+  const { user, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    setLocation("/");
+    return null;
+  }
+
+  return <Component />;
+}
+
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
   // Temporarily disable profile check to isolate error
   return <>{children}</>;
@@ -189,8 +210,8 @@ function Router() {
         }
         return <UnifiedAccount />;
       }} />
-      <Route path="/unified-account" component={UnifiedAccount} />
-      <Route path="/add-player" component={AddPlayer} />
+      <Route path="/unified-account" component={() => <ProtectedRoute component={UnifiedAccount} />} />
+      <Route path="/add-player" component={() => <ProtectedRoute component={AddPlayer} />} />
       <Route path="/dashboard" component={() => {
         switch ((user as any)?.userType) {
           case "admin":
@@ -203,10 +224,10 @@ function Router() {
             return <PlayerDashboard />;
         }
       }} />
-      <Route path="/player-dashboard" component={() => <PlayerDashboard />} />
-      <Route path="/admin-dashboard" component={() => <AdminDashboard />} />
-      <Route path="/coach-dashboard" component={() => <CoachDashboard />} />
-      <Route path="/admin" component={() => <AdminDashboard />} />
+      <Route path="/player-dashboard" component={() => <ProtectedRoute component={PlayerDashboard} />} />
+      <Route path="/admin-dashboard" component={() => <ProtectedRoute component={AdminDashboard} />} />
+      <Route path="/coach-dashboard" component={() => <ProtectedRoute component={CoachDashboard} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminDashboard} />} />
       
       {/* Player/Team search and detail routes */}
       <Route path="/search" component={SearchPage} />
@@ -214,40 +235,40 @@ function Router() {
       <Route path="/players/:id" component={PlayerDetailPage} />
       
       {/* Routes available to all authenticated users */}
-      <Route path="/profile" component={Profile} />
-      <Route path="/settings" component={SettingsPage} />
-      <Route path="/player-settings" component={PlayerSettingsPage} />
-      <Route path="/coach-settings" component={CoachSettingsPage} />
+      <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+      <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
+      <Route path="/player-settings" component={() => <ProtectedRoute component={PlayerSettingsPage} />} />
+      <Route path="/coach-settings" component={() => <ProtectedRoute component={CoachSettingsPage} />} />
       
       {/* Individual Player Setting Pages */}
-      <Route path="/player-settings/profile" component={PlayerProfilePage} />
-      <Route path="/player-settings/privacy" component={PlayerPrivacyPage} />
-      <Route path="/player-settings/notifications" component={PlayerNotificationsPage} />
-      <Route path="/player-settings/security" component={PlayerSecurityPage} />
-      <Route path="/player-settings/devices" component={PlayerDevicesPage} />
-      <Route path="/player-settings/legal" component={PlayerLegalPage} />
-      <Route path="/player-settings/danger" component={PlayerDangerPage} />
+      <Route path="/player-settings/profile" component={() => <ProtectedRoute component={PlayerProfilePage} />} />
+      <Route path="/player-settings/privacy" component={() => <ProtectedRoute component={PlayerPrivacyPage} />} />
+      <Route path="/player-settings/notifications" component={() => <ProtectedRoute component={PlayerNotificationsPage} />} />
+      <Route path="/player-settings/security" component={() => <ProtectedRoute component={PlayerSecurityPage} />} />
+      <Route path="/player-settings/devices" component={() => <ProtectedRoute component={PlayerDevicesPage} />} />
+      <Route path="/player-settings/legal" component={() => <ProtectedRoute component={PlayerLegalPage} />} />
+      <Route path="/player-settings/danger" component={() => <ProtectedRoute component={PlayerDangerPage} />} />
       
       {/* Individual Coach Setting Pages */}
-      <Route path="/coach-settings/profile" component={CoachProfilePage} />
-      <Route path="/coach-settings/coaching" component={CoachCoachingPage} />
-      <Route path="/coach-settings/privacy" component={CoachPrivacyPage} />
-      <Route path="/coach-settings/notifications" component={CoachNotificationsPage} />
-      <Route path="/coach-settings/security" component={CoachSecurityPage} />
-      <Route path="/coach-settings/connections" component={CoachConnectionsPage} />
-      <Route path="/coach-settings/billing" component={CoachBillingPage} />
-      <Route path="/coach-settings/devices" component={CoachDevicesPage} />
-      <Route path="/coach-settings/legal" component={CoachLegalPage} />
-      <Route path="/coach-settings/danger" component={CoachDangerPage} />
+      <Route path="/coach-settings/profile" component={() => <ProtectedRoute component={CoachProfilePage} />} />
+      <Route path="/coach-settings/coaching" component={() => <ProtectedRoute component={CoachCoachingPage} />} />
+      <Route path="/coach-settings/privacy" component={() => <ProtectedRoute component={CoachPrivacyPage} />} />
+      <Route path="/coach-settings/notifications" component={() => <ProtectedRoute component={CoachNotificationsPage} />} />
+      <Route path="/coach-settings/security" component={() => <ProtectedRoute component={CoachSecurityPage} />} />
+      <Route path="/coach-settings/connections" component={() => <ProtectedRoute component={CoachConnectionsPage} />} />
+      <Route path="/coach-settings/billing" component={() => <ProtectedRoute component={CoachBillingPage} />} />
+      <Route path="/coach-settings/devices" component={() => <ProtectedRoute component={CoachDevicesPage} />} />
+      <Route path="/coach-settings/legal" component={() => <ProtectedRoute component={CoachLegalPage} />} />
+      <Route path="/coach-settings/danger" component={() => <ProtectedRoute component={CoachDangerPage} />} />
       
-      <Route path="/team" component={TeamDetails} />
-      <Route path="/schedule" component={Schedule} />
-      <Route path="/chat" component={Chat} />
-      <Route path="/training" component={Training} />
-      <Route path="/training-library" component={TrainingLibrary} />
-      <Route path="/test-route" component={TestRoute} />
-      <Route path="/trophies-badges" component={TrophiesBadges} />
-      <Route path="/skills" component={Skills} />
+      <Route path="/team" component={() => <ProtectedRoute component={TeamDetails} />} />
+      <Route path="/schedule" component={() => <ProtectedRoute component={Schedule} />} />
+      <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
+      <Route path="/training" component={() => <ProtectedRoute component={Training} />} />
+      <Route path="/training-library" component={() => <ProtectedRoute component={TrainingLibrary} />} />
+      <Route path="/test-route" component={() => <ProtectedRoute component={TestRoute} />} />
+      <Route path="/trophies-badges" component={() => <ProtectedRoute component={TrophiesBadges} />} />
+      <Route path="/skills" component={() => <ProtectedRoute component={Skills} />} />
       <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/payments" component={RegistrationStatus} />
       <Route path="/no-profiles" component={NoProfiles} />

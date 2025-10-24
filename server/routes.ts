@@ -56,6 +56,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // =============================================
+  // STATIC ASSETS ROUTES
+  // =============================================
+  
+  // Serve BoxStat logo for emails
+  app.get('/assets/logo', (req, res) => {
+    const logoPath = new URL('../attached_assets/BoxStats_1761255444178.png', import.meta.url).pathname;
+    res.sendFile(logoPath);
+  });
+  
+  // =============================================
   // AUTH ROUTES
   // =============================================
   

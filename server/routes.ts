@@ -700,100 +700,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { registrationType, parentInfo, players, packageId, password, email } = req.body;
       
-      const organizationId = "default-org"; // In production, this would be determined by subdomain
+      const organizationId = "default-org";
+      
+      // Determine the primary email (where verification was sent)
+      const primaryEmail = registrationType === "my_child" 
+        ? parentInfo?.email 
+        : (email || players[0]?.email);
+      
+      if (!primaryEmail) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email is required to complete registration" 
+        });
+      }
+      
+      // Check if user exists and is verified (should have been created at step 1)
+      const existingUser = await storage.getUserByEmail(primaryEmail, organizationId);
+      
+      if (!existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "No verification found for this email. Please start registration again." 
+        });
+      }
+      
+      if (!existingUser.verified) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Please verify your email before completing registration. Check your inbox for the verification link." 
+        });
+      }
       
       // Hash the password
       const hashedPassword = password ? hashPassword(password) : undefined;
       
-      // Generate cryptographically secure verification token (valid for 24 hours)
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      
-      // Create parent account if registering for child
+      // Update user with full registration details
       let accountHolderId: string | undefined;
       let primaryUser: any = null;
       
       if (registrationType === "my_child" && parentInfo) {
-        const parent = await storage.createUser({
-          organizationId,
-          email: parentInfo.email,
+        // Update the existing parent user with full details
+        primaryUser = await storage.updateUser(existingUser.id, {
           role: "parent",
           firstName: parentInfo.firstName,
           lastName: parentInfo.lastName,
           phoneNumber: parentInfo.phoneNumber,
           dateOfBirth: parentInfo.dateOfBirth,
           password: hashedPassword,
-          registrationType,
           packageSelected: packageId,
           hasRegistered: true,
-          isActive: true,
-          verified: false,
-          verificationToken,
-          verificationExpiry,
         });
-        accountHolderId = parent.id;
-        primaryUser = parent;
+        accountHolderId = existingUser.id;
         
-        // Send verification email to parent
-        await emailService.sendVerificationEmail({
-          email: parent.email,
-          firstName: parent.firstName,
-          verificationToken,
-        });
-      }
-      
-      // Create player profiles
-      const createdPlayers = [];
-      for (const player of players) {
-        const playerEmail = registrationType === "myself" 
-          ? (email || parentInfo?.email || players[0]?.email || "") 
-          : `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`;
+        // Create player profiles for children
+        const createdPlayers = [];
+        for (const player of players) {
+          const playerEmail = `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`;
           
-        const playerUser = await storage.createUser({
-          organizationId,
-          email: playerEmail,
-          role: registrationType === "myself" ? "parent" : "player",
+          const playerUser = await storage.createUser({
+            organizationId,
+            email: playerEmail,
+            role: "player",
+            firstName: player.firstName,
+            lastName: player.lastName,
+            dateOfBirth: player.dateOfBirth,
+            gender: player.gender,
+            accountHolderId,
+            packageSelected: packageId,
+            teamAssignmentStatus: "pending",
+            hasRegistered: true,
+            verified: true, // Child profiles are auto-verified through parent
+            isActive: true,
+          });
+          createdPlayers.push(playerUser);
+        }
+      } else {
+        // "myself" registration - update existing user with full details
+        const player = players[0];
+        primaryUser = await storage.updateUser(existingUser.id, {
+          role: "parent", // Self-registering player is considered parent
           firstName: player.firstName,
           lastName: player.lastName,
           dateOfBirth: player.dateOfBirth,
           gender: player.gender,
-          registrationType,
-          accountHolderId,
+          password: hashedPassword,
           packageSelected: packageId,
           teamAssignmentStatus: "pending",
           hasRegistered: true,
-          password: registrationType === "myself" ? hashedPassword : undefined,
-          isActive: true,
-          verified: false,
-          verificationToken: registrationType === "myself" ? verificationToken : undefined,
-          verificationExpiry: registrationType === "myself" ? verificationExpiry : undefined,
         });
-        createdPlayers.push(playerUser);
-        
-        // For "myself" registration, the player is the primary user
-        if (registrationType === "myself" && !primaryUser) {
-          primaryUser = playerUser;
-          
-          // Send verification email to self-registering player
-          await emailService.sendVerificationEmail({
-            email: playerEmail,
-            firstName: player.firstName,
-            verificationToken,
-          });
-        }
       }
-      
-      // DON'T automatically log in - user needs to verify email first
       
       res.json({
         success: true,
-        message: "Registration successful! Please check your email to verify your account.",
-        requiresVerification: true,
-        email: primaryUser?.email,
+        message: "Registration complete! You can now login.",
+        requiresVerification: false,
+        email: primaryEmail,
       });
     } catch (error: any) {
       console.error("Registration error:", error);
-      res.status(400).json({ message: error.message || "Registration failed" });
+      res.status(400).json({ 
+        success: false, 
+        message: error.message || "Registration failed" 
+      });
     }
   });
   

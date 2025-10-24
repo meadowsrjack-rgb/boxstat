@@ -381,6 +381,36 @@ function EmailEntryStep({
 
   const handleSubmit = async (data: { email: string }) => {
     const checkData = await checkEmail(data.email);
+    
+    // Send verification email immediately at step 1
+    try {
+      const verifyResponse = await apiRequest("/api/auth/send-verification", {
+        method: "POST",
+        data: {
+          email: data.email,
+          organizationId: "default-org",
+        },
+      });
+      
+      if (verifyResponse.success) {
+        toast({
+          title: "Verification Email Sent!",
+          description: "Please check your inbox and verify your email before completing registration.",
+        });
+      }
+    } catch (error: any) {
+      // If email already exists and is verified, show error and don't proceed
+      if (error.message?.includes("already registered")) {
+        toast({
+          title: "Email Already Registered",
+          description: "This email is already verified. Please login instead.",
+          variant: "destructive",
+        });
+        return;
+      }
+      console.error("Error sending verification:", error);
+    }
+    
     onSubmit(data, checkData);
   };
 

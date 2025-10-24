@@ -23,7 +23,7 @@ let wss: WebSocketServer | null = null;
 
 // Initialize Stripe
 const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
   : null;
 
 // Simple password hashing for development (use bcrypt in production)
@@ -48,6 +48,12 @@ const isAuthenticated = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  
+  // Initialize test users in development
+  if (process.env.NODE_ENV === 'development') {
+    // Type assertion to access the method
+    await (storage as any).initializeTestUsers?.();
+  }
   
   // =============================================
   // AUTH ROUTES
@@ -299,8 +305,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!stripeCustomerData) {
         await storage.updateUser(user.id, {
           verified: true,
-          verificationToken: null,
-          verificationExpiry: null,
+          verificationToken: null as any,
+          verificationExpiry: null as any,
         });
       }
       
@@ -387,8 +393,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear magic link token
       await storage.updateUser(user.id, {
-        magicLinkToken: null,
-        magicLinkExpiry: null,
+        magicLinkToken: null as any,
+        magicLinkExpiry: null as any,
       });
       
       // Set session

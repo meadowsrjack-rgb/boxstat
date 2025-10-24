@@ -1045,6 +1045,32 @@ import * as schema from "../shared/schema";
 class DatabaseStorage implements IStorage {
   private defaultOrgId = "default-org";
 
+  // Initialize test users for development
+  async initializeTestUsers(): Promise<void> {
+    try {
+      // Check if test user already exists
+      const existingUser = await this.getUserByEmail("test@example.com", this.defaultOrgId);
+      
+      if (!existingUser) {
+        // Create test user with pre-verified status
+        await this.createUser({
+          organizationId: this.defaultOrgId,
+          email: "test@example.com",
+          password: Buffer.from("test123").toString('base64'),
+          role: "parent",
+          firstName: "Test",
+          lastName: "User",
+          verified: true, // Pre-verified for easy testing
+          isActive: true,
+          hasRegistered: true,
+        });
+        console.log('✅ Created pre-verified test user: test@example.com');
+      }
+    } catch (error) {
+      console.error('Error initializing test users:', error);
+    }
+  }
+
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {
     if (id !== this.defaultOrgId) return undefined;

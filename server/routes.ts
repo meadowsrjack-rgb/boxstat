@@ -21,6 +21,11 @@ import {
 
 let wss: WebSocketServer | null = null;
 
+// Initialize Stripe
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-12-18.acacia" })
+  : null;
+
 // Simple password hashing for development (use bcrypt in production)
 function hashPassword(password: string): string {
   // Very basic hashing - in production use bcrypt
@@ -238,14 +243,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Verification token has expired" });
       }
       
-      // Mark user as verified
-      await storage.updateUser(user.id, {
-        verified: true,
-        verificationToken: undefined,
-        verificationExpiry: undefined,
-      });
+      // Check Stripe for existing customer data
+      let stripeCustomerData = null;
+      if (stripe && user.email) {
+        try {
+          const customers = await stripe.customers.list({
+            email: user.email,
+            limit: 1,
+          });
+          
+          if (customers.data.length > 0) {
+            const customer = customers.data[0];
+            stripeCustomerData = {
+              id: customer.id,
+              name: customer.name,
+              phone: customer.phone,
+              address: customer.address,
+              metadata: customer.metadata,
+            };
+            
+            // Prefill user data from Stripe if available
+            const updateData: any = {
+              verified: true,
+              verificationToken: undefined,
+              verificationExpiry: undefined,
+            };
+            
+            // Extract first and last name from Stripe name if user doesn't have them
+            if (customer.name && (!user.firstName || !user.lastName)) {
+              const nameParts = customer.name.split(' ');
+              if (!user.firstName && nameParts.length > 0) {
+                updateData.firstName = nameParts[0];
+              }
+              if (!user.lastName && nameParts.length > 1) {
+                updateData.lastName = nameParts.slice(1).join(' ');
+              }
+            }
+            
+            // Add phone if available
+            if (customer.phone && !user.phoneNumber) {
+              updateData.phoneNumber = customer.phone;
+            }
+            
+            await storage.updateUser(user.id, updateData);
+            
+            console.log(`Stripe customer found and data prefilled for user ${user.email}`);
+          }
+        } catch (stripeError: any) {
+          console.error("Stripe lookup error (non-fatal):", stripeError.message);
+          // Continue even if Stripe lookup fails
+        }
+      }
       
-      res.json({ success: true, message: "Email verified successfully! You can now log in." });
+      // Mark user as verified (if not already done above)
+      if (!stripeCustomerData) {
+        await storage.updateUser(user.id, {
+          verified: true,
+          verificationToken: undefined,
+          verificationExpiry: undefined,
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: stripeCustomerData 
+          ? "Email verified successfully! We found your information from previous payments and have prefilled your profile."
+          : "Email verified successfully! You can now log in.",
+        stripeDataFound: !!stripeCustomerData,
+      });
     } catch (error: any) {
       console.error("Email verification error:", error);
       res.status(500).json({ success: false, message: "Verification failed" });

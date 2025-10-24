@@ -1034,4 +1034,794 @@ class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// =============================================
+// Database Storage Implementation
+// =============================================
+
+import { db } from "./db";
+import { eq, and, gte } from "drizzle-orm";
+import * as schema from "../migrations/schema";
+
+class DatabaseStorage implements IStorage {
+  private defaultOrgId = "default-org";
+
+  // Organization operations
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    if (id !== this.defaultOrgId) return undefined;
+    
+    return {
+      id: this.defaultOrgId,
+      name: "My Sports Organization",
+      subdomain: "default",
+      sportType: "basketball",
+      primaryColor: "#1E40AF",
+      secondaryColor: "#DC2626",
+      logoUrl: undefined,
+      terminology: {
+        athlete: "Player",
+        coach: "Coach",
+        parent: "Parent",
+        team: "Team",
+        practice: "Practice",
+        game: "Game",
+      },
+      features: {
+        payments: true,
+        awards: true,
+        messaging: true,
+        events: true,
+        training: true,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  async getOrganizationBySubdomain(subdomain: string): Promise<Organization | undefined> {
+    if (subdomain !== "default") return undefined;
+    return this.getOrganization(this.defaultOrgId);
+  }
+
+  async createOrganization(org: Omit<Organization, "id" | "createdAt" | "updatedAt">): Promise<Organization> {
+    throw new Error("Organization creation not supported in database mode yet");
+  }
+
+  async updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined> {
+    return undefined;
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const results = await db.select().from(schema.users).where(eq(schema.users.id, id));
+    if (results.length === 0) return undefined;
+    
+    const user = results[0];
+    return this.mapDbUserToUser(user);
+  }
+
+  async getUserByEmail(email: string, organizationId: string): Promise<User | undefined> {
+    const results = await db.select().from(schema.users).where(eq(schema.users.email, email));
+    if (results.length === 0) return undefined;
+    
+    const user = results[0];
+    return this.mapDbUserToUser(user);
+  }
+
+  async getUsersByOrganization(organizationId: string): Promise<User[]> {
+    const results = await db.select().from(schema.users);
+    return results.map(user => this.mapDbUserToUser(user));
+  }
+
+  async getUsersByTeam(teamId: string): Promise<User[]> {
+    const teamIdNum = parseInt(teamId);
+    const results = await db.select().from(schema.users).where(eq(schema.users.teamId, teamIdNum));
+    return results.map(user => this.mapDbUserToUser(user));
+  }
+
+  async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
+    const results = await db.select().from(schema.users).where(eq(schema.users.role, role));
+    return results.map(user => this.mapDbUserToUser(user));
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const dbUser = {
+      id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileImageUrl: user.profileImageUrl,
+      role: user.role,
+      parentId: user.accountHolderId,
+      teamId: user.teamId ? parseInt(user.teamId) : null,
+      dateOfBirth: user.dateOfBirth,
+      phoneNumber: user.phoneNumber,
+      address: user.address,
+      jerseyNumber: user.jerseyNumber,
+      position: user.position,
+      passcode: user.passcode,
+      stripeCustomerId: user.stripeCustomerId,
+      userType: user.role,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.users).values(dbUser).returning();
+    return this.mapDbUserToUser(results[0]);
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const dbUpdates: any = {
+      firstName: updates.firstName,
+      lastName: updates.lastName,
+      email: updates.email,
+      profileImageUrl: updates.profileImageUrl,
+      role: updates.role,
+      dateOfBirth: updates.dateOfBirth,
+      phoneNumber: updates.phoneNumber,
+      address: updates.address,
+      jerseyNumber: updates.jerseyNumber,
+      position: updates.position,
+      passcode: updates.passcode,
+      teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
+      parentId: updates.accountHolderId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.users)
+      .set(dbUpdates)
+      .where(eq(schema.users.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbUserToUser(results[0]);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(schema.users).where(eq(schema.users.id, id));
+  }
+
+  // Team operations
+  async getTeam(id: string): Promise<Team | undefined> {
+    const teamId = parseInt(id);
+    const results = await db.select().from(schema.teams).where(eq(schema.teams.id, teamId));
+    if (results.length === 0) return undefined;
+    return this.mapDbTeamToTeam(results[0]);
+  }
+
+  async getTeamsByOrganization(organizationId: string): Promise<Team[]> {
+    const results = await db.select().from(schema.teams);
+    return results.map(team => this.mapDbTeamToTeam(team));
+  }
+
+  async getTeamsByCoach(coachId: string): Promise<Team[]> {
+    const results = await db.select().from(schema.teams).where(eq(schema.teams.coachId, coachId));
+    return results.map(team => this.mapDbTeamToTeam(team));
+  }
+
+  async createTeam(team: InsertTeam): Promise<Team> {
+    const dbTeam = {
+      name: team.name,
+      ageGroup: team.ageGroup || '',
+      color: team.color || '#1E40AF',
+      coachId: team.coachIds?.[0],
+      division: team.division,
+      program: team.program,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.teams).values(dbTeam).returning();
+    return this.mapDbTeamToTeam(results[0]);
+  }
+
+  async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
+    const teamId = parseInt(id);
+    const dbUpdates: any = {
+      name: updates.name,
+      ageGroup: updates.ageGroup,
+      color: updates.color,
+      coachId: updates.coachIds?.[0],
+      division: updates.division,
+      program: updates.program,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.teams)
+      .set(dbUpdates)
+      .where(eq(schema.teams.id, teamId))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbTeamToTeam(results[0]);
+  }
+
+  async deleteTeam(id: string): Promise<void> {
+    const teamId = parseInt(id);
+    await db.delete(schema.teams).where(eq(schema.teams.id, teamId));
+  }
+
+  // Event operations
+  async getEvent(id: string): Promise<Event | undefined> {
+    const eventId = parseInt(id);
+    const results = await db.select().from(schema.events).where(eq(schema.events.id, eventId));
+    if (results.length === 0) return undefined;
+    return this.mapDbEventToEvent(results[0]);
+  }
+
+  async getEventsByOrganization(organizationId: string): Promise<Event[]> {
+    const results = await db.select().from(schema.events);
+    return results.map(event => this.mapDbEventToEvent(event));
+  }
+
+  async getEventsByTeam(teamId: string): Promise<Event[]> {
+    const teamIdNum = parseInt(teamId);
+    const results = await db.select().from(schema.events).where(eq(schema.events.teamId, teamIdNum));
+    return results.map(event => this.mapDbEventToEvent(event));
+  }
+
+  async getUpcomingEvents(organizationId: string): Promise<Event[]> {
+    const now = new Date().toISOString();
+    const results = await db.select().from(schema.events)
+      .where(and(
+        gte(schema.events.startTime, now),
+        eq(schema.events.isActive, true)
+      ));
+    return results.map(event => this.mapDbEventToEvent(event));
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const dbEvent = {
+      title: event.title,
+      description: event.description,
+      eventType: event.eventType || 'practice',
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      teamId: event.teamId ? parseInt(event.teamId) : null,
+      opponentTeam: event.opponentTeam,
+      isActive: event.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.events).values(dbEvent).returning();
+    return this.mapDbEventToEvent(results[0]);
+  }
+
+  async updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined> {
+    const eventId = parseInt(id);
+    const dbUpdates: any = {
+      title: updates.title,
+      description: updates.description,
+      eventType: updates.eventType,
+      startTime: updates.startTime ? new Date(updates.startTime).toISOString() : undefined,
+      endTime: updates.endTime ? new Date(updates.endTime).toISOString() : undefined,
+      location: updates.location,
+      teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
+      opponentTeam: updates.opponentTeam,
+      isActive: updates.isActive,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.events)
+      .set(dbUpdates)
+      .where(eq(schema.events.id, eventId))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbEventToEvent(results[0]);
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    const eventId = parseInt(id);
+    await db.delete(schema.events).where(eq(schema.events.id, eventId));
+  }
+
+  // Attendance operations
+  async getAttendance(eventId: string, userId: string): Promise<Attendance | undefined> {
+    const eventIdNum = parseInt(eventId);
+    const results = await db.select().from(schema.attendances)
+      .where(and(
+        eq(schema.attendances.eventId, eventIdNum),
+        eq(schema.attendances.userId, userId)
+      ));
+    if (results.length === 0) return undefined;
+    return this.mapDbAttendanceToAttendance(results[0]);
+  }
+
+  async getAttendancesByEvent(eventId: string): Promise<Attendance[]> {
+    const eventIdNum = parseInt(eventId);
+    const results = await db.select().from(schema.attendances)
+      .where(eq(schema.attendances.eventId, eventIdNum));
+    return results.map(att => this.mapDbAttendanceToAttendance(att));
+  }
+
+  async getAttendancesByUser(userId: string): Promise<Attendance[]> {
+    const results = await db.select().from(schema.attendances)
+      .where(eq(schema.attendances.userId, userId));
+    return results.map(att => this.mapDbAttendanceToAttendance(att));
+  }
+
+  async createAttendance(attendance: InsertAttendance): Promise<Attendance> {
+    const dbAttendance = {
+      userId: attendance.userId,
+      eventId: parseInt(attendance.eventId),
+      type: attendance.type || 'advance',
+      qrCodeData: `qr-${Date.now()}`,
+      checkedInAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.attendances).values(dbAttendance).returning();
+    return this.mapDbAttendanceToAttendance(results[0]);
+  }
+
+  // Award operations
+  async getAward(id: string): Promise<Award | undefined> {
+    const awardId = parseInt(id);
+    const results = await db.select().from(schema.badges).where(eq(schema.badges.id, awardId));
+    if (results.length === 0) return undefined;
+    return this.mapDbBadgeToAward(results[0]);
+  }
+
+  async getAwardsByOrganization(organizationId: string): Promise<Award[]> {
+    const results = await db.select().from(schema.badges);
+    return results.map(badge => this.mapDbBadgeToAward(badge));
+  }
+
+  async createAward(award: InsertAward): Promise<Award> {
+    const dbAward = {
+      name: award.name,
+      description: award.description,
+      icon: award.icon,
+      color: award.color || '#1E40AF',
+      criteria: {},
+      type: award.type,
+      category: award.category,
+      isActive: award.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.badges).values(dbAward).returning();
+    return this.mapDbBadgeToAward(results[0]);
+  }
+
+  async updateAward(id: string, updates: Partial<Award>): Promise<Award | undefined> {
+    const awardId = parseInt(id);
+    const dbUpdates: any = {
+      name: updates.name,
+      description: updates.description,
+      icon: updates.icon,
+      color: updates.color,
+      category: updates.category,
+      isActive: updates.isActive,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.badges)
+      .set(dbUpdates)
+      .where(eq(schema.badges.id, awardId))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbBadgeToAward(results[0]);
+  }
+
+  async deleteAward(id: string): Promise<void> {
+    const awardId = parseInt(id);
+    await db.delete(schema.badges).where(eq(schema.badges.id, awardId));
+  }
+
+  // User Award operations
+  async getUserAwards(userId: string): Promise<UserAward[]> {
+    const results = await db.select().from(schema.userBadges)
+      .where(eq(schema.userBadges.userId, userId));
+    return results.map(userBadge => this.mapDbUserBadgeToUserAward(userBadge));
+  }
+
+  async awardUser(userAward: InsertUserAward): Promise<UserAward> {
+    const dbUserAward = {
+      userId: userAward.userId,
+      badgeId: parseInt(userAward.awardId),
+      earnedAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.userBadges).values(dbUserAward).returning();
+    return this.mapDbUserBadgeToUserAward(results[0]);
+  }
+
+  // Announcement operations
+  async getAnnouncement(id: string): Promise<Announcement | undefined> {
+    const announcementId = parseInt(id);
+    const results = await db.select().from(schema.announcements)
+      .where(eq(schema.announcements.id, announcementId));
+    if (results.length === 0) return undefined;
+    return this.mapDbAnnouncementToAnnouncement(results[0]);
+  }
+
+  async getAnnouncementsByOrganization(organizationId: string): Promise<Announcement[]> {
+    const results = await db.select().from(schema.announcements);
+    return results.map(ann => this.mapDbAnnouncementToAnnouncement(ann));
+  }
+
+  async getAnnouncementsByTeam(teamId: string): Promise<Announcement[]> {
+    const teamIdNum = parseInt(teamId);
+    const results = await db.select().from(schema.announcements)
+      .where(eq(schema.announcements.teamId, teamIdNum));
+    return results.map(ann => this.mapDbAnnouncementToAnnouncement(ann));
+  }
+
+  async createAnnouncement(announcement: InsertAnnouncement): Promise<Announcement> {
+    const dbAnnouncement = {
+      title: announcement.title,
+      content: announcement.content,
+      authorId: announcement.authorId,
+      teamId: announcement.teamId ? parseInt(announcement.teamId) : null,
+      priority: announcement.priority || 'medium',
+      isActive: announcement.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.announcements).values(dbAnnouncement).returning();
+    return this.mapDbAnnouncementToAnnouncement(results[0]);
+  }
+
+  async updateAnnouncement(id: string, updates: Partial<Announcement>): Promise<Announcement | undefined> {
+    const announcementId = parseInt(id);
+    const dbUpdates: any = {
+      title: updates.title,
+      content: updates.content,
+      teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
+      priority: updates.priority,
+      isActive: updates.isActive,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.announcements)
+      .set(dbUpdates)
+      .where(eq(schema.announcements.id, announcementId))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbAnnouncementToAnnouncement(results[0]);
+  }
+
+  async deleteAnnouncement(id: string): Promise<void> {
+    const announcementId = parseInt(id);
+    await db.delete(schema.announcements).where(eq(schema.announcements.id, announcementId));
+  }
+
+  // Message operations
+  async getMessagesByTeam(teamId: string): Promise<Message[]> {
+    const teamIdNum = parseInt(teamId);
+    const results = await db.select().from(schema.messages)
+      .where(eq(schema.messages.teamId, teamIdNum));
+    return results.map(msg => this.mapDbMessageToMessage(msg));
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const dbMessage = {
+      senderId: message.senderId,
+      teamId: parseInt(message.teamId),
+      content: message.content,
+      messageType: message.messageType || 'text',
+      isModerated: false,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.messages).values(dbMessage).returning();
+    return this.mapDbMessageToMessage(results[0]);
+  }
+
+  // Payment operations
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const paymentId = parseInt(id);
+    const results = await db.select().from(schema.payments)
+      .where(eq(schema.payments.id, paymentId));
+    if (results.length === 0) return undefined;
+    return this.mapDbPaymentToPayment(results[0]);
+  }
+
+  async getPaymentsByOrganization(organizationId: string): Promise<Payment[]> {
+    const results = await db.select().from(schema.payments);
+    return results.map(payment => this.mapDbPaymentToPayment(payment));
+  }
+
+  async getPaymentsByUser(userId: string): Promise<Payment[]> {
+    const results = await db.select().from(schema.payments)
+      .where(eq(schema.payments.userId, userId));
+    return results.map(payment => this.mapDbPaymentToPayment(payment));
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const dbPayment = {
+      userId: payment.userId,
+      amount: payment.amount,
+      currency: payment.currency || 'usd',
+      paymentType: payment.paymentType,
+      status: payment.status || 'pending',
+      description: payment.description,
+      dueDate: payment.dueDate,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.payments).values(dbPayment).returning();
+    return this.mapDbPaymentToPayment(results[0]);
+  }
+
+  async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined> {
+    const paymentId = parseInt(id);
+    const dbUpdates: any = {
+      amount: updates.amount,
+      status: updates.status,
+      description: updates.description,
+      paidAt: updates.paidAt ? new Date(updates.paidAt).toISOString() : undefined,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.payments)
+      .set(dbUpdates)
+      .where(eq(schema.payments.id, paymentId))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbPaymentToPayment(results[0]);
+  }
+
+  // Program operations (placeholders - no database table yet)
+  async getProgram(id: string): Promise<Program | undefined> {
+    return undefined;
+  }
+
+  async getProgramsByOrganization(organizationId: string): Promise<Program[]> {
+    // Return hardcoded programs until we migrate to proper database tables
+    const programs: Program[] = [
+      {
+        id: 'youth-club-full',
+        organizationId,
+        name: 'Youth Club - Full Season',
+        description: 'Complete youth basketball program with weekly training',
+        price: 299,
+        duration: '3 months',
+        features: ['Weekly practices', 'Game days', 'Coach training', 'Team jersey'],
+        isActive: true,
+        category: 'youth',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'skills-academy',
+        organizationId,
+        name: 'Skills Academy',
+        description: 'Focused skill development program',
+        price: 199,
+        duration: '2 months',
+        features: ['Skill drills', 'Personal coaching', 'Progress tracking'],
+        isActive: true,
+        category: 'training',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'elite-training',
+        organizationId,
+        name: 'Elite Player Development',
+        description: 'Advanced training for competitive players',
+        price: 399,
+        duration: '3 months',
+        features: ['1-on-1 coaching', 'Video analysis', 'Tournament entry', 'Advanced drills'],
+        isActive: true,
+        category: 'elite',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+    return programs;
+  }
+
+  async createProgram(program: InsertProgram): Promise<Program> {
+    throw new Error("Program creation not supported in database mode yet");
+  }
+
+  async updateProgram(id: string, updates: Partial<Program>): Promise<Program | undefined> {
+    return undefined;
+  }
+
+  async deleteProgram(id: string): Promise<void> {
+    return;
+  }
+
+  // Package Selection operations (placeholders - no database table yet)
+  async getPackageSelection(id: string): Promise<PackageSelection | undefined> {
+    return undefined;
+  }
+
+  async getPackageSelectionsByParent(parentUserId: string): Promise<PackageSelection[]> {
+    return [];
+  }
+
+  async getPackageSelectionsByChild(childUserId: string): Promise<PackageSelection[]> {
+    return [];
+  }
+
+  async createPackageSelection(selection: InsertPackageSelection): Promise<PackageSelection> {
+    throw new Error("Package selection creation not supported in database mode yet");
+  }
+
+  async updatePackageSelection(id: string, updates: Partial<PackageSelection>): Promise<PackageSelection | undefined> {
+    return undefined;
+  }
+
+  async deletePackageSelection(id: string): Promise<void> {
+    return;
+  }
+
+  async markPackageSelectionPaid(id: string): Promise<PackageSelection | undefined> {
+    return undefined;
+  }
+
+  // Helper mapping functions
+  private mapDbUserToUser(dbUser: any): User {
+    return {
+      id: dbUser.id,
+      organizationId: this.defaultOrgId,
+      email: dbUser.email || '',
+      role: (dbUser.role || 'parent') as UserRole,
+      firstName: dbUser.firstName || '',
+      lastName: dbUser.lastName || '',
+      profileImageUrl: dbUser.profileImageUrl,
+      dateOfBirth: dbUser.dateOfBirth,
+      phoneNumber: dbUser.phoneNumber,
+      address: dbUser.address,
+      gender: undefined,
+      accountHolderId: dbUser.parentId,
+      packageSelected: undefined,
+      teamAssignmentStatus: undefined,
+      hasRegistered: dbUser.profileCompleted,
+      teamId: dbUser.teamId?.toString(),
+      jerseyNumber: dbUser.jerseyNumber,
+      position: dbUser.position,
+      program: undefined,
+      rating: undefined,
+      awardsCount: undefined,
+      stripeCustomerId: dbUser.stripeCustomerId,
+      passcode: dbUser.passcode,
+      password: dbUser.password,
+      isActive: true,
+      verified: true,
+      createdAt: new Date(dbUser.createdAt),
+      updatedAt: new Date(dbUser.updatedAt),
+    };
+  }
+
+  private mapDbTeamToTeam(dbTeam: any): Team {
+    return {
+      id: dbTeam.id.toString(),
+      organizationId: this.defaultOrgId,
+      name: dbTeam.name,
+      ageGroup: dbTeam.ageGroup,
+      program: dbTeam.program,
+      color: dbTeam.color || '#1E40AF',
+      coachIds: dbTeam.coachId ? [dbTeam.coachId] : [],
+      division: dbTeam.division,
+      createdAt: new Date(dbTeam.createdAt),
+    };
+  }
+
+  private mapDbEventToEvent(dbEvent: any): Event {
+    return {
+      id: dbEvent.id.toString(),
+      organizationId: this.defaultOrgId,
+      title: dbEvent.title,
+      description: dbEvent.description,
+      eventType: dbEvent.eventType,
+      startTime: new Date(dbEvent.startTime),
+      endTime: new Date(dbEvent.endTime),
+      location: dbEvent.location,
+      teamId: dbEvent.teamId?.toString(),
+      opponentTeam: dbEvent.opponentTeam,
+      isActive: dbEvent.isActive ?? true,
+      createdAt: new Date(dbEvent.createdAt),
+    };
+  }
+
+  private mapDbAttendanceToAttendance(dbAttendance: any): Attendance {
+    return {
+      id: dbAttendance.id.toString(),
+      userId: dbAttendance.userId,
+      eventId: dbAttendance.eventId.toString(),
+      checkedInAt: new Date(dbAttendance.checkedInAt),
+      type: (dbAttendance.type || 'advance') as "advance" | "onsite",
+    };
+  }
+
+  private mapDbBadgeToAward(dbBadge: any): Award {
+    return {
+      id: dbBadge.id.toString(),
+      organizationId: this.defaultOrgId,
+      name: dbBadge.name,
+      description: dbBadge.description,
+      icon: dbBadge.icon,
+      color: dbBadge.color,
+      type: (dbBadge.type || 'badge') as "badge" | "trophy",
+      category: dbBadge.category,
+      isActive: dbBadge.isActive ?? true,
+      createdAt: new Date(dbBadge.createdAt),
+    };
+  }
+
+  private mapDbUserBadgeToUserAward(dbUserBadge: any): UserAward {
+    return {
+      id: dbUserBadge.id.toString(),
+      userId: dbUserBadge.userId,
+      awardId: dbUserBadge.badgeId.toString(),
+      earnedAt: new Date(dbUserBadge.earnedAt),
+    };
+  }
+
+  private mapDbAnnouncementToAnnouncement(dbAnnouncement: any): Announcement {
+    return {
+      id: dbAnnouncement.id.toString(),
+      organizationId: this.defaultOrgId,
+      title: dbAnnouncement.title,
+      content: dbAnnouncement.content,
+      authorId: dbAnnouncement.authorId,
+      teamId: dbAnnouncement.teamId?.toString(),
+      priority: (dbAnnouncement.priority || 'medium') as "low" | "medium" | "high",
+      isActive: dbAnnouncement.isActive ?? true,
+      createdAt: new Date(dbAnnouncement.createdAt),
+    };
+  }
+
+  private mapDbMessageToMessage(dbMessage: any): Message {
+    return {
+      id: dbMessage.id.toString(),
+      teamId: dbMessage.teamId.toString(),
+      senderId: dbMessage.senderId,
+      content: dbMessage.content,
+      messageType: (dbMessage.messageType || 'text') as "text" | "system",
+      createdAt: new Date(dbMessage.createdAt),
+    };
+  }
+
+  private mapDbPaymentToPayment(dbPayment: any): Payment {
+    return {
+      id: dbPayment.id.toString(),
+      organizationId: this.defaultOrgId,
+      userId: dbPayment.userId,
+      amount: dbPayment.amount,
+      currency: dbPayment.currency || 'usd',
+      paymentType: dbPayment.paymentType,
+      status: (dbPayment.status || 'pending') as "pending" | "completed" | "failed" | "refunded",
+      description: dbPayment.description,
+      dueDate: dbPayment.dueDate,
+      paidAt: dbPayment.paidAt ? new Date(dbPayment.paidAt) : undefined,
+      createdAt: new Date(dbPayment.createdAt),
+    };
+  }
+}
+
+// Export both storage implementations
+// Switched to DatabaseStorage for data persistence
+export const storage = new DatabaseStorage();
+
+// Export DatabaseStorage class for reference
+export { DatabaseStorage };

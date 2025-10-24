@@ -86,7 +86,7 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     console.log('✅ Sports Management Platform ready!');
-    console.log('📝 In-memory storage initialized');
+    console.log('📝 Database storage initialized');
     console.log('👤 Default admin user: admin@example.com');
     console.log('🏢 Default organization: My Sports Organization');
     console.log('\n🧪 Test Account Credentials:');

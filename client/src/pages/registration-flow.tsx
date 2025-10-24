@@ -132,9 +132,9 @@ export default function RegistrationFlow() {
             description: "Welcome! Redirecting to your account...",
           });
           
-          // Redirect to account page
+          // Redirect to account page with full reload to ensure session is established
           setTimeout(() => {
-            setLocation("/account");
+            window.location.href = "/account";
           }, 1000);
         }
       } catch (loginError: any) {

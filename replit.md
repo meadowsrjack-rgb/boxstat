@@ -31,6 +31,11 @@ This cross-platform mobile application for the UYP Basketball youth league provi
   - **Security Fix** (Oct 24, 2025):
     - Tokens now properly cleared using `null` instead of `undefined` after verification/login
     - Prevents potential token reuse issues
+  - **Session Cookie Fix** (Oct 24, 2025):
+    - Added `trust proxy` setting to support secure cookies behind Replit's HTTPS proxy
+    - Changed `sameSite` cookie attribute to 'lax' for proper session persistence in production
+    - Fixed 401 errors after login in published/production environment
+    - Sessions now work correctly across both development and production deployments
   - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.

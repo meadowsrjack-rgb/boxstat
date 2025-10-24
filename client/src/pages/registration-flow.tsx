@@ -75,7 +75,14 @@ interface Player extends PlayerInfo {
 export default function RegistrationFlow() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
+  
+  // Check if user is coming back from email verification
+  const urlParams = new URLSearchParams(window.location.search);
+  const verifiedEmail = urlParams.get('verified');
+  const continueReg = urlParams.get('continue');
+  
+  const [currentStep, setCurrentStep] = useState(verifiedEmail && continueReg ? 2 : 1);
+  const [emailSent, setEmailSent] = useState(false);
   const [registrationData, setRegistrationData] = useState<{
     email?: string;
     emailCheckData?: any;
@@ -86,6 +93,7 @@ export default function RegistrationFlow() {
     password?: string;
     paymentCompleted?: boolean;
   }>({
+    email: verifiedEmail || undefined,
     players: [],
     paymentCompleted: false,
   });
@@ -98,19 +106,44 @@ export default function RegistrationFlow() {
   const totalSteps = registrationData.registrationType === "myself" ? 6 : 7;
 
   const registrationMutation = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (payload: any) => {
       return await apiRequest("/api/registration/complete", {
         method: "POST",
-        data,
+        data: payload.data,
       });
     },
-    onSuccess: (data: any) => {
-      // Move to verification step
-      setCurrentStep(totalSteps + 1);
-      toast({
-        title: "Registration Successful!",
-        description: "Please check your email to verify your account.",
-      });
+    onSuccess: async (response: any, variables: any) => {
+      // Auto-login the user using the password from variables
+      const { password } = variables;
+      const email = variables.data.email;
+      
+      try {
+        const loginResponse = await apiRequest("/api/auth/login", {
+          method: "POST",
+          data: {
+            email,
+            password,
+          },
+        });
+        
+        if (loginResponse.success) {
+          toast({
+            title: "Registration Complete!",
+            description: "Welcome! Redirecting to your account...",
+          });
+          
+          // Redirect to account page
+          setTimeout(() => {
+            setLocation("/account");
+          }, 1000);
+        }
+      } catch (loginError: any) {
+        toast({
+          title: "Registration Successful!",
+          description: "Please login to access your account.",
+        });
+        setLocation("/login");
+      }
     },
     onError: (error: any) => {
       toast({
@@ -140,7 +173,12 @@ export default function RegistrationFlow() {
       acceptTerms: accountData.acceptTerms,
       marketingOptIn: accountData.marketingOptIn,
     };
-    registrationMutation.mutate(submissionData);
+    
+    // Pass password separately for auto-login to avoid state timing issues
+    registrationMutation.mutate({ 
+      data: submissionData, 
+      password: accountData.password 
+    });
   };
 
   return (
@@ -189,25 +227,8 @@ export default function RegistrationFlow() {
         </CardHeader>
 
         <CardContent>
-          {/* Email Verification Reminder Banner */}
-          {currentStep > 1 && currentStep <= totalSteps && registrationData.email && (
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg" data-testid="verification-reminder">
-              <div className="flex items-start gap-3">
-                <Mail className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div>
-                  <h4 className="font-semibold text-blue-900 text-sm">Verify Your Email</h4>
-                  <p className="text-xs text-blue-700 mt-1">
-                    We sent a verification email to <strong>{registrationData.email}</strong>. 
-                    Please check your inbox (and spam folder) and click the verification link. 
-                    You can continue registration while we verify your email.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Step 1: Email Entry */}
-          {currentStep === 1 && (
+          {currentStep === 1 && !emailSent && (
             <EmailEntryStep
               onSubmit={(data, emailCheckData) => {
                 setRegistrationData({ 
@@ -215,9 +236,28 @@ export default function RegistrationFlow() {
                   email: data.email,
                   emailCheckData: emailCheckData 
                 });
-                handleNext();
+                setEmailSent(true);
               }}
             />
+          )}
+          
+          {/* Step 1: Email Verification Pending */}
+          {currentStep === 1 && emailSent && (
+            <div className="text-center py-8">
+              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
+                <Mail className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Check Your Email</h3>
+              <p className="text-gray-600 mb-2">
+                We sent a verification link to <strong>{registrationData.email}</strong>
+              </p>
+              <p className="text-gray-600 mb-6">
+                Please click the link in your email to verify your account and continue with registration.
+              </p>
+              <p className="text-sm text-gray-500">
+                Don't see it? Check your spam folder.
+              </p>
+            </div>
           )}
 
           {/* Step 2: Registration Intent */}

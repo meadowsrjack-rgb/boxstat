@@ -314,7 +314,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true, 
         message: stripeCustomerData 
           ? "Email verified successfully! We found your information from previous payments and have prefilled your profile."
-          : "Email verified successfully! You can now log in.",
+          : "Email verified successfully! Continue with registration.",
+        email: user.email,
         stripeDataFound: !!stripeCustomerData,
       });
     } catch (error: any) {

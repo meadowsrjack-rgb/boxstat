@@ -30,6 +30,14 @@ export default function VerifyEmail() {
           setStatus("success");
           setMessage(data.message);
           setStripeDataFound(data.stripeDataFound || false);
+          
+          // Get the verified user's email from the response
+          const userEmail = data.email || params.get("email");
+          
+          // Automatically redirect to registration to continue
+          setTimeout(() => {
+            setLocation(`/registration?verified=${encodeURIComponent(userEmail || "")}&continue=true`);
+          }, 2000);
         } else {
           setStatus("error");
           setMessage(data.message || "Verification failed. Please try again.");
@@ -41,7 +49,7 @@ export default function VerifyEmail() {
     };
 
     verifyEmail();
-  }, []);
+  }, [setLocation]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -70,30 +78,17 @@ export default function VerifyEmail() {
                   <div>
                     <h4 className="font-semibold text-green-900 text-sm">Payment History Found</h4>
                     <p className="text-xs text-green-700 mt-1">
-                      We found your information from previous payments and have prefilled your profile. You can now log in and complete your registration.
+                      We found your information from previous payments and have prefilled your profile.
                     </p>
                   </div>
                 </div>
               </div>
             )}
             {status === "success" && (
-              <>
-                <Button 
-                  onClick={() => setLocation("/login")}
-                  className="w-full"
-                  data-testid="button-go-to-login"
-                >
-                  Go to Login
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setLocation("/register")}
-                  className="w-full"
-                  data-testid="button-continue-registration"
-                >
-                  Continue Registration
-                </Button>
-              </>
+              <div className="text-center py-4">
+                <Loader2 className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-3" />
+                <p className="text-sm text-gray-600">Redirecting you to continue registration...</p>
+              </div>
             )}
             {status === "error" && (
               <>

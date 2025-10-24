@@ -1040,7 +1040,7 @@ class MemStorage implements IStorage {
 
 import { db } from "./db";
 import { eq, and, gte } from "drizzle-orm";
-import * as schema from "../migrations/schema";
+import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
   private defaultOrgId = "default-org";

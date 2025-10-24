@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
+import { pgTable, varchar, integer, timestamp, text, boolean, date, serial, foreignKey, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // =============================================
 // Organization (Multi-Tenant) Schema
@@ -103,6 +105,56 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Drizzle pgTable definition for users
+export const users = pgTable("users", {
+  id: varchar().primaryKey().notNull(),
+  email: varchar(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  role: varchar().default('parent').notNull(),
+  parentId: varchar("parent_id"),
+  teamId: integer("team_id"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+  sportsEngineCustomerId: varchar("sports_engine_customer_id"),
+  sportsEngineSubscriptionId: varchar("sports_engine_subscription_id"),
+  userType: varchar("user_type").default('parent').notNull(),
+  dateOfBirth: date("date_of_birth"),
+  phoneNumber: varchar("phone_number"),
+  emergencyContact: varchar("emergency_contact"),
+  emergencyPhone: varchar("emergency_phone"),
+  address: text(),
+  medicalInfo: text("medical_info"),
+  allergies: text(),
+  jerseyNumber: integer("jersey_number"),
+  position: varchar(),
+  schoolGrade: varchar("school_grade"),
+  parentalConsent: boolean("parental_consent").default(false),
+  profileCompleted: boolean("profile_completed").default(false),
+  qrCodeData: varchar("qr_code_data"),
+  teamName: varchar("team_name"),
+  age: varchar(),
+  height: varchar(),
+  passcode: varchar({ length: 4 }),
+  password: varchar(),
+  city: varchar(),
+  youthClubTeam: varchar("youth_club_team"),
+  linkedAccountId: varchar("linked_account_id"),
+  activeProfileId: varchar("active_profile_id"),
+  verified: boolean().default(false),
+  verificationToken: varchar("verification_token"),
+  verificationExpiry: timestamp("verification_expiry", { mode: 'string' }),
+  magicLinkToken: varchar("magic_link_token"),
+  magicLinkExpiry: timestamp("magic_link_expiry", { mode: 'string' }),
+  googleId: varchar("google_id"),
+  appleId: varchar("apple_id"),
+}, (table) => [
+  unique("users_email_unique").on(table.email),
+]);
 
 export const insertUserSchema = z.object({
   organizationId: z.string(),

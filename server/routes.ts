@@ -138,6 +138,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Send verification email (called at step 1 of registration)
+  app.post('/api/auth/send-verification', async (req: any, res) => {
+    try {
+      const { email, organizationId = "default-org" } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
+      
+      // Check if user already exists
+      let user = await storage.getUserByEmail(email, organizationId);
+      
+      if (user) {
+        // User already exists
+        if (user.verified) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "This email is already registered and verified. Please login instead." 
+          });
+        }
+        
+        // User exists but not verified - resend verification email
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        
+        await storage.updateUser(user.id, {
+          verificationToken,
+          verificationExpiry,
+        });
+        
+        await emailService.sendVerificationEmail({
+          email: user.email,
+          firstName: user.firstName || 'User',
+          verificationToken,
+        });
+        
+        return res.json({ 
+          success: true, 
+          message: "Verification email sent. Please check your inbox.",
+          exists: true 
+        });
+      }
+      
+      // Create minimal user record with just email
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      user = await storage.createUser({
+        organizationId,
+        email,
+        role: 'parent', // Default role, will be updated later
+        firstName: '',
+        lastName: '',
+        verified: false,
+        verificationToken,
+        verificationExpiry,
+      });
+      
+      // Send verification email
+      await emailService.sendVerificationEmail({
+        email,
+        firstName: 'User',
+        verificationToken,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Verification email sent! Please check your inbox.",
+        userId: user.id,
+        exists: false
+      });
+    } catch (error: any) {
+      console.error("Send verification error:", error);
+      res.status(500).json({ success: false, message: "Failed to send verification email" });
+    }
+  });
+  
   // Email verification endpoint
   app.get('/api/auth/verify-email', async (req: any, res) => {
     try {

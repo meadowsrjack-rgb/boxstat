@@ -59,13 +59,13 @@ ${DOMAIN}
                 <td style="padding: 40px 20px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
-                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #dc2626; border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">BoxStat</h1>
+                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
                       <td style="padding: 40px;">
-                        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #111827;">Verify Your Email Address</h2>
+                        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #111827; text-align: center;">Verify Your Email Address</h2>
                         <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Hi ${displayName},</p>
                         <p style="margin: 0 0 30px; font-size: 16px; color: #374151;">Thank you for registering with BoxStat. To complete your registration and access your account, please verify your email address by clicking the button below.</p>
                         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -75,7 +75,7 @@ ${DOMAIN}
                             </td>
                           </tr>
                         </table>
-                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button doesn't work, copy and paste this link into your browser:</p>
+                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button does not work, copy and paste this link into your browser:</p>
                         <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; word-break: break-all;">${verificationUrl}</p>
                         <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">This link will expire in 24 hours. If you did not create an account with BoxStat, please disregard this email.</p>
                       </td>
@@ -143,13 +143,13 @@ ${DOMAIN}
                 <td style="padding: 40px 20px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <tr>
-                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #dc2626; border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">BoxStat</h1>
+                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
                       </td>
                     </tr>
                     <tr>
                       <td style="padding: 40px;">
-                        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #111827;">Your Secure Login Link</h2>
+                        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #111827; text-align: center;">Your Secure Login Link</h2>
                         <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Hi ${displayName},</p>
                         <p style="margin: 0 0 30px; font-size: 16px; color: #374151;">You requested a secure login link for your BoxStat account. Click the button below to log in - no password required.</p>
                         <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
@@ -159,7 +159,7 @@ ${DOMAIN}
                             </td>
                           </tr>
                         </table>
-                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button doesn't work, copy and paste this link into your browser:</p>
+                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button does not work, copy and paste this link into your browser:</p>
                         <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; word-break: break-all;">${magicLinkUrl}</p>
                         <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">This link will expire in 15 minutes. If you did not request this login link, please disregard this email.</p>
                       </td>

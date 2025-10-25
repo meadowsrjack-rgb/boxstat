@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
+import searchRoutes from "./routes/search";
 import {
   insertUserSchema,
   insertTeamSchema,
@@ -64,6 +65,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const logoPath = new URL('../attached_assets/BoxStats_1761255444178.png', import.meta.url).pathname;
     res.sendFile(logoPath);
   });
+  
+  // =============================================
+  // SEARCH ROUTES
+  // =============================================
+  
+  app.use('/api/search', searchRoutes);
   
   // =============================================
   // AUTH ROUTES

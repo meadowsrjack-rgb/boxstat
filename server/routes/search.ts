@@ -1,9 +1,22 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { isAuthenticated } from "../replitAuth";
 import { notionService } from "../notion";
 
 const router = Router();
+
+// Simple auth middleware - same as in routes.ts
+const isAuthenticated = (req: any, res: any, next: any) => {
+  if (req.session && req.session.userId) {
+    req.user = { 
+      id: req.session.userId, 
+      organizationId: req.session.organizationId || "default-org", 
+      role: req.session.role || "user" 
+    };
+    next();
+  } else {
+    res.status(401).json({ error: "Not authenticated" });
+  }
+};
 
 router.get("/players", isAuthenticated, async (req: any, res) => {
   const q = (req.query.q as string || "").trim();

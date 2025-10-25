@@ -5,6 +5,15 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
 
 ## Recent Changes
 
+### Database Layer Profile Field Fix (Oct 25, 2025)
+- **Height & City Persistence Fix**: Fixed database layer to properly save and retrieve all profile fields
+  - Root cause: storage-impl.ts was missing height, city, age, and other fields in TWO locations
+  - Fixed updateUser method: Added city, height, age, emergencyContact, emergencyPhone, medicalInfo, allergies to dbUpdates object
+  - Fixed mapDbUserToUser mapper: Added same fields to database-to-application mapping function
+  - Result: All profile fields now persist correctly and round-trip through the database layer
+  - Testing: E2E test verified height and city save, persist after reload, and display on both settings and dashboard
+  - Location: server/storage-impl.ts (lines ~1194-1224 for updateUser, lines ~1735-1779 for mapper)
+
 ### Player Profile Settings Fixes (Oct 25, 2025)
 - **Team Field Removal**: Removed team selector from player-editable profile settings
   - Deleted team field from player-dashboard.tsx Profile tab (editableProfile state)

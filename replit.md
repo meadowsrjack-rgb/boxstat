@@ -47,12 +47,17 @@ This cross-platform mobile application for the UYP Basketball youth league provi
     - Self-registered players now correctly appear in their account page with registration details
     - Added registrationType field to track 'myself' vs 'my_child' registration flows
     - Admin accounts can now add players (previously only parents could add players)
-  - **Add Player Flow Simplification** (Oct 25, 2025):
-    - Simplified add-player flow from 5 steps to 3 steps (Name → DOB → Gender)
-    - Removed payment/package selection requirement - parents/admins pay once for family account, add children freely
+  - **Add Player Payment Flow Implementation** (Oct 25, 2025):
+    - Restored 5-step add-player flow with Stripe payment integration (Name → DOB → Gender → Package Selection → Payment Summary)
+    - Each child player registration requires payment for selected program/package
+    - Database schema: Added paymentStatus ("pending"/"paid") and stripeCheckoutSessionId fields to users table
+    - POST /api/account/players creates pending player and returns Stripe Checkout session URL
+    - After package selection, redirects to Stripe for secure payment processing
+    - Stripe webhook (checkout.session.completed) marks player as paid and finalizes registration
+    - Success flow: Payment → redirect to /unified-account?payment=success → player appears in account
+    - Fixed DbStorage.getProgram() method (was returning undefined, now properly returns programs from hardcoded list)
     - Fixed GET /api/account/players to properly handle admin accounts (was returning empty array)
-    - Added query cache invalidation after adding players to refresh UI immediately
-    - Players now appear instantly in account page with updated active player counts
+    - End-to-end tested with Stripe test mode - complete flow verified
   - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.

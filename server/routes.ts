@@ -900,8 +900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { id } = req.user;
     const user = await storage.getUser(id);
     
-    if (user?.role === "parent") {
-      // Get all players linked to this parent
+    if (user?.role === "parent" || user?.role === "admin") {
+      // Get all players linked to this parent/admin
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
       const linkedPlayers = allUsers.filter(u => u.accountHolderId === id && u.role === "player");
       res.json(linkedPlayers);

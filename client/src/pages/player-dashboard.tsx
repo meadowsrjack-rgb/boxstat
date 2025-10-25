@@ -37,6 +37,7 @@ import {
   Search,
   Ruler,
   Gauge,
+  Cake,
   Hash,
   Users,
   Copy,
@@ -1174,7 +1175,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                               className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
                               style={{ color: "#d82428" }}
                             >
-                              <Gauge className="h-4 w-4" />
+                              <Cake className="h-4 w-4" />
                             </span>
                             <span>AGE</span>
                           </div>

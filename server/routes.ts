@@ -594,7 +594,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log("✅ Checkout session completed:", session.id);
         
-        // Extract metadata
+        // Check if this is an "add_player" payment
+        if (session.metadata?.type === 'add_player') {
+          const playerId = session.metadata.playerId;
+          const accountHolderId = session.metadata.accountHolderId;
+          const packageId = session.metadata.packageId;
+          
+          if (!playerId || !accountHolderId) {
+            console.error("Missing required metadata for add_player:", { playerId, accountHolderId });
+            return res.status(400).json({ 
+              error: "Missing required metadata for add_player",
+              received: { playerId, accountHolderId }
+            });
+          }
+          
+          // Update player to finalize registration
+          const updatedPlayer = await storage.updateUser(playerId, {
+            paymentStatus: "paid",
+            hasRegistered: true,
+            stripeCheckoutSessionId: session.id,
+          });
+          
+          if (updatedPlayer) {
+            console.log(`✅ Player ${playerId} registration finalized after payment`);
+            
+            // Create a payment record
+            if (session.amount_total) {
+              try {
+                await storage.createPayment({
+                  organizationId: updatedPlayer.organizationId,
+                  userId: playerId,
+                  amount: session.amount_total / 100, // Convert from cents to dollars
+                  currency: 'usd',
+                  paymentType: 'add_player',
+                  status: 'completed',
+                  description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
+                });
+                console.log(`✅ Created payment record for player ${playerId}`);
+              } catch (paymentError: any) {
+                console.error("Error creating payment record:", paymentError);
+                // Don't fail the webhook if payment record creation fails
+              }
+            }
+          } else {
+            console.error(`⚠️ Could not find player ${playerId} to update`);
+          }
+          
+          return res.json({ received: true });
+        }
+        
+        // Handle package selection payments (existing family onboarding flow)
         const userId = session.metadata?.userId;
         const selectionIds = session.metadata?.packageSelectionIds;
         
@@ -936,10 +985,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Validate package selection
+      if (!packageId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Package selection is required" 
+        });
+      }
+      
+      // Get the selected program to check price
+      const program = await storage.getProgram(packageId);
+      if (!program) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Selected program not found" 
+        });
+      }
+      
+      if (!program.price || program.price <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Selected program has no valid price" 
+        });
+      }
+      
       // Create player email (temporary email pattern)
       const playerEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@temp.com`;
       
-      // Create child player user
+      // Create child player user with PENDING payment status
       const playerUser = await storage.createUser({
         organizationId: user.organizationId,
         email: playerEmail,
@@ -949,17 +1022,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dateOfBirth: dateOfBirth || null,
         gender: gender || null,
         accountHolderId: id,
-        packageSelected: packageId || null,
+        packageSelected: packageId,
         teamAssignmentStatus: "pending",
-        hasRegistered: true,
+        paymentStatus: "pending", // Player is pending until payment is complete
+        hasRegistered: false, // Will be set to true after payment
         verified: true, // Child profiles are auto-verified through parent
         isActive: true,
       });
       
+      // Create or retrieve Stripe customer
+      if (!stripe) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Payment processing is not configured" 
+        });
+      }
+      
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUser(user.id, { stripeCustomerId });
+      }
+      
+      // Get origin for URLs
+      const origin = `${req.protocol}://${req.get('host')}`;
+      
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: program.name,
+              description: `Registration for ${firstName} ${lastName}`,
+            },
+            unit_amount: program.price, // Price is already in cents
+          },
+          quantity: 1,
+        }],
+        mode: 'payment',
+        success_url: `${origin}/unified-account?payment=success`,
+        cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
+        metadata: {
+          type: 'add_player',
+          playerId: playerUser.id,
+          accountHolderId: id,
+          packageId: packageId,
+        },
+      });
+      
+      // Update player with checkout session ID
+      await storage.updateUser(playerUser.id, {
+        stripeCheckoutSessionId: session.id,
+      });
+      
       res.json({
         success: true,
-        player: playerUser,
-        message: "Player added successfully"
+        checkoutUrl: session.url,
+        playerId: playerUser.id,
+        message: "Player created. Please complete payment to finalize registration."
       });
     } catch (error: any) {
       console.error("Add player error:", error);

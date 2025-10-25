@@ -16,10 +16,25 @@ import {
   ArrowLeft,
   User,
 } from "lucide-react";
+import { useEffect } from "react";
 
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // Check for payment success in URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('payment') === 'success') {
+      toast({
+        title: "Payment Successful!",
+        description: "Player has been successfully added to your account.",
+      });
+      
+      // Clean up the URL
+      window.history.replaceState({}, '', '/unified-account');
+    }
+  }, [toast]);
 
   // Fetch current user
   const { data: user } = useQuery<any>({

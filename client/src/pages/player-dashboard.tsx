@@ -836,7 +836,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           </div>
         </div>
       </header>
-
       {/* Main */}
       <main className="max-w-md mx-auto">
         {/* Avatar header */}
@@ -1141,7 +1140,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     </div>
 
                     {/* Info grid */}
-                    <div className="relative px-6 pb-8">
+                    <div className="relative px-6 pb-8 bg-[#f9fafb]">
                       <div className="grid grid-cols-3 gap-3">
                         <motion.div
                           initial={{ y: 12, opacity: 0 }}
@@ -1347,7 +1346,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           )}
         </div>
       </main>
-
       {/* Foundation Program Popup (unchanged) */}
       <Dialog open={showFoundationProgram} onOpenChange={setShowFoundationProgram}>
         <DialogContent

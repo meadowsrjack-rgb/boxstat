@@ -241,8 +241,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // ---- Early guard
   const currentUser = user as UserType | null;
   
-  // Fetch active profile if parent has activeProfileId
-  const activeProfileId = (currentUser as any)?.activeProfileId;
+  // Fetch active profile if parent has activeProfileId OR if selectedPlayerId is in localStorage
+  const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
+  const activeProfileId = (currentUser as any)?.activeProfileId || selectedPlayerId;
   const { data: activeProfile, isLoading: isLoadingActiveProfile } = useQuery<UserType>({
     queryKey: [`/api/profile/${activeProfileId}`],
     queryFn: async () => {

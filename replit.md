@@ -65,6 +65,15 @@ This cross-platform mobile application for the UYP Basketball youth league provi
     - Age now calculated in real-time from dateOfBirth using calculateAge() helper function
     - Team badge only displays when teamName exists (no default "High School Elite")
     - Fields remain blank until user manually sets them in Settings > Profile Information
+  - **Find Players & Teams Search Update** (Oct 25, 2025):
+    - Updated all search endpoints to query Users table instead of non-existent Profiles table
+    - Registered search routes in server/routes.ts: `app.use('/api/search', searchRoutes)`
+    - Fixed authentication middleware to use session-based auth
+    - Endpoints: GET /api/search/players, GET /api/search/teams, GET /api/search/teams/:teamId
+    - Players search filters by role='player' AND verified=TRUE from Users table
+    - Teams search queries Teams table with roster count/details from Users table
+    - Removed references to profile_privacy, accounts tables (don't exist)
+    - End-to-end tested - all search functionality working correctly
   - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.

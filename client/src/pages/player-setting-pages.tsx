@@ -95,7 +95,9 @@ export function PlayerProfilePage() {
       
       const formData = new FormData();
       formData.append('photo', file);
-      const response = await fetch('/api/upload-profile-photo', {
+      // Pass profileId so backend updates the correct user
+      const url = `/api/upload-profile-photo?profileId=${profileId}`;
+      const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -111,6 +113,7 @@ export function PlayerProfilePage() {
       await queryClient.invalidateQueries({ queryKey: [`/api/profile/${accountId}`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", accountId], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/account/players"], refetchType: 'active' });
       
       setSelectedFile(null);
       if (previewUrl) {

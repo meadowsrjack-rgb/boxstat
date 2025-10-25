@@ -70,10 +70,13 @@ export function ParentProfilePage() {
       // Capture IDs before async operations
       const activeProfileId = (user as any)?.activeProfileId;
       const accountId = (user as any)?.id;
+      const targetProfileId = activeProfileId || accountId;
       
       const formData = new FormData();
       formData.append('photo', file);
-      const response = await fetch('/api/upload-profile-photo', {
+      // Pass profileId so backend updates the correct user
+      const url = `/api/upload-profile-photo?profileId=${targetProfileId}`;
+      const response = await fetch(url, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -111,6 +114,7 @@ export function ParentProfilePage() {
       await queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/account/players"], refetchType: 'active' });
       
       setSelectedFile(null);
       if (previewUrl) {

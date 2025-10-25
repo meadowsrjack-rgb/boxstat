@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -238,9 +239,12 @@ export default function UnifiedAccount() {
                     >
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between mb-4">
-                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                            {player.firstName?.[0]}{player.lastName?.[0]}
-                          </div>
+                          <Avatar className="w-16 h-16">
+                            <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+                              {player.firstName?.[0]}{player.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           {player.teamAssignmentStatus === "pending" && (
                             <Badge variant="outline" className="bg-yellow-50">
                               Pending

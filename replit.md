@@ -5,6 +5,18 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
 
 ## Recent Changes
 
+### Player Profile Settings Fixes (Oct 25, 2025)
+- **Team Field Removal**: Removed team selector from player-editable profile settings
+  - Deleted team field from player-dashboard.tsx Profile tab (editableProfile state)
+  - Deleted team field from player-setting-pages.tsx (state, queries, UI components)
+  - Team assignment remains admin-only, not editable by players
+  - Locations: player-dashboard.tsx SaveProfile component, player-setting-pages.tsx PlayerProfilePage
+- **Profile Save Bug Fix**: Fixed PATCH /api/profile/undefined 404 errors
+  - Added profileId fallback pattern: `activeProfileId || user.id` in both profile editing interfaces
+  - player-dashboard.tsx: SaveProfile component now receives displayProfile.id as prop
+  - player-setting-pages.tsx: Added const profileId with fallback, updated all queries/mutations
+  - Testing: Verified save works correctly with 200 response, Position and Jersey Number persist after reload
+
 ### Find Players & Teams Search Fix (Oct 25, 2025)
 - **Backend**: Updated all search endpoints to query Users table instead of non-existent Profiles table
   - Registered search routes in server/routes.ts: `app.use('/api/search', searchRoutes)`

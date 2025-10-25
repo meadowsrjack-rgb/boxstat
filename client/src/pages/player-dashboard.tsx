@@ -1106,7 +1106,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     />
 
                     {/* Header */}
-                    <div className="relative px-6 pt-8 pb-5 text-center">
+                    <div className="relative px-6 pt-8 pb-5 text-center bg-[#fbfbfc]">
                       
                       <h1
                         className="mt-3 text-4xl font-black tracking-tight leading-tight"

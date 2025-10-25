@@ -249,7 +249,7 @@ function GlassOverlay({ open, onClose, item }: { open: boolean; onClose: () => v
             </div>
             <div className="space-y-2 text-left">
               <h3 className="text-lg font-semibold leading-tight text-center">{item.title}</h3>
-              {how && <p className="text-sm text-white/90 leading-relaxed text-center">How to earn: {how}</p>}
+              {how && <p className="text-sm text-white/90 leading-relaxed text-center">{how}</p>}
               <p className="text-xs text-white/70 text-center">{typeLine(item)}</p>
             </div>
           </div>

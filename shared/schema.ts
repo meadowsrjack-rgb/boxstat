@@ -81,6 +81,8 @@ export interface User {
   
   // Payment information
   stripeCustomerId?: string; // Stripe Customer ID for payment tracking
+  stripeCheckoutSessionId?: string; // Stripe Checkout Session ID for player registration
+  paymentStatus?: string; // "pending" or "paid" for player registrations
   lastPaymentDate?: Date; // Date of last payment received
   nextPaymentDate?: Date; // Expected date of next payment (28 days from last)
   
@@ -118,6 +120,8 @@ export const users = pgTable("users", {
   teamId: integer("team_id"),
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
+  stripeCheckoutSessionId: varchar("stripe_checkout_session_id"),
+  paymentStatus: varchar("payment_status"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
   sportsEngineCustomerId: varchar("sports_engine_customer_id"),

@@ -15,7 +15,12 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
   - Added profileId fallback pattern: `activeProfileId || user.id` in both profile editing interfaces
   - player-dashboard.tsx: SaveProfile component now receives displayProfile.id as prop
   - player-setting-pages.tsx: Added const profileId with fallback, updated all queries/mutations
-  - Testing: Verified save works correctly with 200 response, Position and Jersey Number persist after reload
+- **Cache Invalidation Fix**: Fixed profile updates not showing in UI
+  - Root cause: Cache invalidation keys were mismatched with actual query keys
+  - player-setting-pages.tsx: Updated mutations to invalidate correct keys: `/api/profile/${id}`, `/api/auth/user`, `/api/child-profiles`
+  - player-dashboard.tsx: Added child-profiles cache invalidation to SaveProfile mutation
+  - Profile photo upload: Fixed cache invalidation to use same correct keys
+  - Testing: Verified profile updates (Position, Jersey, City) now display correctly in both player settings and player dashboard after save
 
 ### Find Players & Teams Search Fix (Oct 25, 2025)
 - **Backend**: Updated all search endpoints to query Users table instead of non-existent Profiles table

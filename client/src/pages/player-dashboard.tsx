@@ -157,6 +157,22 @@ type CheckIn = {
   createdAt: string;
 };
 
+// Helper function to calculate age from date of birth
+function calculateAge(dateOfBirth: string | null | undefined): number | null {
+  if (!dateOfBirth) return null;
+  
+  const today = new Date();
+  const birthDate = new Date(dateOfBirth);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
   const [showFoundationProgram, setShowFoundationProgram] = useState(false);
@@ -418,12 +434,13 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   useEffect(() => {
     if (displayProfile) {
       const cityValue = displayProfile.city || displayProfile.address || "";
+      const calculatedAge = calculateAge(displayProfile.dateOfBirth);
       setEditableProfile(prev => ({
         ...prev,
         firstName: displayProfile.firstName || "",
         lastName: displayProfile.lastName || "",
         teamName: displayProfile.teamName || "",
-        age: displayProfile.age || "",
+        age: calculatedAge !== null ? calculatedAge.toString() : "",
         height: displayProfile.height || "",
         location: cityValue,
         city: cityValue,
@@ -1103,16 +1120,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       </h1>
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
-                        {editableProfile.position || "Guard"} #{editableProfile.jerseyNumber || "23"}
+                        {editableProfile.position ? (
+                          <>
+                            {editableProfile.position} #{editableProfile.jerseyNumber || "—"}
+                          </>
+                        ) : (
+                          <span className="text-gray-400">Position not set</span>
+                        )}
                         {editableProfile.city && (
                           <div className="text-xs text-gray-600 mt-1">From {editableProfile.city}</div>
                         )}
                       </div>
 
-                      {(currentChild?.teamName || userTeam?.name || "High School Elite") && (
+                      {(currentChild?.teamName || userTeam?.name) && (
                         <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
                           <Shirt className="h-4 w-4 text-[#d82428]" />
-                          {currentChild?.teamName || userTeam?.name || "High School Elite"}
+                          {currentChild?.teamName || userTeam?.name}
                         </div>
                       )}
                     </div>
@@ -1136,7 +1159,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             <span>HEIGHT</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.height || "5'9\""}
+                            {editableProfile.height || <span className="text-gray-400 text-sm">Not set</span>}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>
@@ -1157,7 +1180,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             <span>AGE</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.age || "16"}
+                            {editableProfile.age || <span className="text-gray-400 text-sm">Not set</span>}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

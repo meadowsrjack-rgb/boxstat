@@ -5,6 +5,17 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
 
 ## Recent Changes
 
+### Profile Photo Upload Implementation (Oct 25, 2025)
+- **Image Upload Endpoint**: Created POST /api/upload-profile-photo endpoint to handle profile photo uploads
+  - Backend uses multer middleware for multipart/form-data file handling
+  - Files saved to public/uploads/ directory with unique filenames (profile-{timestamp}-{random}.{ext})
+  - File validation: Max 5MB, image types only (jpeg, jpg, png, gif, webp)
+  - Authorization: Parents can upload for children, users can upload for self, admins can upload for anyone
+  - Security: Files are deleted if authorization fails or any error occurs (prevents unauthorized file persistence)
+  - Response: Returns image URL (/uploads/filename) and updates user's profileImageUrl in database
+  - Location: server/routes.ts (lines ~36-68 for multer config, lines ~1166-1224 for endpoint)
+- **Testing**: E2E test verified uploads work, images persist after reload, and display on both settings and dashboard
+
 ### Database Layer Profile Field Fix (Oct 25, 2025)
 - **Height & City Persistence Fix**: Fixed database layer to properly save and retrieve all profile fields
   - Root cause: storage-impl.ts was missing height, city, age, and other fields in TWO locations

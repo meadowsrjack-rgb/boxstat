@@ -38,7 +38,9 @@ export function PlayerProfilePage() {
   const [, setLocation] = useLocation();
 
   // Get profile ID (activeProfileId for parents editing children, user.id for players editing themselves)
-  const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+  // Also check localStorage for selectedPlayerId (used when switching between child profiles)
+  const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
+  const profileId = (user as any)?.activeProfileId || selectedPlayerId || (user as any)?.id;
 
   // Fetch the active profile data
   const { data: activeProfile, isLoading: isLoadingProfile } = useQuery<any>({

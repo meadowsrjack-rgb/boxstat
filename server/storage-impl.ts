@@ -1632,7 +1632,9 @@ class DatabaseStorage implements IStorage {
 
   // Program operations (placeholders - no database table yet)
   async getProgram(id: string): Promise<Program | undefined> {
-    return undefined;
+    // Get all programs and find the one with matching ID
+    const programs = await this.getProgramsByOrganization(this.defaultOrgId);
+    return programs.find(program => program.id === id);
   }
 
   async getProgramsByOrganization(organizationId: string): Promise<Program[]> {

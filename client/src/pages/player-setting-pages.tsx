@@ -33,20 +33,17 @@ const GRADE_OPTIONS = ["3rd Grade", "4th Grade", "5th Grade", "6th Grade", "7th 
 
 export function PlayerProfilePage() {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast} = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  // Get profile ID (activeProfileId for parents editing children, user.id for players editing themselves)
+  const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+
   // Fetch the active profile data
   const { data: activeProfile, isLoading: isLoadingProfile } = useQuery<any>({
-    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
-    enabled: !!(user as any)?.activeProfileId,
-  });
-
-  // Fetch all teams for team selector
-  const { data: allTeams = [] } = useQuery<{ id: number; name: string; ageGroup: string; program: string }[]>({
-    queryKey: ['/api/teams'],
-    enabled: true,
+    queryKey: [`/api/profile/${profileId}`],
+    enabled: !!profileId,
   });
 
   const [profile, setProfile] = useState({
@@ -57,7 +54,6 @@ export function PlayerProfilePage() {
     city: "",
     age: "",
     height: "",
-    teamId: "",
     phoneNumber: "",
     emergencyContact: "",
     emergencyPhone: "",
@@ -76,7 +72,6 @@ export function PlayerProfilePage() {
         city: (activeProfile as any)?.city || activeProfile.address || "",
         age: (activeProfile as any)?.age || "",
         height: (activeProfile as any)?.height || "",
-        teamId: (activeProfile as any)?.teamId || "",
         phoneNumber: activeProfile.phoneNumber || "",
         emergencyContact: activeProfile.emergencyContact || "",
         emergencyPhone: activeProfile.emergencyPhone || "",
@@ -94,7 +89,6 @@ export function PlayerProfilePage() {
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       // Capture IDs before async operations
-      const activeProfileId = (user as any)?.activeProfileId;
       const accountId = (user as any)?.id;
       
       const formData = new FormData();
@@ -105,35 +99,35 @@ export function PlayerProfilePage() {
         body: formData,
       });
       if (!response.ok) throw new Error('Upload failed');
-      return { result: await response.json(), activeProfileId, accountId };
+      return { result: await response.json(), accountId };
     },
-    onSuccess: async ({ activeProfileId, accountId }) => {
+    onSuccess: async ({ accountId }) => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
       
       try {
         // Refetch and update profile data immediately
-        const response = await fetch(`/api/profile/${activeProfileId}`, { credentials: 'include' });
+        const response = await fetch(`/api/profile/${profileId}`, { credentials: 'include' });
         if (response.ok) {
           const updatedProfile = await response.json();
           // Directly update the cache with fresh data
-          queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
+          queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
         } else {
           // Fallback to invalidation with refetch if fetch fails
           await queryClient.invalidateQueries({ 
-            queryKey: [`/api/profile/${activeProfileId}`],
+            queryKey: [`/api/profile/${profileId}`],
             refetchType: 'active'
           });
         }
       } catch {
         // Fallback to invalidation with refetch on error
         await queryClient.invalidateQueries({ 
-          queryKey: [`/api/profile/${activeProfileId}`],
+          queryKey: [`/api/profile/${profileId}`],
           refetchType: 'active'
         });
       }
       
       // Invalidate PlayerCard and other caches with forced refetch
-      await queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
@@ -175,7 +169,7 @@ export function PlayerProfilePage() {
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
       };
       
-      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
+      const response = await fetch(`/api/profile/${profileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -196,7 +190,6 @@ export function PlayerProfilePage() {
         city: updatedProfile.address || "",
         age: updatedProfile.age || "",
         height: updatedProfile.height || "",
-        teamId: updatedProfile.teamId || "",
         phoneNumber: updatedProfile.phoneNumber || "",
         emergencyContact: updatedProfile.emergencyContact || "",
         emergencyPhone: updatedProfile.emergencyPhone || "",
@@ -205,21 +198,20 @@ export function PlayerProfilePage() {
       });
       
       // Update caches with new data for immediate UI sync
-      const activeProfileId = (user as any)?.activeProfileId;
       const accountId = (user as any)?.id;
       
       // Directly set the updated profile data in all relevant caches
-      queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
+      queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
       
       // Force refetch for PlayerCard and other views
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
       queryClient.invalidateQueries({ queryKey: [`/api/players/${accountId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       // Invalidate team queries for both account ID and profile ID (PlayerCard might use either)
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "team"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${activeProfileId}/team`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${profileId}/team`] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "awards"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "tasks"] });
@@ -417,22 +409,6 @@ export function PlayerProfilePage() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
-                <Select value={profile.teamId} onValueChange={(value) => setProfile(p => ({ ...p, teamId: value }))}>
-                  <SelectTrigger data-testid="select-team">
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allTeams.map((team) => (
-                      <SelectItem key={team.id} value={team.id.toString()}>
-                        {team.name} {team.program ? `(${team.program})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </CardContent>
           </Card>

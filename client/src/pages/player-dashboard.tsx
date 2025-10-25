@@ -234,7 +234,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const [editableProfile, setEditableProfile] = useState({
     firstName: "",
     lastName: "",
-    teamName: "",
     age: "",
     height: "",
     weight: "",
@@ -440,7 +439,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         ...prev,
         firstName: displayProfile.firstName || "",
         lastName: displayProfile.lastName || "",
-        teamName: displayProfile.teamName || "",
         age: calculatedAge !== null ? calculatedAge.toString() : "",
         height: displayProfile.height || "",
         location: cityValue,
@@ -768,7 +766,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const primeEditable = () => {
     setEditableProfile((prev) => ({
       ...prev,
-      teamName: currentChild?.teamName || prev.teamName || "",
       age: prev.age || "",
       height: prev.height || "",
       weight: prev.weight || "",
@@ -1312,6 +1309,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                     {/* Save Button */}
                     <div className="flex justify-end pt-4">
                       <SaveProfile
+                        profileId={displayProfile?.id}
                         editableProfile={editableProfile}
                         setEditableProfile={setEditableProfile}
                         setIsEditingProfile={setIsEditingProfile}
@@ -1802,10 +1800,12 @@ function TeamBlock() {
 }
 
 function SaveProfile({
+  profileId,
   editableProfile,
   setEditableProfile,
   setIsEditingProfile,
 }: {
+  profileId: string | number | undefined;
   editableProfile: any;
   setEditableProfile: (fn: any) => void;
   setIsEditingProfile: (b: boolean) => void;
@@ -1814,9 +1814,6 @@ function SaveProfile({
   const currentUser = user as UserType;
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
-  // Use activeProfileId if available (for parents editing children), otherwise use current user ID
-  const profileId = (currentUser as any)?.activeProfileId || currentUser.id;
   
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {

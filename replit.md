@@ -58,6 +58,13 @@ This cross-platform mobile application for the UYP Basketball youth league provi
     - Fixed DbStorage.getProgram() method (was returning undefined, now properly returns programs from hardcoded list)
     - Fixed GET /api/account/players to properly handle admin accounts (was returning empty array)
     - End-to-end tested with Stripe test mode - complete flow verified
+  - **Player Profile Field Display Fix** (Oct 25, 2025):
+    - Removed all hardcoded placeholder values from player dashboard profile display
+    - Players now added to database with NULL values for optional fields (position, height, city, team)
+    - Profile fields display "Not set" (gray text) when NULL instead of defaults like "Guard", "5'9"", "Irvine"
+    - Age now calculated in real-time from dateOfBirth using calculateAge() helper function
+    - Team badge only displays when teamName exists (no default "High School Elite")
+    - Fields remain blank until user manually sets them in Settings > Profile Information
   - TODO: Add Google OAuth and Apple Sign-In (passport-google-oauth20 and passport-apple already installed)
 - **Google Calendar Integration Removed**: Removed all Google Calendar sync functionality. Events are now created and managed directly by admins and coaches within the app via the admin dashboard. Admins can create events individually or bulk upload via CSV. Backend endpoints support full CRUD operations (POST/PATCH/DELETE /api/events).
 - **Stripe Payment Integration**: Replaced LeadConnector forms with Stripe Checkout flow. Added GET /api/payments/checkout-session endpoint, webhook handler, and updated family-onboarding.tsx and payments.tsx to redirect to Stripe for payment processing.

@@ -7,73 +7,62 @@ const router = Router();
 
 router.get("/players", isAuthenticated, async (req: any, res) => {
   const q = (req.query.q as string || "").trim();
-  const accountId = req.user?.claims?.sub as string | undefined;
-  const viewerTeams = await getViewerTeamIds(accountId);
 
   const params: any[] = [];
-  let where = "p.profile_type='player' AND p.verified=TRUE";
-  
-  // Filter out profiles with searchable set to false
-  where += " AND (COALESCE((pp.settings->>'searchable')::boolean, true) = true)";
+  let where = "u.role='player' AND u.verified=TRUE";
   
   if (q) {
     params.push(`%${q}%`);
-    where += ` AND (LOWER(p.first_name||' '||p.last_name) LIKE LOWER($${params.length}))`;
+    where += ` AND (LOWER(u.first_name||' '||u.last_name) LIKE LOWER($${params.length}))`;
   }
+  
   const sql = `
-    SELECT p.id, p.first_name, p.last_name, p.team_id, p.profile_image_url,
-           p.date_of_birth, p.phone_number, p.emergency_contact, p.emergency_phone,
-           p.address, p.medical_info, p.allergies, p.jersey_number, p.position,
-           p.school_grade, a.email as account_email, a.registration_status,
-           COALESCE(pp.settings, '{}'::jsonb) AS settings
-    FROM profiles p
-    LEFT JOIN profile_privacy pp ON pp.profile_id = p.id
-    LEFT JOIN accounts a ON a.id = p.account_id
+    SELECT u.id, u.email, u.first_name, u.last_name, u.team_id, u.profile_image_url,
+           u.date_of_birth, u.phone_number, u.emergency_contact, u.emergency_phone,
+           u.address, u.medical_info, u.allergies, u.jersey_number, u.position,
+           u.school_grade, u.team_name, u.city, u.height, u.package_selected,
+           u.payment_status
+    FROM users u
     WHERE ${where}
-    ORDER BY p.first_name NULLS LAST, p.last_name NULLS LAST
+    ORDER BY u.first_name NULLS LAST, u.last_name NULLS LAST
     LIMIT 50;
   `;
+  
   const r = await pool.query(sql, params);
   const rows = r.rows.map(row => {
-    const s = row.settings || {};
-    const vis = (field: string) => (s[field] ?? "public");
-    const canSeeTeamOnly = viewerTeams?.length > 0;
-    const mask = (field: string, value: any) => {
-      const level = vis(field);
-      if (level === "public") return value;
-      if (level === "team") return canSeeTeamOnly ? value : null;
-      return null; // private
-    };
     // Calculate age from date of birth
     const age = row.date_of_birth ? 
       new Date().getFullYear() - new Date(row.date_of_birth).getFullYear() : undefined;
     
     return {
       id: row.id,
-      first_name: mask("first_name", row.first_name) ?? "🔒",
-      last_name: mask("last_name", row.last_name) ?? "",
-      profile_image_url: mask("profile_image_url", row.profile_image_url),
+      first_name: row.first_name || "",
+      last_name: row.last_name || "",
+      profile_image_url: row.profile_image_url,
       team_id: row.team_id,
-      age: mask("date_of_birth", age),
-      date_of_birth: mask("date_of_birth", row.date_of_birth),
-      registration_status: row.registration_status,
-      parent_name: mask("emergency_contact", row.emergency_contact), // Use emergency contact as parent name
-      parent_email: mask("email", row.account_email), // Use account email as parent contact
-      account_email: mask("email", row.account_email),
-      phone_number: mask("phone_number", row.phone_number),
-      emergency_contact: mask("emergency_contact", row.emergency_contact),
-      emergency_phone: mask("emergency_phone", row.emergency_phone),
-      grade: mask("school_grade", row.school_grade),
-      school_grade: mask("school_grade", row.school_grade),
-      session: mask("position", row.position) || 'Youth Basketball', // Use position or default program
-      position: mask("position", row.position),
-      jersey_number: mask("jersey_number", row.jersey_number),
-      address: mask("address", row.address),
-      medical_info: mask("medical_info", row.medical_info),
-      allergies: mask("allergies", row.allergies),
-      badges_public: vis("badges") !== "private",
-      trophies_public: vis("trophies") !== "private",
-      skills_public: vis("skills") !== "private",
+      team_name: row.team_name,
+      age: age,
+      date_of_birth: row.date_of_birth,
+      payment_status: row.payment_status,
+      parent_name: row.emergency_contact,
+      parent_email: row.email,
+      account_email: row.email,
+      phone_number: row.phone_number,
+      emergency_contact: row.emergency_contact,
+      emergency_phone: row.emergency_phone,
+      grade: row.school_grade,
+      school_grade: row.school_grade,
+      session: row.package_selected || 'Youth Basketball',
+      position: row.position,
+      jersey_number: row.jersey_number,
+      address: row.address,
+      city: row.city,
+      height: row.height,
+      medical_info: row.medical_info,
+      allergies: row.allergies,
+      badges_public: true,
+      trophies_public: true,
+      skills_public: true,
     };
   });
   res.json({ ok: true, players: rows });
@@ -83,32 +72,54 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
     
-    try {
-      // Get available teams (sync runs in background on startup)
-      const teams = q ? notionService.searchTeams(q) : notionService.getAllTeams();
-      
-      console.log(`Searching teams with query: "${q}"`);
-      console.log(`Found ${teams.length} matching teams:`, teams.map(t => t.name));
-      
-      res.json({ ok: true, teams: teams.map(team => ({
-        id: team.slug,
-        name: team.name,
-        roster_count: team.roster.length,
-        roster: team.roster.map(p => ({
-          name: p.name,
-          id: p.id
-        }))
-      })) });
-    } catch (notionError: any) {
-      console.error("Notion search failed:", notionError.message);
-      
-      // No fallback - only return real Notion data
-      res.json({ 
-        ok: false, 
-        error: "Unable to load team data. Please ensure Notion integration is properly configured.",
-        teams: []
-      });
+    const params: any[] = [];
+    let where = "1=1";
+    
+    if (q) {
+      params.push(`%${q}%`);
+      where += ` AND (LOWER(t.name) LIKE LOWER($${params.length}))`;
     }
+    
+    const sql = `
+      SELECT t.id, t.name, t.age_group, t.color, t.coach_id,
+             COUNT(u.id) as roster_count
+      FROM teams t
+      LEFT JOIN users u ON u.team_id = t.id AND u.role = 'player'
+      WHERE ${where}
+      GROUP BY t.id, t.name, t.age_group, t.color, t.coach_id
+      ORDER BY t.name
+      LIMIT 50;
+    `;
+    
+    const r = await pool.query(sql, params);
+    
+    // For each team, get the roster
+    const teamsWithRoster = await Promise.all(r.rows.map(async (team) => {
+      const rosterSql = `
+        SELECT id, first_name, last_name, jersey_number, position
+        FROM users
+        WHERE team_id = $1 AND role = 'player'
+        ORDER BY last_name, first_name;
+      `;
+      const rosterResult = await pool.query(rosterSql, [team.id]);
+      
+      return {
+        id: team.id.toString(),
+        name: team.name,
+        age_group: team.age_group,
+        color: team.color,
+        roster_count: parseInt(team.roster_count) || 0,
+        roster: rosterResult.rows.map(p => ({
+          id: p.id,
+          name: `${p.first_name} ${p.last_name}`.trim(),
+          jersey: p.jersey_number?.toString() || '',
+          position: p.position || 'Player'
+        }))
+      };
+    }));
+    
+    console.log(`Found ${teamsWithRoster.length} teams with query: "${q}"`);
+    res.json({ ok: true, teams: teamsWithRoster });
   } catch (error) {
     console.error("Error searching teams:", error);
     res.status(500).json({ ok: false, error: "Failed to search teams" });
@@ -117,20 +128,44 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
 
 router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
   try {
-    const teamId = req.params.teamId;
-    const team = notionService.getTeam(teamId);
-    if (!team) {
+    const teamId = parseInt(req.params.teamId, 10);
+    
+    // Get team info
+    const teamResult = await pool.query(
+      `SELECT id, name, age_group, color FROM teams WHERE id = $1`,
+      [teamId]
+    );
+    
+    if (teamResult.rowCount === 0) {
       return res.status(404).json({ ok: false, error: "Team not found" });
     }
+    
+    const team = teamResult.rows[0];
+    
+    // Get roster
+    const rosterResult = await pool.query(
+      `SELECT id, first_name, last_name, jersey_number, position
+       FROM users
+       WHERE team_id = $1 AND role = 'player'
+       ORDER BY last_name, first_name`,
+      [teamId]
+    );
+    
     res.json({ 
-      ok: true, 
-      roster: team.roster.map(p => ({
-        name: p.name,
+      ok: true,
+      team: {
+        id: team.id,
+        name: team.name,
+        age_group: team.age_group,
+        color: team.color
+      },
+      roster: rosterResult.rows.map((p: any) => ({
+        name: `${p.first_name} ${p.last_name}`.trim(),
         id: p.id,
-        position: 'Player',
-        jersey: ''
+        position: p.position || 'Player',
+        jersey: p.jersey_number?.toString() || ''
       })),
-      roster_count: team.roster.length 
+      roster_count: rosterResult.rowCount || 0
     });
   } catch (error) {
     console.error("Error getting team details:", error);
@@ -139,19 +174,21 @@ router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
 });
 
 router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res) => {
-  const accountId = req.user?.claims?.sub as string;
+  const userId = req.user?.id as string;
   const teamId = parseInt(req.params.teamId, 10);
-  const message = (req.body?.message as string | undefined) || null;
 
-  if (!accountId || !teamId) return res.status(400).json({ ok: false, error: "Missing account/team" });
-  const prof = await pool.query(`SELECT id FROM profiles WHERE account_id=$1 LIMIT 1`, [accountId]);
-  if (!prof.rowCount) return res.status(400).json({ ok: false, error: "Create your player profile first" });
-  const profileId = prof.rows[0].id;
+  if (!userId || !teamId) return res.status(400).json({ ok: false, error: "Missing user/team" });
+  
+  // Verify user exists and is a player
+  const user = await pool.query(`SELECT id, role FROM users WHERE id=$1 LIMIT 1`, [userId]);
+  if (!user.rowCount || user.rows[0].role !== 'player') {
+    return res.status(400).json({ ok: false, error: "Only players can join teams" });
+  }
 
+  // Update the user's team_id directly
   await pool.query(
-    `INSERT INTO team_join_requests (profile_id, team_id, message, status, created_at)
-     VALUES ($1,$2,$3,'pending',now())`,
-    [profileId, teamId, message]
+    `UPDATE users SET team_id=$1, updated_at=now() WHERE id=$2`,
+    [teamId, userId]
   );
 
   res.json({ ok: true });
@@ -231,9 +268,9 @@ router.get("/notion-players", isAuthenticated, async (req: any, res) => {
   }
 });
 
-async function getViewerTeamIds(accountId?: string): Promise<number[]> {
-  if (!accountId) return [];
-  const r = await pool.query(`SELECT DISTINCT team_id FROM profiles WHERE account_id=$1 AND team_id IS NOT NULL`, [accountId]);
+async function getViewerTeamIds(userId?: string): Promise<number[]> {
+  if (!userId) return [];
+  const r = await pool.query(`SELECT DISTINCT team_id FROM users WHERE id=$1 AND team_id IS NOT NULL`, [userId]);
   return r.rows.map((x: any) => x.team_id);
 }
 

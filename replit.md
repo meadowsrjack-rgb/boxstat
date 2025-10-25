@@ -3,6 +3,19 @@
 ## Overview
 The UYP Basketball League Mobile App is a cross-platform solution designed for parents and players to streamline league operations, enhance communication, and manage schedules, player development, and team activities. It aims to provide a comprehensive platform for the youth league, improving user experience through PWA features, secure authentication, and robust data management. The application also includes tools for coaches and administrators for effective team and player development management. The long-term vision is to establish a leading mobile platform for youth sports leagues, offering unparalleled user experience and operational efficiency, with potential for broader market reach beyond basketball.
 
+## Recent Changes
+
+### Find Players & Teams Search Fix (Oct 25, 2025)
+- **Backend**: Updated all search endpoints to query Users table instead of non-existent Profiles table
+  - Registered search routes in server/routes.ts: `app.use('/api/search', searchRoutes)`
+  - Fixed authentication middleware in search.ts to use session-based auth (removed broken replitAuth)
+  - Endpoints: GET /api/search/players, GET /api/search/teams, GET /api/search/teams/:teamId
+  - Players search filters by `role='player' AND verified=TRUE` from Users table
+  - Teams search queries Teams table with roster count/details from Users table
+- **Frontend**: Updated PlayerSearch.tsx component to call `/api/search/players` instead of `/api/search/notion-players`
+- **Location**: PlayerSearch component is in the Team tab of the player dashboard
+- **Testing**: Verified searches for "John" return John Doe and John Jones; all search functionality working correctly
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 

@@ -84,9 +84,9 @@ export default function PlayerSearch({
   }, [debouncedQuery, selectedTeamFilter]);
 
   const { data: searchResults, isLoading } = useQuery<PlayerSearchResponse | PlayerSearchResult[]>({
-    queryKey: [`/api/search/notion-players`, searchParams],
+    queryKey: [`/api/search/players`, searchParams],
     queryFn: async () => {
-      const response = await fetch(`/api/search/notion-players?${searchParams}`, {
+      const response = await fetch(`/api/search/players?${searchParams}`, {
         credentials: "include"
       });
       if (!response.ok) {

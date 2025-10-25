@@ -6,6 +6,9 @@ import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
 import searchRoutes from "./routes/search";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import {
   insertUserSchema,
   insertTeamSchema,
@@ -26,6 +29,40 @@ let wss: WebSocketServer | null = null;
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-06-30.basil" })
   : null;
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+// Ensure upload directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const multerStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'profile-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: multerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  }
+});
 
 // Simple password hashing for development (use bcrypt in production)
 function hashPassword(password: string): string {
@@ -1120,6 +1157,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(profile);
     } catch (error: any) {
       res.status(500).json({ error: 'Failed to fetch profile', message: error.message });
+    }
+  });
+
+  // Upload profile photo
+  app.post('/api/upload-profile-photo', isAuthenticated, upload.single('photo'), async (req: any, res) => {
+    const uploadedFilePath = req.file ? path.join(uploadDir, req.file.filename) : null;
+    
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const requestingUserId = req.user.id;
+      const targetUserId = req.query.profileId || req.body.profileId || requestingUserId;
+      const filename = req.file.filename;
+      const imageUrl = `/uploads/${filename}`;
+      
+      // Authorization: parent can update their children, or user can update self
+      const requestingUser = await storage.getUser(requestingUserId);
+      const targetUser = await storage.getUser(targetUserId);
+      
+      if (!targetUser) {
+        // Delete uploaded file on authorization failure
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const isParentOfChild = requestingUser?.role === 'parent' && targetUser.accountHolderId === requestingUserId;
+      const isUpdatingSelf = requestingUserId === targetUserId;
+      const isAdmin = requestingUser?.role === 'admin';
+      
+      if (!isParentOfChild && !isUpdatingSelf && !isAdmin) {
+        // Delete uploaded file on authorization failure
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        return res.status(403).json({ error: 'Not authorized to update this profile' });
+      }
+      
+      // Update user's profile image
+      await storage.updateUser(targetUserId, { profileImageUrl: imageUrl });
+      
+      res.json({ 
+        success: true, 
+        imageUrl,
+        message: 'Profile photo uploaded successfully' 
+      });
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      // Delete uploaded file on any error
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        try {
+          fs.unlinkSync(uploadedFilePath);
+        } catch (unlinkError) {
+          console.error('Failed to delete uploaded file:', unlinkError);
+        }
+      }
+      res.status(500).json({ error: 'Failed to upload photo', message: error.message });
     }
   });
 

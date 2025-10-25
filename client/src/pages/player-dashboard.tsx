@@ -1828,9 +1828,11 @@ function SaveProfile({
     },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved." });
+      // Invalidate all profile-related queries to force refresh
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${currentUser.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", currentUser.id] });
       setIsEditingProfile(false);
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),

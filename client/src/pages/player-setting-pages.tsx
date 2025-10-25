@@ -104,33 +104,11 @@ export function PlayerProfilePage() {
     onSuccess: async ({ accountId }) => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });
       
-      try {
-        // Refetch and update profile data immediately
-        const response = await fetch(`/api/profile/${profileId}`, { credentials: 'include' });
-        if (response.ok) {
-          const updatedProfile = await response.json();
-          // Directly update the cache with fresh data
-          queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
-        } else {
-          // Fallback to invalidation with refetch if fetch fails
-          await queryClient.invalidateQueries({ 
-            queryKey: [`/api/profile/${profileId}`],
-            refetchType: 'active'
-          });
-        }
-      } catch {
-        // Fallback to invalidation with refetch on error
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/profile/${profileId}`],
-          refetchType: 'active'
-        });
-      }
-      
-      // Invalidate PlayerCard and other caches with forced refetch
-      await queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`], refetchType: 'active' });
-      await queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'], refetchType: 'active' });
-      await queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`], refetchType: 'active' });
+      // Invalidate ALL profile queries to force refresh everywhere
+      await queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: [`/api/profile/${accountId}`], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", accountId], refetchType: 'active' });
       
       setSelectedFile(null);
       if (previewUrl) {
@@ -200,21 +178,15 @@ export function PlayerProfilePage() {
       // Update caches with new data for immediate UI sync
       const accountId = (user as any)?.id;
       
-      // Directly set the updated profile data in all relevant caches
+      // Directly set the updated profile data in the cache
       queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
       
-      // Force refetch for PlayerCard and other views
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${accountId}/profile`] });
-      queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
+      // Invalidate ALL profile-related queries to force UI refresh
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${accountId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Invalidate team queries for both account ID and profile ID (PlayerCard might use either)
-      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "team"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${profileId}/team`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "awards"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", accountId] });
       
       toast({ 
         title: "Profile Updated", 

@@ -1201,7 +1201,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             <span>FROM</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {(editableProfile.city || "Irvine").replace(", CA", "").replace(",CA", "")}
+                            {editableProfile.city ? editableProfile.city.replace(", CA", "").replace(",CA", "") : <span className="text-gray-400 text-sm">Not set</span>}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

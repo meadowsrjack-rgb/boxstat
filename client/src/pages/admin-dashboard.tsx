@@ -32,6 +32,9 @@ import {
   List,
   Eye,
   ArrowLeft,
+  Star,
+  Bell,
+  Layers,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -43,6 +46,7 @@ import { useEffect } from "react";
 import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
+import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
@@ -96,7 +100,22 @@ export default function AdminDashboard() {
     queryKey: ["/api/payments"],
   });
 
-  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardsLoading || paymentsLoading;
+  // Fetch divisions
+  const { data: divisions = [], isLoading: divisionsLoading } = useQuery<any[]>({
+    queryKey: ["/api/divisions"],
+  });
+
+  // Fetch skills
+  const { data: skills = [], isLoading: skillsLoading } = useQuery<any[]>({
+    queryKey: ["/api/skills"],
+  });
+
+  // Fetch notifications
+  const { data: notifications = [], isLoading: notificationsLoading } = useQuery<any[]>({
+    queryKey: ["/api/notifications"],
+  });
+
+  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardsLoading || paymentsLoading || divisionsLoading || skillsLoading || notificationsLoading;
 
   // Calculate stats
   const stats = {
@@ -186,6 +205,18 @@ export default function AdminDashboard() {
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </TabsTrigger>
+              <TabsTrigger value="divisions" data-testid="tab-divisions">
+                <Layers className="w-4 h-4 mr-2" />
+                Divisions
+              </TabsTrigger>
+              <TabsTrigger value="skills" data-testid="tab-skills">
+                <Star className="w-4 h-4 mr-2" />
+                Skills
+              </TabsTrigger>
+              <TabsTrigger value="notifications" data-testid="tab-notifications">
+                <Bell className="w-4 h-4 mr-2" />
+                Notifications
+              </TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -246,6 +277,18 @@ export default function AdminDashboard() {
 
           <TabsContent value="preview">
             <PreviewTab users={users} />
+          </TabsContent>
+
+          <TabsContent value="divisions">
+            <DivisionsTab divisions={divisions} programs={programs} organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="skills">
+            <SkillsTab skills={skills} users={users} organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="notifications">
+            <NotificationsTab notifications={notifications} users={users} organization={organization} />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -2358,6 +2401,766 @@ function PackagesTab({ packages, organization }: any) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Divisions Tab Component
+function DivisionsTab({ divisions, programs, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingDivision, setEditingDivision] = useState<any>(null);
+
+  const form = useForm({
+    resolver: zodResolver(insertDivisionSchema),
+    defaultValues: {
+      organizationId: organization?.id || "",
+      name: "",
+      description: "",
+      ageRange: "",
+      programIds: [],
+      isActive: true,
+    },
+  });
+
+  const createDivision = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingDivision) {
+        return await apiRequest("PATCH", `/api/divisions/${editingDivision.id}`, data);
+      }
+      return await apiRequest("POST", "/api/divisions", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/divisions"] });
+      toast({ title: editingDivision ? "Division updated successfully" : "Division created successfully" });
+      setIsDialogOpen(false);
+      setEditingDivision(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to save division", variant: "destructive" });
+    },
+  });
+
+  const deleteDivision = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/divisions/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/divisions"] });
+      toast({ title: "Division deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete division", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (division: any) => {
+    setEditingDivision(division);
+    form.reset({
+      organizationId: division.organizationId,
+      name: division.name,
+      description: division.description || "",
+      ageRange: division.ageRange || "",
+      programIds: division.programIds || [],
+      isActive: division.isActive,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingDivision(null);
+      form.reset();
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Manage Divisions</CardTitle>
+          <CardDescription>Create and manage age divisions for your organization</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-division">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Division
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingDivision ? "Edit Division" : "Create New Division"}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createDivision.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Division Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="U12 Division" data-testid="input-division-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Division for players under 12" data-testid="input-division-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="ageRange"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Age Range</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., 10-12, U14, 6th-8th" data-testid="input-division-agerange" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="programIds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Linked Programs</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value?.[0] || ""}
+                          onValueChange={(value) => {
+                            const currentIds = field.value || [];
+                            if (!currentIds.includes(value)) {
+                              field.onChange([...currentIds, value]);
+                            }
+                          }}
+                        >
+                          <SelectTrigger data-testid="select-division-programs">
+                            <SelectValue placeholder="Select programs..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {programs.map((program: any) => (
+                              <SelectItem key={program.id} value={program.id.toString()}>
+                                {program.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>Selected: {field.value?.length || 0} program(s)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-division-active"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Active Division</FormLabel>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={createDivision.isPending} data-testid="button-submit-division">
+                  {createDivision.isPending ? "Saving..." : editingDivision ? "Update Division" : "Create Division"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Age Range</TableHead>
+              <TableHead>Programs</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {divisions.map((division: any) => (
+              <TableRow key={division.id} data-testid={`row-division-${division.id}`}>
+                <TableCell className="font-medium" data-testid={`text-division-name-${division.id}`}>
+                  {division.name}
+                </TableCell>
+                <TableCell>{division.description || "-"}</TableCell>
+                <TableCell>{division.ageRange || "-"}</TableCell>
+                <TableCell>{division.programIds?.length || 0}</TableCell>
+                <TableCell>
+                  <Badge variant={division.isActive ? "default" : "secondary"} data-testid={`badge-division-status-${division.id}`}>
+                    {division.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(division)}
+                      data-testid={`button-edit-division-${division.id}`}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteDivision.mutate(division.id)}
+                      data-testid={`button-delete-division-${division.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Skills Tab Component
+function SkillsTab({ skills, users, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<any>(null);
+  const [filterPlayerId, setFilterPlayerId] = useState<string>("all");
+
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  const players = users.filter((u: any) => u.role === "player");
+
+  const form = useForm({
+    resolver: zodResolver(insertSkillSchema),
+    defaultValues: {
+      organizationId: organization?.id || "",
+      playerId: "",
+      coachId: currentUser?.id || "",
+      category: "",
+      score: 5,
+      notes: "",
+    },
+  });
+
+  const createSkill = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingSkill) {
+        return await apiRequest("PATCH", `/api/skills/${editingSkill.id}`, data);
+      }
+      return await apiRequest("POST", "/api/skills", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
+      toast({ title: editingSkill ? "Skill updated successfully" : "Skill evaluation created successfully" });
+      setIsDialogOpen(false);
+      setEditingSkill(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to save skill evaluation", variant: "destructive" });
+    },
+  });
+
+  const deleteSkill = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/skills/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
+      toast({ title: "Skill evaluation deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete skill evaluation", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (skill: any) => {
+    setEditingSkill(skill);
+    form.reset({
+      organizationId: skill.organizationId,
+      playerId: skill.playerId,
+      coachId: skill.coachId,
+      category: skill.category,
+      score: skill.score,
+      notes: skill.notes || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingSkill(null);
+      form.reset();
+    }
+  };
+
+  const filteredSkills = filterPlayerId === "all" 
+    ? skills 
+    : skills.filter((s: any) => s.playerId === filterPlayerId);
+
+  const renderStars = (rating: number) => {
+    return (
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
+          <Star
+            key={star}
+            className={`w-3 h-3 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Manage Skills</CardTitle>
+          <CardDescription>Evaluate and track player skill development</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-skill">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Skill Evaluation
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingSkill ? "Edit Skill Evaluation" : "Create New Skill Evaluation"}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createSkill.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="playerId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Player</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-skill-player">
+                            <SelectValue placeholder="Select player..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {players.map((player: any) => (
+                            <SelectItem key={player.id} value={player.id}>
+                              {player.firstName} {player.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Skill Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="e.g., Shooting, Dribbling, Defense" data-testid="input-skill-category" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="score"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rating (1-10)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="number"
+                          min="1"
+                          max="10"
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          data-testid="input-skill-score"
+                        />
+                      </FormControl>
+                      <FormDescription>Rate the player's skill level from 1 (beginner) to 10 (expert)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (Optional)</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Additional observations..." data-testid="input-skill-notes" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={createSkill.isPending} data-testid="button-submit-skill">
+                  {createSkill.isPending ? "Saving..." : editingSkill ? "Update Evaluation" : "Create Evaluation"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <Label>Filter by Player</Label>
+          <Select value={filterPlayerId} onValueChange={setFilterPlayerId}>
+            <SelectTrigger data-testid="select-filter-player">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Players</SelectItem>
+              {players.map((player: any) => (
+                <SelectItem key={player.id} value={player.id}>
+                  {player.firstName} {player.lastName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Player</TableHead>
+              <TableHead>Skill Name</TableHead>
+              <TableHead>Rating</TableHead>
+              <TableHead>Evaluated By</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Notes</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredSkills.map((skill: any) => {
+              const player = users.find((u: any) => u.id === skill.playerId);
+              const coach = users.find((u: any) => u.id === skill.coachId);
+              return (
+                <TableRow key={skill.id} data-testid={`row-skill-${skill.id}`}>
+                  <TableCell data-testid={`text-skill-player-${skill.id}`}>
+                    {player ? `${player.firstName} ${player.lastName}` : "Unknown"}
+                  </TableCell>
+                  <TableCell>{skill.category}</TableCell>
+                  <TableCell data-testid={`rating-skill-${skill.id}`}>
+                    {renderStars(skill.score)}
+                  </TableCell>
+                  <TableCell>{coach ? `${coach.firstName} ${coach.lastName}` : "Unknown"}</TableCell>
+                  <TableCell>
+                    {skill.evaluatedAt ? new Date(skill.evaluatedAt).toLocaleDateString() : "-"}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">{skill.notes || "-"}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(skill)}
+                        data-testid={`button-edit-skill-${skill.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteSkill.mutate(skill.id)}
+                        data-testid={`button-delete-skill-${skill.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Notifications Tab Component
+function NotificationsTab({ notifications, users, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingNotification, setEditingNotification] = useState<any>(null);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertNotificationSchema),
+    defaultValues: {
+      organizationId: organization?.id || "",
+      type: "in-app",
+      title: "",
+      message: "",
+      recipientIds: [],
+      sentBy: currentUser?.id || "",
+      readBy: [],
+      status: "pending",
+    },
+  });
+
+  const createNotification = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingNotification) {
+        return await apiRequest("PATCH", `/api/notifications/${editingNotification.id}`, data);
+      }
+      return await apiRequest("POST", "/api/notifications", { ...data, recipientIds: selectedRecipients });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      toast({ title: editingNotification ? "Notification updated successfully" : "Notification created successfully" });
+      setIsDialogOpen(false);
+      setEditingNotification(null);
+      setSelectedRecipients([]);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to save notification", variant: "destructive" });
+    },
+  });
+
+  const deleteNotification = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/notifications/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      toast({ title: "Notification deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete notification", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (notification: any) => {
+    setEditingNotification(notification);
+    setSelectedRecipients(notification.recipientIds || []);
+    form.reset({
+      organizationId: notification.organizationId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      recipientIds: notification.recipientIds || [],
+      sentBy: notification.sentBy,
+      readBy: notification.readBy || [],
+      status: notification.status,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingNotification(null);
+      setSelectedRecipients([]);
+      form.reset();
+    }
+  };
+
+  const toggleRecipient = (userId: string) => {
+    setSelectedRecipients((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Manage Notifications</CardTitle>
+          <CardDescription>Send and manage notifications to users</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-notification">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Notification
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingNotification ? "Edit Notification" : "Create New Notification"}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createNotification.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Notification title" data-testid="input-notification-title" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="message"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Notification message..." rows={4} data-testid="input-notification-message" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notification Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-notification-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="in-app">In-App</SelectItem>
+                          <SelectItem value="email">Email</SelectItem>
+                          <SelectItem value="push">Push Notification</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div>
+                  <Label>Recipients</Label>
+                  <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                    {users.map((user: any) => (
+                      <div key={user.id} className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedRecipients.includes(user.id)}
+                          onCheckedChange={() => toggleRecipient(user.id)}
+                          data-testid={`checkbox-recipient-${user.id}`}
+                        />
+                        <span className="text-sm">
+                          {user.firstName} {user.lastName} ({user.role})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">Selected: {selectedRecipients.length} user(s)</p>
+                </div>
+                <Button type="submit" className="w-full" disabled={createNotification.isPending} data-testid="button-submit-notification">
+                  {createNotification.isPending ? "Sending..." : editingNotification ? "Update Notification" : "Send Notification"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Message</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Recipients</TableHead>
+              <TableHead>Sent Date</TableHead>
+              <TableHead>Read Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {notifications.map((notification: any) => (
+              <TableRow key={notification.id} data-testid={`row-notification-${notification.id}`}>
+                <TableCell className="font-medium" data-testid={`text-notification-title-${notification.id}`}>
+                  {notification.title}
+                </TableCell>
+                <TableCell className="max-w-xs truncate">{notification.message}</TableCell>
+                <TableCell>
+                  <Badge variant="outline">{notification.type}</Badge>
+                </TableCell>
+                <TableCell data-testid={`text-notification-recipients-${notification.id}`}>
+                  {notification.recipientIds?.length || 0} user(s)
+                </TableCell>
+                <TableCell>
+                  {notification.sentAt ? new Date(notification.sentAt).toLocaleDateString() : "-"}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={notification.readBy?.length > 0 ? "default" : "secondary"}>
+                    {notification.readBy?.length || 0} / {notification.recipientIds?.length || 0} read
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(notification)}
+                      data-testid={`button-edit-notification-${notification.id}`}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteNotification.mutate(notification.id)}
+                      data-testid={`button-delete-notification-${notification.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 

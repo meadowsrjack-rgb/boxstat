@@ -11,6 +11,9 @@ import {
   type Payment,
   type Program,
   type PackageSelection,
+  type Division,
+  type Skill,
+  type Notification,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -22,6 +25,9 @@ import {
   type InsertPayment,
   type InsertProgram,
   type InsertPackageSelection,
+  type InsertDivision,
+  type InsertSkill,
+  type InsertNotification,
 } from "@shared/schema";
 
 // =============================================
@@ -113,6 +119,30 @@ export interface IStorage {
   updatePackageSelection(id: string, updates: Partial<PackageSelection>): Promise<PackageSelection | undefined>;
   deletePackageSelection(id: string): Promise<void>;
   markPackageSelectionPaid(id: string): Promise<PackageSelection | undefined>;
+  
+  // Division operations
+  getDivision(id: number): Promise<Division | undefined>;
+  getDivisionsByOrganization(organizationId: string): Promise<Division[]>;
+  createDivision(division: InsertDivision): Promise<Division>;
+  updateDivision(id: number, updates: Partial<Division>): Promise<Division | undefined>;
+  deleteDivision(id: number): Promise<void>;
+  
+  // Skill operations
+  getSkill(id: number): Promise<Skill | undefined>;
+  getSkillsByOrganization(organizationId: string): Promise<Skill[]>;
+  getSkillsByPlayer(playerId: string): Promise<Skill[]>;
+  createSkill(skill: InsertSkill): Promise<Skill>;
+  updateSkill(id: number, updates: Partial<Skill>): Promise<Skill | undefined>;
+  deleteSkill(id: number): Promise<void>;
+  
+  // Notification operations
+  getNotification(id: number): Promise<Notification | undefined>;
+  getNotificationsByOrganization(organizationId: string): Promise<Notification[]>;
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined>;
+  deleteNotification(id: number): Promise<void>;
+  markNotificationAsRead(id: number): Promise<Notification | undefined>;
 }
 
 // =============================================
@@ -132,6 +162,12 @@ class MemStorage implements IStorage {
   private payments: Map<string, Payment> = new Map();
   private programs: Map<string, Program> = new Map();
   private packageSelections: Map<string, PackageSelection> = new Map();
+  private divisions: Map<number, Division> = new Map();
+  private skills: Map<number, Skill> = new Map();
+  private notifications: Map<number, Notification> = new Map();
+  private nextDivisionId = 1;
+  private nextSkillId = 1;
+  private nextNotificationId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1032,6 +1068,145 @@ class MemStorage implements IStorage {
     this.packageSelections.set(id, updated);
     return updated;
   }
+  
+  // Division operations
+  async getDivision(id: number): Promise<Division | undefined> {
+    const division = this.divisions.get(id);
+    if (!division) return undefined;
+    return { ...division, id: id.toString() };
+  }
+  
+  async getDivisionsByOrganization(organizationId: string): Promise<Division[]> {
+    return Array.from(this.divisions.values())
+      .filter(division => division.organizationId === organizationId)
+      .map(division => ({ ...division, id: division.id.toString() }));
+  }
+  
+  async createDivision(division: InsertDivision): Promise<Division> {
+    const id = this.nextDivisionId++;
+    const newDivision: Division = {
+      ...division,
+      id: id.toString(),
+      programIds: division.programIds ?? [],
+      isActive: division.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.divisions.set(id, newDivision as any);
+    return newDivision;
+  }
+  
+  async updateDivision(id: number, updates: Partial<Division>): Promise<Division | undefined> {
+    const division = this.divisions.get(id);
+    if (!division) return undefined;
+    
+    const updated = { ...division, ...updates, id: id.toString() };
+    this.divisions.set(id, updated as any);
+    return updated;
+  }
+  
+  async deleteDivision(id: number): Promise<void> {
+    this.divisions.delete(id);
+  }
+  
+  // Skill operations
+  async getSkill(id: number): Promise<Skill | undefined> {
+    const skill = this.skills.get(id);
+    if (!skill) return undefined;
+    return { ...skill, id: id.toString() };
+  }
+  
+  async getSkillsByOrganization(organizationId: string): Promise<Skill[]> {
+    return Array.from(this.skills.values())
+      .filter(skill => skill.organizationId === organizationId)
+      .map(skill => ({ ...skill, id: skill.id.toString() }));
+  }
+  
+  async getSkillsByPlayer(playerId: string): Promise<Skill[]> {
+    return Array.from(this.skills.values())
+      .filter(skill => skill.playerId === playerId)
+      .map(skill => ({ ...skill, id: skill.id.toString() }));
+  }
+  
+  async createSkill(skill: InsertSkill): Promise<Skill> {
+    const id = this.nextSkillId++;
+    const newSkill: Skill = {
+      ...skill,
+      id: id.toString(),
+      evaluatedAt: new Date(),
+      createdAt: new Date(),
+    };
+    this.skills.set(id, newSkill as any);
+    return newSkill;
+  }
+  
+  async updateSkill(id: number, updates: Partial<Skill>): Promise<Skill | undefined> {
+    const skill = this.skills.get(id);
+    if (!skill) return undefined;
+    
+    const updated = { ...skill, ...updates, id: id.toString() };
+    this.skills.set(id, updated as any);
+    return updated;
+  }
+  
+  async deleteSkill(id: number): Promise<void> {
+    this.skills.delete(id);
+  }
+  
+  // Notification operations
+  async getNotification(id: number): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    return { ...notification, id: id.toString() };
+  }
+  
+  async getNotificationsByOrganization(organizationId: string): Promise<Notification[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.organizationId === organizationId)
+      .map(notification => ({ ...notification, id: notification.id.toString() }));
+  }
+  
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return Array.from(this.notifications.values())
+      .filter(notification => notification.recipientIds.includes(userId))
+      .map(notification => ({ ...notification, id: notification.id.toString() }));
+  }
+  
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const id = this.nextNotificationId++;
+    const newNotification: Notification = {
+      ...notification,
+      id: id.toString(),
+      readBy: notification.readBy ?? [],
+      sentAt: new Date(),
+      status: notification.status ?? 'pending',
+      createdAt: new Date(),
+    };
+    this.notifications.set(id, newNotification as any);
+    return newNotification;
+  }
+  
+  async updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    
+    const updated = { ...notification, ...updates, id: id.toString() };
+    this.notifications.set(id, updated as any);
+    return updated;
+  }
+  
+  async deleteNotification(id: number): Promise<void> {
+    this.notifications.delete(id);
+  }
+  
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    const notification = this.notifications.get(id);
+    if (!notification) return undefined;
+    
+    // Mark as read by updating status to 'sent' (since there's no isRead field)
+    const updated = { ...notification, id: id.toString(), status: 'sent' };
+    this.notifications.set(id, updated as any);
+    return updated;
+  }
 }
 
 // =============================================
@@ -1728,6 +1903,198 @@ class DatabaseStorage implements IStorage {
     return undefined;
   }
 
+  // Division operations
+  async getDivision(id: number): Promise<Division | undefined> {
+    const results = await db.select().from(schema.divisions).where(eq(schema.divisions.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbDivisionToDivision(results[0]);
+  }
+
+  async getDivisionsByOrganization(organizationId: string): Promise<Division[]> {
+    const results = await db.select().from(schema.divisions)
+      .where(eq(schema.divisions.organizationId, organizationId));
+    return results.map(div => this.mapDbDivisionToDivision(div));
+  }
+
+  async createDivision(division: InsertDivision): Promise<Division> {
+    const dbDivision = {
+      organizationId: division.organizationId,
+      name: division.name,
+      description: division.description,
+      ageRange: division.ageRange,
+      programIds: division.programIds || [],
+      isActive: division.isActive ?? true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.divisions).values(dbDivision).returning();
+    return this.mapDbDivisionToDivision(results[0]);
+  }
+
+  async updateDivision(id: number, updates: Partial<Division>): Promise<Division | undefined> {
+    const dbUpdates: any = {
+      name: updates.name,
+      description: updates.description,
+      ageRange: updates.ageRange,
+      programIds: updates.programIds,
+      isActive: updates.isActive,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.divisions)
+      .set(dbUpdates)
+      .where(eq(schema.divisions.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbDivisionToDivision(results[0]);
+  }
+
+  async deleteDivision(id: number): Promise<void> {
+    await db.delete(schema.divisions).where(eq(schema.divisions.id, id));
+  }
+
+  // Skill operations
+  async getSkill(id: number): Promise<Skill | undefined> {
+    const results = await db.select().from(schema.skills).where(eq(schema.skills.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbSkillToSkill(results[0]);
+  }
+
+  async getSkillsByOrganization(organizationId: string): Promise<Skill[]> {
+    const results = await db.select().from(schema.skills)
+      .where(eq(schema.skills.organizationId, organizationId));
+    return results.map(skill => this.mapDbSkillToSkill(skill));
+  }
+
+  async getSkillsByPlayer(playerId: string): Promise<Skill[]> {
+    const results = await db.select().from(schema.skills)
+      .where(eq(schema.skills.playerId, playerId));
+    return results.map(skill => this.mapDbSkillToSkill(skill));
+  }
+
+  async createSkill(skill: InsertSkill): Promise<Skill> {
+    const dbSkill = {
+      organizationId: skill.organizationId,
+      playerId: skill.playerId,
+      coachId: skill.coachId,
+      category: skill.category,
+      score: skill.score,
+      notes: skill.notes,
+      evaluatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.skills).values(dbSkill).returning();
+    return this.mapDbSkillToSkill(results[0]);
+  }
+
+  async updateSkill(id: number, updates: Partial<Skill>): Promise<Skill | undefined> {
+    const dbUpdates: any = {
+      category: updates.category,
+      score: updates.score,
+      notes: updates.notes,
+      evaluatedAt: updates.evaluatedAt ? new Date(updates.evaluatedAt).toISOString() : undefined,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.skills)
+      .set(dbUpdates)
+      .where(eq(schema.skills.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbSkillToSkill(results[0]);
+  }
+
+  async deleteSkill(id: number): Promise<void> {
+    await db.delete(schema.skills).where(eq(schema.skills.id, id));
+  }
+
+  // Notification operations
+  async getNotification(id: number): Promise<Notification | undefined> {
+    const results = await db.select().from(schema.notifications).where(eq(schema.notifications.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbNotificationToNotification(results[0]);
+  }
+
+  async getNotificationsByOrganization(organizationId: string): Promise<Notification[]> {
+    const results = await db.select().from(schema.notifications)
+      .where(eq(schema.notifications.organizationId, organizationId));
+    return results.map(notif => this.mapDbNotificationToNotification(notif));
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    // Filter notifications where recipientIds array contains the userId
+    const results = await db.select().from(schema.notifications);
+    return results
+      .filter(notif => notif.recipientIds?.includes(userId))
+      .map(notif => this.mapDbNotificationToNotification(notif));
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const dbNotification = {
+      organizationId: notification.organizationId,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      recipientIds: notification.recipientIds,
+      sentBy: notification.sentBy,
+      sentAt: new Date().toISOString(),
+      readBy: notification.readBy || [],
+      relatedEventId: notification.relatedEventId,
+      status: notification.status || 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    const results = await db.insert(schema.notifications).values(dbNotification).returning();
+    return this.mapDbNotificationToNotification(results[0]);
+  }
+
+  async updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined> {
+    const dbUpdates: any = {
+      type: updates.type,
+      title: updates.title,
+      message: updates.message,
+      recipientIds: updates.recipientIds,
+      readBy: updates.readBy,
+      status: updates.status,
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.notifications)
+      .set(dbUpdates)
+      .where(eq(schema.notifications.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbNotificationToNotification(results[0]);
+  }
+
+  async deleteNotification(id: number): Promise<void> {
+    await db.delete(schema.notifications).where(eq(schema.notifications.id, id));
+  }
+
+  async markNotificationAsRead(id: number): Promise<Notification | undefined> {
+    // Mark as read by updating status
+    const results = await db.update(schema.notifications)
+      .set({ status: 'sent' })
+      .where(eq(schema.notifications.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbNotificationToNotification(results[0]);
+  }
+
   // Helper mapping functions
   private mapDbUserToUser(dbUser: any): User {
     return {
@@ -1878,6 +2245,50 @@ class DatabaseStorage implements IStorage {
       dueDate: dbPayment.dueDate,
       paidAt: dbPayment.paidAt ? new Date(dbPayment.paidAt) : undefined,
       createdAt: new Date(dbPayment.createdAt),
+    };
+  }
+
+  private mapDbDivisionToDivision(dbDivision: any): Division {
+    return {
+      id: dbDivision.id.toString(),
+      organizationId: dbDivision.organizationId,
+      name: dbDivision.name,
+      description: dbDivision.description,
+      ageRange: dbDivision.ageRange,
+      programIds: dbDivision.programIds || [],
+      isActive: dbDivision.isActive ?? true,
+      createdAt: new Date(dbDivision.createdAt),
+    };
+  }
+
+  private mapDbSkillToSkill(dbSkill: any): Skill {
+    return {
+      id: dbSkill.id.toString(),
+      organizationId: dbSkill.organizationId,
+      playerId: dbSkill.playerId,
+      coachId: dbSkill.coachId,
+      category: dbSkill.category,
+      score: dbSkill.score,
+      notes: dbSkill.notes,
+      evaluatedAt: new Date(dbSkill.evaluatedAt),
+      createdAt: new Date(dbSkill.createdAt),
+    };
+  }
+
+  private mapDbNotificationToNotification(dbNotification: any): Notification {
+    return {
+      id: dbNotification.id.toString(),
+      organizationId: dbNotification.organizationId,
+      type: dbNotification.type,
+      title: dbNotification.title,
+      message: dbNotification.message,
+      recipientIds: dbNotification.recipientIds || [],
+      sentBy: dbNotification.sentBy,
+      sentAt: new Date(dbNotification.sentAt),
+      readBy: dbNotification.readBy || [],
+      relatedEventId: dbNotification.relatedEventId,
+      status: dbNotification.status || 'pending',
+      createdAt: new Date(dbNotification.createdAt),
     };
   }
 }

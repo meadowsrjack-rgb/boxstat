@@ -60,7 +60,16 @@ export interface User {
   dateOfBirth?: string;
   phoneNumber?: string;
   address?: string;
+  city?: string;
   gender?: string;
+  height?: string;
+  age?: string;
+  
+  // Emergency and medical information
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  medicalInfo?: string;
+  allergies?: string;
   
   // Registration flow fields
   registrationType?: RegistrationType; // "myself" or "my_child"
@@ -165,6 +174,18 @@ export const users = pgTable("users", {
   unique("users_email_unique").on(table.email),
 ]);
 
+// Divisions table (defined before teams for FK reference)
+export const divisions = pgTable("divisions", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  description: text(),
+  ageRange: varchar("age_range"), // e.g., "6th-8th", "U12", "14-17"
+  programIds: text("program_ids").array(), // JSON array of linked program IDs
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
 // Teams table
 export const teams = pgTable("teams", {
   id: serial().primaryKey().notNull(),
@@ -173,12 +194,18 @@ export const teams = pgTable("teams", {
   color: varchar().default('#1E40AF').notNull(),
   coachId: varchar("coach_id"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-  division: varchar({ length: 100 }),
+  division: varchar({ length: 100 }), // legacy text division
+  divisionId: integer("division_id"), // FK to divisions table
   coachNames: varchar("coach_names", { length: 255 }),
   notionId: varchar("notion_id", { length: 255 }),
   program: varchar(),
 }, (table) => [
   unique("teams_notion_id_key").on(table.notionId),
+  foreignKey({
+    columns: [table.divisionId],
+    foreignColumns: [divisions.id],
+    name: "teams_division_id_fkey"
+  }),
 ]);
 
 // Events table
@@ -204,6 +231,16 @@ export const events = pgTable("events", {
   latitude: doublePrecision(),
   longitude: doublePrecision(),
   tags: text().array(),
+  // Event visibility and assignment scoping
+  visibility: jsonb(), // { roles?: string[], teams?: string[], programs?: string[], divisions?: string[], packages?: string[] }
+  assignTo: jsonb(), // { roles?: string[], teams?: string[], programs?: string[], divisions?: string[], packages?: string[], users?: string[] }
+  rsvpRequired: boolean("rsvp_required").default(false),
+  capacity: integer(),
+  allowCheckIn: boolean("allow_check_in").default(false),
+  checkInRadius: integer("check_in_radius"), // in meters
+  sendNotifications: boolean("send_notifications").default(false),
+  createdBy: varchar("created_by"),
+  status: varchar().default('active'), // active, cancelled, completed, draft
 });
 
 // Attendances table
@@ -284,6 +321,38 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   sportsEnginePaymentId: varchar("sports_engine_payment_id"),
   sportsEngineTransactionId: varchar("sports_engine_transaction_id"),
+  packageId: varchar("package_id"), // linked package/program
+  programId: varchar("program_id"), // linked program
+  organizationId: varchar("organization_id"), // organization
+});
+
+// Skills table (for coach evaluations)
+export const skills = pgTable("skills", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  playerId: varchar("player_id").notNull(),
+  coachId: varchar("coach_id").notNull(),
+  category: varchar().notNull(), // e.g., "Shooting", "Dribbling", "Defense"
+  score: integer().notNull(), // 1-10 rating scale
+  notes: text(),
+  evaluatedAt: timestamp("evaluated_at", { mode: 'string' }).defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  type: varchar().notNull(), // push, email, in-app
+  title: varchar().notNull(),
+  message: text().notNull(),
+  recipientIds: text("recipient_ids").array(), // array of user IDs
+  sentBy: varchar("sent_by").notNull(),
+  sentAt: timestamp("sent_at", { mode: 'string' }).defaultNow(),
+  readBy: text("read_by").array(), // array of user IDs who have read it
+  relatedEventId: integer("related_event_id"), // optional link to event
+  status: varchar().default('pending'), // pending, sent, failed
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
 export const insertUserSchema = z.object({
@@ -337,7 +406,8 @@ export interface Team {
   program?: string; // Configurable by organization
   color: string;
   coachIds: string[]; // Multiple coaches can manage a team
-  division?: string;
+  division?: string; // Legacy text division
+  divisionId?: number; // FK to divisions table
   createdAt: Date;
 }
 
@@ -349,6 +419,7 @@ export const insertTeamSchema = z.object({
   color: z.string().default("#1E40AF"),
   coachIds: z.array(z.string()).default([]),
   division: z.string().optional(),
+  divisionId: z.number().optional(),
 });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -356,6 +427,24 @@ export type InsertTeam = z.infer<typeof insertTeamSchema>;
 // =============================================
 // Event Schema
 // =============================================
+
+export interface EventVisibility {
+  roles?: string[];
+  teams?: string[];
+  programs?: string[];
+  divisions?: string[];
+  packages?: string[];
+  organizationId?: string;
+}
+
+export interface EventAssignment {
+  roles?: string[];
+  teams?: string[];
+  programs?: string[];
+  divisions?: string[];
+  packages?: string[];
+  users?: string[];
+}
 
 export interface Event {
   id: string;
@@ -368,6 +457,15 @@ export interface Event {
   location: string;
   teamId?: string;
   opponentTeam?: string;
+  visibility?: EventVisibility;
+  assignTo?: EventAssignment;
+  rsvpRequired?: boolean;
+  capacity?: number;
+  allowCheckIn?: boolean;
+  checkInRadius?: number;
+  sendNotifications?: boolean;
+  createdBy?: string;
+  status?: string; // active, cancelled, completed, draft
   isActive: boolean;
   createdAt: Date;
 }
@@ -382,6 +480,29 @@ export const insertEventSchema = z.object({
   location: z.string().min(1),
   teamId: z.string().optional(),
   opponentTeam: z.string().optional(),
+  visibility: z.object({
+    roles: z.array(z.string()).optional(),
+    teams: z.array(z.string()).optional(),
+    programs: z.array(z.string()).optional(),
+    divisions: z.array(z.string()).optional(),
+    packages: z.array(z.string()).optional(),
+    organizationId: z.string().optional(),
+  }).optional(),
+  assignTo: z.object({
+    roles: z.array(z.string()).optional(),
+    teams: z.array(z.string()).optional(),
+    programs: z.array(z.string()).optional(),
+    divisions: z.array(z.string()).optional(),
+    packages: z.array(z.string()).optional(),
+    users: z.array(z.string()).optional(),
+  }).optional(),
+  rsvpRequired: z.boolean().default(false),
+  capacity: z.number().optional(),
+  allowCheckIn: z.boolean().default(false),
+  checkInRadius: z.number().optional(),
+  sendNotifications: z.boolean().default(false),
+  createdBy: z.string().optional(),
+  status: z.string().default('active'),
   isActive: z.boolean().default(true),
 });
 
@@ -517,6 +638,9 @@ export interface Payment {
   currency: string;
   paymentType: string; // Configurable by organization
   status: "pending" | "completed" | "failed" | "refunded";
+  stripePaymentId?: string;
+  packageId?: string;
+  programId?: string;
   description?: string;
   dueDate?: string;
   paidAt?: Date;
@@ -530,6 +654,9 @@ export const insertPaymentSchema = z.object({
   currency: z.string().default("usd"),
   paymentType: z.string().min(1),
   status: z.enum(["pending", "completed", "failed", "refunded"]).default("pending"),
+  stripePaymentId: z.string().optional(),
+  packageId: z.string().optional(),
+  programId: z.string().optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(),
 });
@@ -597,3 +724,89 @@ export const insertPackageSelectionSchema = z.object({
 });
 
 export type InsertPackageSelection = z.infer<typeof insertPackageSelectionSchema>;
+
+// =============================================
+// Division Schema
+// =============================================
+
+export interface Division {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  ageRange?: string;
+  programIds?: string[];
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export const insertDivisionSchema = z.object({
+  organizationId: z.string(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  ageRange: z.string().optional(),
+  programIds: z.array(z.string()).default([]),
+  isActive: z.boolean().default(true),
+});
+
+export type InsertDivision = z.infer<typeof insertDivisionSchema>;
+
+// =============================================
+// Skill Evaluation Schema
+// =============================================
+
+export interface Skill {
+  id: string;
+  organizationId: string;
+  playerId: string;
+  coachId: string;
+  category: string;
+  score: number;
+  notes?: string;
+  evaluatedAt: Date;
+  createdAt: Date;
+}
+
+export const insertSkillSchema = z.object({
+  organizationId: z.string(),
+  playerId: z.string(),
+  coachId: z.string(),
+  category: z.string().min(1),
+  score: z.number().min(1).max(10),
+  notes: z.string().optional(),
+});
+
+export type InsertSkill = z.infer<typeof insertSkillSchema>;
+
+// =============================================
+// Notification Schema
+// =============================================
+
+export interface Notification {
+  id: string;
+  organizationId: string;
+  type: string; // push, email, in-app
+  title: string;
+  message: string;
+  recipientIds: string[];
+  sentBy: string;
+  sentAt: Date;
+  readBy?: string[];
+  relatedEventId?: number;
+  status: string; // pending, sent, failed
+  createdAt: Date;
+}
+
+export const insertNotificationSchema = z.object({
+  organizationId: z.string(),
+  type: z.string().min(1),
+  title: z.string().min(1),
+  message: z.string().min(1),
+  recipientIds: z.array(z.string()).default([]),
+  sentBy: z.string(),
+  readBy: z.array(z.string()).default([]),
+  relatedEventId: z.number().optional(),
+  status: z.string().default('pending'),
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

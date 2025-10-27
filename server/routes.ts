@@ -21,6 +21,9 @@ import {
   insertPaymentSchema,
   insertProgramSchema,
   insertPackageSelectionSchema,
+  insertDivisionSchema,
+  insertSkillSchema,
+  insertNotificationSchema,
 } from "@shared/schema";
 
 let wss: WebSocketServer | null = null;
@@ -1642,6 +1645,344 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     await storage.deleteProgram(req.params.id);
     res.json({ success: true });
+  });
+  
+  // =============================================
+  // DIVISION ROUTES
+  // =============================================
+  
+  app.get('/api/divisions', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const divisions = await storage.getDivisionsByOrganization(organizationId);
+      res.json(divisions);
+    } catch (error: any) {
+      console.error('Error fetching divisions:', error);
+      res.status(500).json({ error: 'Failed to fetch divisions', message: error.message });
+    }
+  });
+  
+  app.get('/api/divisions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid division ID' });
+      }
+      
+      const division = await storage.getDivision(id);
+      if (!division) {
+        return res.status(404).json({ error: 'Division not found' });
+      }
+      
+      res.json(division);
+    } catch (error: any) {
+      console.error('Error fetching division:', error);
+      res.status(500).json({ error: 'Failed to fetch division', message: error.message });
+    }
+  });
+  
+  app.post('/api/divisions', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can create divisions' });
+      }
+      
+      const divisionData = insertDivisionSchema.parse(req.body);
+      const division = await storage.createDivision(divisionData);
+      res.status(201).json(division);
+    } catch (error: any) {
+      console.error('Error creating division:', error);
+      res.status(400).json({ error: 'Failed to create division', message: error.message });
+    }
+  });
+  
+  app.patch('/api/divisions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can update divisions' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid division ID' });
+      }
+      
+      const updated = await storage.updateDivision(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Division not found' });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating division:', error);
+      res.status(400).json({ error: 'Failed to update division', message: error.message });
+    }
+  });
+  
+  app.delete('/api/divisions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can delete divisions' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid division ID' });
+      }
+      
+      await storage.deleteDivision(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting division:', error);
+      res.status(500).json({ error: 'Failed to delete division', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // SKILL ROUTES
+  // =============================================
+  
+  app.get('/api/skills', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const { playerId } = req.query;
+      
+      let skills;
+      if (playerId) {
+        skills = await storage.getSkillsByPlayer(playerId as string);
+      } else {
+        skills = await storage.getSkillsByOrganization(organizationId);
+      }
+      
+      res.json(skills);
+    } catch (error: any) {
+      console.error('Error fetching skills:', error);
+      res.status(500).json({ error: 'Failed to fetch skills', message: error.message });
+    }
+  });
+  
+  app.get('/api/skills/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid skill ID' });
+      }
+      
+      const skill = await storage.getSkill(id);
+      if (!skill) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+      
+      res.json(skill);
+    } catch (error: any) {
+      console.error('Error fetching skill:', error);
+      res.status(500).json({ error: 'Failed to fetch skill', message: error.message });
+    }
+  });
+  
+  app.post('/api/skills', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can create skills' });
+      }
+      
+      const skillData = insertSkillSchema.parse(req.body);
+      const skill = await storage.createSkill(skillData);
+      res.status(201).json(skill);
+    } catch (error: any) {
+      console.error('Error creating skill:', error);
+      res.status(400).json({ error: 'Failed to create skill', message: error.message });
+    }
+  });
+  
+  app.patch('/api/skills/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can update skills' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid skill ID' });
+      }
+      
+      const updated = await storage.updateSkill(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Skill not found' });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating skill:', error);
+      res.status(400).json({ error: 'Failed to update skill', message: error.message });
+    }
+  });
+  
+  app.delete('/api/skills/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can delete skills' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid skill ID' });
+      }
+      
+      await storage.deleteSkill(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting skill:', error);
+      res.status(500).json({ error: 'Failed to delete skill', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // NOTIFICATION ROUTES
+  // =============================================
+  
+  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: userId, organizationId } = req.user;
+      const allNotifications = await storage.getNotificationsByOrganization(organizationId);
+      
+      // Filter notifications where current user is a recipient
+      const userNotifications = allNotifications.filter(notification => 
+        notification.recipientIds && notification.recipientIds.includes(userId)
+      );
+      
+      res.json(userNotifications);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ error: 'Failed to fetch notifications', message: error.message });
+    }
+  });
+  
+  app.get('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid notification ID' });
+      }
+      
+      const notification = await storage.getNotification(id);
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      
+      res.json(notification);
+    } catch (error: any) {
+      console.error('Error fetching notification:', error);
+      res.status(500).json({ error: 'Failed to fetch notification', message: error.message });
+    }
+  });
+  
+  app.post('/api/notifications', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can create notifications' });
+      }
+      
+      const notificationData = insertNotificationSchema.parse(req.body);
+      const notification = await storage.createNotification(notificationData);
+      res.status(201).json(notification);
+    } catch (error: any) {
+      console.error('Error creating notification:', error);
+      res.status(400).json({ error: 'Failed to create notification', message: error.message });
+    }
+  });
+  
+  app.patch('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, id: userId } = req.user;
+      const id = parseInt(req.params.id, 10);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid notification ID' });
+      }
+      
+      // Get the notification to check ownership
+      const notification = await storage.getNotification(id);
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      
+      // Only admin can update any notification
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update notifications' });
+      }
+      
+      const updated = await storage.updateNotification(id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating notification:', error);
+      res.status(400).json({ error: 'Failed to update notification', message: error.message });
+    }
+  });
+  
+  app.delete('/api/notifications/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, id: userId } = req.user;
+      const id = parseInt(req.params.id, 10);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid notification ID' });
+      }
+      
+      // Get the notification to check ownership
+      const notification = await storage.getNotification(id);
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      
+      // Admin or user who created the notification can delete it
+      const isSender = notification.sentBy === userId;
+      if (role !== 'admin' && !isSender) {
+        return res.status(403).json({ message: 'You can only delete notifications you created or be an admin' });
+      }
+      
+      await storage.deleteNotification(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting notification:', error);
+      res.status(500).json({ error: 'Failed to delete notification', message: error.message });
+    }
+  });
+  
+  app.patch('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+      const id = parseInt(req.params.id, 10);
+      
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid notification ID' });
+      }
+      
+      // Get the notification to check if user is a recipient
+      const notification = await storage.getNotification(id);
+      if (!notification) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+      
+      // Only recipients can mark as read
+      const isRecipient = notification.recipientIds && notification.recipientIds.includes(userId);
+      if (!isRecipient) {
+        return res.status(403).json({ message: 'You can only mark your own notifications as read' });
+      }
+      
+      const updated = await storage.markNotificationAsRead(id);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error marking notification as read:', error);
+      res.status(400).json({ error: 'Failed to mark notification as read', message: error.message });
+    }
   });
   
   // =============================================

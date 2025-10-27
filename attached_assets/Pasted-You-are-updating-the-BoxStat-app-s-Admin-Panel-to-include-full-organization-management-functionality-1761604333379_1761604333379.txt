@@ -1,0 +1,201 @@
+You are updating the BoxStat app’s Admin Panel to include full organization management functionality across all key system tables.
+
+### 🎯 OBJECTIVE
+Enhance the Admin Dashboard to include CRUD (Create, Read, Update, Delete) operations for the following entities:
+Users, Programs, Divisions, Teams, Packages, Awards, Skills, Events, Attendance, Notifications, Transactions, and Settings.
+
+Each section should have:
+- A data table view (sortable, searchable)
+- A “Create New” button opening a modal form
+- Edit and Delete options
+- Integration with the backend API and Replit Database or Postgres
+
+---
+
+## 🧩 TABLES & ADMIN MENUS
+
+### 1️⃣ USERS
+Purpose: Manage all players, parents, coaches, and admins.
+
+**Fields:**
+id, firstName, lastName, email, phone, role, club, program, team, division, packages, stripeCustomerId, lastPayment, nextPayment, registered, active, dob, skill, awards, createdAt
+
+**Admin UI:**
+- Show all users with filters by role, program, and team.
+- "Create User" Modal:
+  - Inputs: firstName, lastName, email, phone, role (dropdown), club (auto), program, team, division, dob, packages (multi-select), skill (slider/dropdown), awards (multi-select), active (toggle)
+  - Auto-create Stripe customer if missing.
+  - Send welcome email via Resend.
+
+---
+
+### 2️⃣ PROGRAMS
+Purpose: Manage organization’s main offerings (e.g., Skills Academy).
+
+**Fields:**
+id, name, description, startDate, endDate, capacity, divisionIds, teamIds, packageIds, fee, active, createdAt
+
+**Admin UI:**
+- “Create Program” modal:
+  - Inputs: name, description, start/end date, capacity, fee, linked divisions, teams, packages, active toggle.
+
+---
+
+### 3️⃣ DIVISIONS
+Purpose: Age/skill groups within programs.
+
+**Fields:**
+id, programId, name, ageRange, description, teamIds, active
+
+**Admin UI:**
+- “Create Division” modal:
+  - Inputs: name, program (dropdown), age range, description, teams (multi-select), active toggle.
+
+---
+
+### 4️⃣ TEAMS
+Purpose: Manage rosters and coaching staff.
+
+**Fields:**
+id, name, programId, divisionId, coachIds, playerIds, color, active
+
+**Admin UI:**
+- “Create Team” modal:
+  - Inputs: name, program, division, coaches (multi-select), players (multi-select), color picker, active toggle.
+
+---
+
+### 5️⃣ PACKAGES
+Purpose: Manage payment options linked to programs.
+
+**Fields:**
+id, name, description, price, pricingModel, installments, installmentPrice, programId, duration, active
+
+**Admin UI:**
+- “Create Package” modal:
+  - Inputs: name, description, linked program, price, pricing model (one-time/monthly/installments), installments, installment price, duration, active toggle.
+- Auto-create Stripe product and price IDs.
+
+---
+
+### 6️⃣ AWARDS
+Purpose: Manage badges and trophies.
+
+**Fields:**
+id, name, description, criteria, tier, image, active
+
+**Admin UI:**
+- “Create Award” modal:
+  - Inputs: name, description, criteria, tier (dropdown), image upload, active toggle.
+
+---
+
+### 7️⃣ SKILLS
+Purpose: Track player evaluations by coaches.
+
+**Fields:**
+id, playerId, coachId, category, score, notes, evaluatedAt
+
+**Admin UI:**
+- “New Skill Evaluation” modal:
+  - Inputs: player (dropdown), coach (dropdown), category, score (1–10), notes.
+- Allow coaches to export evaluations to PDF.
+
+---
+
+### 8️⃣ EVENTS
+Purpose: Schedule games, practices, camps, etc.
+
+**Fields:**
+id, title, type, description, date, startTime, endTime, location, visibility (JSON), assignTo (JSON), rsvpRequired, allowCheckIn, checkInRadius, sendNotifications, createdBy, status, createdAt
+
+**Admin UI:**
+- “Create Event” modal:
+  - Inputs:
+    - Title, Type (dropdown: practice, game, camp, tryout, scrimmage, combine, meeting, other)
+    - Date, Start/End Time, Location
+    - Description
+    - Visibility: Roles, Programs, Teams, Divisions, Packages
+    - Assign To: Roles, Teams, Users
+    - RSVP Required (toggle), Check-in (toggle + radius), Send Notifications (toggle)
+- On save: Send notifications via Resend to “assignTo” users.
+
+---
+
+### 9️⃣ ATTENDANCE
+Purpose: Track attendance per event.
+
+**Fields:**
+id, eventId, userId, checkedIn, checkInTime, method, notes, coachId, createdAt
+
+**Admin UI:**
+- Attendance Tab:
+  - Filter by event/team/player.
+  - Toggle check-in status.
+  - Add manual check-ins.
+  - Export CSV.
+
+---
+
+### 🔟 NOTIFICATIONS
+Purpose: Log push/email/in-app messages.
+
+**Fields:**
+id, type, title, message, recipientIds, sentBy, sentAt, readBy, relatedEventId, status
+
+**Admin UI:**
+- “Send Notification” modal:
+  - Inputs: title, message, delivery type (push, email, in-app), recipient selection (roles/teams/programs/users).
+  - Log each send to notifications table.
+
+---
+
+### 11️⃣ TRANSACTIONS
+Purpose: Track Stripe payments and refunds.
+
+**Fields:**
+id, userId, stripePaymentId, amount, currency, status, packageId, programId, createdAt
+
+**Admin UI:**
+- Transaction Table:
+  - Columns: user, amount, status, date, linked package/program.
+  - View details modal with Stripe event link.
+
+---
+
+### 12️⃣ SETTINGS
+Purpose: Configure organization branding and global preferences.
+
+**Fields:**
+organizationId, name, sportType, primaryColor, secondaryColor, terminology, contactEmail, timezone, createdAt
+
+**Admin UI:**
+- “Organization Settings” modal:
+  - Inputs: name, sport type, primary/secondary color pickers, terminology, contact email, timezone.
+
+---
+
+## ⚙️ FUNCTIONAL REQUIREMENTS
+
+- Use modal-based forms for creating and editing records.
+- Fetch dropdown data dynamically (e.g., Program → Teams, Teams → Players).
+- Use pagination for large tables.
+- Use toasts/snackbars for success and error feedback.
+- Persist all data to Replit Database (JSON) or Postgres (if configured).
+- Confirm deletion with dialog.
+- Update admin navbar with all new tabs in this order:
+  `Users`, `Programs`, `Divisions`, `Teams`, `Packages`, `Awards`, `Skills`, `Events`, `Attendance`, `Notifications`, `Transactions`, `Settings`.
+
+---
+
+## ✅ FINAL BEHAVIOR EXPECTATION
+- Admin dashboard fully manages all data entities.
+- Each tab loads dynamically with consistent styling.
+- All modals use the same design system (inputs, dropdowns, toggles).
+- API routes exist for each table:
+  - `GET /api/[entity]`
+  - `POST /api/[entity]`
+  - `PUT /api/[entity]/:id`
+  - `DELETE /api/[entity]/:id`
+- Auto-refresh tables after create/edit/delete.
+- Admin role (meadowsrjack@gmail.com) has full access.

@@ -38,6 +38,7 @@ import PlayerTeamChat from "@/pages/player-team-chat";
 import SettingsPage from "@/pages/settings";
 import PlayerSettingsPage from "@/pages/player-settings";
 import CoachSettingsPage from "@/pages/coach-settings";
+import ParentSettingsPage from "@/pages/parent-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
 import TestRoute from "@/pages/test-route";
@@ -68,6 +69,17 @@ import {
   PlayerLegalPage,
   PlayerDangerPage 
 } from "@/pages/player-setting-pages";
+
+import { 
+  ParentProfilePage,
+  ParentPrivacyPage,
+  ParentNotificationsPage,
+  ParentSecurityPage,
+  ParentConnectionsPage,
+  ParentLegalPage,
+  ParentDevicesPage,
+  ParentDangerPage
+} from "@/pages/parent-setting-pages";
 
 import { 
   CoachProfilePage, 
@@ -243,6 +255,7 @@ function Router() {
       <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
       <Route path="/player-settings" component={() => <ProtectedRoute component={PlayerSettingsPage} />} />
       <Route path="/coach-settings" component={() => <ProtectedRoute component={CoachSettingsPage} />} />
+      <Route path="/parent-settings" component={() => <ProtectedRoute component={ParentSettingsPage} />} />
       
       {/* Individual Player Setting Pages */}
       <Route path="/player-settings/profile" component={() => <ProtectedRoute component={PlayerProfilePage} />} />
@@ -252,6 +265,16 @@ function Router() {
       <Route path="/player-settings/devices" component={() => <ProtectedRoute component={PlayerDevicesPage} />} />
       <Route path="/player-settings/legal" component={() => <ProtectedRoute component={PlayerLegalPage} />} />
       <Route path="/player-settings/danger" component={() => <ProtectedRoute component={PlayerDangerPage} />} />
+      
+      {/* Individual Parent Setting Pages */}
+      <Route path="/parent-settings/profile" component={() => <ProtectedRoute component={ParentProfilePage} />} />
+      <Route path="/parent-settings/privacy" component={() => <ProtectedRoute component={ParentPrivacyPage} />} />
+      <Route path="/parent-settings/notifications" component={() => <ProtectedRoute component={ParentNotificationsPage} />} />
+      <Route path="/parent-settings/security" component={() => <ProtectedRoute component={ParentSecurityPage} />} />
+      <Route path="/parent-settings/connections" component={() => <ProtectedRoute component={ParentConnectionsPage} />} />
+      <Route path="/parent-settings/legal" component={() => <ProtectedRoute component={ParentLegalPage} />} />
+      <Route path="/parent-settings/devices" component={() => <ProtectedRoute component={ParentDevicesPage} />} />
+      <Route path="/parent-settings/danger" component={() => <ProtectedRoute component={ParentDangerPage} />} />
       
       {/* Individual Coach Setting Pages */}
       <Route path="/coach-settings/profile" component={() => <ProtectedRoute component={CoachProfilePage} />} />

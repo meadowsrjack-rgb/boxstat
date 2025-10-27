@@ -1,0 +1,109 @@
+You are updating the BoxStat app’s event creation system to support scoped visibility and assignment logic.
+
+### Objective
+Modify the existing event creation flow (admin dashboard) to include two structured fields:
+1. `visibility` — controls who can SEE the event.
+2. `assignTo` — controls who PARTICIPATES in or is tracked for the event.
+
+### Requirements
+
+#### 1️⃣ Event Object Structure
+Each new event should include the following fields:
+{
+  id: string,                    // unique event ID
+  title: string,
+  type: string,                  // practice, game, camp, etc.
+  description?: string,
+  date: string,
+  startTime: string,
+  endTime: string,
+  location?: string,
+  visibility: {
+    roles?: string[],            // e.g. ["Player", "Coach", "Parent"]
+    teams?: string[],            // e.g. ["Titans", "Wildcats"]
+    programs?: string[],         // e.g. ["Skills Academy", "Youth Club"]
+    divisions?: string[],        // e.g. ["6th–8th"]
+    packages?: string[],         // e.g. ["Monthly Training"]
+    organizationId?: string      // org isolation
+  },
+  assignTo: {
+    roles?: string[],            // who can RSVP/check in
+    teams?: string[],
+    programs?: string[],
+    divisions?: string[],
+    packages?: string[],
+    users?: string[],            // optional direct user assignment (emails or IDs)
+  },
+  rsvpRequired?: boolean,
+  capacity?: number,
+  allowCheckIn?: boolean,
+  checkInRadius?: number,
+  sendNotifications?: boolean,
+  createdBy: string,             // admin user ID
+  createdAt: string,
+  status?: "active" | "cancelled" | "completed" | "draft"
+}
+
+#### 2️⃣ Admin Event Creation UI
+- Add two new sections to the Create Event modal:
+
+**Visibility**
+- Multi-select dropdowns for:
+  - Role (Coach, Player, Parent, Admin)
+  - Team (populate from `/api/teams`)
+  - Program (populate from `/api/programs`)
+  - Division (static list)
+  - Package (populate from `/api/programs` if applicable)
+- Optional toggle: "Visible to entire organization"
+
+**Assign To**
+- Same dropdown structure as above, but used for attendance/tracking scope
+- Add helper text: “Only assigned users can RSVP, check in, or receive stats for this event.”
+
+#### 3️⃣ Logic
+- When the admin saves:
+  - Store both objects (`visibility` and `assignTo`) in the database.
+  - On the front-end (player/coach/parent dashboards), only show events where the user:
+    - Matches at least one `visibility` condition (role, team, program, etc.)
+  - Only users in the `assignTo` conditions can RSVP, check in, or be marked present.
+
+#### 4️⃣ Notifications
+If `sendNotifications` = true:
+- Send push and/or email to all users included in `assignTo`
+- Use event title and date in the message
+
+#### 5️⃣ Integration Notes
+- The existing `/api/events` endpoint should accept the two new fields.
+- Database schema (Replit DB or Postgres) should be updated accordingly.
+- If Replit DB: store visibility and assignTo as nested JSON objects.
+- If Postgres: create JSONB columns for `visibility` and `assignTo`.
+
+#### 6️⃣ Example Entry
+{
+  id: "evt_001",
+  title: "Skills Academy Training",
+  type: "training",
+  date: "2025-10-30",
+  startTime: "17:00",
+  endTime: "19:00",
+  visibility: {
+    roles: ["Coach", "Player", "Parent"],
+    programs: ["Skills Academy"],
+    teams: ["Titans", "Wildcats"],
+    organizationId: "org_001"
+  },
+  assignTo: {
+    roles: ["Coach", "Player"],
+    teams: ["Titans"],
+    programs: ["Skills Academy"]
+  },
+  rsvpRequired: true,
+  allowCheckIn: true,
+  sendNotifications: true,
+  createdBy: "admin_123",
+  createdAt: "2025-10-24T17:45:00Z"
+}
+
+### End of Prompt
+Implement and connect to the admin dashboard’s “Create Event” modal.
+Ensure both new sections (Visibility + Assign To) appear above RSVP/Notifications.

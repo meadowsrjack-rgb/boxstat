@@ -5,6 +5,26 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
 
 ## Recent Changes
 
+### Complete Profile Photo Upload System (Oct 27, 2025)
+- **Parent Settings Routes Added**: Registered all parent-settings routes in App.tsx (were missing)
+  - Main route: `/parent-settings`
+  - Sub-routes: profile, privacy, notifications, security, connections, legal, devices, danger
+  - Location: client/src/App.tsx (lines 44, 76-85, 261, 272-280)
+- **Unified Account Avatar Fix**: Updated player cards to use Avatar component with AvatarImage
+  - Replaced hardcoded gradient div with proper Avatar/AvatarImage/AvatarFallback
+  - Now displays profileImageUrl when available, falls back to initials
+  - Location: client/src/pages/unified-account.tsx (lines 6, 245-250)
+- **Cache Invalidation Enhancement**: Added `/api/account/players` to cache invalidation
+  - All settings pages (player, parent, coach) now invalidate account/players cache after upload
+  - Ensures unified-account page shows updated photos immediately
+  - Locations: player-setting-pages.tsx (line 119), parent-setting-pages.tsx (line 120), coach-setting-pages.tsx (line 127)
+- **End-to-End Functionality**: Profile photos now work across all account types and pages
+  - Parents can upload photos for themselves via /parent-settings/profile
+  - Parents can upload photos for children via player settings
+  - Photos persist and display on: settings pages, player dashboard, unified-account page
+  - Each user (parent/child) has independent profileImageUrl field
+- **Testing**: E2E test verified complete workflow: parent uploads own photo, uploads child photos, all display correctly on unified-account and player dashboard, photos persist after page refresh
+
 ### Profile Photo Upload Implementation (Oct 25, 2025)
 - **Image Upload Endpoint**: Created POST /api/upload-profile-photo endpoint to handle profile photo uploads
   - Backend uses multer middleware for multipart/form-data file handling

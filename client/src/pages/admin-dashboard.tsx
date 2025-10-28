@@ -1953,23 +1953,158 @@ function EventsTab({ events, teams, programs, organization }: any) {
           </Table>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <h3 className="font-semibold">
-                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h3>
-              <Button variant="outline" size="sm" onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+            {/* Calendar Navigation and Legend */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    const newDate = new Date(currentDate);
+                    newDate.setMonth(newDate.getMonth() - 1);
+                    setCurrentDate(newDate);
+                  }}
+                  data-testid="button-prev-month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <h3 className="font-semibold text-lg min-w-[200px] text-center">
+                  {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    const newDate = new Date(currentDate);
+                    newDate.setMonth(newDate.getMonth() + 1);
+                    setCurrentDate(newDate);
+                  }}
+                  data-testid="button-next-month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentDate(new Date())}
+                  data-testid="button-today"
+                >
+                  Today
+                </Button>
+              </div>
+              
+              {/* Event Type Legend */}
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-blue-100 border border-blue-300" />
+                  <span className="text-gray-600">Practice</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-red-100 border border-red-300" />
+                  <span className="text-gray-600">Game</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-purple-100 border border-purple-300" />
+                  <span className="text-gray-600">Tournament</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-green-100 border border-green-300" />
+                  <span className="text-gray-600">Meeting</span>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-7 gap-2 text-center">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="font-semibold text-sm p-2">{day}</div>
-              ))}
-              {/* Calendar grid would be rendered here */}
-              <div className="col-span-7 text-center text-gray-500 py-8">Calendar view coming soon</div>
+            <div className="border rounded-lg overflow-hidden">
+              {/* Calendar Header - Days of Week */}
+              <div className="grid grid-cols-7 bg-gray-50 border-b">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div key={day} className="font-semibold text-sm p-3 text-center border-r last:border-r-0">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Calendar Grid - Days */}
+              <div className="grid grid-cols-7">
+                {(() => {
+                  const year = currentDate.getFullYear();
+                  const month = currentDate.getMonth();
+                  const firstDay = new Date(year, month, 1).getDay();
+                  const daysInMonth = new Date(year, month + 1, 0).getDate();
+                  const today = new Date();
+                  const isToday = (day: number) => 
+                    today.getDate() === day && 
+                    today.getMonth() === month && 
+                    today.getFullYear() === year;
+                  
+                  const cells = [];
+                  
+                  // Empty cells for days before month starts
+                  for (let i = 0; i < firstDay; i++) {
+                    cells.push(
+                      <div key={`empty-${i}`} className="min-h-32 p-2 bg-gray-50 border-r border-b" />
+                    );
+                  }
+                  
+                  // Days of the month
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+                    const dayEvents = events.filter((event: any) => {
+                      const eventDate = new Date(event.startTime).toISOString().split('T')[0];
+                      return eventDate === dateStr;
+                    });
+                    
+                    const eventTypeColors: Record<string, string> = {
+                      practice: 'bg-blue-100 text-blue-700 border-blue-300',
+                      game: 'bg-red-100 text-red-700 border-red-300',
+                      tournament: 'bg-purple-100 text-purple-700 border-purple-300',
+                      meeting: 'bg-green-100 text-green-700 border-green-300',
+                    };
+                    
+                    cells.push(
+                      <div 
+                        key={day} 
+                        className={`min-h-32 p-2 border-r border-b hover:bg-gray-50 transition-colors ${
+                          isToday(day) ? 'bg-red-50' : ''
+                        }`}
+                        data-testid={`calendar-day-${dateStr}`}
+                      >
+                        <div className={`text-sm font-semibold mb-1 ${
+                          isToday(day) ? 'text-red-600' : 'text-gray-700'
+                        }`}>
+                          {day}
+                        </div>
+                        <div className="space-y-1">
+                          {dayEvents.slice(0, 3).map((event: any) => (
+                            <button
+                              key={event.id}
+                              onClick={() => setEditingEvent(event)}
+                              className={`w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity ${
+                                eventTypeColors[event.type] || 'bg-gray-100 text-gray-700 border-gray-300'
+                              }`}
+                              data-testid={`calendar-event-${event.id}`}
+                            >
+                              <div className="font-medium truncate">{event.title}</div>
+                              <div className="text-xs opacity-75">
+                                {new Date(event.startTime).toLocaleTimeString('en-US', { 
+                                  hour: 'numeric', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                            </button>
+                          ))}
+                          {dayEvents.length > 3 && (
+                            <div className="text-xs text-gray-500 pl-1">
+                              +{dayEvents.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return cells;
+                })()}
+              </div>
             </div>
           </div>
         )}

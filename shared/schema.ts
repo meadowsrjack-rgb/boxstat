@@ -170,6 +170,7 @@ export const users = pgTable("users", {
   magicLinkExpiry: timestamp("magic_link_expiry", { mode: 'string' }),
   googleId: varchar("google_id"),
   appleId: varchar("apple_id"),
+  isActive: boolean("is_active").default(true).notNull(),
 }, (table) => [
   unique("users_email_unique").on(table.email),
 ]);

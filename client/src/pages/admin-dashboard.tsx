@@ -710,10 +710,21 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-program" data-testid="label-edit-program">Program</Label>
                     <Select 
-                      value={selectedProgram || editingUser.program || ""}
+                      value={selectedProgram || editingUser.programId || ""}
                       onValueChange={(value) => {
+                        const selectedProgramObj = programs?.find((p: any) => p.id === value);
+                        const programName = selectedProgramObj?.name || "";
                         setSelectedProgram(value);
-                        setEditingUser({...editingUser, program: value});
+                        setEditingUser({ 
+                          ...editingUser, 
+                          program: programName,
+                          programId: value,
+                          team: "",
+                          teamId: "",
+                          division: "",
+                          divisionId: ""
+                        });
+                        setSelectedDivision("");
                       }}
                     >
                       <SelectTrigger id="edit-program" data-testid="select-edit-program">
@@ -722,7 +733,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       <SelectContent>
                         <SelectItem value="">None</SelectItem>
                         {programs?.map((program: any) => (
-                          <SelectItem key={program.id} value={program.name}>
+                          <SelectItem key={program.id} value={program.id}>
                             {program.name}
                           </SelectItem>
                         ))}
@@ -742,7 +753,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       <SelectContent>
                         <SelectItem value="">None</SelectItem>
                         {teams
-                          ?.filter((team: any) => !selectedProgram || team.program === selectedProgram)
+                          ?.filter((team: any) => !selectedProgram || team.program === programs?.find((p: any) => p.id === selectedProgram)?.name)
                           .map((team: any) => (
                             <SelectItem key={team.id} value={team.id}>
                               {team.name}
@@ -755,10 +766,16 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
                     <Select 
-                      value={selectedDivision || editingUser.division || ""}
+                      value={selectedDivision || editingUser.divisionId || ""}
                       onValueChange={(value) => {
+                        const selectedDivisionObj = divisions?.find((d: any) => d.id === value);
+                        const divisionName = selectedDivisionObj?.name || "";
                         setSelectedDivision(value);
-                        setEditingUser({...editingUser, division: value});
+                        setEditingUser({
+                          ...editingUser, 
+                          division: divisionName,
+                          divisionId: value
+                        });
                       }}
                     >
                       <SelectTrigger id="edit-division" data-testid="select-edit-division">
@@ -769,7 +786,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         {divisions
                           ?.filter((division: any) => !selectedProgram || division.programIds?.includes(selectedProgram))
                           .map((division: any) => (
-                            <SelectItem key={division.id} value={division.name}>
+                            <SelectItem key={division.id} value={division.id}>
                               {division.name}
                             </SelectItem>
                           ))}
@@ -877,7 +894,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                           size="sm" 
                           onClick={() => {
                             setEditingUser(user);
-                            setSelectedProgram(user.program || "");
+                            const programId = user.programId || programs.find((p: any) => p.name === user.program)?.id || "";
+                            setSelectedProgram(programId);
                           }}
                           data-testid={`button-edit-user-${user.id}`}
                         >

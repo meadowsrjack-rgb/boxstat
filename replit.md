@@ -5,6 +5,49 @@ The UYP Basketball League Mobile App is a cross-platform solution designed for p
 
 ## Recent Changes
 
+### Admin Panel Expansion - Divisions, Skills, Notifications (Oct 27, 2025)
+- **Database Schema Enhancements**: Added three new tables with complete TypeScript interfaces and Zod validation
+  - **Divisions Table**: organizationId, name, description, ageRange, programIds[], isActive, createdAt
+  - **Skills Table**: organizationId, playerId, category, score (1-10), notes, evaluatedBy, evaluationDate, createdAt
+  - **Notifications Table**: organizationId, title, message, type, recipientIds[], sentBy, sendDate, isRead, createdAt
+  - Added divisionId foreign key to teams table (references divisions.id)
+  - Enhanced events table with visibility and assignTo JSONB fields for scoped event management
+  - Enhanced payments table with packageId, programId, organizationId fields to track transactions
+  - Fixed User interface to include all database fields (city, height, age, emergencyContact, emergencyPhone, medicalInfo, allergies)
+  - Location: shared/schema.ts
+
+- **Storage Layer Implementation**: Full CRUD operations for all new entities
+  - Added methods to IStorage interface for divisions, skills, and notifications
+  - Implemented all methods in MemStorage class using in-memory Maps with auto-incrementing IDs
+  - Implemented all methods in DatabaseStorage class using Drizzle ORM with proper database queries
+  - Added mapper functions (mapDbDivisionToDivision, mapDbSkillToSkill, mapDbNotificationToNotification)
+  - Location: server/storage-impl.ts
+
+- **API Routes**: RESTful endpoints with full authentication and validation
+  - **Divisions API**: GET/POST /api/divisions, GET/PATCH/DELETE /api/divisions/:id (admin/coach only)
+  - **Skills API**: GET/POST /api/skills, GET/PATCH/DELETE /api/skills/:id (coach/admin only, supports playerId filter)
+  - **Notifications API**: GET/POST /api/notifications, GET/PATCH/DELETE /api/notifications/:id, PATCH /api/notifications/:id/read
+  - All routes use Zod schema validation (insertDivisionSchema, insertSkillSchema, insertNotificationSchema)
+  - Proper authorization checks based on user role
+  - Comprehensive error handling with appropriate HTTP status codes
+  - Location: server/routes.ts (lines 1653-1989)
+
+- **Admin Dashboard UI**: Three new tabs with full CRUD interfaces
+  - **Divisions Tab**: Create, edit, delete divisions with table view showing name, description, age range, programs, status
+  - **Skills Tab**: Create, edit, delete skills with player filter, table view with visual star ratings
+  - **Notifications Tab**: Create, edit, delete notifications with recipient selection, table view with read status
+  - All tabs use TanStack Query for data fetching and mutations
+  - Form validation using react-hook-form with Zod resolvers
+  - Success/error toast notifications for all operations
+  - Comprehensive data-testid attributes for testing
+  - Location: client/src/pages/admin-dashboard.tsx
+
+- **Architect Review**: All changes reviewed and approved by architect
+  - No critical issues identified
+  - Implementation follows best practices and existing patterns
+  - Clean integration across schema, storage, API, and UI layers
+  - Proper error handling and security throughout
+
 ### Complete Profile Photo Upload System (Oct 27, 2025)
 - **Parent Settings Routes Added**: Registered all parent-settings routes in App.tsx (were missing)
   - Main route: `/parent-settings`

@@ -344,12 +344,17 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       firstName: "",
       lastName: "",
       phoneNumber: "",
+      isActive: true,
     },
   });
 
   const createUser = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/users", { ...data, organizationId: organization.id });
+      return await apiRequest("POST", "/api/users", { 
+        ...data, 
+        organizationId: organization.id,
+        isActive: data.isActive ?? true
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -863,7 +868,17 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user: any) => {
+              {[...users].sort((a, b) => {
+                // First, separate by active status
+                if (a.isActive && !b.isActive) return -1;
+                if (!a.isActive && b.isActive) return 1;
+                
+                // Within the same active/inactive group, sort by updatedAt descending
+                // (recently updated users first)
+                const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                return bTime - aTime;
+              }).map((user: any) => {
                 const userTeam = teams.find((t: any) => t.roster?.includes(user.id));
                 return (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>

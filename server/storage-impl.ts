@@ -721,7 +721,11 @@ class MemStorage implements IStorage {
     const user = this.users.get(id);
     if (!user) return undefined;
     
-    const updated = { ...user, ...updates, updatedAt: new Date() };
+    const updated = { 
+      ...user, 
+      ...updates, 
+      updatedAt: new Date() 
+    };
     this.users.set(id, updated);
     return updated;
   }
@@ -1381,6 +1385,7 @@ class DatabaseStorage implements IStorage {
       password: updates.password,
       teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
       parentId: updates.accountHolderId,
+      isActive: updates.isActive,
       verified: updates.verified,
       verificationToken: updates.verificationToken,
       verificationExpiry: updates.verificationExpiry?.toISOString(),

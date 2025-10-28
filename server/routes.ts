@@ -1071,7 +1071,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accountHolderId: id,
         packageSelected: packageId,
         teamAssignmentStatus: "pending",
-        paymentStatus: "pending", // Player is pending until payment is complete
         hasRegistered: false, // Will be set to true after payment
         verified: true, // Child profiles are auto-verified through parent
         isActive: true,

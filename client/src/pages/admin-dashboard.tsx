@@ -384,11 +384,14 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     mutationFn: async ({ id, ...data }: any) => {
       return await apiRequest("PATCH", `/api/users/${id}`, data);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "User updated successfully" });
-      setEditingUser(null);
-      setSelectedProgram("");
+      // Only show toast and close dialog if updating from edit dialog (more than just isActive)
+      if (Object.keys(variables).length > 2 || !('isActive' in variables)) {
+        toast({ title: "User updated successfully" });
+        setEditingUser(null);
+        setSelectedProgram("");
+      }
     },
     onError: () => {
       toast({ title: "Failed to update user", variant: "destructive" });
@@ -903,6 +906,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         onCheckedChange={(checked) => {
                           updateUser.mutate({ id: user.id, isActive: checked });
                         }}
+                        className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-gray-400"
                         data-testid={`toggle-active-${user.id}`}
                       />
                     </TableCell>

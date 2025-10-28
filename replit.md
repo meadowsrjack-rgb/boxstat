@@ -8,6 +8,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Admin Panel - Active Toggle Fix (Oct 28, 2025)
+- **Critical Database Schema Fix**: Added missing `isActive` column to users table
+  - Column was defined in TypeScript interface but missing from Drizzle schema
+  - Added as `boolean("is_active").default(true).notNull()` to ensure all users default to active
+  - Pushed schema change to database successfully
+- **Fixed Toggle Mutation Logic**: Removed optimistic updates that were causing React component confusion
+  - Removed optimistic cache updates that were triggering premature list re-sorting
+  - Added disabled state to Switch during mutation to prevent race conditions
+  - Toggle now updates backend first, then refreshes UI with correct state
+- **Verified Functionality**: End-to-end testing confirmed all toggle features work correctly
+  - Each toggle operates independently without affecting others
+  - Visual feedback: red when active, gray when inactive
+  - Backend persistence: isActive values correctly stored and retrieved
+  - List sorting: active users at top (by most recent updatedAt), inactive at bottom
+  - No race conditions or flickering during updates
+- Architect verified: PASS - production-ready implementation
+
 ### Admin Panel - Calendar View for Event Management (Oct 28, 2025)
 - **Full Calendar View Implementation**: Built comprehensive calendar view for Events tab
   - **Monthly Calendar Grid**: Displays all days of the month with proper alignment and empty cells for days before month starts

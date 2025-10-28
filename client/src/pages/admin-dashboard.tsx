@@ -327,6 +327,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("");
+  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -382,30 +383,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 
   const updateUser = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
+      setUpdatingUserId(id);
       return await apiRequest("PATCH", `/api/users/${id}`, data);
-    },
-    onMutate: async (variables) => {
-      // Cancel any outgoing refetches to avoid overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey: ["/api/users"] });
-      
-      // Snapshot the previous value
-      const previousUsers = queryClient.getQueryData(["/api/users"]);
-      
-      // Optimistically update the cache
-      queryClient.setQueryData(["/api/users"], (old: any) => {
-        if (!old) return old;
-        return old.map((user: any) => 
-          user.id === variables.id 
-            ? { ...user, ...variables, updatedAt: new Date().toISOString() }
-            : user
-        );
-      });
-      
-      // Return a context object with the snapshotted value
-      return { previousUsers };
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setUpdatingUserId(null);
       // Only show toast and close dialog if updating from edit dialog (more than just isActive)
       if (Object.keys(variables).length > 2 || !('isActive' in variables)) {
         toast({ title: "User updated successfully" });
@@ -413,11 +396,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         setSelectedProgram("");
       }
     },
-    onError: (_error, _variables, context: any) => {
-      // If the mutation fails, roll back to the previous value
-      if (context?.previousUsers) {
-        queryClient.setQueryData(["/api/users"], context.previousUsers);
-      }
+    onError: (_error, _variables) => {
+      setUpdatingUserId(null);
       toast({ title: "Failed to update user", variant: "destructive" });
     },
   });
@@ -927,6 +907,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>
                       <Switch
                         checked={user.isActive !== false}
+                        disabled={updatingUserId === user.id}
                         onCheckedChange={(checked) => {
                           updateUser.mutate({ id: user.id, isActive: checked });
                         }}

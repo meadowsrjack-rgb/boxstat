@@ -1307,7 +1307,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can update users' });
     }
     
+    console.log(`[DEBUG] PATCH /api/users/${req.params.id} - Received body:`, JSON.stringify(req.body));
     const updated = await storage.updateUser(req.params.id, req.body);
+    console.log(`[DEBUG] PATCH /api/users/${req.params.id} - Returning isActive:`, updated?.isActive);
     res.json(updated);
   });
   

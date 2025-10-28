@@ -6,6 +6,46 @@ The UYP Basketball League Mobile App is a cross-platform solution for parents an
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Admin Panel - Functional Edit Dialogs & Users Table Restructure (Oct 28, 2025)
+- **Users Table Restructure**: Updated from 19 to 15 columns matching exact specification
+  - **Columns**: First Name, Last Name, Email, Phone, Role, Club, Program, Team, Division, DOB, Packages, Skill Level, Awards, Active, Actions
+  - **Removed**: Stripe ID, Last Payment, Next Payment, Registered, Created
+  - Split Name into separate First Name and Last Name columns
+  - Added responsive horizontal scrolling for smaller screens
+
+- **Users Edit Dialog - Production-Ready Cascading Dropdowns**:
+  - Full edit capability with updateUser mutation (PATCH /api/users/${id})
+  - All user fields pre-populated in edit form
+  - **Cascading Dropdown Logic**:
+    - Program dropdown → filters Team and Division dropdowns
+    - When program changes → clears team, teamId, division, divisionId (prevents inconsistent relationships)
+    - Division dropdown filters by program IDs (programIds array)
+    - Team dropdown filters by selected program
+  - Club field auto-filled from organization.name (disabled)
+  - Active status toggle using Switch component
+  - Architect verified: PASS - production-ready implementation
+
+- **Edit Dialogs Implemented for All Tabs**:
+  - **Teams**: Edit name, division, ageGroup, coachId, description
+  - **Events**: Edit title, description, startTime, endTime, location, type, targetType, targetId
+  - **Awards**: Edit name, description, criteria, iconUrl
+  - **Programs**: Edit name, description, startDate, endDate, capacity, fee (with ongoing checkbox)
+  - **Divisions, Skills, Notifications**: Already had working edit dialogs (verified)
+
+- **Technical Details**:
+  - All edit dialogs use controlled Dialog pattern with proper state management
+  - Forms pre-populate with current data using defaultValue
+  - All mutations use HTTP PATCH method with cache invalidation
+  - Consistent data-testid attributes for testing
+  - Zero LSP errors, application running successfully
+
+- **Bug Fixes During Implementation**:
+  - Fixed cascading dropdown to use program IDs instead of names
+  - Fixed PATCH payload to include programId and divisionId
+  - Fixed team consistency by clearing teamId when program changes
+
 ## System Architecture
 
 ### Frontend Architecture

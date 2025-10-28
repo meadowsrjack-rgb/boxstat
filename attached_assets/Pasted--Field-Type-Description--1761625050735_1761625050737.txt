@@ -1,0 +1,22 @@
+| Field              | Type                                       | Description                             |
+| ------------------ | ------------------------------------------ | --------------------------------------- |
+| `id`               | string (UUID)                              | Unique user ID                          |
+| `firstName`        | string                                     | User’s first name                       |
+| `lastName`         | string                                     | User’s last name                        |
+| `email`            | string                                     | Primary email (unique)                  |
+| `phone`            | string                                     | Phone number                            |
+| `role`             | enum(`admin`, `coach`, `player`, `parent`) | Role type                               |
+| `club`             | string                                     | Club/organization name                  |
+| `program`          | string                                     | Linked program (e.g., “Skills Academy”) |
+| `team`             | string                                     | Linked team (e.g., “Titans”)            |
+| `division`         | string                                     | Division (e.g., “6th–8th”)              |
+| `packages`         | array[string]                              | Purchased package(s)                    |
+| `stripeCustomerId` | string                                     | Stripe ID                               |
+| `lastPayment`      | date                                       | Last payment date                       |
+| `nextPayment`      | date                                       | Next due date                           |
+| `registered`       | boolean                                    | Registered through platform             |
+| `active`           | boolean                                    | Active status                           |
+| `dob`              | date                                       | Date of birth                           |
+| `skill`            | string                                     | Skill rating / level                    |
+| `awards`           | array[string]                              | Badge/trophy IDs                        |
+| `createdAt`        | date                                       | Auto timestamp                          |

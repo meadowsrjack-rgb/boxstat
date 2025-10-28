@@ -358,6 +358,19 @@ function UsersTab({ users, teams, organization }: any) {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/users/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete user", variant: "destructive" });
+    },
+  });
+
   const downloadUserTemplate = () => {
     const csvContent = "First name,Last name,Email,Phone,Address,Role,Status,Program/Division,Team,Awards,Rating\nJohn,Doe,player@example.com,555-0100,123 Main St,player,active,Basketball Academy,Thunder U12,5,4.5\nJane,Smith,coach@example.com,555-0101,456 Oak Ave,coach,active,,,10,5.0\nBob,Johnson,parent@example.com,555-0102,789 Elm St,parent,active,,,,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -594,62 +607,91 @@ function UsersTab({ users, teams, organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead>Registered</TableHead>
-              <TableHead>Stripe ID</TableHead>
-              <TableHead>Program</TableHead>
-              <TableHead>Team</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user: any) => (
-              <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                <TableCell data-testid={`text-username-${user.id}`}>{user.firstName} {user.lastName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{user.phoneNumber || "-"}</TableCell>
-                <TableCell>
-                  <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                    {user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.isActive ? "default" : "secondary"}>
-                    {user.isActive ? "Yes" : "No"}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.hasRegistered ? "default" : "outline"}>
-                    {user.hasRegistered ? "Yes" : "No"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {user.stripeCustomerId ? (
-                    <span className="text-green-600" title={user.stripeCustomerId}>
-                      {user.stripeCustomerId.substring(0, 12)}...
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </TableCell>
-                <TableCell>{user.program || "-"}</TableCell>
-                <TableCell>{user.teamId || "-"}</TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Club</TableHead>
+                <TableHead>Program</TableHead>
+                <TableHead>Team</TableHead>
+                <TableHead>Division</TableHead>
+                <TableHead>DOB</TableHead>
+                <TableHead>Skill</TableHead>
+                <TableHead>Packages</TableHead>
+                <TableHead>Stripe ID</TableHead>
+                <TableHead>Last Payment</TableHead>
+                <TableHead>Next Payment</TableHead>
+                <TableHead>Registered</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead>Awards</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
+            </TableHeader>
+            <TableBody>
+              {users.map((user: any) => {
+                const userTeam = teams.find((t: any) => t.roster?.includes(user.id));
+                return (
+                  <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                    <TableCell data-testid={`text-username-${user.id}`}>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phoneNumber || user.phone || "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>{user.club || "-"}</TableCell>
+                    <TableCell>{user.program || "-"}</TableCell>
+                    <TableCell>{userTeam?.name || "-"}</TableCell>
+                    <TableCell>{user.division || "-"}</TableCell>
+                    <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell>{user.skill || "-"}</TableCell>
+                    <TableCell>{user.packages?.join(", ") || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {user.stripeCustomerId ? (
+                        <span className="text-green-600" title={user.stripeCustomerId}>
+                          {user.stripeCustomerId.substring(0, 12)}...
+                        </span>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell>{user.lastPayment ? new Date(user.lastPayment).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell>{user.nextPayment ? new Date(user.nextPayment).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell>
+                      <Badge variant={user.hasRegistered ? "default" : "outline"}>
+                        {user.hasRegistered ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.isActive ? "default" : "secondary"}>
+                        {user.isActive ? "Yes" : "No"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{user.awards?.length || 0}</TableCell>
+                    <TableCell>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => deleteUser.mutate(user.id)}
+                          data-testid={`button-delete-user-${user.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -700,6 +742,19 @@ function TeamsTab({ teams, users, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to create team", variant: "destructive" });
+    },
+  });
+
+  const deleteTeam = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/teams/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete team", variant: "destructive" });
     },
   });
 
@@ -962,6 +1017,14 @@ function TeamsTab({ teams, users, organization }: any) {
                         <Button variant="ghost" size="sm" data-testid={`button-edit-team-${team.id}`}>
                           <Edit className="w-4 h-4" />
                         </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => deleteTeam.mutate(team.id)}
+                          data-testid={`button-delete-team-${team.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1050,6 +1113,19 @@ function EventsTab({ events, teams, programs, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
+    },
+  });
+
+  const deleteEvent = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/events/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Event deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete event", variant: "destructive" });
     },
   });
 
@@ -1295,7 +1371,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </FormItem>
                     )}
                   />
-                  {(form.watch("targetType") === "team" || form.watch("targetType") === "program" || form.watch("targetType") === "role") && (
+                  {(String(form.watch("targetType")) === "team" || String(form.watch("targetType")) === "program" || String(form.watch("targetType")) === "role") && (
                     <FormField
                       control={form.control}
                       name="targetId"
@@ -1367,9 +1443,19 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     {event.targetType === "all" ? "Everyone" : event.targetType}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm" data-testid={`button-edit-event-${event.id}`}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" data-testid={`button-edit-event-${event.id}`}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => deleteEvent.mutate(event.id)}
+                        data-testid={`button-delete-event-${event.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1407,12 +1493,13 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [isOngoing, setIsOngoing] = useState(false);
 
   const createProgramSchema = z.object({
     name: z.string().min(1, "Program name is required"),
     description: z.string().optional(),
     startDate: z.string(),
-    endDate: z.string(),
+    endDate: z.string().optional(),
     capacity: z.number().optional(),
     fee: z.number().optional(),
   });
@@ -1431,15 +1518,18 @@ function ProgramsTab({ programs, teams, organization }: any) {
 
   const createProgram = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/programs", {
+      const programData = {
         ...data,
         organizationId: organization.id,
-      });
+        endDate: isOngoing ? null : data.endDate,
+      };
+      return await apiRequest("POST", "/api/programs", programData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
       toast({ title: "Program created successfully" });
       setIsDialogOpen(false);
+      setIsOngoing(false);
       form.reset();
     },
     onError: () => {
@@ -1595,31 +1685,56 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" data-testid="input-program-start" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>End Date</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" data-testid="input-program-end" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="startDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="date" data-testid="input-program-start" />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="date" 
+                              disabled={isOngoing}
+                              data-testid="input-program-end" 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {isOngoing && "Program is ongoing"}
+                          </FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={isOngoing}
+                      onCheckedChange={(checked) => {
+                        setIsOngoing(checked as boolean);
+                        if (checked) {
+                          form.setValue("endDate", "");
+                        }
+                      }}
+                      data-testid="checkbox-program-ongoing"
+                    />
+                    <Label htmlFor="ongoing" className="text-sm">
+                      This is an ongoing/infinite program (no end date)
+                    </Label>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
@@ -1673,7 +1788,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
               <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
                 <TableCell className="font-medium">{program.name}</TableCell>
                 <TableCell>
-                  {new Date(program.startDate).toLocaleDateString()} - {new Date(program.endDate).toLocaleDateString()}
+                  {new Date(program.startDate).toLocaleDateString()} - {program.endDate ? new Date(program.endDate).toLocaleDateString() : <Badge variant="secondary">Ongoing</Badge>}
                 </TableCell>
                 <TableCell>{program.capacity || "-"}</TableCell>
                 <TableCell>${(program.fee || 0).toFixed(2)}</TableCell>
@@ -1728,6 +1843,19 @@ function AwardsTab({ awards, users, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to create award", variant: "destructive" });
+    },
+  });
+
+  const deleteAward = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/awards/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
+      toast({ title: "Award deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete award", variant: "destructive" });
     },
   });
 
@@ -1920,6 +2048,14 @@ function AwardsTab({ awards, users, organization }: any) {
                     </Button>
                     <Button variant="ghost" size="sm" data-testid={`button-edit-award-${award.id}`}>
                       <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => deleteAward.mutate(award.id)}
+                      data-testid={`button-delete-award-${award.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>
                 </TableCell>
@@ -2544,7 +2680,7 @@ function DivisionsTab({ divisions, programs, organization }: any) {
                         <Select
                           value={field.value?.[0] || ""}
                           onValueChange={(value) => {
-                            const currentIds = field.value || [];
+                            const currentIds: string[] = field.value || [];
                             if (!currentIds.includes(value)) {
                               field.onChange([...currentIds, value]);
                             }

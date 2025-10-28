@@ -85,6 +85,26 @@
 }
 
 @layer components {
+  /* Hide scrollbar but keep scrolling functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Drag to scroll container */
+  .drag-scroll {
+    cursor: grab;
+    user-select: none;
+  }
+
+  .drag-scroll:active {
+    cursor: grabbing;
+  }
+
   /* Player interface specific styles */
   .player-gradient {
     background: linear-gradient(135deg, hsl(167, 85%, 45%), hsl(221, 83%, 53%));

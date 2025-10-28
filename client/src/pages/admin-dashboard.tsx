@@ -38,22 +38,71 @@ import {
   Layers,
   ArrowUpDown,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
 import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
 import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
 
+// Hook for drag-to-scroll functionality
+function useDragScroll() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      setIsDragging(true);
+      setStartX(e.pageX - element.offsetLeft);
+      setScrollLeft(element.scrollLeft);
+    };
+
+    const handleMouseLeave = () => {
+      setIsDragging(false);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - element.offsetLeft;
+      const walk = (x - startX) * 2;
+      element.scrollLeft = scrollLeft - walk;
+    };
+
+    element.addEventListener('mousedown', handleMouseDown);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      element.removeEventListener('mousedown', handleMouseDown);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isDragging, startX, scrollLeft]);
+
+  return ref;
+}
+
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
+  const tabsRef = useDragScroll();
 
   // Fetch current user for role-based access control
   const { data: currentUser, isLoading: userLoading } = useQuery<any>({
@@ -173,53 +222,53 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="overflow-x-auto mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="inline-flex w-auto min-w-full sm:w-auto">
-              <TabsTrigger value="overview" data-testid="tab-overview">
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
+              <TabsTrigger value="overview" data-testid="tab-overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <TrendingUp className="w-4 h-4 mr-2" />
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="users" data-testid="tab-users">
+              <TabsTrigger value="users" data-testid="tab-users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Users className="w-4 h-4 mr-2" />
                 Users
               </TabsTrigger>
-              <TabsTrigger value="teams" data-testid="tab-teams">
+              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Users className="w-4 h-4 mr-2" />
                 Teams
               </TabsTrigger>
-              <TabsTrigger value="events" data-testid="tab-events">
+              <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Calendar className="w-4 h-4 mr-2" />
                 Events
               </TabsTrigger>
-              <TabsTrigger value="programs" data-testid="tab-programs">
+              <TabsTrigger value="programs" data-testid="tab-programs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Award className="w-4 h-4 mr-2" />
                 Programs
               </TabsTrigger>
-              <TabsTrigger value="awards" data-testid="tab-awards">
+              <TabsTrigger value="awards" data-testid="tab-awards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Trophy className="w-4 h-4 mr-2" />
                 Awards
               </TabsTrigger>
-              <TabsTrigger value="packages" data-testid="tab-packages">
+              <TabsTrigger value="packages" data-testid="tab-packages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Packages
               </TabsTrigger>
-              <TabsTrigger value="preview" data-testid="tab-preview">
+              <TabsTrigger value="preview" data-testid="tab-preview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Eye className="w-4 h-4 mr-2" />
                 Preview
               </TabsTrigger>
-              <TabsTrigger value="divisions" data-testid="tab-divisions">
+              <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Layers className="w-4 h-4 mr-2" />
                 Divisions
               </TabsTrigger>
-              <TabsTrigger value="skills" data-testid="tab-skills">
+              <TabsTrigger value="skills" data-testid="tab-skills" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Star className="w-4 h-4 mr-2" />
                 Skills
               </TabsTrigger>
-              <TabsTrigger value="notifications" data-testid="tab-notifications">
+              <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
               </TabsTrigger>
-              <TabsTrigger value="settings" data-testid="tab-settings">
+              <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </TabsTrigger>
@@ -331,6 +380,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const tableRef = useDragScroll();
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -908,7 +958,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
           <Table>
             <TableHeader>
               <TableRow>
@@ -1086,6 +1136,7 @@ function TeamsTab({ teams, users, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [editingTeam, setEditingTeam] = useState<any>(null);
+  const tableRef = useDragScroll();
 
   const coaches = users.filter((u: any) => u.role === "coach");
   const players = users.filter((u: any) => u.role === "player");
@@ -1455,10 +1506,11 @@ function TeamsTab({ teams, users, organization }: any) {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Team Name</TableHead>
+          <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Team Name</TableHead>
                 <TableHead>Division</TableHead>
                 <TableHead>Age Group</TableHead>
                 <TableHead>Coach</TableHead>
@@ -1511,6 +1563,7 @@ function TeamsTab({ teams, users, organization }: any) {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -2255,6 +2308,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [isOngoing, setIsOngoing] = useState(false);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const [editIsOngoing, setEditIsOngoing] = useState(false);
+  const tableRef = useDragScroll();
 
   const createProgramSchema = z.object({
     name: z.string().min(1, "Program name is required"),
@@ -2656,10 +2710,11 @@ function ProgramsTab({ programs, teams, organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Program Name</TableHead>
+        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Program Name</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Capacity</TableHead>
               <TableHead>Fee</TableHead>
@@ -2694,6 +2749,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -2705,6 +2761,7 @@ function AwardsTab({ awards, users, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingAward, setEditingAward] = useState<any>(null);
+  const tableRef = useDragScroll();
 
   const createAwardSchema = z.object({
     name: z.string().min(1),
@@ -2992,10 +3049,11 @@ function AwardsTab({ awards, users, organization }: any) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Award Name</TableHead>
+        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Award Name</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Recipients</TableHead>
               <TableHead>Actions</TableHead>
@@ -3034,6 +3092,7 @@ function AwardsTab({ awards, users, organization }: any) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -3045,6 +3104,7 @@ function PackagesTab({ packages, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<any>(null);
+  const tableRef = useDragScroll();
 
   const createPackageSchema = z.object({
     name: z.string().min(1, "Package name is required"),

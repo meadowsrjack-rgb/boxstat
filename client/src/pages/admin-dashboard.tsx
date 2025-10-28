@@ -917,140 +917,98 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   onClick={() => handleSort('firstName')}
                   data-testid="sort-firstName"
                 >
-                  <div className="flex items-center gap-1">
-                    First Name
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  First Name
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('lastName')}
                   data-testid="sort-lastName"
                 >
-                  <div className="flex items-center gap-1">
-                    Last Name
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Last Name
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('email')}
                   data-testid="sort-email"
                 >
-                  <div className="flex items-center gap-1">
-                    Email
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Email
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('phoneNumber')}
                   data-testid="sort-phoneNumber"
                 >
-                  <div className="flex items-center gap-1">
-                    Phone
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Phone
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('role')}
                   data-testid="sort-role"
                 >
-                  <div className="flex items-center gap-1">
-                    Role
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Role
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('club')}
                   data-testid="sort-club"
                 >
-                  <div className="flex items-center gap-1">
-                    Club
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Club
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('program')}
                   data-testid="sort-program"
                 >
-                  <div className="flex items-center gap-1">
-                    Program
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Program
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('team')}
                   data-testid="sort-team"
                 >
-                  <div className="flex items-center gap-1">
-                    Team
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Team
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('division')}
                   data-testid="sort-division"
                 >
-                  <div className="flex items-center gap-1">
-                    Division
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Division
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('dob')}
                   data-testid="sort-dob"
                 >
-                  <div className="flex items-center gap-1">
-                    DOB
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  DOB
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('packages')}
                   data-testid="sort-packages"
                 >
-                  <div className="flex items-center gap-1">
-                    Packages
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Packages
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('skill')}
                   data-testid="sort-skill"
                 >
-                  <div className="flex items-center gap-1">
-                    Skill Level
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Skill Level
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('awards')}
                   data-testid="sort-awards"
                 >
-                  <div className="flex items-center gap-1">
-                    Awards
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Awards
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('isActive')}
                   data-testid="sort-isActive"
                 >
-                  <div className="flex items-center gap-1">
-                    Active
-                    <ArrowUpDown className="w-4 h-4" />
-                  </div>
+                  Active
                 </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>

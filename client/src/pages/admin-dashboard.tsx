@@ -910,6 +910,7 @@ function TeamsTab({ teams, users, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [editingTeam, setEditingTeam] = useState<any>(null);
 
   const coaches = users.filter((u: any) => u.role === "coach");
   const players = users.filter((u: any) => u.role === "player");
@@ -962,6 +963,20 @@ function TeamsTab({ teams, users, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to delete team", variant: "destructive" });
+    },
+  });
+
+  const updateTeam = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest("PATCH", `/api/teams/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Team updated successfully" });
+      setEditingTeam(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update team", variant: "destructive" });
     },
   });
 
@@ -1185,6 +1200,83 @@ function TeamsTab({ teams, users, organization }: any) {
                 </Form>
               </DialogContent>
             </Dialog>
+
+            {/* Edit Team Dialog */}
+            <Dialog open={!!editingTeam} onOpenChange={(open) => !open && setEditingTeam(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Team</DialogTitle>
+                </DialogHeader>
+                {editingTeam && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-name">Team Name</Label>
+                      <Input
+                        id="edit-team-name"
+                        defaultValue={editingTeam.name || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, name: e.target.value})}
+                        data-testid="input-edit-team-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-division">Division</Label>
+                      <Input
+                        id="edit-team-division"
+                        defaultValue={editingTeam.division || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, division: e.target.value})}
+                        data-testid="input-edit-team-division"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-ageGroup">Age Group</Label>
+                      <Input
+                        id="edit-team-ageGroup"
+                        defaultValue={editingTeam.ageGroup || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, ageGroup: e.target.value})}
+                        data-testid="input-edit-team-ageGroup"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-coachId">Assign Coach</Label>
+                      <Select
+                        value={editingTeam.coachId || ""}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value})}
+                      >
+                        <SelectTrigger id="edit-team-coachId" data-testid="select-edit-team-coachId">
+                          <SelectValue placeholder="Select a coach" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {coaches.map((coach: any) => (
+                            <SelectItem key={coach.id} value={coach.id}>
+                              {coach.firstName} {coach.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-description">Description</Label>
+                      <Textarea
+                        id="edit-team-description"
+                        defaultValue={editingTeam.description || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, description: e.target.value})}
+                        data-testid="input-edit-team-description"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => updateTeam.mutate(editingTeam)}
+                      disabled={updateTeam.isPending}
+                      data-testid="button-submit-edit-team"
+                    >
+                      {updateTeam.isPending ? "Updating..." : "Update Team"}
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         </CardHeader>
         <CardContent>
@@ -1221,7 +1313,12 @@ function TeamsTab({ teams, users, organization }: any) {
                         >
                           Manage Roster
                         </Button>
-                        <Button variant="ghost" size="sm" data-testid={`button-edit-team-${team.id}`}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setEditingTeam(team)}
+                          data-testid={`button-edit-team-${team.id}`}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button 
@@ -1279,6 +1376,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [editingEvent, setEditingEvent] = useState<any>(null);
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -1333,6 +1431,20 @@ function EventsTab({ events, teams, programs, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to delete event", variant: "destructive" });
+    },
+  });
+
+  const updateEvent = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest("PATCH", `/api/events/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({ title: "Event updated successfully" });
+      setEditingEvent(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update event", variant: "destructive" });
     },
   });
 
@@ -1622,6 +1734,131 @@ function EventsTab({ events, teams, programs, organization }: any) {
               </Form>
             </DialogContent>
           </Dialog>
+
+          {/* Edit Event Dialog */}
+          <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Edit Event</DialogTitle>
+              </DialogHeader>
+              {editingEvent && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-title">Event Title</Label>
+                    <Input
+                      id="edit-event-title"
+                      defaultValue={editingEvent.title || ""}
+                      onChange={(e) => setEditingEvent({...editingEvent, title: e.target.value})}
+                      data-testid="input-edit-event-title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-type">Event Type</Label>
+                    <Select
+                      value={editingEvent.type || "practice"}
+                      onValueChange={(value) => setEditingEvent({...editingEvent, type: value})}
+                    >
+                      <SelectTrigger id="edit-event-type" data-testid="select-edit-event-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="practice">Practice</SelectItem>
+                        <SelectItem value="game">Game</SelectItem>
+                        <SelectItem value="tournament">Tournament</SelectItem>
+                        <SelectItem value="meeting">Meeting</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-startTime">Start Time</Label>
+                      <Input
+                        id="edit-event-startTime"
+                        type="datetime-local"
+                        defaultValue={editingEvent.startTime ? new Date(editingEvent.startTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
+                        data-testid="input-edit-event-startTime"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-endTime">End Time</Label>
+                      <Input
+                        id="edit-event-endTime"
+                        type="datetime-local"
+                        defaultValue={editingEvent.endTime ? new Date(editingEvent.endTime).toISOString().slice(0, 16) : ""}
+                        onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
+                        data-testid="input-edit-event-endTime"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-location">Location</Label>
+                    <Input
+                      id="edit-event-location"
+                      defaultValue={editingEvent.location || ""}
+                      onChange={(e) => setEditingEvent({...editingEvent, location: e.target.value})}
+                      data-testid="input-edit-event-location"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-targetType">Event For</Label>
+                    <Select
+                      value={editingEvent.targetType || "all"}
+                      onValueChange={(value) => setEditingEvent({...editingEvent, targetType: value})}
+                    >
+                      <SelectTrigger id="edit-event-targetType" data-testid="select-edit-event-targetType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Everyone</SelectItem>
+                        <SelectItem value="team">Specific Team</SelectItem>
+                        <SelectItem value="program">Specific Program</SelectItem>
+                        <SelectItem value="role">Specific Role</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(editingEvent.targetType === "team" || editingEvent.targetType === "program" || editingEvent.targetType === "role") && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-targetId">Select Target</Label>
+                      <Select
+                        value={editingEvent.targetId || ""}
+                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
+                      >
+                        <SelectTrigger id="edit-event-targetId" data-testid="select-edit-event-targetId">
+                          <SelectValue placeholder="Choose a target" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teams.map((team: any) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-event-description">Description</Label>
+                    <Textarea
+                      id="edit-event-description"
+                      defaultValue={editingEvent.description || ""}
+                      onChange={(e) => setEditingEvent({...editingEvent, description: e.target.value})}
+                      data-testid="input-edit-event-description"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => updateEvent.mutate(editingEvent)}
+                    disabled={updateEvent.isPending}
+                    data-testid="button-submit-edit-event"
+                  >
+                    {updateEvent.isPending ? "Updating..." : "Update Event"}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -1651,7 +1888,12 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button variant="ghost" size="sm" data-testid={`button-edit-event-${event.id}`}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setEditingEvent(event)}
+                        data-testid={`button-edit-event-${event.id}`}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button 
@@ -1701,6 +1943,8 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [isOngoing, setIsOngoing] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<any>(null);
+  const [editIsOngoing, setEditIsOngoing] = useState(false);
 
   const createProgramSchema = z.object({
     name: z.string().min(1, "Program name is required"),
@@ -1741,6 +1985,25 @@ function ProgramsTab({ programs, teams, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to create program", variant: "destructive" });
+    },
+  });
+
+  const updateProgram = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      const programData = {
+        ...data,
+        endDate: editIsOngoing ? null : data.endDate,
+      };
+      return await apiRequest("PATCH", `/api/programs/${id}`, programData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: "Program updated successfully" });
+      setEditingProgram(null);
+      setEditIsOngoing(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update program", variant: "destructive" });
     },
   });
 
@@ -1976,6 +2239,110 @@ function ProgramsTab({ programs, teams, organization }: any) {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Program Dialog */}
+        <Dialog open={!!editingProgram} onOpenChange={(open) => !open && setEditingProgram(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Program</DialogTitle>
+            </DialogHeader>
+            {editingProgram && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-program-name">Program Name</Label>
+                  <Input
+                    id="edit-program-name"
+                    defaultValue={editingProgram.name || ""}
+                    onChange={(e) => setEditingProgram({...editingProgram, name: e.target.value})}
+                    data-testid="input-edit-program-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-program-description">Description</Label>
+                  <Textarea
+                    id="edit-program-description"
+                    defaultValue={editingProgram.description || ""}
+                    onChange={(e) => setEditingProgram({...editingProgram, description: e.target.value})}
+                    data-testid="input-edit-program-description"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-program-startDate">Start Date</Label>
+                      <Input
+                        id="edit-program-startDate"
+                        type="date"
+                        defaultValue={editingProgram.startDate ? new Date(editingProgram.startDate).toISOString().split('T')[0] : ""}
+                        onChange={(e) => setEditingProgram({...editingProgram, startDate: e.target.value})}
+                        data-testid="input-edit-program-startDate"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-program-endDate">End Date</Label>
+                      <Input
+                        id="edit-program-endDate"
+                        type="date"
+                        disabled={editIsOngoing}
+                        defaultValue={editingProgram.endDate ? new Date(editingProgram.endDate).toISOString().split('T')[0] : ""}
+                        onChange={(e) => setEditingProgram({...editingProgram, endDate: e.target.value})}
+                        data-testid="input-edit-program-endDate"
+                      />
+                      {editIsOngoing && <p className="text-sm text-gray-500">Program is ongoing</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={editIsOngoing}
+                      onCheckedChange={(checked) => {
+                        setEditIsOngoing(checked as boolean);
+                        if (checked) {
+                          setEditingProgram({...editingProgram, endDate: null});
+                        }
+                      }}
+                      data-testid="checkbox-edit-program-ongoing"
+                    />
+                    <Label htmlFor="edit-ongoing" className="text-sm">
+                      This is an ongoing/infinite program (no end date)
+                    </Label>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-program-capacity">Capacity</Label>
+                    <Input
+                      id="edit-program-capacity"
+                      type="number"
+                      defaultValue={editingProgram.capacity || 0}
+                      onChange={(e) => setEditingProgram({...editingProgram, capacity: parseInt(e.target.value)})}
+                      data-testid="input-edit-program-capacity"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-program-fee">Fee ($)</Label>
+                    <Input
+                      id="edit-program-fee"
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingProgram.fee || 0}
+                      onChange={(e) => setEditingProgram({...editingProgram, fee: parseFloat(e.target.value)})}
+                      data-testid="input-edit-program-fee"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => updateProgram.mutate(editingProgram)}
+                  disabled={updateProgram.isPending}
+                  data-testid="button-submit-edit-program"
+                >
+                  {updateProgram.isPending ? "Updating..." : "Update Program"}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -2001,7 +2368,15 @@ function ProgramsTab({ programs, teams, organization }: any) {
                 <TableCell>${(program.fee || 0).toFixed(2)}</TableCell>
                 <TableCell>{program.enrolledCount || 0} / {program.capacity || "∞"}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" data-testid={`button-edit-program-${program.id}`}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setEditingProgram(program);
+                      setEditIsOngoing(!program.endDate);
+                    }}
+                    data-testid={`button-edit-program-${program.id}`}
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
                 </TableCell>
@@ -2019,6 +2394,7 @@ function AwardsTab({ awards, users, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [editingAward, setEditingAward] = useState<any>(null);
 
   const createAwardSchema = z.object({
     name: z.string().min(1),
@@ -2063,6 +2439,20 @@ function AwardsTab({ awards, users, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to delete award", variant: "destructive" });
+    },
+  });
+
+  const updateAward = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest("PATCH", `/api/awards/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
+      toast({ title: "Award updated successfully" });
+      setEditingAward(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update award", variant: "destructive" });
     },
   });
 
@@ -2230,6 +2620,65 @@ function AwardsTab({ awards, users, organization }: any) {
             </Form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Award Dialog */}
+        <Dialog open={!!editingAward} onOpenChange={(open) => !open && setEditingAward(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Award</DialogTitle>
+            </DialogHeader>
+            {editingAward && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-award-name">Award Name</Label>
+                  <Input
+                    id="edit-award-name"
+                    defaultValue={editingAward.name || ""}
+                    onChange={(e) => setEditingAward({...editingAward, name: e.target.value})}
+                    data-testid="input-edit-award-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-award-description">Description</Label>
+                  <Textarea
+                    id="edit-award-description"
+                    defaultValue={editingAward.description || ""}
+                    onChange={(e) => setEditingAward({...editingAward, description: e.target.value})}
+                    data-testid="input-edit-award-description"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-award-criteria">Criteria</Label>
+                  <Textarea
+                    id="edit-award-criteria"
+                    defaultValue={editingAward.criteria || ""}
+                    onChange={(e) => setEditingAward({...editingAward, criteria: e.target.value})}
+                    data-testid="input-edit-award-criteria"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-award-iconUrl">Icon URL</Label>
+                  <Input
+                    id="edit-award-iconUrl"
+                    defaultValue={editingAward.iconUrl || ""}
+                    onChange={(e) => setEditingAward({...editingAward, iconUrl: e.target.value})}
+                    placeholder="https://example.com/icon.png"
+                    data-testid="input-edit-award-iconUrl"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => updateAward.mutate(editingAward)}
+                  disabled={updateAward.isPending}
+                  data-testid="button-submit-edit-award"
+                >
+                  {updateAward.isPending ? "Updating..." : "Update Award"}
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -2253,7 +2702,12 @@ function AwardsTab({ awards, users, organization }: any) {
                     <Button variant="ghost" size="sm" data-testid={`button-assign-award-${award.id}`}>
                       Assign
                     </Button>
-                    <Button variant="ghost" size="sm" data-testid={`button-edit-award-${award.id}`}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setEditingAward(award)}
+                      data-testid={`button-edit-award-${award.id}`}
+                    >
                       <Edit className="w-4 h-4" />
                     </Button>
                     <Button 

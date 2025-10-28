@@ -52,37 +52,34 @@ import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } fro
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
   const ref = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeft = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      isDragging.current = true;
-      startX.current = e.pageX - element.offsetLeft;
-      scrollLeft.current = element.scrollLeft;
-      element.style.cursor = 'grabbing';
+      setIsDragging(true);
+      setStartX(e.pageX - element.offsetLeft);
+      setScrollLeft(element.scrollLeft);
     };
 
     const handleMouseLeave = () => {
-      isDragging.current = false;
-      element.style.cursor = 'grab';
+      setIsDragging(false);
     };
 
     const handleMouseUp = () => {
-      isDragging.current = false;
-      element.style.cursor = 'grab';
+      setIsDragging(false);
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current) return;
+      if (!isDragging) return;
       e.preventDefault();
       const x = e.pageX - element.offsetLeft;
-      const walk = (x - startX.current) * 2;
-      element.scrollLeft = scrollLeft.current - walk;
+      const walk = (x - startX) * 2;
+      element.scrollLeft = scrollLeft - walk;
     };
 
     element.addEventListener('mousedown', handleMouseDown);
@@ -96,58 +93,9 @@ function useDragScroll() {
       element.removeEventListener('mouseup', handleMouseUp);
       element.removeEventListener('mousemove', handleMouseMove);
     };
-  }, []);
+  }, [isDragging, startX, scrollLeft]);
 
   return ref;
-}
-
-// Minimalist scroll position indicator component
-function ScrollIndicator({ containerRef }: { containerRef: React.RefObject<HTMLDivElement> }) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-
-    const handleScroll = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = element;
-      const maxScroll = scrollWidth - clientWidth;
-      
-      if (maxScroll > 0) {
-        setIsVisible(true);
-        setScrollPosition((scrollLeft / maxScroll) * 100);
-      } else {
-        setIsVisible(false);
-      }
-    };
-
-    // Initial check
-    handleScroll();
-
-    element.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-
-    return () => {
-      element.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [containerRef]);
-
-  if (!isVisible) return null;
-
-  return (
-    <div className="relative w-full h-1 bg-gray-100 mt-2 rounded-full">
-      <div 
-        className="absolute h-full bg-primary rounded-full transition-all duration-150"
-        style={{ 
-          width: '20%',
-          left: `${scrollPosition}%`,
-          transform: 'translateX(0)'
-        }}
-      />
-    </div>
-  );
 }
 
 export default function AdminDashboard() {
@@ -1176,7 +1124,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           </TableBody>
         </Table>
         </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );
@@ -1617,7 +1564,6 @@ function TeamsTab({ teams, users, organization }: any) {
             </TableBody>
           </Table>
           </div>
-          <ScrollIndicator containerRef={tableRef} />
         </CardContent>
       </Card>
 
@@ -2804,7 +2750,6 @@ function ProgramsTab({ programs, teams, organization }: any) {
           </TableBody>
         </Table>
         </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );
@@ -3148,7 +3093,6 @@ function AwardsTab({ awards, users, organization }: any) {
           </TableBody>
         </Table>
         </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );
@@ -3161,7 +3105,6 @@ function PackagesTab({ packages, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<any>(null);
   const tableRef = useDragScroll();
-  const scrollRef = useDragScroll();
 
   const createPackageSchema = z.object({
     name: z.string().min(1, "Package name is required"),
@@ -3558,7 +3501,6 @@ function PackagesTab({ packages, organization }: any) {
           </div>
         </CardHeader>
         <CardContent>
-          <div ref={scrollRef} className="overflow-x-auto hide-scrollbar drag-scroll">
           <div className="space-y-6">
             {Object.entries(groupedPackages).map(([category, pkgs]: [string, any]) => (
               <div key={category}>
@@ -3623,8 +3565,6 @@ function PackagesTab({ packages, organization }: any) {
               </div>
             ))}
           </div>
-          </div>
-          <ScrollIndicator containerRef={scrollRef} />
         </CardContent>
       </Card>
     </div>
@@ -3636,7 +3576,6 @@ function DivisionsTab({ divisions, programs, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any>(null);
-  const tableRef = useDragScroll();
 
   const form = useForm({
     resolver: zodResolver(insertDivisionSchema),
@@ -3821,7 +3760,6 @@ function DivisionsTab({ divisions, programs, organization }: any) {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
         <Table>
           <TableHeader>
             <TableRow>
@@ -3871,8 +3809,6 @@ function DivisionsTab({ divisions, programs, organization }: any) {
             ))}
           </TableBody>
         </Table>
-        </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );
@@ -3884,7 +3820,6 @@ function SkillsTab({ skills, users, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState<any>(null);
   const [filterPlayerId, setFilterPlayerId] = useState<string>("all");
-  const tableRef = useDragScroll();
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -4090,7 +4025,6 @@ function SkillsTab({ skills, users, organization }: any) {
             </SelectContent>
           </Select>
         </div>
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
         <Table>
           <TableHeader>
             <TableRow>
@@ -4146,8 +4080,6 @@ function SkillsTab({ skills, users, organization }: any) {
             })}
           </TableBody>
         </Table>
-        </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );
@@ -4159,7 +4091,6 @@ function NotificationsTab({ notifications, users, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingNotification, setEditingNotification] = useState<any>(null);
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  const tableRef = useDragScroll();
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -4338,7 +4269,6 @@ function NotificationsTab({ notifications, users, organization }: any) {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
         <Table>
           <TableHeader>
             <TableRow>
@@ -4396,8 +4326,6 @@ function NotificationsTab({ notifications, users, organization }: any) {
             ))}
           </TableBody>
         </Table>
-        </div>
-        <ScrollIndicator containerRef={tableRef} />
       </CardContent>
     </Card>
   );

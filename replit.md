@@ -45,6 +45,8 @@ Preferred communication style: Simple, everyday language.
   - Fixed cascading dropdown to use program IDs instead of names
   - Fixed PATCH payload to include programId and divisionId
   - Fixed team consistency by clearing teamId when program changes
+  - Verified edit button functionality (Dialog opens correctly when editingUser is set)
+  - Added Active column toggle switch for quick status updates without opening edit dialog
 
 ## System Architecture
 

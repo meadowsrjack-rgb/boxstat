@@ -883,9 +883,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>{user.skill || "-"}</TableCell>
                     <TableCell>{user.awards?.length || 0}</TableCell>
                     <TableCell>
-                      <Badge variant={user.isActive ? "default" : "secondary"}>
-                        {user.isActive ? "Yes" : "No"}
-                      </Badge>
+                      <Switch
+                        checked={user.isActive !== false}
+                        onCheckedChange={(checked) => {
+                          updateUser.mutate({ id: user.id, isActive: checked });
+                        }}
+                        data-testid={`toggle-active-${user.id}`}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">

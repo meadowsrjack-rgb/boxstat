@@ -65,6 +65,7 @@ Preferred communication style: Simple, everyday language.
   - Implemented intelligent user sorting: active users at top (sorted by most recently updated first), inactive users at bottom
   - Fixed storage layer to update timestamps: updatedAt is now set on every user modification in both MemStorage and DatabaseStorage
   - Set new users to active (isActive: true) by default
+  - Fixed Active toggle responsiveness: Added optimistic updates so toggle switches instantly (red/gray) with automatic rollback on error
 
 ## System Architecture
 

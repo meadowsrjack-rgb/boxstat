@@ -36,6 +36,7 @@ import {
   Star,
   Bell,
   Layers,
+  ArrowUpDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -328,6 +329,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -502,6 +505,58 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     };
     reader.readAsText(file);
   };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sort users based on current sort field and direction
+  const sortedUsers = sortField ? [...users].sort((a, b) => {
+    let aValue = a[sortField];
+    let bValue = b[sortField];
+
+    // Handle special cases
+    if (sortField === 'team') {
+      const aTeam = teams.find((t: any) => t.roster?.includes(a.id));
+      const bTeam = teams.find((t: any) => t.roster?.includes(b.id));
+      aValue = aTeam?.name || '';
+      bValue = bTeam?.name || '';
+    }
+
+    if (sortField === 'dob' || sortField === 'dateOfBirth') {
+      aValue = a.dob || a.dateOfBirth;
+      bValue = b.dob || b.dateOfBirth;
+    }
+
+    if (sortField === 'awards') {
+      aValue = a.awards?.length || 0;
+      bValue = b.awards?.length || 0;
+    }
+
+    if (sortField === 'isActive') {
+      aValue = a.isActive !== false ? 1 : 0;
+      bValue = b.isActive !== false ? 1 : 0;
+    }
+
+    // Handle null/undefined values
+    if (aValue == null) aValue = '';
+    if (bValue == null) bValue = '';
+
+    // Convert to strings for comparison if needed
+    const aStr = typeof aValue === 'string' ? aValue.toLowerCase() : aValue;
+    const bStr = typeof bValue === 'string' ? bValue.toLowerCase() : bValue;
+
+    if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
+    if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  }) : users;
 
   return (
     <Card>
@@ -857,25 +912,151 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>First Name</TableHead>
-                <TableHead>Last Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Club</TableHead>
-                <TableHead>Program</TableHead>
-                <TableHead>Team</TableHead>
-                <TableHead>Division</TableHead>
-                <TableHead>DOB</TableHead>
-                <TableHead>Packages</TableHead>
-                <TableHead>Skill Level</TableHead>
-                <TableHead>Awards</TableHead>
-                <TableHead>Active</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('firstName')}
+                  data-testid="sort-firstName"
+                >
+                  <div className="flex items-center gap-1">
+                    First Name
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('lastName')}
+                  data-testid="sort-lastName"
+                >
+                  <div className="flex items-center gap-1">
+                    Last Name
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('email')}
+                  data-testid="sort-email"
+                >
+                  <div className="flex items-center gap-1">
+                    Email
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('phoneNumber')}
+                  data-testid="sort-phoneNumber"
+                >
+                  <div className="flex items-center gap-1">
+                    Phone
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('role')}
+                  data-testid="sort-role"
+                >
+                  <div className="flex items-center gap-1">
+                    Role
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('club')}
+                  data-testid="sort-club"
+                >
+                  <div className="flex items-center gap-1">
+                    Club
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('program')}
+                  data-testid="sort-program"
+                >
+                  <div className="flex items-center gap-1">
+                    Program
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('team')}
+                  data-testid="sort-team"
+                >
+                  <div className="flex items-center gap-1">
+                    Team
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('division')}
+                  data-testid="sort-division"
+                >
+                  <div className="flex items-center gap-1">
+                    Division
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('dob')}
+                  data-testid="sort-dob"
+                >
+                  <div className="flex items-center gap-1">
+                    DOB
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('packages')}
+                  data-testid="sort-packages"
+                >
+                  <div className="flex items-center gap-1">
+                    Packages
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('skill')}
+                  data-testid="sort-skill"
+                >
+                  <div className="flex items-center gap-1">
+                    Skill Level
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('awards')}
+                  data-testid="sort-awards"
+                >
+                  <div className="flex items-center gap-1">
+                    Awards
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('isActive')}
+                  data-testid="sort-isActive"
+                >
+                  <div className="flex items-center gap-1">
+                    Active
+                    <ArrowUpDown className="w-4 h-4" />
+                  </div>
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user: any) => {
+              {sortedUsers.map((user: any) => {
                 const userTeam = teams.find((t: any) => t.roster?.includes(user.id));
                 return (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>

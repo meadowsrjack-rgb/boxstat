@@ -47,6 +47,9 @@ Preferred communication style: Simple, everyday language.
   - Fixed team consistency by clearing teamId when program changes
   - Verified edit button functionality (Dialog opens correctly when editingUser is set)
   - Added Active column toggle switch for quick status updates without opening edit dialog
+  - Implemented intelligent user sorting: active users at top (sorted by most recently updated first), inactive users at bottom
+  - Fixed storage layer to update timestamps: updatedAt is now set on every user modification in both MemStorage and DatabaseStorage
+  - Set new users to active (isActive: true) by default
 
 ## System Architecture
 

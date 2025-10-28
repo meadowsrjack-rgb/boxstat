@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Settings,
@@ -252,7 +253,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users">
-            <UsersTab users={users} teams={teams} organization={organization} />
+            <UsersTab users={users} teams={teams} programs={programs} divisions={divisions} organization={organization} />
           </TabsContent>
 
           <TabsContent value="teams">
@@ -319,10 +320,13 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
 }
 
 // Users Tab Component  
-function UsersTab({ users, teams, organization }: any) {
+function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [selectedProgram, setSelectedProgram] = useState<string>("");
+  const [selectedDivision, setSelectedDivision] = useState<string>("");
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -368,6 +372,21 @@ function UsersTab({ users, teams, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to delete user", variant: "destructive" });
+    },
+  });
+
+  const updateUser = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      return await apiRequest("PATCH", `/api/users/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User updated successfully" });
+      setEditingUser(null);
+      setSelectedProgram("");
+    },
+    onError: () => {
+      toast({ title: "Failed to update user", variant: "destructive" });
     },
   });
 
@@ -604,6 +623,204 @@ function UsersTab({ users, teams, organization }: any) {
               </Form>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!editingUser} onOpenChange={(open) => {
+            if (!open) {
+              setEditingUser(null);
+              setSelectedProgram("");
+              setSelectedDivision("");
+            }
+          }}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit User</DialogTitle>
+              </DialogHeader>
+              {editingUser && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-firstname" data-testid="label-edit-firstname">First Name</Label>
+                      <Input 
+                        id="edit-firstname"
+                        defaultValue={editingUser.firstName || ""}
+                        onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                        data-testid="input-edit-firstname"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-lastname" data-testid="label-edit-lastname">Last Name</Label>
+                      <Input 
+                        id="edit-lastname"
+                        defaultValue={editingUser.lastName || ""}
+                        onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                        data-testid="input-edit-lastname"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email" data-testid="label-edit-email">Email</Label>
+                    <Input 
+                      id="edit-email"
+                      type="email"
+                      defaultValue={editingUser.email || ""}
+                      onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                      data-testid="input-edit-email"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone" data-testid="label-edit-phone">Phone</Label>
+                    <Input 
+                      id="edit-phone"
+                      defaultValue={editingUser.phoneNumber || editingUser.phone || ""}
+                      onChange={(e) => setEditingUser({...editingUser, phoneNumber: e.target.value})}
+                      data-testid="input-edit-phone"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-role" data-testid="label-edit-role">Role</Label>
+                    <Select 
+                      value={editingUser.role || "player"}
+                      onValueChange={(value) => setEditingUser({...editingUser, role: value})}
+                    >
+                      <SelectTrigger id="edit-role" data-testid="select-edit-role">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="player">Player</SelectItem>
+                        <SelectItem value="coach">Coach</SelectItem>
+                        <SelectItem value="parent">Parent</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-club" data-testid="label-edit-club">Club</Label>
+                    <Input 
+                      id="edit-club"
+                      value={organization?.name || ""}
+                      disabled
+                      data-testid="input-edit-club"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-program" data-testid="label-edit-program">Program</Label>
+                    <Select 
+                      value={selectedProgram || editingUser.program || ""}
+                      onValueChange={(value) => {
+                        setSelectedProgram(value);
+                        setEditingUser({...editingUser, program: value});
+                      }}
+                    >
+                      <SelectTrigger id="edit-program" data-testid="select-edit-program">
+                        <SelectValue placeholder="Select a program" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {programs?.map((program: any) => (
+                          <SelectItem key={program.id} value={program.name}>
+                            {program.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-team" data-testid="label-edit-team">Team</Label>
+                    <Select 
+                      value={editingUser.teamId || ""}
+                      onValueChange={(value) => setEditingUser({...editingUser, teamId: value})}
+                    >
+                      <SelectTrigger id="edit-team" data-testid="select-edit-team">
+                        <SelectValue placeholder="Select a team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {teams
+                          ?.filter((team: any) => !selectedProgram || team.program === selectedProgram)
+                          .map((team: any) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
+                    <Select 
+                      value={selectedDivision || editingUser.division || ""}
+                      onValueChange={(value) => {
+                        setSelectedDivision(value);
+                        setEditingUser({...editingUser, division: value});
+                      }}
+                    >
+                      <SelectTrigger id="edit-division" data-testid="select-edit-division">
+                        <SelectValue placeholder="Select a division" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">None</SelectItem>
+                        {divisions
+                          ?.filter((division: any) => !selectedProgram || division.programIds?.includes(selectedProgram))
+                          .map((division: any) => (
+                            <SelectItem key={division.id} value={division.name}>
+                              {division.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-dob" data-testid="label-edit-dob">Date of Birth</Label>
+                    <Input 
+                      id="edit-dob"
+                      type="date"
+                      defaultValue={editingUser.dob ? new Date(editingUser.dob).toISOString().split('T')[0] : ""}
+                      onChange={(e) => setEditingUser({...editingUser, dob: e.target.value})}
+                      data-testid="input-edit-dob"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-skill" data-testid="label-edit-skill">Skill Level</Label>
+                    <Input 
+                      id="edit-skill"
+                      defaultValue={editingUser.skill || ""}
+                      onChange={(e) => setEditingUser({...editingUser, skill: e.target.value})}
+                      data-testid="input-edit-skill"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="edit-active"
+                      checked={editingUser.isActive !== false}
+                      onCheckedChange={(checked) => setEditingUser({...editingUser, isActive: checked})}
+                      data-testid="switch-edit-active"
+                    />
+                    <Label htmlFor="edit-active" data-testid="label-edit-active">Active</Label>
+                  </div>
+                  
+                  <Button 
+                    type="button" 
+                    className="w-full" 
+                    onClick={() => updateUser.mutate(editingUser)}
+                    disabled={updateUser.isPending}
+                    data-testid="button-submit-edit-user"
+                  >
+                    {updateUser.isPending ? "Updating..." : "Update User"}
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -611,7 +828,8 @@ function UsersTab({ users, teams, organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>First Name</TableHead>
+                <TableHead>Last Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
@@ -620,15 +838,10 @@ function UsersTab({ users, teams, organization }: any) {
                 <TableHead>Team</TableHead>
                 <TableHead>Division</TableHead>
                 <TableHead>DOB</TableHead>
-                <TableHead>Skill</TableHead>
                 <TableHead>Packages</TableHead>
-                <TableHead>Stripe ID</TableHead>
-                <TableHead>Last Payment</TableHead>
-                <TableHead>Next Payment</TableHead>
-                <TableHead>Registered</TableHead>
-                <TableHead>Active</TableHead>
+                <TableHead>Skill Level</TableHead>
                 <TableHead>Awards</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead>Active</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -637,7 +850,8 @@ function UsersTab({ users, teams, organization }: any) {
                 const userTeam = teams.find((t: any) => t.roster?.includes(user.id));
                 return (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
-                    <TableCell data-testid={`text-username-${user.id}`}>{user.firstName} {user.lastName}</TableCell>
+                    <TableCell data-testid={`text-firstname-${user.id}`}>{user.firstName || "-"}</TableCell>
+                    <TableCell data-testid={`text-lastname-${user.id}`}>{user.lastName || "-"}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.phoneNumber || user.phone || "-"}</TableCell>
                     <TableCell>
@@ -648,32 +862,25 @@ function UsersTab({ users, teams, organization }: any) {
                     <TableCell>{userTeam?.name || "-"}</TableCell>
                     <TableCell>{user.division || "-"}</TableCell>
                     <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>{user.skill || "-"}</TableCell>
                     <TableCell>{user.packages?.join(", ") || "-"}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {user.stripeCustomerId ? (
-                        <span className="text-green-600" title={user.stripeCustomerId}>
-                          {user.stripeCustomerId.substring(0, 12)}...
-                        </span>
-                      ) : "-"}
-                    </TableCell>
-                    <TableCell>{user.lastPayment ? new Date(user.lastPayment).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>{user.nextPayment ? new Date(user.nextPayment).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>
-                      <Badge variant={user.hasRegistered ? "default" : "outline"}>
-                        {user.hasRegistered ? "Yes" : "No"}
-                      </Badge>
-                    </TableCell>
+                    <TableCell>{user.skill || "-"}</TableCell>
+                    <TableCell>{user.awards?.length || 0}</TableCell>
                     <TableCell>
                       <Badge variant={user.isActive ? "default" : "secondary"}>
                         {user.isActive ? "Yes" : "No"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{user.awards?.length || 0}</TableCell>
-                    <TableCell>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" data-testid={`button-edit-user-${user.id}`}>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setEditingUser(user);
+                            setSelectedProgram(user.program || "");
+                          }}
+                          data-testid={`button-edit-user-${user.id}`}
+                        >
                           <Edit className="w-4 h-4" />
                         </Button>
                         <Button 

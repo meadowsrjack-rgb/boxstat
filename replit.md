@@ -20,15 +20,14 @@ Preferred communication style: Simple, everyday language.
   - **Integration**: Replaced manual location input in admin event creation form
   - **Schema Updates**: Event creation now captures and stores latitude/longitude coordinates
   - **User Experience**: "Search for a location..." prompt with helpful description about geo-fencing
-- **Check-in Radius Adjustment**: Updated from 200 meters to 61 meters (200 feet)
-  - Default radius in CheckInButton component: 61 meters
-  - More accurate proximity validation for on-site check-ins
-  - Matches user requirement for 200-foot check-in radius
+- **Check-in Radius**: Set to 200 meters
+  - Default radius in CheckInButton component: 200 meters
+  - Proximity validation for on-site check-ins within 200m of event location
 - **Bug Fix**: Resolved React "setState during render" warning in CheckInButton
   - Moved distance calculation from useMemo to useEffect
   - Cleaner state management without render-time side effects
 - **API Key**: Uses `VITE_GOOGLE_MAPS_API_KEY` environment variable
-- **Geo-fencing Flow**: Location search → coordinates saved → check-in validation within 200ft radius
+- **Geo-fencing Flow**: Location search → coordinates saved → check-in validation within 200m radius
 
 ### Admin Panel - Active Toggle Fix (Oct 28, 2025)
 - **Critical Database Schema Fix**: Added missing `isActive` column to users table

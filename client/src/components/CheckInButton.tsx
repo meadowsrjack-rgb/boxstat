@@ -52,27 +52,37 @@ export default function CheckInButton({
     }
   }, [timeOk, autoLocationAttempted, coords, loading, getOnce]);
 
+  // Calculate distance between user and event location
+  const calculatedDistance = useMemo(() => {
+    if (!coords || !event.latitude || !event.longitude) return null;
+    return distanceMeters(coords, { lat: event.latitude, lng: event.longitude });
+  }, [coords, event.latitude, event.longitude]);
+
+  // Update distance state in effect to avoid setState during render
+  useEffect(() => {
+    if (calculatedDistance !== null) {
+      setDistance(calculatedDistance);
+      
+      // Debug logging
+      console.log('Location Debug:', {
+        userLat: coords?.lat,
+        userLng: coords?.lng, 
+        eventLat: event.latitude,
+        eventLng: event.longitude,
+        distance: calculatedDistance,
+        radiusMeters,
+        withinRadius: calculatedDistance <= radiusMeters,
+        eventTitle: event.title,
+        eventLocation: event.location
+      });
+    }
+  }, [calculatedDistance, coords, event.latitude, event.longitude, event.title, event.location, radiusMeters]);
+
   // Check if user is within radius of event location
   const nearby = useMemo(() => {
-    if (!coords || !event.latitude || !event.longitude) return false;
-    const d = distanceMeters(coords, { lat: event.latitude, lng: event.longitude });
-    setDistance(d);
-    
-    // Debug logging
-    console.log('Location Debug:', {
-      userLat: coords.lat,
-      userLng: coords.lng, 
-      eventLat: event.latitude,
-      eventLng: event.longitude,
-      distance: d,
-      radiusMeters,
-      withinRadius: d <= radiusMeters,
-      eventTitle: event.title,
-      eventLocation: event.location
-    });
-    
-    return d <= radiusMeters;
-  }, [coords, event.latitude, event.longitude, radiusMeters]);
+    if (!coords || !event.latitude || !event.longitude || calculatedDistance === null) return false;
+    return calculatedDistance <= radiusMeters;
+  }, [coords, event.latitude, event.longitude, calculatedDistance, radiusMeters]);
 
   const { mutate: checkIn, isPending, isSuccess } = useMutation({
     mutationFn: async (payload: { 

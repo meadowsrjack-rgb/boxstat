@@ -762,7 +762,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       <Label htmlFor="edit-firstname" data-testid="label-edit-firstname">First Name</Label>
                       <Input 
                         id="edit-firstname"
-                        defaultValue={editingUser.firstName || ""}
+                        value={editingUser.firstName || ""}
                         onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
                         data-testid="input-edit-firstname"
                       />
@@ -771,7 +771,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       <Label htmlFor="edit-lastname" data-testid="label-edit-lastname">Last Name</Label>
                       <Input 
                         id="edit-lastname"
-                        defaultValue={editingUser.lastName || ""}
+                        value={editingUser.lastName || ""}
                         onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
                         data-testid="input-edit-lastname"
                       />
@@ -783,7 +783,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <Input 
                       id="edit-email"
                       type="email"
-                      defaultValue={editingUser.email || ""}
+                      value={editingUser.email || ""}
                       onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                       data-testid="input-edit-email"
                     />
@@ -793,7 +793,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <Label htmlFor="edit-phone" data-testid="label-edit-phone">Phone</Label>
                     <Input 
                       id="edit-phone"
-                      defaultValue={editingUser.phoneNumber || editingUser.phone || ""}
+                      value={editingUser.phoneNumber || editingUser.phone || ""}
                       onChange={(e) => setEditingUser({...editingUser, phoneNumber: e.target.value})}
                       data-testid="input-edit-phone"
                     />
@@ -830,15 +830,16 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-program" data-testid="label-edit-program">Program</Label>
                     <Select 
-                      value={selectedProgram || editingUser.programId || ""}
+                      value={selectedProgram || editingUser.programId || "none"}
                       onValueChange={(value) => {
-                        const selectedProgramObj = programs?.find((p: any) => p.id === value);
+                        const actualValue = value === "none" ? "" : value;
+                        const selectedProgramObj = programs?.find((p: any) => p.id === actualValue);
                         const programName = selectedProgramObj?.name || "";
-                        setSelectedProgram(value);
+                        setSelectedProgram(actualValue);
                         setEditingUser({ 
                           ...editingUser, 
                           program: programName,
-                          programId: value,
+                          programId: actualValue,
                           team: "",
                           teamId: "",
                           division: "",
@@ -851,7 +852,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         <SelectValue placeholder="Select a program" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {programs?.map((program: any) => (
                           <SelectItem key={program.id} value={program.id}>
                             {program.name}
@@ -864,14 +865,17 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-team" data-testid="label-edit-team">Team</Label>
                     <Select 
-                      value={editingUser.teamId || ""}
-                      onValueChange={(value) => setEditingUser({...editingUser, teamId: value})}
+                      value={editingUser.teamId || "none"}
+                      onValueChange={(value) => {
+                        const actualValue = value === "none" ? "" : value;
+                        setEditingUser({...editingUser, teamId: actualValue});
+                      }}
                     >
                       <SelectTrigger id="edit-team" data-testid="select-edit-team">
                         <SelectValue placeholder="Select a team" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {teams
                           ?.filter((team: any) => !selectedProgram || team.program === programs?.find((p: any) => p.id === selectedProgram)?.name)
                           .map((team: any) => (
@@ -886,15 +890,16 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
                     <Select 
-                      value={selectedDivision || editingUser.divisionId || ""}
+                      value={selectedDivision || editingUser.divisionId || "none"}
                       onValueChange={(value) => {
-                        const selectedDivisionObj = divisions?.find((d: any) => d.id === value);
+                        const actualValue = value === "none" ? "" : value;
+                        const selectedDivisionObj = divisions?.find((d: any) => d.id === actualValue);
                         const divisionName = selectedDivisionObj?.name || "";
-                        setSelectedDivision(value);
+                        setSelectedDivision(actualValue);
                         setEditingUser({
                           ...editingUser, 
                           division: divisionName,
-                          divisionId: value
+                          divisionId: actualValue
                         });
                       }}
                     >
@@ -902,7 +907,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         <SelectValue placeholder="Select a division" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {divisions
                           ?.filter((division: any) => !selectedProgram || division.programIds?.includes(selectedProgram))
                           .map((division: any) => (
@@ -919,7 +924,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <Input 
                       id="edit-dob"
                       type="date"
-                      defaultValue={editingUser.dob ? new Date(editingUser.dob).toISOString().split('T')[0] : ""}
+                      value={editingUser.dob ? new Date(editingUser.dob).toISOString().split('T')[0] : ""}
                       onChange={(e) => setEditingUser({...editingUser, dob: e.target.value})}
                       data-testid="input-edit-dob"
                     />
@@ -929,7 +934,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <Label htmlFor="edit-skill" data-testid="label-edit-skill">Skill Level</Label>
                     <Input 
                       id="edit-skill"
-                      defaultValue={editingUser.skill || ""}
+                      value={editingUser.skill || ""}
                       onChange={(e) => setEditingUser({...editingUser, skill: e.target.value})}
                       data-testid="input-edit-skill"
                     />

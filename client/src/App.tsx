@@ -58,6 +58,7 @@ type Profile = {
   lastName: string;
 };
 import PhotoUpload from "@/pages/photo-upload";
+import SupportPage from "@/pages/support";
 
 // Individual Setting Pages
 import { 
@@ -182,6 +183,7 @@ function Router() {
     <Switch>
       {/* Public routes - always accessible */}
       <Route path="/privacy" component={PrivacySettingsPage} />
+      <Route path="/support" component={SupportPage} />
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />

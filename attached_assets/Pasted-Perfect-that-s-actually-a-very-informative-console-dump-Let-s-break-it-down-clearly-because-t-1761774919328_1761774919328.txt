@@ -1,0 +1,152 @@
+Perfect — that’s actually a very informative console dump 👇
+Let’s break it down clearly (because there are **three distinct issues** happening here):
+
+---
+
+## 🧩 1. **Performance Warning — “loaded directly without loading=async”**
+
+```
+Google Maps JavaScript API has been loaded directly without loading=async.
+This can result in suboptimal performance.
+```
+
+### ✅ What it means
+
+You’re loading the Google Maps script like this:
+
+```html
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&libraries=places&callback=Function.prototype"></script>
+```
+
+…but **without the `async` or `defer` attribute**, meaning it blocks page rendering until the Maps API loads.
+
+### ✅ Fix
+
+Use this instead (modern best practice):
+
+```html
+<script
+  async
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&libraries=places&v=weekly"
+></script>
+```
+
+Or better yet, load it via the [new loader API](https://developers.google.com/maps/documentation/javascript/load-maps-js-api):
+
+```js
+import { Loader } from "@googlemaps/js-api-loader";
+
+const loader = new Loader({
+  apiKey: "YOUR_KEY",
+  version: "weekly",
+  libraries: ["places"],
+});
+
+await loader.load();
+```
+
+---
+
+## 🔒 2. **Network Error — “gen_204?csp_test=true”**
+
+```
+The FetchEvent for "https://maps.googleapis.com/maps/api/mapsjs/gen_204?csp_test=true" resulted in a network error
+```
+
+### ✅ What it means
+
+That’s a harmless *test request* Google uses to verify your browser’s Content Security Policy (CSP) and connectivity.
+The “failed to fetch” error here means one of these:
+
+* You’re running the app **in a sandboxed environment** (like Replit preview or localhost with a service worker),
+* Or **CSP/network/VPN restrictions** blocked the request.
+
+You can safely ignore it **unless your map actually fails to load.**
+
+---
+
+## ⚙️ 3. **Deprecation Warning — Autocomplete is being replaced**
+
+```
+As of March 1st, 2025, google.maps.places.Autocomplete is not available to new customers.
+Please use google.maps.places.PlaceAutocompleteElement instead.
+```
+
+### ✅ What it means
+
+If your Google Cloud project **was created or enabled after March 1, 2025**,
+you can’t use the old `google.maps.places.Autocomplete` class.
+
+You must switch to the **new Web Component API**:
+
+```html
+<gmpx-place-autocomplete
+  style="width: 100%"
+  placeholder="Enter a location"
+></gmpx-place-autocomplete>
+
+<script type="module" src="https://unpkg.com/@googlemaps/extended-component-library@0.6.0"></script>
+```
+
+Or dynamically import it:
+
+```js
+const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+const autocomplete = new PlaceAutocompleteElement();
+```
+
+👉 Migration guide:
+🔗 [https://developers.google.com/maps/documentation/javascript/places-migration-overview](https://developers.google.com/maps/documentation/javascript/places-migration-overview)
+
+---
+
+## 🚨 4. **Critical Error — `ApiNotActivatedMapError`**
+
+```
+Google Maps JavaScript API error: ApiNotActivatedMapError
+```
+
+### ✅ What it means
+
+Your **API key is valid**, but you **haven’t enabled** the correct APIs in Google Cloud Console.
+
+### ✅ Fix
+
+Go to your Google Cloud Console → [API Library](https://console.cloud.google.com/apis/library)
+
+Enable these:
+
+* ✅ **Maps JavaScript API**
+* ✅ **Places API**
+* (Optional but recommended) **Geocoding API**
+
+Then regenerate or re-restrict your API key if needed.
+
+---
+
+## ✅ TL;DR — How to Fix Everything
+
+Here’s the updated setup that will make all those errors disappear:
+
+```html
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&v=weekly&libraries=places"
+></script>
+
+<script type="module">
+  import { PlaceAutocompleteElement } from "https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&v=weekly&libraries=places";
+  // or use the official loader
+</script>
+```
+
+✅ Ensure:
+
+* You’ve enabled **Maps JavaScript API** and **Places API**
+* You’re using **async loading**
+* You’re using **PlaceAutocompleteElement** if your project is new
+* You’re not blocked by **service worker / VPN / CSP**
+
+---
+
+If you’d like, paste your `<script>` tag or how you’re importing the API in your React/TSX file (`GooglePlacesAutocomplete.tsx`),
+and I can show you the **exact updated code snippet** you should use for your case. Would you like me to?

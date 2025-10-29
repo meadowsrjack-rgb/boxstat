@@ -48,6 +48,7 @@ import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
 import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
+import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1612,6 +1613,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
     startTime: z.string(),
     endTime: z.string(),
     location: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
     description: z.string().optional(),
     targetType: z.enum(["all", "team", "program", "role"]),
     targetId: z.string().optional(),
@@ -1625,6 +1628,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
       startTime: "",
       endTime: "",
       location: "",
+      latitude: undefined,
+      longitude: undefined,
       description: "",
       targetType: "all" as const,
       targetId: "",
@@ -1890,8 +1895,21 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Main Gym" data-testid="input-event-location" />
+                          <GooglePlacesAutocomplete
+                            value={field.value || ""}
+                            onChange={field.onChange}
+                            onPlaceSelect={(place) => {
+                              field.onChange(place.address);
+                              form.setValue("latitude", place.latitude);
+                              form.setValue("longitude", place.longitude);
+                            }}
+                            placeholder="Search for a location..."
+                            data-testid="input-event-location"
+                          />
                         </FormControl>
+                        <FormDescription>
+                          Search and select a location for accurate check-in geo-fencing
+                        </FormDescription>
                       </FormItem>
                     )}
                   />

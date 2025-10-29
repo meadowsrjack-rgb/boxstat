@@ -1900,8 +1900,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             onChange={field.onChange}
                             onPlaceSelect={(place) => {
                               field.onChange(place.address);
-                              form.setValue("latitude", place.latitude);
-                              form.setValue("longitude", place.longitude);
+                              form.setValue("latitude", place.latitude as any);
+                              form.setValue("longitude", place.longitude as any);
                             }}
                             placeholder="Search for a location..."
                             data-testid="input-event-location"

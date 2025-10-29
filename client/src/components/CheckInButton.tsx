@@ -30,7 +30,7 @@ type Props = {
 export default function CheckInButton({ 
   event, 
   userId, 
-  radiusMeters = 200, 
+  radiusMeters = 61, 
   onCheckedIn, 
   openQr 
 }: Props) {

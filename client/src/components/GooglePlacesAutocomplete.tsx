@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 
 interface PlaceResult {
   address: string;
@@ -27,10 +27,11 @@ export function GooglePlacesAutocomplete({
   className,
   'data-testid': testId = 'input-location-autocomplete',
 }: GooglePlacesAutocompleteProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const autocompleteElementRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState(value);
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -45,69 +46,165 @@ export function GooglePlacesAutocomplete({
 
     async function initAutocomplete() {
       try {
-        // Load the Google Maps script using the Loader API
+        // Load the Google Maps script with async
         await loadGoogleMapsScript(apiKey);
 
-        if (!isMounted) return;
+        if (!isMounted || !containerRef.current) return;
 
-        // Wait a bit for the API to fully initialize
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        if (!isMounted || !inputRef.current) return;
-
-        // Check if google.maps is available
-        if (!(window as any).google?.maps?.places) {
-          throw new Error('Google Maps Places library not loaded');
+        // Check if the new API is available
+        if (typeof (window as any).google?.maps?.importLibrary !== 'function') {
+          console.warn('New Google Maps API not available, falling back to classic API');
+          await initClassicAutocomplete();
+          return;
         }
 
-        // Create autocomplete using the classic API (more reliable)
-        const autocomplete = new (window as any).google.maps.places.Autocomplete(
-          inputRef.current,
-          {
+        // Try to use the new PlaceAutocompleteElement API
+        try {
+          const { PlaceAutocompleteElement } = await (window as any).google.maps.importLibrary('places');
+          
+          if (!isMounted || !containerRef.current) return;
+
+          // Create the new autocomplete element
+          const autocomplete = new PlaceAutocompleteElement({
             componentRestrictions: { country: ['us', 'ca'] },
-            fields: ['formatted_address', 'geometry', 'name'],
-            types: ['geocode', 'establishment'],
-          }
-        );
+            fields: ['formattedAddress', 'location', 'displayName'],
+          });
 
-        autocompleteRef.current = autocomplete;
+          autocompleteElementRef.current = autocomplete;
 
-        // Listen for place selection
-        autocomplete.addListener('place_changed', () => {
-          const place = autocomplete.getPlace();
+          // Style the autocomplete element
+          autocomplete.style.width = '100%';
+          autocomplete.placeholder = placeholder;
 
-          if (!place.geometry || !place.geometry.location) {
-            console.error('No geometry found for place');
-            return;
-          }
+          // Clear container and add the autocomplete element
+          containerRef.current.innerHTML = '';
+          containerRef.current.appendChild(autocomplete);
 
-          const address = place.formatted_address || place.name || '';
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
+          // Listen for place selection
+          autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
+            const place = event.place;
 
-          // Update the input value
-          onChange(address);
+            if (!place) {
+              console.error('No place data received');
+              return;
+            }
 
-          // Call the callback with full place data
-          if (onPlaceSelect) {
-            onPlaceSelect({
-              address,
-              latitude: lat,
-              longitude: lng,
+            // Get place details
+            await place.fetchFields({
+              fields: ['formattedAddress', 'location', 'displayName'],
             });
-          }
-        });
 
-        if (isMounted) {
-          setIsLoading(false);
-          setError(null);
+            const address = place.formattedAddress || place.displayName || '';
+            const location = place.location;
+
+            if (!location) {
+              console.error('No location data in place');
+              return;
+            }
+
+            const lat = location.lat();
+            const lng = location.lng();
+
+            // Update state
+            setManualInput(address);
+            onChange(address);
+
+            // Call callback with full place data
+            if (onPlaceSelect) {
+              onPlaceSelect({
+                address,
+                latitude: lat,
+                longitude: lng,
+              });
+            }
+          });
+
+          if (isMounted) {
+            setIsLoading(false);
+            setError(null);
+          }
+        } catch (newApiError) {
+          console.warn('PlaceAutocompleteElement not available, using classic API:', newApiError);
+          await initClassicAutocomplete();
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error initializing Google Places:', err);
         if (isMounted) {
-          setError('Failed to load Google Places');
+          // Check for specific API errors
+          if (err.message?.includes('ApiNotActivatedMapError')) {
+            setError('Google Maps API not enabled. Please enable Maps JavaScript API and Places API in Google Cloud Console.');
+          } else {
+            setError('Failed to load Google Places - using manual input');
+          }
           setIsLoading(false);
         }
+      }
+    }
+
+    // Fallback to classic Autocomplete API
+    async function initClassicAutocomplete() {
+      if (!isMounted || !containerRef.current) return;
+
+      // Wait for places library
+      if (!(window as any).google?.maps?.places?.Autocomplete) {
+        throw new Error('Google Maps Places library not loaded');
+      }
+
+      // Create a hidden input for the classic API
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = placeholder;
+      input.value = value;
+      input.className = className || 'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+      input.setAttribute('data-testid', testId);
+
+      const autocomplete = new (window as any).google.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: ['us', 'ca'] },
+        fields: ['formatted_address', 'geometry', 'name'],
+        types: ['geocode', 'establishment'],
+      });
+
+      autocompleteElementRef.current = autocomplete;
+
+      // Listen for place selection
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+
+        if (!place.geometry || !place.geometry.location) {
+          console.error('No geometry found for place');
+          return;
+        }
+
+        const address = place.formatted_address || place.name || '';
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        setManualInput(address);
+        onChange(address);
+
+        if (onPlaceSelect) {
+          onPlaceSelect({
+            address,
+            latitude: lat,
+            longitude: lng,
+          });
+        }
+      });
+
+      // Listen for manual input changes
+      input.addEventListener('input', (e: any) => {
+        const newValue = e.target.value;
+        setManualInput(newValue);
+        onChange(newValue);
+      });
+
+      // Clear container and add the input
+      containerRef.current.innerHTML = '';
+      containerRef.current.appendChild(input);
+
+      if (isMounted) {
+        setIsLoading(false);
+        setError(null);
       }
     }
 
@@ -115,32 +212,45 @@ export function GooglePlacesAutocomplete({
 
     return () => {
       isMounted = false;
-      // Clean up the autocomplete
-      if (autocompleteRef.current) {
-        (window as any).google?.maps?.event?.clearInstanceListeners?.(autocompleteRef.current);
+      // Clean up
+      if (autocompleteElementRef.current) {
+        try {
+          (window as any).google?.maps?.event?.clearInstanceListeners?.(autocompleteElementRef.current);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
     };
-  }, [onChange, onPlaceSelect]);
+  }, [placeholder, className, testId]); // Removed onChange and onPlaceSelect from deps to prevent re-initialization
 
-  // Handle manual input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+  // Handle manual input changes when Google Maps fails
+  const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setManualInput(newValue);
+    onChange(newValue);
   };
+
+  // Sync external value changes
+  useEffect(() => {
+    setManualInput(value);
+  }, [value]);
 
   if (error) {
     return (
       <div className="space-y-2">
-        <Input
-          ref={inputRef}
-          value={value}
-          onChange={handleInputChange}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={className}
-          data-testid={testId}
-        />
+        <div className="relative">
+          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            value={manualInput}
+            onChange={handleManualInputChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={`pl-9 ${className || ''}`}
+            data-testid={testId}
+          />
+        </div>
         <p className="text-xs text-orange-600" data-testid="text-maps-error">
-          {error} - Using manual input instead
+          {error}
         </p>
       </div>
     );
@@ -149,21 +259,25 @@ export function GooglePlacesAutocomplete({
   return (
     <div className="space-y-2">
       {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Loading Google Maps...</span>
         </div>
       )}
       
-      <Input
-        ref={inputRef}
-        value={value}
-        onChange={handleInputChange}
-        placeholder={placeholder}
-        disabled={disabled || isLoading}
-        className={className}
-        data-testid={testId}
-      />
+      <div ref={containerRef} className="w-full">
+        {/* Google Places Autocomplete element will be inserted here */}
+        {!isLoading && !error && (
+          <Input
+            value={manualInput}
+            onChange={handleManualInputChange}
+            placeholder={placeholder}
+            disabled={disabled}
+            className={className}
+            data-testid={testId}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -171,7 +285,7 @@ export function GooglePlacesAutocomplete({
 // Global promise to ensure we only load the script once
 let scriptLoadPromise: Promise<void> | null = null;
 
-// Helper function to load the Google Maps script dynamically
+// Helper function to load the Google Maps script dynamically with async
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   // Return existing promise if already loading
   if (scriptLoadPromise) {
@@ -179,7 +293,7 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
   }
 
   // Check if already loaded
-  if ((window as any).google?.maps?.places) {
+  if ((window as any).google?.maps) {
     return Promise.resolve();
   }
 
@@ -188,27 +302,33 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
     const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
     if (existingScript) {
       // Script exists, wait for it to load
-      if ((window as any).google?.maps?.places) {
+      if ((window as any).google?.maps) {
         resolve();
         return;
       }
       // Add a listener for when it loads
-      existingScript.addEventListener('load', () => resolve());
-      existingScript.addEventListener('error', () => reject(new Error('Failed to load existing Google Maps script')));
+      existingScript.addEventListener('load', () => {
+        setTimeout(() => resolve(), 200);
+      });
+      existingScript.addEventListener('error', (e) => {
+        console.error('Error loading existing Google Maps script:', e);
+        reject(new Error('Failed to load existing Google Maps script'));
+      });
       return;
     }
 
-    // Create new script element
+    // Create new script element with async loading and v=weekly
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=Function.prototype`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly&loading=async`;
     script.async = true;
     script.defer = true;
     
     script.onload = () => {
       // Give it a moment to initialize
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 200);
     };
-    script.onerror = () => {
+    script.onerror = (e) => {
+      console.error('Failed to load Google Maps script:', e);
       scriptLoadPromise = null; // Reset so it can be retried
       reject(new Error('Failed to load Google Maps script'));
     };

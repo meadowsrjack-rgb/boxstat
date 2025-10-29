@@ -480,7 +480,7 @@ export const insertEventSchema = z.object({
   eventType: z.string().optional(),
   startTime: z.string().min(1, "Start time is required"), // ISO date string
   endTime: z.string().min(1, "End time is required"), // ISO date string
-  location: z.string().min(1),
+  location: z.string().default(""),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   teamId: z.string().optional(),

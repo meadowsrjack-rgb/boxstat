@@ -1,0 +1,124 @@
+chunk-RPCDYKBN.js?v=6eae9b1b:21551 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+trophies-badges.tsx:529 All UI tests passed
+App.tsx:154 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/', …}
+App.tsx:226 Warning: Cannot update a component (`Router`) while rendering a different component (`component`). To locate the bad setState() call inside `component`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+    at component
+    at Route (https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=6eae9b1b:323:16)
+    at Switch (https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=6eae9b1b:379:17)
+    at Router (https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/src/App.tsx?v=Y1J75TZhNxQ8nlkgr8XlS:137:48)
+    at QueryClientProvider (https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=6eae9b1b:2805:3)
+    at App
+printWarning @ chunk-RPCDYKBN.js?v=6eae9b1b:521
+error @ chunk-RPCDYKBN.js?v=6eae9b1b:505
+warnAboutRenderPhaseUpdatesInDEV @ chunk-RPCDYKBN.js?v=6eae9b1b:19793
+scheduleUpdateOnFiber @ chunk-RPCDYKBN.js?v=6eae9b1b:18546
+forceStoreRerender @ chunk-RPCDYKBN.js?v=6eae9b1b:11999
+handleStoreChange @ chunk-RPCDYKBN.js?v=6eae9b1b:11981
+history.<computed> @ wouter.js?v=6eae9b1b:224
+navigate @ wouter.js?v=6eae9b1b:214
+(anonymous) @ wouter.js?v=6eae9b1b:265
+(anonymous) @ wouter.js?v=6eae9b1b:178
+component @ App.tsx:226
+renderWithHooks @ chunk-RPCDYKBN.js?v=6eae9b1b:11548
+mountIndeterminateComponent @ chunk-RPCDYKBN.js?v=6eae9b1b:14926
+beginWork @ chunk-RPCDYKBN.js?v=6eae9b1b:15914
+beginWork$1 @ chunk-RPCDYKBN.js?v=6eae9b1b:19753
+performUnitOfWork @ chunk-RPCDYKBN.js?v=6eae9b1b:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=6eae9b1b:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=6eae9b1b:19116
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:18874
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6eae9b1b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6eae9b1b:18627
+setTimeout
+scheduleFn @ @tanstack_react-query.js?v=6eae9b1b:555
+flush @ @tanstack_react-query.js?v=6eae9b1b:569
+batch @ @tanstack_react-query.js?v=6eae9b1b:587
+dispatch_fn @ @tanstack_react-query.js?v=6eae9b1b:996
+setData @ @tanstack_react-query.js?v=6eae9b1b:696
+onSuccess @ @tanstack_react-query.js?v=6eae9b1b:897
+resolve @ @tanstack_react-query.js?v=6eae9b1b:456
+Promise.then
+run @ @tanstack_react-query.js?v=6eae9b1b:498
+start @ @tanstack_react-query.js?v=6eae9b1b:536
+fetch @ @tanstack_react-query.js?v=6eae9b1b:926
+executeFetch_fn @ @tanstack_react-query.js?v=6eae9b1b:2211
+onSubscribe @ @tanstack_react-query.js?v=6eae9b1b:1898
+subscribe @ @tanstack_react-query.js?v=6eae9b1b:24
+(anonymous) @ @tanstack_react-query.js?v=6eae9b1b:3022
+subscribeToStore @ chunk-RPCDYKBN.js?v=6eae9b1b:11984
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6eae9b1b:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6eae9b1b:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6eae9b1b:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6eae9b1b:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6eae9b1b:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6eae9b1b:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6eae9b1b:19447
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:18868
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6eae9b1b:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=6eae9b1b:19432
+commitRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=6eae9b1b:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:18718
+workLoop @ chunk-RPCDYKBN.js?v=6eae9b1b:197
+flushWork @ chunk-RPCDYKBN.js?v=6eae9b1b:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=6eae9b1b:384
+main.tsx:10 SW registered:  ServiceWorkerRegistration {installing: null, waiting: null, active: ServiceWorker, navigationPreload: NavigationPreloadManager, scope: 'https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/', …}
+admin-dashboard:1 <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+@radix-ui_react-dialog.js?v=6eae9b1b:342 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=6eae9b1b:342
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=6eae9b1b:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=6eae9b1b:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=6eae9b1b:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=6eae9b1b:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=6eae9b1b:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=6eae9b1b:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=6eae9b1b:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=6eae9b1b:19416
+commitRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=6eae9b1b:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=6eae9b1b:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=6eae9b1b:18627
+The FetchEvent for "https://maps.googleapis.com/maps/api/mapsjs/gen_204?csp_test=true" resulted in a network error response: the promise was rejected.
+Promise.then
+(anonymous) @ sw.js:44
+sw.js:47  Uncaught (in promise) TypeError: Failed to fetch
+    at sw.js:47:30
+(anonymous) @ sw.js:47
+Promise.then
+(anonymous) @ sw.js:46
+main.js:330  GET https://maps.googleapis.com/maps/api/mapsjs/gen_204?csp_test=true net::ERR_FAILED
+_.z.send @ main.js:330
+Tda @ main.js:307
+Wda @ main.js:299
+await in Wda
+google.maps.Load @ js?key=AIzaSyBNSmQoxwL4W1OMrdIHflcIIuql8IMHtdY&v=weekly&libraries=places&loading=async:38
+(anonymous) @ main.js:602
+(anonymous) @ main.js:602
+queryClient.ts:35  POST https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/api/events 400 (Bad Request)
+apiRequest @ queryClient.ts:35
+mutationFn @ admin-dashboard.tsx:1644
+fn @ @tanstack_react-query.js?v=6eae9b1b:1189
+run @ @tanstack_react-query.js?v=6eae9b1b:494
+start @ @tanstack_react-query.js?v=6eae9b1b:536
+execute @ @tanstack_react-query.js?v=6eae9b1b:1225
+await in execute
+mutate @ @tanstack_react-query.js?v=6eae9b1b:2630
+(anonymous) @ @tanstack_react-query.js?v=6eae9b1b:3295
+(anonymous) @ admin-dashboard.tsx:1829
+(anonymous) @ chunk-4BFJKWC4.js?v=6eae9b1b:1465
+await in (anonymous)
+callCallback2 @ chunk-RPCDYKBN.js?v=6eae9b1b:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=6eae9b1b:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=6eae9b1b:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-RPCDYKBN.js?v=6eae9b1b:3736
+executeDispatch @ chunk-RPCDYKBN.js?v=6eae9b1b:7014
+processDispatchQueueItemsInOrder @ chunk-RPCDYKBN.js?v=6eae9b1b:7034
+processDispatchQueue @ chunk-RPCDYKBN.js?v=6eae9b1b:7043
+dispatchEventsForPlugins @ chunk-RPCDYKBN.js?v=6eae9b1b:7051
+(anonymous) @ chunk-RPCDYKBN.js?v=6eae9b1b:7174
+batchedUpdates$1 @ chunk-RPCDYKBN.js?v=6eae9b1b:18913
+batchedUpdates @ chunk-RPCDYKBN.js?v=6eae9b1b:3579
+dispatchEventForPluginEventSystem @ chunk-RPCDYKBN.js?v=6eae9b1b:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-RPCDYKBN.js?v=6eae9b1b:5478
+dispatchEvent @ chunk-RPCDYKBN.js?v=6eae9b1b:5472
+dispatchDiscreteEvent @ chunk-RPCDYKBN.js?v=6eae9b1b:5449

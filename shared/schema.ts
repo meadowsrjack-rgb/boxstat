@@ -456,6 +456,8 @@ export interface Event {
   startTime: Date;
   endTime: Date;
   location: string;
+  latitude?: number;
+  longitude?: number;
   teamId?: string;
   opponentTeam?: string;
   visibility?: EventVisibility;
@@ -476,9 +478,11 @@ export const insertEventSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   eventType: z.string().optional(),
-  startTime: z.string(), // ISO date string
-  endTime: z.string(), // ISO date string
+  startTime: z.string().min(1, "Start time is required"), // ISO date string
+  endTime: z.string().min(1, "End time is required"), // ISO date string
   location: z.string().min(1),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
   teamId: z.string().optional(),
   opponentTeam: z.string().optional(),
   visibility: z.object({
@@ -516,15 +520,18 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 export interface Attendance {
   id: string;
   userId: string;
-  eventId: string;
+  eventId: number;
   checkedInAt: Date;
   type: "advance" | "onsite";
 }
 
 export const insertAttendanceSchema = z.object({
   userId: z.string(),
-  eventId: z.string(),
+  eventId: z.coerce.number(),
   type: z.enum(["advance", "onsite"]).default("advance"),
+  qrCodeData: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;

@@ -823,13 +823,15 @@ class MemStorage implements IStorage {
   
   // Attendance operations
   async getAttendance(eventId: string, userId: string): Promise<Attendance | undefined> {
+    const eventIdNum = parseInt(eventId);
     return Array.from(this.attendances.values()).find(
-      att => att.eventId === eventId && att.userId === userId
+      att => att.eventId === eventIdNum && att.userId === userId
     );
   }
   
   async getAttendancesByEvent(eventId: string): Promise<Attendance[]> {
-    return Array.from(this.attendances.values()).filter(att => att.eventId === eventId);
+    const eventIdNum = parseInt(eventId);
+    return Array.from(this.attendances.values()).filter(att => att.eventId === eventIdNum);
   }
   
   async getAttendancesByUser(userId: string): Promise<Attendance[]> {
@@ -1516,6 +1518,8 @@ class DatabaseStorage implements IStorage {
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
+      latitude: event.latitude ?? undefined,
+      longitude: event.longitude ?? undefined,
       teamId: event.teamId ? parseInt(event.teamId) : null,
       opponentTeam: event.opponentTeam,
       isActive: event.isActive ?? true,
@@ -1535,6 +1539,8 @@ class DatabaseStorage implements IStorage {
       startTime: updates.startTime ? new Date(updates.startTime).toISOString() : undefined,
       endTime: updates.endTime ? new Date(updates.endTime).toISOString() : undefined,
       location: updates.location,
+      latitude: updates.latitude,
+      longitude: updates.longitude,
       teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
       opponentTeam: updates.opponentTeam,
       isActive: updates.isActive,
@@ -1586,9 +1592,11 @@ class DatabaseStorage implements IStorage {
   async createAttendance(attendance: InsertAttendance): Promise<Attendance> {
     const dbAttendance = {
       userId: attendance.userId,
-      eventId: parseInt(attendance.eventId),
+      eventId: attendance.eventId,
       type: attendance.type || 'advance',
-      qrCodeData: `qr-${Date.now()}`,
+      qrCodeData: attendance.qrCodeData || `qr-${Date.now()}`,
+      latitude: attendance.latitude !== undefined ? attendance.latitude.toString() : undefined,
+      longitude: attendance.longitude !== undefined ? attendance.longitude.toString() : undefined,
       checkedInAt: new Date().toISOString(),
     };
 
@@ -2171,6 +2179,8 @@ class DatabaseStorage implements IStorage {
       startTime: new Date(dbEvent.startTime),
       endTime: new Date(dbEvent.endTime),
       location: dbEvent.location,
+      latitude: dbEvent.latitude ?? undefined,
+      longitude: dbEvent.longitude ?? undefined,
       teamId: dbEvent.teamId?.toString(),
       opponentTeam: dbEvent.opponentTeam,
       isActive: dbEvent.isActive ?? true,

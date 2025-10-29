@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import CheckInButton from "@/components/CheckInButton";
 import {
   UserPlus,
   DollarSign,
@@ -16,12 +18,15 @@ import {
   Trophy,
   ArrowLeft,
   User,
+  MapPin,
+  Clock,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [selectedChildPerEvent, setSelectedChildPerEvent] = useState<Record<string, string>>({});
 
   // Check for payment success in URL
   useEffect(() => {
@@ -48,7 +53,7 @@ export default function UnifiedAccount() {
   });
 
   // Fetch upcoming events
-  const { data: events = [] } = useQuery<any[]>({
+  const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
     queryKey: ["/api/events"],
   });
 
@@ -60,6 +65,11 @@ export default function UnifiedAccount() {
   const upcomingEvents = events
     .filter((e: any) => new Date(e.startTime) > new Date())
     .slice(0, 3);
+
+  // All upcoming events for Events tab
+  const allUpcomingEvents = events
+    .filter((e: any) => new Date(e.startTime) > new Date())
+    .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
@@ -194,6 +204,10 @@ export default function UnifiedAccount() {
             <TabsTrigger value="settings" data-testid="tab-settings">
               <Settings className="w-4 h-4 mr-2" />
               Settings
+            </TabsTrigger>
+            <TabsTrigger value="events" data-testid="tab-events">
+              <Calendar className="w-4 h-4 mr-2" />
+              Events
             </TabsTrigger>
           </TabsList>
 
@@ -393,6 +407,179 @@ export default function UnifiedAccount() {
                     Sign Out
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Events Tab */}
+          <TabsContent value="events" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming Events</CardTitle>
+                <CardDescription>Check in your children to upcoming events</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {eventsLoading ? (
+                  <div className="flex justify-center py-8" data-testid="loading-events">
+                    <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                  </div>
+                ) : players.length === 0 ? (
+                  <div className="text-center py-8" data-testid="no-children-message">
+                    <User className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold mb-2">No Children Added</h3>
+                    <p className="text-gray-600 mb-4">
+                      Add a child to your account to check them in to events
+                    </p>
+                    <Button
+                      onClick={() => setLocation("/add-player")}
+                      data-testid="button-add-child-from-events"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add Child
+                    </Button>
+                  </div>
+                ) : allUpcomingEvents.length === 0 ? (
+                  <div className="text-center py-8" data-testid="no-events-message">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold mb-2">No Upcoming Events</h3>
+                    <p className="text-gray-600">
+                      There are no upcoming events scheduled at this time
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {allUpcomingEvents.map((event: any) => {
+                      const eventId = String(event.id);
+                      const selectedChildId = selectedChildPerEvent[eventId] || players[0]?.id;
+                      const hasCoordinates = event.latitude != null && event.longitude != null;
+
+                      return (
+                        <Card key={event.id} className="border-2" data-testid={`event-card-${event.id}`}>
+                          <CardContent className="p-6">
+                            <div className="space-y-4">
+                              {/* Event Details */}
+                              <div>
+                                <div className="flex items-start justify-between mb-2">
+                                  <h3 className="text-xl font-semibold" data-testid={`event-title-${event.id}`}>
+                                    {event.title}
+                                  </h3>
+                                  <Badge variant="outline" data-testid={`event-type-${event.id}`}>
+                                    {event.eventType || "Event"}
+                                  </Badge>
+                                </div>
+
+                                <div className="space-y-2 text-sm text-gray-600">
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    <span data-testid={`event-time-${event.id}`}>
+                                      {new Date(event.startTime).toLocaleDateString('en-US', {
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4" />
+                                    <span data-testid={`event-location-${event.id}`}>{event.location}</span>
+                                  </div>
+                                  {!hasCoordinates && (
+                                    <div className="mt-2">
+                                      <Badge variant="secondary" data-testid={`no-coordinates-badge-${event.id}`}>
+                                        Location coordinates not available
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Child Selection Dropdown */}
+                              {players.length > 1 && (
+                                <div className="space-y-2">
+                                  <label 
+                                    className="text-sm font-medium" 
+                                    data-testid={`label-select-child-${event.id}`}
+                                  >
+                                    Select Child to Check In
+                                  </label>
+                                  <Select
+                                    value={selectedChildId}
+                                    onValueChange={(value) => 
+                                      setSelectedChildPerEvent(prev => ({ ...prev, [eventId]: value }))
+                                    }
+                                  >
+                                    <SelectTrigger 
+                                      className="w-full" 
+                                      data-testid={`select-child-${event.id}`}
+                                    >
+                                      <SelectValue placeholder="Select a child" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {players.map((player: any) => (
+                                        <SelectItem 
+                                          key={player.id} 
+                                          value={player.id}
+                                          data-testid={`select-child-option-${event.id}-${player.id}`}
+                                        >
+                                          {player.firstName} {player.lastName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {/* Single Child Display */}
+                              {players.length === 1 && (
+                                <div className="flex items-center gap-2 text-sm" data-testid={`single-child-${event.id}`}>
+                                  <User className="w-4 h-4 text-gray-600" />
+                                  <span className="font-medium">
+                                    Checking in: {players[0].firstName} {players[0].lastName}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Check-In Button */}
+                              {hasCoordinates ? (
+                                <div data-testid={`checkin-section-${event.id}`}>
+                                  <CheckInButton
+                                    event={{
+                                      id: event.id,
+                                      title: event.title,
+                                      startTime: event.startTime,
+                                      endTime: event.endTime,
+                                      location: event.location,
+                                      latitude: event.latitude,
+                                      longitude: event.longitude,
+                                    }}
+                                    userId={selectedChildId}
+                                    radiusMeters={200}
+                                    onCheckedIn={() => {
+                                      toast({
+                                        title: "Check-in Successful!",
+                                        description: `${players.find((p: any) => p.id === selectedChildId)?.firstName} has been checked in.`,
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <div 
+                                  className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600"
+                                  data-testid={`no-checkin-available-${event.id}`}
+                                >
+                                  Check-in is not available for this event. Location coordinates are required.
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

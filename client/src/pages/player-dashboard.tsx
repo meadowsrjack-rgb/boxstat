@@ -115,6 +115,8 @@ type UypEvent = {
   endTime?: string;
   eventType?: string;
   location: string;
+  latitude?: number;
+  longitude?: number;
   description?: string;
   teamId?: number | null;
 };
@@ -139,6 +141,8 @@ function convertEventToUypEvent(event: Event | any): UypEvent {
     endTime: event.endTime instanceof Date ? event.endTime.toISOString() : event.endTime || event.end_time,
     eventType: event.eventType,
     location: event.location || 'TBD',
+    latitude: event.latitude ?? undefined,
+    longitude: event.longitude ?? undefined,
     description: event.description || undefined,
     teamId: event.teamId,
   };
@@ -256,6 +260,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // ---- Early guard
   const currentUser = user as UserType | null;
+  
+  // Early return if no user
+  if (!currentUser) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
   
   // Fetch active profile if parent has activeProfileId OR if selectedPlayerId is in localStorage
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
@@ -487,7 +496,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   }, [currentUser?.id, userTeam?.id, queryClient]);
 
   // Helpers
-  const initials = `${(displayProfile.firstName || "").charAt(0)}${(displayProfile.lastName || "").charAt(0)}`.toUpperCase();
+  const initials = `${(displayProfile?.firstName || "").charAt(0)}${(displayProfile?.lastName || "").charAt(0)}`.toUpperCase();
 
   const todayEvents = useMemo(() => {
     const today = new Date();
@@ -1113,7 +1122,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           textShadow: "0 1px 0 rgba(255,255,255,0.6)",
                         }}
                       >
-                        {displayProfile.firstName || "Jack"} {displayProfile.lastName || "Meadows"}
+                        {displayProfile?.firstName || "Jack"} {displayProfile?.lastName || "Meadows"}
                       </h1>
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
@@ -1642,8 +1651,8 @@ function TeamBlock() {
   
   // Fetch coach information
   const { data: coachInfo } = useQuery<any>({
-    queryKey: ["/api/users", userTeam?.coachId],
-    enabled: !!userTeam?.coachId,
+    queryKey: ["/api/users", userTeam?.coachIds?.[0]],
+    enabled: !!userTeam?.coachIds?.[0],
   });
 
   return (
@@ -1780,7 +1789,7 @@ function TeamBlock() {
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-chat">Team Chat</h3>
           <TeamChat 
-            teamId={userTeam.id}
+            teamId={Number(userTeam.id)}
           />
         </div>
       )}
@@ -1791,7 +1800,7 @@ function TeamBlock() {
           playerId={selectedPlayerId}
           isOpen={!!selectedPlayerId}
           onClose={() => setSelectedPlayerId(null)}
-          isCoach={currentUser.userType === 'coach'}
+          isCoach={currentUser.role === 'coach'}
         />
       )}
 

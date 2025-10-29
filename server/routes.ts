@@ -1389,24 +1389,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
-      return res.status(403).json({ message: 'Only admins and coaches can create events' });
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can create events' });
+      }
+      
+      const eventData = insertEventSchema.parse(req.body);
+      const event = await storage.createEvent(eventData);
+      res.json(event);
+    } catch (error: any) {
+      console.error('Error creating event:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: 'Invalid event data', 
+          errors: error.errors 
+        });
+      }
+      return res.status(500).json({ 
+        message: 'Failed to create event',
+        error: error.message 
+      });
     }
-    
-    const eventData = insertEventSchema.parse(req.body);
-    const event = await storage.createEvent(eventData);
-    res.json(event);
   });
   
   app.patch('/api/events/:id', isAuthenticated, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
-      return res.status(403).json({ message: 'Only admins and coaches can update events' });
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can update events' });
+      }
+      
+      const updated = await storage.updateEvent(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating event:', error);
+      return res.status(500).json({ 
+        message: 'Failed to update event',
+        error: error.message 
+      });
     }
-    
-    const updated = await storage.updateEvent(req.params.id, req.body);
-    res.json(updated);
   });
   
   app.delete('/api/events/:id', isAuthenticated, async (req: any, res) => {
@@ -1434,9 +1456,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post('/api/attendance', isAuthenticated, async (req: any, res) => {
-    const attendanceData = insertAttendanceSchema.parse(req.body);
-    const attendance = await storage.createAttendance(attendanceData);
-    res.json(attendance);
+    try {
+      const attendanceData = insertAttendanceSchema.parse(req.body);
+      const attendance = await storage.createAttendance(attendanceData);
+      res.json(attendance);
+    } catch (error: any) {
+      console.error("Attendance creation error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          error: "Invalid attendance data", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        error: "Failed to create attendance record" 
+      });
+    }
   });
   
   // =============================================

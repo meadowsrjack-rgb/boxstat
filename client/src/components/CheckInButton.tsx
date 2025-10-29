@@ -107,7 +107,15 @@ export default function CheckInButton({
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate all check-in related queries
       queryClient.invalidateQueries({ queryKey: ['/api/checkins'] });
+      
+      // Invalidate attendance for this specific event
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance/event', event.id] });
+      
+      // Invalidate all attendance queries
+      queryClient.invalidateQueries({ queryKey: ['/api/attendance'] });
+      
       onCheckedIn?.();
       toast({ 
         title: 'Checked In', 

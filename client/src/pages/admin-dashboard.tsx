@@ -49,6 +49,8 @@ import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
 import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
 import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
+import AttendanceList from "@/components/AttendanceList";
+import { format } from "date-fns";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1606,12 +1608,13 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
     type: z.enum(["practice", "game", "tournament", "meeting"]),
-    startTime: z.string(),
-    endTime: z.string(),
+    startTime: z.string().min(1, "Start time is required"),
+    endTime: z.string().min(1, "End time is required"),
     location: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
@@ -2105,6 +2108,69 @@ function EventsTab({ events, teams, programs, organization }: any) {
               )}
             </DialogContent>
           </Dialog>
+
+          {/* Event Details Dialog */}
+          <Dialog open={!!selectedEventForDetails} onOpenChange={(open) => !open && setSelectedEventForDetails(null)}>
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-event-details">
+              <DialogHeader>
+                <DialogTitle>Event Details</DialogTitle>
+              </DialogHeader>
+              {selectedEventForDetails && (
+                <div className="space-y-6">
+                  {/* Event Information */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900" data-testid="text-event-title">
+                        {selectedEventForDetails.title}
+                      </h3>
+                      <Badge className="mt-2" data-testid="badge-event-type">
+                        {selectedEventForDetails.type}
+                      </Badge>
+                    </div>
+
+                    {selectedEventForDetails.description && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Description</Label>
+                        <p className="text-gray-600 mt-1" data-testid="text-event-description">
+                          {selectedEventForDetails.description}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Start Time</Label>
+                        <p className="text-gray-900 mt-1" data-testid="text-event-start-time">
+                          {format(new Date(selectedEventForDetails.startTime), "MMMM d, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">End Time</Label>
+                        <p className="text-gray-900 mt-1" data-testid="text-event-end-time">
+                          {format(new Date(selectedEventForDetails.endTime), "MMMM d, yyyy 'at' h:mm a")}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedEventForDetails.location && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Location</Label>
+                        <p className="text-gray-900 mt-1" data-testid="text-event-location">
+                          {selectedEventForDetails.location}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Attendance List */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Attendance</h4>
+                    <AttendanceList eventId={selectedEventForDetails.id} />
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
@@ -2137,8 +2203,18 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <Button 
                         variant="ghost" 
                         size="sm" 
+                        onClick={() => setSelectedEventForDetails(event)}
+                        data-testid={`button-view-details-${event.id}`}
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
                         onClick={() => setEditingEvent(event)}
                         data-testid={`button-edit-event-${event.id}`}
+                        title="Edit Event"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -2147,6 +2223,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         size="sm" 
                         onClick={() => deleteEvent.mutate(event.id)}
                         data-testid={`button-delete-event-${event.id}`}
+                        title="Delete Event"
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
@@ -2282,7 +2359,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                           {dayEvents.slice(0, 3).map((event: any) => (
                             <button
                               key={event.id}
-                              onClick={() => setEditingEvent(event)}
+                              onClick={() => setSelectedEventForDetails(event)}
                               className={`w-full text-left text-xs p-1 rounded border cursor-pointer hover:opacity-80 transition-opacity ${
                                 eventTypeColors[event.type] || 'bg-gray-100 text-gray-700 border-gray-300'
                               }`}

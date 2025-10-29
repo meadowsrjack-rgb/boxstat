@@ -1,0 +1,108 @@
+🔍 Root Cause Summary
+
+Your console shows:
+
+PlaceAutocompleteElement not available, using classic API: InvalidValueError: Unknown property 'fields'
+You’re calling a legacy API, which is not enabled for your project. 
+To get newer features and more functionality, switch to the Places API (New)
+
+
+👉 That means your app is still using legacy Places endpoints — and your Google Cloud project doesn’t have the “Places API (New)” enabled.
+
+🚨 1. The Immediate Fix
+Step 1 — Enable the correct APIs in Google Cloud
+
+Go to Google Cloud Console → APIs & Services → Library
+
+✅ Make sure these are enabled:
+
+Maps JavaScript API
+
+Places API (New) ← this is the crucial one
+(⚠️ “Places API” ≠ “Places API (New)”)
+
+Geocoding API (optional, but good to have)
+
+Step 2 — Remove the fields property
+
+In your GooglePlacesAutocomplete.tsx, you still have:
+
+const autocomplete = new PlaceAutocompleteElement({
+  componentRestrictions: { country: ['us', 'ca'] },
+  fields: ['formattedAddress', 'location', 'displayName'], // ❌ invalid
+});
+
+
+✅ Change to:
+
+const autocomplete = new PlaceAutocompleteElement({
+  componentRestrictions: { country: ['us', 'ca'] },
+});
+
+Step 3 — Use the correct event name
+
+Replace:
+
+autocomplete.addEventListener('gmp-placeselect', async (event: any) => {
+
+
+✅ With:
+
+autocomplete.addEventListener('gmpx-placechange', async (event: any) => {
+
+Step 4 — Use updated script loader
+
+Your script URL is correct but ensure it loads after the DOM and with proper params:
+
+script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=places&loading=async`;
+
+
+✅ The key must belong to a project where “Places API (New)” is enabled.
+
+Step 5 — Deploy HTTPS / non-sandbox URL
+
+You’re running inside:
+
+https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/
+
+
+Google’s Places components often fail in sandboxed or preview environments (like Replit dev domains), especially with service workers.
+✅ Test from a live deployed HTTPS domain or localhost (http://localhost:5173 etc.) instead of Replit preview.
+
+⚙️ 2. Why the “legacy API” error appears
+
+Your app tried to fall back to this line:
+
+new google.maps.places.Autocomplete(...)
+
+
+That class is now deprecated for new customers (as of March 1, 2025).
+Because your project is new, it only supports PlaceAutocompleteElement (the new web component).
+
+✅ Solution:
+Delete the fallback (initClassicAutocomplete()) from your file.
+Use only the PlaceAutocompleteElement path.
+
+🧩 3. Optional: Confirm you’re using “Places API (New)”
+
+In Cloud Console → Dashboard → APIs & Services, it should list:
+
+Places API (New) — not just Places API
+
+If you only see the old one:
+
+Disable it
+
+Enable the “New” version
+
+Regenerate your API key or remove key restrictions temporarily to test
+
+✅ 4. After applying these
+
+Once the new API is active and your code cleaned up:
+
+The InvalidValueError: Unknown property 'fields' will disappear
+
+The LegacyApiNotActivatedMapError will disappear
+
+The autocomplete input will render correctly and show address predictions

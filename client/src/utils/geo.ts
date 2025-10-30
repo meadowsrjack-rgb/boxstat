@@ -14,7 +14,7 @@ export function distanceMeters(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-export function withinWindow(startISO: string, endISO?: string, preMin = 30, postMin = 30): boolean {
+export function withinWindow(startISO: string, endISO?: string, preMin = 180, postMin = 15): boolean {
   const now = Date.now();
   const start = new Date(startISO).getTime() - preMin * 60 * 1000;
   const end = (endISO ? new Date(endISO).getTime() : new Date(startISO).getTime()) + postMin * 60 * 1000;

@@ -1646,8 +1646,11 @@ function EventsTab({ events, teams, programs, organization }: any) {
 
   const createEvent = useMutation({
     mutationFn: async (data: any) => {
+      // Rename 'type' to 'eventType' for backend compatibility
+      const { type, ...rest } = data;
       return await apiRequest("POST", "/api/events", {
-        ...data,
+        ...rest,
+        eventType: type,
         organizationId: organization.id,
       });
     },

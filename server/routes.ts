@@ -1372,15 +1372,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   app.get('/api/events', isAuthenticated, async (req: any, res) => {
-    const { organizationId } = req.user;
-    const events = await storage.getEventsByOrganization(organizationId);
-    res.json(events);
+    const { organizationId, id: userId, role } = req.user;
+    const allEvents = await storage.getEventsByOrganization(organizationId);
+    
+    // Admins see all events
+    if (role === 'admin') {
+      return res.json(allEvents);
+    }
+    
+    // Fetch user's full profile to get team membership
+    const userProfile = await storage.getUser(userId);
+    const teamId = userProfile?.teamId;
+    
+    // Filter events based on user's role and team
+    const filteredEvents = allEvents.filter((event: any) => {
+      // If no visibility/assignTo, assume it's visible to everyone (legacy events)
+      if (!event.visibility && !event.assignTo) {
+        return true;
+      }
+      
+      const visibility = event.visibility || {};
+      const assignTo = event.assignTo || {};
+      
+      // Check role-based visibility
+      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
+        return true;
+      }
+      
+      // Check team-based visibility
+      if (teamId && (visibility.teams?.includes(teamId) || assignTo.teams?.includes(teamId))) {
+        return true;
+      }
+      
+      // Check user-specific assignment
+      if (assignTo.users?.includes(userId)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    res.json(filteredEvents);
   });
   
   app.get('/api/events/upcoming', isAuthenticated, async (req: any, res) => {
-    const { organizationId } = req.user;
-    const events = await storage.getUpcomingEvents(organizationId);
-    res.json(events);
+    const { organizationId, id: userId, role } = req.user;
+    const allEvents = await storage.getUpcomingEvents(organizationId);
+    
+    // Admins see all events
+    if (role === 'admin') {
+      return res.json(allEvents);
+    }
+    
+    // Fetch user's full profile to get team membership
+    const userProfile = await storage.getUser(userId);
+    const teamId = userProfile?.teamId;
+    
+    // Filter events based on user's role and team
+    const filteredEvents = allEvents.filter((event: any) => {
+      // If no visibility/assignTo, assume it's visible to everyone (legacy events)
+      if (!event.visibility && !event.assignTo) {
+        return true;
+      }
+      
+      const visibility = event.visibility || {};
+      const assignTo = event.assignTo || {};
+      
+      // Check role-based visibility
+      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
+        return true;
+      }
+      
+      // Check team-based visibility
+      if (teamId && (visibility.teams?.includes(teamId) || assignTo.teams?.includes(teamId))) {
+        return true;
+      }
+      
+      // Check user-specific assignment
+      if (assignTo.users?.includes(userId)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    res.json(filteredEvents);
   });
   
   app.get('/api/events/team/:teamId', isAuthenticated, async (req: any, res) => {
@@ -1390,12 +1466,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      const { role } = req.user;
+      const { role, id: userId } = req.user;
       if (role !== 'admin' && role !== 'coach') {
         return res.status(403).json({ message: 'Only admins and coaches can create events' });
       }
       
-      const eventData = insertEventSchema.parse(req.body);
+      // Transform targetType/targetId into visibility/assignTo structure
+      const { targetType, targetId, ...restData } = req.body;
+      let visibility: any = {};
+      let assignTo: any = {};
+      
+      if (targetType === 'all') {
+        // Event visible to everyone in the organization
+        visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
+        assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
+      } else if (targetType === 'team' && targetId) {
+        visibility = { teams: [targetId] };
+        assignTo = { teams: [targetId] };
+      } else if (targetType === 'program' && targetId) {
+        visibility = { programs: [targetId] };
+        assignTo = { programs: [targetId] };
+      } else if (targetType === 'role' && targetId) {
+        visibility = { roles: [targetId] };
+        assignTo = { roles: [targetId] };
+      }
+      
+      const eventData = insertEventSchema.parse({
+        ...restData,
+        visibility,
+        assignTo,
+        createdBy: userId,
+      });
       const event = await storage.createEvent(eventData);
       res.json(event);
     } catch (error: any) {

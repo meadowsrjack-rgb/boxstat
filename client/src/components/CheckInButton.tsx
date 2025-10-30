@@ -132,20 +132,19 @@ export default function CheckInButton({
   });
 
   const handleCheckDistance = async () => {
+    if (!event.latitude || !event.longitude) {
+      toast({
+        title: 'Location Coordinates Not Set',
+        description: 'This event location doesn\'t have GPS coordinates. Please use the QR code scanner to check in.',
+      });
+      return;
+    }
+    
     const pos = await getOnce();
     if (!pos) {
       toast({
         title: 'Location Access Needed',
         description: 'Please allow location access to check your distance from the event.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (!event.latitude || !event.longitude) {
-      toast({
-        title: 'Location Not Available',
-        description: 'This event does not have location coordinates set.',
         variant: 'destructive',
       });
       return;
@@ -261,6 +260,12 @@ export default function CheckInButton({
       {timeOk && !coords && !loading && (
         <p className="text-sm text-orange-600" data-testid="text-location-needed">
           Location access needed - click "Check Location" to enable check-in.
+        </p>
+      )}
+      
+      {timeOk && !event.latitude && !event.longitude && (
+        <p className="text-sm text-blue-600" data-testid="text-coordinates-unavailable">
+          GPS coordinates not set for this event. Use the QR code scanner to check in.
         </p>
       )}
       

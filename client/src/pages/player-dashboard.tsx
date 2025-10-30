@@ -303,17 +303,16 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     refetchInterval: false,
   });
 
-  const { data: userEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
-    queryKey: ["/api/users", currentUser.id, "events"],
+  // Fetch events (backend filters based on user's role, team membership)
+  const { data: allEvents = [] } = useQuery<any[]>({
+    queryKey: ["/api/events"],
     enabled: !!currentUser.id,
   });
-
-  const { data: childEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
-    queryKey: ["/api/child-profiles", selectedChildId, "events"],
-    enabled: !!selectedChildId,
-  });
-
-  const displayEvents: UypEvent[] = (childEvents?.length ? childEvents : userEvents) || [];
+  
+  // Convert database events to UypEvent format
+  const displayEvents: UypEvent[] = useMemo(() => {
+    return (allEvents || []).map(convertEventToUypEvent);
+  }, [allEvents]);
 
   // Player Tasks (server-driven)
   const { data: tasks = [] as Task[] } = useQuery<Task[]>({

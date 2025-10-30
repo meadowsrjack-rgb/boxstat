@@ -44,6 +44,10 @@ export function GooglePlacesAutocomplete({
     }
 
     let isMounted = true;
+    let inputEventListener: ((e: any) => void) | null = null;
+    let observer: MutationObserver | null = null;
+    let shadowObserver: MutationObserver | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
 
     async function initAutocomplete() {
       try {
@@ -126,15 +130,90 @@ export function GooglePlacesAutocomplete({
           }
         });
 
-        // IMPORTANT: Also listen for text input to capture manual typing
-        autocomplete.addEventListener('input', (e: any) => {
-          const textValue = e.target?.value || autocomplete.value?.displayName || '';
-          console.log('Google Places input event:', textValue);
-          if (textValue && typeof textValue === 'string') {
-            setManualInput(textValue);
-            onChange(textValue);
+        // Use MutationObserver to robustly find the internal input field
+        let foundInput = false;
+        
+        const findAndAttachToInput = () => {
+          if (foundInput || !isMounted) return;
+          
+          // Try to find the internal input field
+          const inputField = autocomplete.querySelector('input') || 
+                           autocomplete.shadowRoot?.querySelector('input');
+          
+          if (inputField) {
+            console.log('Found internal input field in autocomplete element');
+            foundInput = true;
+            
+            // Create and store the listener reference for cleanup
+            inputEventListener = (e: any) => {
+              const textValue = e.target?.value ?? '';
+              console.log('Google Places input event (from internal field):', textValue);
+              // Allow empty strings to propagate (removed the falsy check)
+              if (typeof textValue === 'string') {
+                setManualInput(textValue);
+                onChange(textValue);
+              }
+            };
+            
+            inputField.addEventListener('input', inputEventListener);
+            
+            // Stop observing once we find and attach to the input
+            if (observer) {
+              observer.disconnect();
+              observer = null;
+            }
+            if (shadowObserver) {
+              shadowObserver.disconnect();
+              shadowObserver = null;
+            }
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
           }
-        });
+        };
+        
+        // Try to find immediately
+        findAndAttachToInput();
+        
+        // If not found, set up MutationObserver with retry loop
+        if (!foundInput) {
+          observer = new MutationObserver(() => {
+            findAndAttachToInput();
+          });
+          
+          // Observe the autocomplete element for changes
+          observer.observe(autocomplete, {
+            childList: true,
+            subtree: true,
+          });
+          
+          // Also try to observe shadow root if available
+          if (autocomplete.shadowRoot) {
+            shadowObserver = new MutationObserver(() => {
+              findAndAttachToInput();
+            });
+            shadowObserver.observe(autocomplete.shadowRoot, {
+              childList: true,
+              subtree: true,
+            });
+          }
+          
+          // Set max timeout of 3 seconds
+          timeoutId = setTimeout(() => {
+            if (!foundInput) {
+              console.warn('Could not find internal input field in autocomplete element after 3 seconds');
+              if (observer) {
+                observer.disconnect();
+                observer = null;
+              }
+              if (shadowObserver) {
+                shadowObserver.disconnect();
+                shadowObserver = null;
+              }
+            }
+          }, 3000);
+        }
 
         if (isMounted) {
           setIsLoading(false);
@@ -160,7 +239,28 @@ export function GooglePlacesAutocomplete({
 
     return () => {
       isMounted = false;
-      // Clean up
+      
+      // Clean up MutationObservers
+      if (observer) {
+        observer.disconnect();
+      }
+      if (shadowObserver) {
+        shadowObserver.disconnect();
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Clean up event listener
+      if (inputEventListener && autocompleteElementRef.current) {
+        const inputField = autocompleteElementRef.current.querySelector('input') || 
+                         autocompleteElementRef.current.shadowRoot?.querySelector('input');
+        if (inputField) {
+          inputField.removeEventListener('input', inputEventListener);
+        }
+      }
+      
+      // Clean up autocomplete element
       if (autocompleteElementRef.current) {
         try {
           autocompleteElementRef.current.remove?.();

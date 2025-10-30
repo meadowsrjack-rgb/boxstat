@@ -1273,6 +1273,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
+  app.patch('/api/organization/time-window-defaults', isAuthenticated, async (req: any, res) => {
+    const { role, organizationId } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can update organization settings' });
+    }
+    
+    const { rsvpOpenHours, rsvpCloseHours, checkInOpenHours, checkInCloseMinutes } = req.body;
+    
+    // Validate inputs
+    if (rsvpOpenHours !== undefined && (typeof rsvpOpenHours !== 'number' || rsvpOpenHours < 0)) {
+      return res.status(400).json({ message: 'Invalid rsvpOpenHours value' });
+    }
+    if (rsvpCloseHours !== undefined && (typeof rsvpCloseHours !== 'number' || rsvpCloseHours < 0)) {
+      return res.status(400).json({ message: 'Invalid rsvpCloseHours value' });
+    }
+    if (checkInOpenHours !== undefined && (typeof checkInOpenHours !== 'number' || checkInOpenHours < 0)) {
+      return res.status(400).json({ message: 'Invalid checkInOpenHours value' });
+    }
+    if (checkInCloseMinutes !== undefined && (typeof checkInCloseMinutes !== 'number' || checkInCloseMinutes < 0)) {
+      return res.status(400).json({ message: 'Invalid checkInCloseMinutes value' });
+    }
+    
+    const updated = await storage.updateOrganization(organizationId, {
+      rsvpOpenHours,
+      rsvpCloseHours,
+      checkInOpenHours,
+      checkInCloseMinutes,
+    });
+    
+    res.json(updated);
+  });
+  
   // =============================================
   // USER MANAGEMENT ROUTES (Admin only)
   // =============================================

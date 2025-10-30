@@ -35,6 +35,12 @@ export interface Organization {
     training: boolean;
   };
   
+  // Time window defaults for events
+  rsvpOpenHours: number; // Hours before event when RSVP opens (default: 72)
+  rsvpCloseHours: number; // Hours before event when RSVP closes (default: 24)
+  checkInOpenHours: number; // Hours before event when check-in opens (default: 3)
+  checkInCloseMinutes: number; // Minutes after event start when check-in closes (default: 15)
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -242,6 +248,11 @@ export const events = pgTable("events", {
   sendNotifications: boolean("send_notifications").default(false),
   createdBy: varchar("created_by"),
   status: varchar().default('active'), // active, cancelled, completed, draft
+  // RSVP and Check-in time windows
+  rsvpOpensHoursBefore: integer("rsvp_opens_hours_before").default(72), // Hours before event when RSVP opens
+  rsvpClosesHoursBefore: integer("rsvp_closes_hours_before").default(24), // Hours before event when RSVP closes
+  checkInOpensHoursBefore: integer("check_in_opens_hours_before").default(3), // Hours before event when check-in opens
+  checkInClosesMinutesAfter: integer("check_in_closes_minutes_after").default(15), // Minutes after event start when check-in closes
 });
 
 // Attendances table

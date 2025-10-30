@@ -242,10 +242,6 @@ export const events = pgTable("events", {
   sendNotifications: boolean("send_notifications").default(false),
   createdBy: varchar("created_by"),
   status: varchar().default('active'), // active, cancelled, completed, draft
-  rsvpOpensHoursBefore: integer("rsvp_opens_hours_before").default(72), // 3 days
-  rsvpClosesHoursBefore: integer("rsvp_closes_hours_before").default(24), // 1 day
-  checkInOpensHoursBefore: integer("check_in_opens_hours_before").default(3), // 3 hours
-  checkInClosesMinutesAfter: integer("check_in_closes_minutes_after").default(15), // 15 minutes
 });
 
 // Attendances table
@@ -358,20 +354,6 @@ export const notifications = pgTable("notifications", {
   relatedEventId: integer("related_event_id"), // optional link to event
   status: varchar().default('pending'), // pending, sent, failed
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-// Event Creation Defaults table
-export const eventCreationDefaults = pgTable("event_creation_defaults", {
-  id: serial().primaryKey(),
-  userId: varchar("user_id").notNull().unique(),
-  rsvpEnabled: boolean("rsvp_enabled").default(true),
-  rsvpOpensHoursBefore: integer("rsvp_opens_hours_before").default(72),
-  rsvpClosesHoursBefore: integer("rsvp_closes_hours_before").default(24),
-  checkInEnabled: boolean("check_in_enabled").default(true),
-  checkInOpensHoursBefore: integer("check_in_opens_hours_before").default(3),
-  checkInClosesMinutesAfter: integer("check_in_closes_minutes_after").default(15),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
 export const insertUserSchema = z.object({
@@ -487,10 +469,6 @@ export interface Event {
   sendNotifications?: boolean;
   createdBy?: string;
   status?: string; // active, cancelled, completed, draft
-  rsvpOpensHoursBefore?: number;
-  rsvpClosesHoursBefore?: number;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
   isActive: boolean;
   createdAt: Date;
 }
@@ -530,10 +508,6 @@ export const insertEventSchema = z.object({
   sendNotifications: z.boolean().default(false),
   createdBy: z.string().optional(),
   status: z.string().default('active'),
-  rsvpOpensHoursBefore: z.number().default(72).optional(),
-  rsvpClosesHoursBefore: z.number().default(24).optional(),
-  checkInOpensHoursBefore: z.number().default(3).optional(),
-  checkInClosesMinutesAfter: z.number().default(15).optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -844,32 +818,3 @@ export const insertNotificationSchema = z.object({
 });
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-
-// =============================================
-// Event Creation Defaults Schema
-// =============================================
-
-export interface EventCreationDefaults {
-  id: number;
-  userId: string;
-  rsvpEnabled: boolean;
-  rsvpOpensHoursBefore: number;
-  rsvpClosesHoursBefore: number;
-  checkInEnabled: boolean;
-  checkInOpensHoursBefore: number;
-  checkInClosesMinutesAfter: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export const insertEventCreationDefaultsSchema = z.object({
-  userId: z.string(),
-  rsvpEnabled: z.boolean().default(true),
-  rsvpOpensHoursBefore: z.number().default(72),
-  rsvpClosesHoursBefore: z.number().default(24),
-  checkInEnabled: z.boolean().default(true),
-  checkInOpensHoursBefore: z.number().default(3),
-  checkInClosesMinutesAfter: z.number().default(15),
-});
-
-export type InsertEventCreationDefaults = z.infer<typeof insertEventCreationDefaultsSchema>;

@@ -3,14 +3,7 @@ import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-type CheckIn = {
-  id: string | number;
-  eventId: string | number;
-  userId: string;
-  type: "advance" | "onsite";
-  createdAt: string;
-};
+import type { CheckIn } from "@shared/schema";
 
 type UypEvent = {
   id: string;
@@ -18,10 +11,6 @@ type UypEvent = {
   startTime: string; // ISO
   endTime?: string;
   eventType?: "Practice" | "Skills" | "Game" | "Other" | string;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
-  rsvpOpensHoursBefore?: number;
-  rsvpClosesHoursBefore?: number;
 };
 
 interface PlayerCalendarProps {
@@ -52,20 +41,19 @@ export default function PlayerCalendar({
 
   // Constants for time windows
   const MS = { HOUR: 60 * 60 * 1000, MIN: 60 * 1000 };
+  const RSVP_OPEN_HOURS = 72; // 3 days before tip-off
+  const RSVP_CLOSE_HOURS = 24; // 1 day before tip-off
+  const ONSITE_OPEN_HOURS = 3;
 
-  // Helper functions for time windows - using event-specific timing settings
-  const isRsvpWindow = (event: UypEvent, now = new Date()) => {
-    const t = new Date(event.startTime).getTime(), n = now.getTime();
-    const rsvpOpensHours = event.rsvpOpensHoursBefore ?? 72;
-    const rsvpClosesHours = event.rsvpClosesHoursBefore ?? 24;
-    return n >= t - rsvpOpensHours * MS.HOUR && n <= t - rsvpClosesHours * MS.HOUR;
+  // Helper functions for time windows
+  const isRsvpWindow = (start: Date, now = new Date()) => {
+    const t = start.getTime(), n = now.getTime();
+    return n >= t - RSVP_OPEN_HOURS * MS.HOUR && n <= t - RSVP_CLOSE_HOURS * MS.HOUR;
   };
   
-  const isOnsiteWindow = (event: UypEvent, now = new Date()) => {
-    const t = new Date(event.startTime).getTime(), n = now.getTime();
-    const checkInOpensMin = (event.checkInOpensHoursBefore ?? 3) * 60;
-    const checkInClosesMin = event.checkInClosesMinutesAfter ?? 15;
-    return n >= t - checkInOpensMin * MS.MIN && n <= t + checkInClosesMin * MS.MIN;
+  const isOnsiteWindow = (start: Date, now = new Date()) => {
+    const t = start.getTime(), n = now.getTime();
+    return n >= t - ONSITE_OPEN_HOURS * MS.HOUR && n <= t;
   };
 
   // Checkins query

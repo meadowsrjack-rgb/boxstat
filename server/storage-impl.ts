@@ -14,7 +14,6 @@ import {
   type Division,
   type Skill,
   type Notification,
-  type EventCreationDefaults,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -29,7 +28,6 @@ import {
   type InsertDivision,
   type InsertSkill,
   type InsertNotification,
-  type InsertEventCreationDefaults,
 } from "@shared/schema";
 
 // =============================================
@@ -145,10 +143,6 @@ export interface IStorage {
   updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined>;
   deleteNotification(id: number): Promise<void>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
-  
-  // Event Creation Defaults operations
-  getEventCreationDefaults(userId: string): Promise<EventCreationDefaults | undefined>;
-  saveEventCreationDefaults(userId: string, defaults: InsertEventCreationDefaults): Promise<EventCreationDefaults>;
 }
 
 // =============================================
@@ -171,11 +165,9 @@ class MemStorage implements IStorage {
   private divisions: Map<number, Division> = new Map();
   private skills: Map<number, Skill> = new Map();
   private notifications: Map<number, Notification> = new Map();
-  private eventCreationDefaults: Map<string, EventCreationDefaults> = new Map();
   private nextDivisionId = 1;
   private nextSkillId = 1;
   private nextNotificationId = 1;
-  private nextEventDefaultsId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1221,42 +1213,6 @@ class MemStorage implements IStorage {
     this.notifications.set(id, updated as any);
     return updated;
   }
-  
-  // Event Creation Defaults operations
-  async getEventCreationDefaults(userId: string): Promise<EventCreationDefaults | undefined> {
-    return this.eventCreationDefaults.get(userId);
-  }
-  
-  async saveEventCreationDefaults(userId: string, defaults: InsertEventCreationDefaults): Promise<EventCreationDefaults> {
-    const existing = this.eventCreationDefaults.get(userId);
-    const now = new Date();
-    
-    if (existing) {
-      const updated: EventCreationDefaults = {
-        ...existing,
-        ...defaults,
-        userId,
-        updatedAt: now,
-      };
-      this.eventCreationDefaults.set(userId, updated);
-      return updated;
-    } else {
-      const newDefaults: EventCreationDefaults = {
-        id: this.nextEventDefaultsId++,
-        userId,
-        rsvpEnabled: defaults.rsvpEnabled ?? true,
-        rsvpOpensHoursBefore: defaults.rsvpOpensHoursBefore ?? 72,
-        rsvpClosesHoursBefore: defaults.rsvpClosesHoursBefore ?? 24,
-        checkInEnabled: defaults.checkInEnabled ?? true,
-        checkInOpensHoursBefore: defaults.checkInOpensHoursBefore ?? 3,
-        checkInClosesMinutesAfter: defaults.checkInClosesMinutesAfter ?? 15,
-        createdAt: now,
-        updatedAt: now,
-      };
-      this.eventCreationDefaults.set(userId, newDefaults);
-      return newDefaults;
-    }
-  }
 }
 
 // =============================================
@@ -2159,89 +2115,6 @@ class DatabaseStorage implements IStorage {
     
     if (results.length === 0) return undefined;
     return this.mapDbNotificationToNotification(results[0]);
-  }
-  
-  // Event Creation Defaults operations
-  async getEventCreationDefaults(userId: string): Promise<EventCreationDefaults | undefined> {
-    const results = await db.select().from(schema.eventCreationDefaults)
-      .where(eq(schema.eventCreationDefaults.userId, userId));
-    
-    if (results.length === 0) return undefined;
-    
-    const result = results[0];
-    return {
-      id: result.id,
-      userId: result.userId,
-      rsvpEnabled: result.rsvpEnabled ?? true,
-      rsvpOpensHoursBefore: result.rsvpOpensHoursBefore ?? 72,
-      rsvpClosesHoursBefore: result.rsvpClosesHoursBefore ?? 24,
-      checkInEnabled: result.checkInEnabled ?? true,
-      checkInOpensHoursBefore: result.checkInOpensHoursBefore ?? 3,
-      checkInClosesMinutesAfter: result.checkInClosesMinutesAfter ?? 15,
-      createdAt: new Date(result.createdAt!),
-      updatedAt: new Date(result.updatedAt!),
-    };
-  }
-  
-  async saveEventCreationDefaults(userId: string, defaults: InsertEventCreationDefaults): Promise<EventCreationDefaults> {
-    const existing = await this.getEventCreationDefaults(userId);
-    
-    if (existing) {
-      // Update existing
-      const results = await db.update(schema.eventCreationDefaults)
-        .set({
-          rsvpEnabled: defaults.rsvpEnabled,
-          rsvpOpensHoursBefore: defaults.rsvpOpensHoursBefore,
-          rsvpClosesHoursBefore: defaults.rsvpClosesHoursBefore,
-          checkInEnabled: defaults.checkInEnabled,
-          checkInOpensHoursBefore: defaults.checkInOpensHoursBefore,
-          checkInClosesMinutesAfter: defaults.checkInClosesMinutesAfter,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(schema.eventCreationDefaults.userId, userId))
-        .returning();
-      
-      const result = results[0];
-      return {
-        id: result.id,
-        userId: result.userId,
-        rsvpEnabled: result.rsvpEnabled ?? true,
-        rsvpOpensHoursBefore: result.rsvpOpensHoursBefore ?? 72,
-        rsvpClosesHoursBefore: result.rsvpClosesHoursBefore ?? 24,
-        checkInEnabled: result.checkInEnabled ?? true,
-        checkInOpensHoursBefore: result.checkInOpensHoursBefore ?? 3,
-        checkInClosesMinutesAfter: result.checkInClosesMinutesAfter ?? 15,
-        createdAt: new Date(result.createdAt!),
-        updatedAt: new Date(result.updatedAt!),
-      };
-    } else {
-      // Insert new
-      const results = await db.insert(schema.eventCreationDefaults)
-        .values({
-          userId,
-          rsvpEnabled: defaults.rsvpEnabled ?? true,
-          rsvpOpensHoursBefore: defaults.rsvpOpensHoursBefore ?? 72,
-          rsvpClosesHoursBefore: defaults.rsvpClosesHoursBefore ?? 24,
-          checkInEnabled: defaults.checkInEnabled ?? true,
-          checkInOpensHoursBefore: defaults.checkInOpensHoursBefore ?? 3,
-          checkInClosesMinutesAfter: defaults.checkInClosesMinutesAfter ?? 15,
-        })
-        .returning();
-      
-      const result = results[0];
-      return {
-        id: result.id,
-        userId: result.userId,
-        rsvpEnabled: result.rsvpEnabled ?? true,
-        rsvpOpensHoursBefore: result.rsvpOpensHoursBefore ?? 72,
-        rsvpClosesHoursBefore: result.rsvpClosesHoursBefore ?? 24,
-        checkInEnabled: result.checkInEnabled ?? true,
-        checkInOpensHoursBefore: result.checkInOpensHoursBefore ?? 3,
-        checkInClosesMinutesAfter: result.checkInClosesMinutesAfter ?? 15,
-        createdAt: new Date(result.createdAt!),
-        updatedAt: new Date(result.updatedAt!),
-      };
-    }
   }
 
   // Helper mapping functions

@@ -17,8 +17,6 @@ export type UypEvent = {
   location: string;
   latitude?: number;
   longitude?: number;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
 };
 
 type Props = {
@@ -41,10 +39,8 @@ export default function CheckInButton({
   const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
   const { toast } = useToast();
 
-  // Check if event is within time window using event-specific settings
-  const checkInOpensMin = (event.checkInOpensHoursBefore ?? 3) * 60;
-  const checkInClosesMin = event.checkInClosesMinutesAfter ?? 15;
-  const timeOk = withinWindow(event.startTime, undefined, checkInOpensMin, checkInClosesMin);
+  // Check if event is within time window (15 min before to 30 min after start)
+  const timeOk = withinWindow(event.startTime, event.endTime);
 
   // Automatically get location when time window opens
   useEffect(() => {
@@ -184,10 +180,8 @@ export default function CheckInButton({
   const getTimeWindowInfo = () => {
     const now = new Date();
     const start = new Date(event.startTime);
-    const checkInOpensHours = event.checkInOpensHoursBefore ?? 3;
-    const checkInClosesMin = event.checkInClosesMinutesAfter ?? 15;
-    const checkInStart = new Date(start.getTime() - checkInOpensHours * 60 * 60 * 1000);
-    const checkInEnd = new Date(start.getTime() + checkInClosesMin * 60 * 1000);
+    const checkInStart = new Date(start.getTime() - 30 * 60 * 1000); // 30 min before
+    const checkInEnd = new Date(start.getTime() + 30 * 60 * 1000); // 30 min after
     
     if (now < checkInStart) {
       const minutesUntil = Math.ceil((checkInStart.getTime() - now.getTime()) / (1000 * 60));
@@ -259,7 +253,7 @@ export default function CheckInButton({
       {/* Status messages */}
       {!timeOk && (
         <p className="text-sm text-muted-foreground" data-testid="text-time-window-info">
-          Check-in opens {event.checkInOpensHoursBefore ?? 3} hours before event start and closes {event.checkInClosesMinutesAfter ?? 15} minutes after.
+          Check-in opens 30 minutes before event start and closes 30 minutes after.
         </p>
       )}
       

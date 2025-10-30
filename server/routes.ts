@@ -24,7 +24,6 @@ import {
   insertDivisionSchema,
   insertSkillSchema,
   insertNotificationSchema,
-  insertEventCreationDefaultsSchema,
 } from "@shared/schema";
 
 let wss: WebSocketServer | null = null;
@@ -2164,36 +2163,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating package selections:", error);
       res.status(500).json({ error: "Failed to create package selections", details: error.message });
-    }
-  });
-  
-  // =============================================
-  // EVENT DEFAULTS ROUTES
-  // =============================================
-  
-  app.get('/api/event-defaults', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id: userId } = req.user;
-      const defaults = await storage.getEventCreationDefaults(userId);
-      res.json(defaults || null);
-    } catch (error: any) {
-      console.error('Error fetching event defaults:', error);
-      res.status(500).json({ error: 'Failed to fetch event defaults', message: error.message });
-    }
-  });
-  
-  app.post('/api/event-defaults', isAuthenticated, async (req: any, res) => {
-    try {
-      const { id: userId } = req.user;
-      const defaultsData = insertEventCreationDefaultsSchema.parse(req.body);
-      const defaults = await storage.saveEventCreationDefaults(userId, defaultsData);
-      res.json(defaults);
-    } catch (error: any) {
-      console.error('Error saving event defaults:', error);
-      if (error.name === 'ZodError') {
-        return res.status(400).json({ error: 'Invalid input', details: error.errors });
-      }
-      res.status(500).json({ error: 'Failed to save event defaults', message: error.message });
     }
   });
   

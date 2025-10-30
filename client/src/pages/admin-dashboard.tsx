@@ -13,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Settings,
   Users,
@@ -1615,14 +1614,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
-  const [saveAsDefaults, setSaveAsDefaults] = useState(false);
-  const [rsvpEnabled, setRsvpEnabled] = useState(true);
-  const [checkInEnabled, setCheckInEnabled] = useState(true);
-
-  // Fetch user's event creation defaults
-  const { data: userDefaults } = useQuery({
-    queryKey: ["/api/event-defaults"],
-  });
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -1635,10 +1626,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
     description: z.string().optional(),
     targetType: z.enum(["all", "team", "program", "role"]),
     targetId: z.string().optional(),
-    rsvpOpensHoursBefore: z.number().optional(),
-    rsvpClosesHoursBefore: z.number().optional(),
-    checkInOpensHoursBefore: z.number().optional(),
-    checkInClosesMinutesAfter: z.number().optional(),
   });
 
   const form = useForm({
@@ -1654,24 +1641,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
       description: "",
       targetType: "all" as const,
       targetId: "",
-      rsvpOpensHoursBefore: userDefaults?.rsvpOpensHoursBefore || 72,
-      rsvpClosesHoursBefore: userDefaults?.rsvpClosesHoursBefore || 24,
-      checkInOpensHoursBefore: userDefaults?.checkInOpensHoursBefore || 3,
-      checkInClosesMinutesAfter: userDefaults?.checkInClosesMinutesAfter || 15,
     },
   });
-
-  // Update form defaults when userDefaults loads
-  useEffect(() => {
-    if (userDefaults) {
-      setRsvpEnabled(userDefaults.rsvpEnabled ?? true);
-      setCheckInEnabled(userDefaults.checkInEnabled ?? true);
-      form.setValue("rsvpOpensHoursBefore", userDefaults.rsvpOpensHoursBefore || 72);
-      form.setValue("rsvpClosesHoursBefore", userDefaults.rsvpClosesHoursBefore || 24);
-      form.setValue("checkInOpensHoursBefore", userDefaults.checkInOpensHoursBefore || 3);
-      form.setValue("checkInClosesMinutesAfter", userDefaults.checkInClosesMinutesAfter || 15);
-    }
-  }, [userDefaults, form]);
 
   const createEvent = useMutation({
     mutationFn: async (data: any) => {
@@ -1684,20 +1655,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
         organizationId: organization.id,
       };
       console.log('Event API payload:', payload);
-      
-      // Save defaults if checkbox is checked
-      if (saveAsDefaults) {
-        await apiRequest("POST", "/api/event-defaults", {
-          rsvpEnabled,
-          rsvpOpensHoursBefore: data.rsvpOpensHoursBefore,
-          rsvpClosesHoursBefore: data.rsvpClosesHoursBefore,
-          checkInEnabled,
-          checkInOpensHoursBefore: data.checkInOpensHoursBefore,
-          checkInClosesMinutesAfter: data.checkInClosesMinutesAfter,
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/event-defaults"] });
-      }
-      
       return await apiRequest("POST", "/api/events", payload);
     },
     onSuccess: () => {
@@ -1705,7 +1662,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
       toast({ title: "Event created successfully" });
       setIsDialogOpen(false);
       form.reset();
-      setSaveAsDefaults(false);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -2031,139 +1987,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </FormItem>
                     )}
                   />
-                  
-                  {/* RSVP Settings */}
-                  <Collapsible className="border rounded-lg p-4 space-y-3">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Checkbox 
-                          checked={rsvpEnabled}
-                          onCheckedChange={setRsvpEnabled}
-                          data-testid="checkbox-rsvp-enabled"
-                        />
-                        <span className="font-medium">RSVP Settings</span>
-                      </div>
-                    </CollapsibleTrigger>
-                    {rsvpEnabled && (
-                      <CollapsibleContent className="space-y-3 mt-3">
-                        <FormField
-                          control={form.control}
-                          name="rsvpOpensHoursBefore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>RSVP Opens (hours before event)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number" 
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  data-testid="input-rsvp-opens"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                How many hours before the event should RSVP open
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="rsvpClosesHoursBefore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>RSVP Closes (hours before event)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number"
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  data-testid="input-rsvp-closes"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                How many hours before the event should RSVP close
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CollapsibleContent>
-                    )}
-                  </Collapsible>
-
-                  {/* Check-in Settings */}
-                  <Collapsible className="border rounded-lg p-4 space-y-3">
-                    <CollapsibleTrigger className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <Checkbox 
-                          checked={checkInEnabled}
-                          onCheckedChange={setCheckInEnabled}
-                          data-testid="checkbox-checkin-enabled"
-                        />
-                        <span className="font-medium">Check-in Settings</span>
-                      </div>
-                    </CollapsibleTrigger>
-                    {checkInEnabled && (
-                      <CollapsibleContent className="space-y-3 mt-3">
-                        <FormField
-                          control={form.control}
-                          name="checkInOpensHoursBefore"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Check-in Opens (hours before event)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number"
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  data-testid="input-checkin-opens"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                How many hours before the event should check-in open
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="checkInClosesMinutesAfter"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Check-in Closes (minutes after event start)</FormLabel>
-                              <FormControl>
-                                <Input 
-                                  {...field} 
-                                  type="number"
-                                  onChange={(e) => field.onChange(parseInt(e.target.value))}
-                                  data-testid="input-checkin-closes"
-                                />
-                              </FormControl>
-                              <FormDescription>
-                                How many minutes after event start should check-in close
-                              </FormDescription>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </CollapsibleContent>
-                    )}
-                  </Collapsible>
-
-                  {/* Save as defaults checkbox */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <Checkbox 
-                      checked={saveAsDefaults}
-                      onCheckedChange={setSaveAsDefaults}
-                      data-testid="checkbox-save-defaults"
-                    />
-                    <Label htmlFor="save-defaults" className="text-sm cursor-pointer">
-                      Save these RSVP and check-in settings as my defaults
-                    </Label>
-                  </div>
-
                   <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
                     {createEvent.isPending ? "Creating..." : "Create Event"}
                   </Button>

@@ -119,10 +119,6 @@ type UypEvent = {
   longitude?: number;
   description?: string;
   teamId?: number | null;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
-  rsvpOpensHoursBefore?: number;
-  rsvpClosesHoursBefore?: number;
 };
 
 // Helper function to convert database Event to UypEvent
@@ -149,10 +145,6 @@ function convertEventToUypEvent(event: Event | any): UypEvent {
     longitude: event.longitude ?? undefined,
     description: event.description || undefined,
     teamId: event.teamId,
-    checkInOpensHoursBefore: event.checkInOpensHoursBefore ?? undefined,
-    checkInClosesMinutesAfter: event.checkInClosesMinutesAfter ?? undefined,
-    rsvpOpensHoursBefore: event.rsvpOpensHoursBefore ?? undefined,
-    rsvpClosesHoursBefore: event.rsvpClosesHoursBefore ?? undefined,
   };
 }
 type Task = {

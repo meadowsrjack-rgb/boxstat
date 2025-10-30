@@ -17,10 +17,6 @@ type UypEvent = {
   location: string;
   latitude?: number;
   longitude?: number;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
-  rsvpOpensHoursBefore?: number;
-  rsvpClosesHoursBefore?: number;
 };
 
 export default function SchedulePage() {

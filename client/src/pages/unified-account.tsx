@@ -21,12 +21,62 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+
+// Hook for drag-to-scroll functionality
+function useDragScroll() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      setIsDragging(true);
+      setStartX(e.pageX - element.offsetLeft);
+      setScrollLeft(element.scrollLeft);
+    };
+
+    const handleMouseLeave = () => {
+      setIsDragging(false);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - element.offsetLeft;
+      const walk = (x - startX) * 2;
+      element.scrollLeft = scrollLeft - walk;
+    };
+
+    element.addEventListener('mousedown', handleMouseDown);
+    element.addEventListener('mouseleave', handleMouseLeave);
+    element.addEventListener('mouseup', handleMouseUp);
+    element.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      element.removeEventListener('mousedown', handleMouseDown);
+      element.removeEventListener('mouseleave', handleMouseLeave);
+      element.removeEventListener('mouseup', handleMouseUp);
+      element.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isDragging, startX, scrollLeft]);
+
+  return ref;
+}
 
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedChildPerEvent, setSelectedChildPerEvent] = useState<Record<string, string>>({});
+  const tabsRef = useDragScroll();
 
   // Check for payment success in URL
   useEffect(() => {
@@ -114,12 +164,13 @@ export default function UnifiedAccount() {
               </h1>
               <p className="text-gray-600 mt-1">Manage your account and players</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               {user?.role === "admin" && (
                 <Button
                   onClick={() => setLocation("/admin-dashboard")}
                   variant="outline"
                   data-testid="button-admin"
+                  className="w-full sm:w-auto"
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   Admin
@@ -130,6 +181,7 @@ export default function UnifiedAccount() {
                   onClick={() => setLocation("/coach-dashboard")}
                   variant="outline"
                   data-testid="button-coach"
+                  className="w-full sm:w-auto"
                 >
                   <User className="w-4 h-4 mr-2" />
                   Coach
@@ -188,28 +240,30 @@ export default function UnifiedAccount() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="home">
-          <TabsList className="mb-6">
-            <TabsTrigger value="home" data-testid="tab-home">
-              <User className="w-4 h-4 mr-2" />
-              Home
-            </TabsTrigger>
-            <TabsTrigger value="payments" data-testid="tab-payments">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Payments
-            </TabsTrigger>
-            <TabsTrigger value="messages" data-testid="tab-messages">
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Messages
-            </TabsTrigger>
-            <TabsTrigger value="settings" data-testid="tab-settings">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
-            </TabsTrigger>
-            <TabsTrigger value="events" data-testid="tab-events">
-              <Calendar className="w-4 h-4 mr-2" />
-              Events
-            </TabsTrigger>
-          </TabsList>
+          <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
+              <TabsTrigger value="home" data-testid="tab-home" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <User className="w-4 h-4 mr-2" />
+                Home
+              </TabsTrigger>
+              <TabsTrigger value="payments" data-testid="tab-payments" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <DollarSign className="w-4 h-4 mr-2" />
+                Payments
+              </TabsTrigger>
+              <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Messages
+              </TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Settings className="w-4 h-4 mr-2" />
+                Settings
+              </TabsTrigger>
+              <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Calendar className="w-4 h-4 mr-2" />
+                Events
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">

@@ -107,6 +107,8 @@ export function GooglePlacesAutocomplete({
             const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
             const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
+            console.log('Google Places selected:', { address, lat, lng });
+
             // Update state
             setManualInput(address);
             onChange(address);
@@ -121,6 +123,16 @@ export function GooglePlacesAutocomplete({
             }
           } catch (fetchError) {
             console.error('Error fetching place details:', fetchError);
+          }
+        });
+
+        // IMPORTANT: Also listen for text input to capture manual typing
+        autocomplete.addEventListener('input', (e: any) => {
+          const textValue = e.target?.value || autocomplete.value?.displayName || '';
+          console.log('Google Places input event:', textValue);
+          if (textValue && typeof textValue === 'string') {
+            setManualInput(textValue);
+            onChange(textValue);
           }
         });
 
@@ -162,6 +174,7 @@ export function GooglePlacesAutocomplete({
   // Handle manual input changes when Google Maps fails
   const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    console.log('GooglePlacesAutocomplete manual input changed:', newValue);
     setManualInput(newValue);
     onChange(newValue);
   };

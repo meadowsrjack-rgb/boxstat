@@ -1648,11 +1648,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
     mutationFn: async (data: any) => {
       // Rename 'type' to 'eventType' for backend compatibility
       const { type, ...rest } = data;
-      return await apiRequest("POST", "/api/events", {
+      console.log('Event form data before submission:', { type, ...rest });
+      const payload = {
         ...rest,
         eventType: type,
         organizationId: organization.id,
-      });
+      };
+      console.log('Event API payload:', payload);
+      return await apiRequest("POST", "/api/events", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });

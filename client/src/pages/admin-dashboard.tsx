@@ -924,8 +924,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <Input 
                       id="edit-dob"
                       type="date"
-                      value={editingUser.dob ? new Date(editingUser.dob).toISOString().split('T')[0] : ""}
-                      onChange={(e) => setEditingUser({...editingUser, dob: e.target.value})}
+                      value={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).toISOString().split('T')[0] : ""}
+                      onChange={(e) => setEditingUser({...editingUser, dateOfBirth: e.target.value})}
                       data-testid="input-edit-dob"
                     />
                   </div>

@@ -30,16 +30,16 @@ export default function EventDetailPanel({
 }: EventDetailPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const { toast } = useToast();
-  const RSVP_OPEN_HOURS = 72; // 3 days before event
-  const RSVP_CLOSE_HOURS = 24; // 1 day before event
 
-  // Check if we're in RSVP window
+  // Check if we're in RSVP window using event-specific settings
   const isRsvpWindow = useMemo(() => {
     if (!event) return false;
     const now = Date.now();
     const eventTime = new Date(event.startTime).getTime();
-    return now >= eventTime - RSVP_OPEN_HOURS * MS.HOUR && now <= eventTime - RSVP_CLOSE_HOURS * MS.HOUR;
-  }, [event?.startTime]);
+    const rsvpOpensHours = (event as any).rsvpOpensHoursBefore ?? 72;
+    const rsvpClosesHours = (event as any).rsvpClosesHoursBefore ?? 24;
+    return now >= eventTime - rsvpOpensHours * MS.HOUR && now <= eventTime - rsvpClosesHours * MS.HOUR;
+  }, [event?.startTime, (event as any)?.rsvpOpensHoursBefore, (event as any)?.rsvpClosesHoursBefore]);
 
   // Fetch RSVP status
   const { data: rsvps = [] } = useQuery<any[]>({
@@ -222,7 +222,7 @@ export default function EventDetailPanel({
                     </>
                   ) : (
                     <p className="text-sm text-gray-500" data-testid="rsvp-window-closed">
-                      RSVP is available 3 days to 1 day before the event.
+                      RSVP is available {((event as any).rsvpOpensHoursBefore ?? 72) / 24} days to {((event as any).rsvpClosesHoursBefore ?? 24) / 24} day{((event as any).rsvpClosesHoursBefore ?? 24) !== 24 ? 's' : ''} before the event.
                     </p>
                   )}
                 </div>

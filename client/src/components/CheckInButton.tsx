@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, QrCode, Check, Clock } from 'lucide-react';
 import { useGeo } from '@/hooks/useGeo';
-import { distanceMeters, withinWindow, isWithinCheckInWindow } from '@/utils/geo';
+import { distanceMeters, withinWindow } from '@/utils/geo';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
 
@@ -17,10 +17,6 @@ export type UypEvent = {
   location: string;
   latitude?: number;
   longitude?: number;
-  checkInOpensHoursBefore?: number;
-  checkInClosesMinutesAfter?: number;
-  rsvpOpensHoursBefore?: number;
-  rsvpClosesHoursBefore?: number;
 };
 
 type Props = {
@@ -43,12 +39,8 @@ export default function CheckInButton({
   const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
   const { toast } = useToast();
 
-  // Use event-specific time windows, fallback to defaults (3 hours before, 15 min after)
-  const checkInOpens = event.checkInOpensHoursBefore ?? 3;
-  const checkInCloses = event.checkInClosesMinutesAfter ?? 15;
-  
-  // Check if event is within time window using event-specific values
-  const timeOk = isWithinCheckInWindow(event.startTime, event.endTime, checkInOpens, checkInCloses);
+  // Check if event is within time window (15 min before to 30 min after start)
+  const timeOk = withinWindow(event.startTime, event.endTime);
 
   // Automatically get location when time window opens
   useEffect(() => {
@@ -184,20 +176,16 @@ export default function CheckInButton({
     });
   };
 
-  // Show time window info based on event-specific settings
+  // Show time window info
   const getTimeWindowInfo = () => {
     const now = new Date();
     const start = new Date(event.startTime);
-    const checkInStart = new Date(start.getTime() - checkInOpens * 60 * 60 * 1000); 
-    const checkInEnd = new Date(start.getTime() + checkInCloses * 60 * 1000);
+    const checkInStart = new Date(start.getTime() - 30 * 60 * 1000); // 30 min before
+    const checkInEnd = new Date(start.getTime() + 30 * 60 * 1000); // 30 min after
     
     if (now < checkInStart) {
       const minutesUntil = Math.ceil((checkInStart.getTime() - now.getTime()) / (1000 * 60));
-      if (minutesUntil > 60) {
-        const hoursUntil = Math.ceil(minutesUntil / 60);
-        return `Check-in opens in ${hoursUntil} hour${hoursUntil !== 1 ? 's' : ''}`;
-      }
-      return `Check-in opens in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+      return `Check-in opens in ${minutesUntil} minutes`;
     }
     if (now > checkInEnd) {
       return 'Check-in window has closed';
@@ -265,7 +253,7 @@ export default function CheckInButton({
       {/* Status messages */}
       {!timeOk && (
         <p className="text-sm text-muted-foreground" data-testid="text-time-window-info">
-          Check-in opens {checkInOpens} hour{checkInOpens !== 1 ? 's' : ''} before event start and closes {checkInCloses} minute{checkInCloses !== 1 ? 's' : ''} after.
+          Check-in opens 30 minutes before event start and closes 30 minutes after.
         </p>
       )}
       

@@ -9,7 +9,6 @@ import { MapPin, Calendar, Clock, Users, X, Check, CheckCircle2 } from 'lucide-r
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient, apiRequest } from '@/lib/queryClient';
-import { isWithinRSVPWindow } from '@/utils/geo';
 
 type EventDetailPanelProps = {
   event: UypEvent | null;
@@ -31,16 +30,16 @@ export default function EventDetailPanel({
 }: EventDetailPanelProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const { toast } = useToast();
-  
-  // Use event-specific RSVP time windows, fallback to defaults
-  const rsvpOpenHours = event?.rsvpOpensHoursBefore ?? 72;
-  const rsvpCloseHours = event?.rsvpClosesHoursBefore ?? 24;
+  const RSVP_OPEN_HOURS = 72; // 3 days before event
+  const RSVP_CLOSE_HOURS = 24; // 1 day before event
 
-  // Check if we're in RSVP window using event-specific values
+  // Check if we're in RSVP window
   const isRsvpWindow = useMemo(() => {
     if (!event) return false;
-    return isWithinRSVPWindow(event.startTime, rsvpOpenHours, rsvpCloseHours);
-  }, [event?.startTime, rsvpOpenHours, rsvpCloseHours]);
+    const now = Date.now();
+    const eventTime = new Date(event.startTime).getTime();
+    return now >= eventTime - RSVP_OPEN_HOURS * MS.HOUR && now <= eventTime - RSVP_CLOSE_HOURS * MS.HOUR;
+  }, [event?.startTime]);
 
   // Fetch RSVP status
   const { data: rsvps = [] } = useQuery<any[]>({
@@ -223,7 +222,7 @@ export default function EventDetailPanel({
                     </>
                   ) : (
                     <p className="text-sm text-gray-500" data-testid="rsvp-window-closed">
-                      RSVP is available {rsvpOpenHours} hour{rsvpOpenHours !== 1 ? 's' : ''} to {rsvpCloseHours} hour{rsvpCloseHours !== 1 ? 's' : ''} before the event.
+                      RSVP is available 3 days to 1 day before the event.
                     </p>
                   )}
                 </div>

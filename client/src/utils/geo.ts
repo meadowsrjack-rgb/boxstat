@@ -20,34 +20,3 @@ export function withinWindow(startISO: string, endISO?: string, preMin = 180, po
   const end = (endISO ? new Date(endISO).getTime() : new Date(startISO).getTime()) + postMin * 60 * 1000;
   return now >= start && now <= end;
 }
-
-// Check if current time is within check-in window
-export function isWithinCheckInWindow(
-  eventStartISO: string, 
-  eventEndISO?: string, 
-  checkInOpensHoursBefore: number = 3, 
-  checkInClosesMinutesAfter: number = 15
-): boolean {
-  const now = Date.now();
-  const eventStart = new Date(eventStartISO).getTime();
-  
-  const checkInOpens = eventStart - (checkInOpensHoursBefore * 60 * 60 * 1000);
-  const checkInCloses = eventStart + (checkInClosesMinutesAfter * 60 * 1000);
-  
-  return now >= checkInOpens && now <= checkInCloses;
-}
-
-// Check if current time is within RSVP window
-export function isWithinRSVPWindow(
-  eventStartISO: string,
-  rsvpOpensHoursBefore: number = 72,
-  rsvpClosesHoursBefore: number = 24
-): boolean {
-  const now = Date.now();
-  const eventStart = new Date(eventStartISO).getTime();
-  
-  const rsvpOpens = eventStart - (rsvpOpensHoursBefore * 60 * 60 * 1000);
-  const rsvpCloses = eventStart - (rsvpClosesHoursBefore * 60 * 60 * 1000);
-  
-  return now >= rsvpOpens && now <= rsvpCloses;
-}

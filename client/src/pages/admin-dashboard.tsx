@@ -51,7 +51,6 @@ import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } fro
 import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
-import { TimeWindowConfig } from "@/components/TimeWindowConfig";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1615,8 +1614,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
-  const [showSaveDefaultsDialog, setShowSaveDefaultsDialog] = useState(false);
-  const [pendingEventData, setPendingEventData] = useState<any>(null);
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -1629,10 +1626,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
     description: z.string().optional(),
     targetType: z.enum(["all", "team", "program", "role"]),
     targetId: z.string().optional(),
-    rsvpOpensHoursBefore: z.number().min(0).max(720).optional(),
-    rsvpClosesHoursBefore: z.number().min(0).max(168).optional(),
-    checkInOpensHoursBefore: z.number().min(0).max(48).optional(),
-    checkInClosesMinutesAfter: z.number().min(0).max(240).optional(),
   });
 
   const form = useForm({
@@ -1648,81 +1641,22 @@ function EventsTab({ events, teams, programs, organization }: any) {
       description: "",
       targetType: "all" as const,
       targetId: "",
-      rsvpOpensHoursBefore: organization?.rsvpOpenHours ?? 72,
-      rsvpClosesHoursBefore: organization?.rsvpCloseHours ?? 24,
-      checkInOpensHoursBefore: organization?.checkInOpenHours ?? 3,
-      checkInClosesMinutesAfter: organization?.checkInCloseMinutes ?? 15,
     },
   });
-
-  const saveTimeWindowDefaults = useMutation({
-    mutationFn: async (data: { rsvpOpenHours: number; rsvpCloseHours: number; checkInOpenHours: number; checkInCloseMinutes: number }) => {
-      return await apiRequest("PATCH", "/api/organization/time-window-defaults", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/organization"] });
-      toast({ title: "Time window defaults updated successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to update time window defaults", variant: "destructive" });
-    },
-  });
-
-  const actuallyCreateEvent = async (data: any) => {
-    const { type, ...rest } = data;
-    const payload = {
-      ...rest,
-      eventType: type,
-      organizationId: organization.id,
-    };
-    return await apiRequest("POST", "/api/events", payload);
-  };
-
-  const handleEventSubmit = (data: any) => {
-    // Check if time windows differ from organization defaults
-    const hasChangedDefaults = 
-      data.rsvpOpensHoursBefore !== (organization?.rsvpOpenHours ?? 72) ||
-      data.rsvpClosesHoursBefore !== (organization?.rsvpCloseHours ?? 24) ||
-      data.checkInOpensHoursBefore !== (organization?.checkInOpenHours ?? 3) ||
-      data.checkInClosesMinutesAfter !== (organization?.checkInCloseMinutes ?? 15);
-
-    if (hasChangedDefaults) {
-      // Show dialog to ask if user wants to save as defaults
-      setPendingEventData(data);
-      setShowSaveDefaultsDialog(true);
-    } else {
-      // Directly create event
-      createEvent.mutate(data);
-    }
-  };
-
-  const handleSaveAsDefaults = async () => {
-    if (!pendingEventData) return;
-    
-    // Save as defaults first
-    await saveTimeWindowDefaults.mutateAsync({
-      rsvpOpenHours: pendingEventData.rsvpOpensHoursBefore,
-      rsvpCloseHours: pendingEventData.rsvpClosesHoursBefore,
-      checkInOpenHours: pendingEventData.checkInOpensHoursBefore,
-      checkInCloseMinutes: pendingEventData.checkInClosesMinutesAfter,
-    });
-    
-    // Then create event
-    createEvent.mutate(pendingEventData);
-    setShowSaveDefaultsDialog(false);
-    setPendingEventData(null);
-  };
-
-  const handleJustThisEvent = () => {
-    if (!pendingEventData) return;
-    
-    createEvent.mutate(pendingEventData);
-    setShowSaveDefaultsDialog(false);
-    setPendingEventData(null);
-  };
 
   const createEvent = useMutation({
-    mutationFn: actuallyCreateEvent,
+    mutationFn: async (data: any) => {
+      // Rename 'type' to 'eventType' for backend compatibility
+      const { type, ...rest } = data;
+      console.log('Event form data before submission:', { type, ...rest });
+      const payload = {
+        ...rest,
+        eventType: type,
+        organizationId: organization.id,
+      };
+      console.log('Event API payload:', payload);
+      return await apiRequest("POST", "/api/events", payload);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Event created successfully" });
@@ -1903,7 +1837,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleEventSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => createEvent.mutate(data))} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"
@@ -2053,53 +1987,11 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </FormItem>
                     )}
                   />
-                  
-                  <TimeWindowConfig
-                    rsvpOpensHoursBefore={organization?.rsvpOpenHours ?? 72}
-                    rsvpClosesHoursBefore={organization?.rsvpCloseHours ?? 24}
-                    checkInOpensHoursBefore={organization?.checkInOpenHours ?? 3}
-                    checkInClosesMinutesAfter={organization?.checkInCloseMinutes ?? 15}
-                    onChange={(values) => {
-                      form.setValue("rsvpOpensHoursBefore", values.rsvpOpensHoursBefore);
-                      form.setValue("rsvpClosesHoursBefore", values.rsvpClosesHoursBefore);
-                      form.setValue("checkInOpensHoursBefore", values.checkInOpensHoursBefore);
-                      form.setValue("checkInClosesMinutesAfter", values.checkInClosesMinutesAfter);
-                    }}
-                    showSetAsDefault={false}
-                  />
-                  
                   <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
                     {createEvent.isPending ? "Creating..." : "Create Event"}
                   </Button>
                 </form>
               </Form>
-            </DialogContent>
-          </Dialog>
-          
-          {/* Save as Defaults Dialog */}
-          <Dialog open={showSaveDefaultsDialog} onOpenChange={setShowSaveDefaultsDialog}>
-            <DialogContent data-testid="dialog-save-defaults">
-              <DialogHeader>
-                <DialogTitle>Save as Default?</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Would you like to use these time windows as the default for all future events?
-              </p>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={handleJustThisEvent}
-                  data-testid="button-just-this-event"
-                >
-                  No, Just This Event
-                </Button>
-                <Button
-                  onClick={handleSaveAsDefaults}
-                  data-testid="button-save-as-default"
-                >
-                  Yes, Save as Default
-                </Button>
-              </div>
             </DialogContent>
           </Dialog>
 
@@ -2214,24 +2106,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       data-testid="input-edit-event-description"
                     />
                   </div>
-                  
-                  <TimeWindowConfig
-                    rsvpOpensHoursBefore={editingEvent.rsvpOpensHoursBefore ?? 72}
-                    rsvpClosesHoursBefore={editingEvent.rsvpClosesHoursBefore ?? 24}
-                    checkInOpensHoursBefore={editingEvent.checkInOpensHoursBefore ?? 3}
-                    checkInClosesMinutesAfter={editingEvent.checkInClosesMinutesAfter ?? 15}
-                    onChange={(values) => {
-                      setEditingEvent({
-                        ...editingEvent,
-                        rsvpOpensHoursBefore: values.rsvpOpensHoursBefore,
-                        rsvpClosesHoursBefore: values.rsvpClosesHoursBefore,
-                        checkInOpensHoursBefore: values.checkInOpensHoursBefore,
-                        checkInClosesMinutesAfter: values.checkInClosesMinutesAfter,
-                      });
-                    }}
-                    showSetAsDefault={false}
-                  />
-                  
                   <Button
                     type="button"
                     className="w-full"

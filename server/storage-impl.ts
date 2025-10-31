@@ -198,10 +198,6 @@ class MemStorage implements IStorage {
         events: true,
         training: true,
       },
-      rsvpOpenHours: 72,
-      rsvpCloseHours: 24,
-      checkInOpenHours: 3,
-      checkInCloseMinutes: 15,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

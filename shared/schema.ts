@@ -217,7 +217,7 @@ export const events = pgTable("events", {
   eventType: varchar("event_type").notNull(),
   startTime: timestamp("start_time", { mode: 'string' }).notNull(),
   endTime: timestamp("end_time", { mode: 'string' }).notNull(),
-  location: varchar().notNull(),
+  location: varchar(),
   teamId: integer("team_id"),
   opponentTeam: varchar("opponent_team"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),

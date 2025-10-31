@@ -1,0 +1,271 @@
+Build a React + TypeScript + Tailwind + shadcn/ui component for configuring RSVP & Check-In windows for Admin dashboard creating or editing event
+Tech + Setup
+Framework: React + TypeScript.
+
+
+Styling: Tailwind CSS.
+
+
+UI kit: shadcn/ui (Buttons, Select, Input, Checkbox, Card, Alert).
+
+
+No tooltips.
+
+
+Component must be self-contained but exportable; no API calls (state only).
+
+
+Provide a minimal demo page that mounts the component and logs result JSON on Save.
+
+
+Files to create
+src/components/EventWindowsConfigurator.tsx
+
+
+src/pages/ConfiguratorDemo.tsx (render this in App.tsx)
+
+
+src/lib/time.ts (helpers for relative time math/display)
+
+
+Purpose
+Let an admin define time windows for:
+RSVP (open/close)
+
+
+Check-in (open/close)
+
+
+Each “window rule” has:
+type: "RSVP" or "Check-in"
+
+
+direction: "before" or "after" (relative to event start)
+
+
+amount: number
+
+
+unit: "minutes" or "hours" or "days"
+
+
+role: "open" or "close"
+
+
+isDefault: boolean (applies to future events)
+
+
+Required UI
+Inside a Card, vertically stacked “rule rows”. Each row contains:
+Type Select (RSVP / Check-in)
+
+
+Role Select (Opens / Closes)
+
+
+Amount NumberInput (integer ≥ 0; no decimals)
+
+
+Unit Select (minutes, hours, days)
+
+
+Direction Select (before, after)
+
+
+[ ] Set as default (Checkbox)
+
+
+Delete (X) icon button (danger/ghost)
+
+
+Below rows:
++ Add RSVP/Check-in Window (link-style button)
+
+
+Apply Preset Select with two presets:
+
+
+“Typical Youth Event”
+
+
+RSVP Opens: 7 days before
+
+
+RSVP Closes: 1 day before
+
+
+Check-in Opens: 30 minutes before
+
+
+Check-in Closes: 15 minutes after
+
+
+“One-Day Camp”
+
+
+RSVP Opens: 14 days before
+
+
+RSVP Closes: 1 day before
+
+
+Check-in Opens: 1 hour before
+
+
+Check-in Closes: 15 minutes after
+
+
+Add Closing Window for this RSVP/Check-in action: when a row exists for Opens, show a small button that inserts a matching Closes row with a sensible default (e.g., 1 day before for RSVP; 15 minutes after for Check-in) if missing.
+
+
+Inline sentence preview per row
+Under each row (muted text), render a sentence:
+Example:
+
+
+RSVP opens 7 days before event start.
+
+
+Check-in closes 15 minutes after event start.
+
+
+Timeline Preview (global, beneath list)
+Show a compact preview box that summarizes the computed absolute times given an example event start (use a local eventStart = new Date("2025-11-01T18:00:00") or accept it as a prop with a default).
+ Format:
+Event Start: Sat Nov 1, 6:00 PM
+RSVP: Opens <date time> | Closes <date time> (if defined)
+Check-in: Opens <date time> | Closes <date time> (if defined)
+
+If an open/close is missing for a type, show “—”.
+
+
+Validation & UX rules
+Singular/plural units auto-rendered in sentence preview (1 day vs 2 days).
+
+
+Value normalization: if amount is 0, allow only after for Opens and before/after for Closes (but still valid UI).
+
+
+Ordering checks:
+
+
+For each type, if both Opens and Closes exist, ensure OpenTime < CloseTime. If invalid, show an inline red Alert under the preview:
+
+
+“RSVP close must be after RSVP open.”
+
+
+Optional sanity guard: warn (yellow Alert) if a Check-in open is more than 12 hours before start.
+
+
+Duplicates: prevent two identical rows (same type+role+amount+unit+direction).
+
+
+Defaults: multiple rows can be “default”; that flag is just carried in output.
+
+
+Accessibility: all inputs have labels; keyboard navigable; buttons have aria-labels.
+
+
+State Shape & Output
+Internal state array of WindowRule:
+type WindowType = "RSVP" | "Check-in";
+type WindowRole = "open" | "close";
+type TimeUnit = "minutes" | "hours" | "days";
+type Direction = "before" | "after";
+
+interface WindowRule {
+  id: string;              // uuid
+  type: WindowType;
+  role: WindowRole;
+  amount: number;          // integer >= 0
+  unit: TimeUnit;
+  direction: Direction;
+  isDefault: boolean;
+}
+
+Component props:
+interface EventWindowsConfiguratorProps {
+  initialRules?: WindowRule[];
+  eventStart?: Date; // optional, default: new Date("2025-11-01T18:00:00")
+  onChange?: (rules: WindowRule[]) => void;
+  onSave?: (rules: WindowRule[]) => void; // triggered by Save button
+}
+
+On every edit, call onChange(rules).
+
+
+Provide Save and Reset buttons (primary + ghost). Save validates; if errors, block save and focus first invalid row.
+
+
+On Save success, call onSave(rules) and show a green success Alert.
+
+
+Time math helpers (src/lib/time.ts)
+offsetFromStart(eventStart: Date, amount: number, unit: TimeUnit, direction: Direction): Date
+
+
+formatDateTime(dt: Date): string (e.g., Sat Nov 1, 6:15 PM)
+
+
+pluralize(n: number, unit: TimeUnit): string → 1 hour, 2 hours, etc.
+
+
+Demo page (ConfiguratorDemo.tsx)
+Render <EventWindowsConfigurator /> with no props.
+
+
+Console.log rules in onChange.
+
+
+On Save, pretty-print the rules JSON below the component in a pre block.
+
+
+Styling details
+Rows are Cards with subtle border and gap-3 grid layout:
+ grid grid-cols-1 md:grid-cols-[140px,120px,150px,140px,140px,160px,40px] items-center gap-3
+
+
+Inline sentence uses text-sm text-muted-foreground.
+
+
+Alerts use shadcn/ui Alert (destructive for errors, default for info, “warning” style using variant class).
+
+
+Preset implementation
+A small Select labeled “Apply preset”. On change, replace the current rules with the preset’s four rows.
+
+
+Presets set isDefault=false by default; user may toggle afterward.
+
+
+Linked “Add Closing Window” behavior
+For any Opens row missing a Closes partner of the same type, show a tiny link under that row:
+
+
+Text: + Add closing window for this {type}
+
+
+Clicking inserts a recommended close:
+
+
+RSVP: 1 day before
+
+
+Check-in: 15 minutes after
+
+
+Acceptance criteria
+I can add, delete, and reorder (drag not required) rows; reorder via up/down chevrons on each row.
+
+
+Per-row sentence always matches the current inputs.
+
+
+Timeline Preview updates live and shows errors if order invalid.
+
+
+Applying a preset replaces rows and updates preview.
+
+
+Save is disabled when there are validation errors.

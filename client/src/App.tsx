@@ -49,6 +49,7 @@ import PaymentsTab from "@/pages/payments";
 import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
+import DemoProfileSelection from "@/pages/demo-profile-selection";
 import { useQuery } from "@tanstack/react-query";
 
 type Profile = {
@@ -303,6 +304,7 @@ function Router() {
       <Route path="/no-profiles" component={NoProfiles} />
       {/* New profile selection flow */}
       <Route path="/select-profile-type" component={SelectProfileType} />
+      <Route path="/profile-selection" component={DemoProfileSelection} />
       {/* Legacy routes for compatibility during transition */}
       <Route path="/create-profile" component={CreateProfile} />
       <Route path="/family-onboarding" component={FamilyOnboarding} />

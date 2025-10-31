@@ -1,4 +1,4 @@
-Build a React + TypeScript + Tailwind + shadcn/ui component for configuring RSVP & Check-In windows for Admin dashboard creating or editing event
+For when any user clicks on an event: Build a React + TypeScript + Tailwind + shadcn/ui component for configuring RSVP & Check-In windows for Admin dashboard creating or editing event
 Tech + Setup
 Framework: React + TypeScript.
 

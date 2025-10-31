@@ -146,9 +146,9 @@ function Router() {
   // Check if user needs profile setup
   const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
-  // Register service worker for PWA
+  // Register service worker for PWA (production only)
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
       navigator.serviceWorker.register('/sw.js')
         .then((registration) => {
           console.log('SW registered: ', registration);

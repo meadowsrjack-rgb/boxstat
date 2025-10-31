@@ -73,19 +73,24 @@ export function TimeWindowConfig({
     setWindows(newWindows);
 
     // Convert UI format back to backend values
+    // Backend expects:
+    // - rsvpOpensHoursBefore: hours (decimal allowed)
+    // - rsvpClosesHoursBefore: hours (decimal allowed)
+    // - checkInOpensHoursBefore: hours (decimal allowed)
+    // - checkInClosesMinutesAfter: minutes (always "after")
     const backendValues = {
       rsvpOpensHoursBefore:
         newWindows[0].unit === "hours"
           ? newWindows[0].value
-          : Math.round(newWindows[0].value / 60),
+          : newWindows[0].value / 60,
       rsvpClosesHoursBefore:
         newWindows[1].unit === "hours"
           ? newWindows[1].value
-          : Math.round(newWindows[1].value / 60),
+          : newWindows[1].value / 60,
       checkInOpensHoursBefore:
         newWindows[2].unit === "hours"
           ? newWindows[2].value
-          : Math.round(newWindows[2].value / 60),
+          : newWindows[2].value / 60,
       checkInClosesMinutesAfter:
         newWindows[3].unit === "minutes"
           ? newWindows[3].value
@@ -143,6 +148,7 @@ export function TimeWindowConfig({
             <Input
               type="number"
               min="0"
+              step="any"
               value={window.value}
               onChange={(e) => updateWindow(index, { value: Number(e.target.value) })}
               className="w-20 pr-8 text-center"
@@ -172,12 +178,12 @@ export function TimeWindowConfig({
           <Select
             value={window.unit}
             onValueChange={(value: "hours" | "minutes") => {
-              // Convert value when changing units
+              // Convert value when changing units - preserve exact duration
               let newValue = window.value;
               if (value === "minutes" && window.unit === "hours") {
                 newValue = window.value * 60;
               } else if (value === "hours" && window.unit === "minutes") {
-                newValue = Math.round(window.value / 60);
+                newValue = window.value / 60; // Keep as decimal (e.g., 30 mins = 0.5 hours)
               }
               updateWindow(index, { unit: value, value: newValue });
             }}
@@ -191,12 +197,13 @@ export function TimeWindowConfig({
             </SelectContent>
           </Select>
 
-          {/* Timing Dropdown */}
+          {/* Timing Dropdown - locked to "before" for first 3, "after" for last */}
           <Select
             value={window.timing}
             onValueChange={(value: "before" | "after") =>
               updateWindow(index, { timing: value })
             }
+            disabled={true}
           >
             <SelectTrigger className="w-24" data-testid={`select-timing-${index}`}>
               <SelectValue />

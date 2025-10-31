@@ -51,6 +51,7 @@ import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } fro
 import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
+import { TimeWindowConfig } from "@/components/TimeWindowConfig";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -2053,95 +2054,19 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     )}
                   />
                   
-                  <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="text-sm font-medium">RSVP & Check-in Time Windows</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="rsvpOpensHoursBefore"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>RSVP Opens (hours before)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="0"
-                                max="720"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                data-testid="input-rsvp-opens-hours"
-                              />
-                            </FormControl>
-                            <FormDescription>Hours before event when RSVP opens</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="rsvpClosesHoursBefore"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>RSVP Closes (hours before)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="0"
-                                max="168"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                data-testid="input-rsvp-closes-hours"
-                              />
-                            </FormControl>
-                            <FormDescription>Hours before event when RSVP closes</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="checkInOpensHoursBefore"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Check-in Opens (hours before)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="0"
-                                max="48"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                data-testid="input-checkin-opens-hours"
-                              />
-                            </FormControl>
-                            <FormDescription>Hours before event when check-in opens</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="checkInClosesMinutesAfter"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Check-in Closes (minutes after)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                min="0"
-                                max="240"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                data-testid="input-checkin-closes-minutes"
-                              />
-                            </FormControl>
-                            <FormDescription>Minutes after event start when check-in closes</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
+                  <TimeWindowConfig
+                    rsvpOpensHoursBefore={form.watch("rsvpOpensHoursBefore")}
+                    rsvpClosesHoursBefore={form.watch("rsvpClosesHoursBefore")}
+                    checkInOpensHoursBefore={form.watch("checkInOpensHoursBefore")}
+                    checkInClosesMinutesAfter={form.watch("checkInClosesMinutesAfter")}
+                    onChange={(values) => {
+                      form.setValue("rsvpOpensHoursBefore", values.rsvpOpensHoursBefore);
+                      form.setValue("rsvpClosesHoursBefore", values.rsvpClosesHoursBefore);
+                      form.setValue("checkInOpensHoursBefore", values.checkInOpensHoursBefore);
+                      form.setValue("checkInClosesMinutesAfter", values.checkInClosesMinutesAfter);
+                    }}
+                    showSetAsDefault={false}
+                  />
                   
                   <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
                     {createEvent.isPending ? "Creating..." : "Create Event"}
@@ -2290,63 +2215,22 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     />
                   </div>
                   
-                  <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <h4 className="text-sm font-medium">RSVP & Check-in Time Windows</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-rsvp-opens">RSVP Opens (hours before)</Label>
-                        <Input
-                          id="edit-rsvp-opens"
-                          type="number"
-                          min="0"
-                          max="720"
-                          defaultValue={editingEvent.rsvpOpensHoursBefore ?? 72}
-                          onChange={(e) => setEditingEvent({...editingEvent, rsvpOpensHoursBefore: Number(e.target.value)})}
-                          data-testid="input-edit-rsvp-opens-hours"
-                        />
-                        <p className="text-xs text-gray-500">Hours before event when RSVP opens</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-rsvp-closes">RSVP Closes (hours before)</Label>
-                        <Input
-                          id="edit-rsvp-closes"
-                          type="number"
-                          min="0"
-                          max="168"
-                          defaultValue={editingEvent.rsvpClosesHoursBefore ?? 24}
-                          onChange={(e) => setEditingEvent({...editingEvent, rsvpClosesHoursBefore: Number(e.target.value)})}
-                          data-testid="input-edit-rsvp-closes-hours"
-                        />
-                        <p className="text-xs text-gray-500">Hours before event when RSVP closes</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-checkin-opens">Check-in Opens (hours before)</Label>
-                        <Input
-                          id="edit-checkin-opens"
-                          type="number"
-                          min="0"
-                          max="48"
-                          defaultValue={editingEvent.checkInOpensHoursBefore ?? 3}
-                          onChange={(e) => setEditingEvent({...editingEvent, checkInOpensHoursBefore: Number(e.target.value)})}
-                          data-testid="input-edit-checkin-opens-hours"
-                        />
-                        <p className="text-xs text-gray-500">Hours before event when check-in opens</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="edit-checkin-closes">Check-in Closes (minutes after)</Label>
-                        <Input
-                          id="edit-checkin-closes"
-                          type="number"
-                          min="0"
-                          max="240"
-                          defaultValue={editingEvent.checkInClosesMinutesAfter ?? 15}
-                          onChange={(e) => setEditingEvent({...editingEvent, checkInClosesMinutesAfter: Number(e.target.value)})}
-                          data-testid="input-edit-checkin-closes-minutes"
-                        />
-                        <p className="text-xs text-gray-500">Minutes after event start when check-in closes</p>
-                      </div>
-                    </div>
-                  </div>
+                  <TimeWindowConfig
+                    rsvpOpensHoursBefore={editingEvent.rsvpOpensHoursBefore ?? 72}
+                    rsvpClosesHoursBefore={editingEvent.rsvpClosesHoursBefore ?? 24}
+                    checkInOpensHoursBefore={editingEvent.checkInOpensHoursBefore ?? 3}
+                    checkInClosesMinutesAfter={editingEvent.checkInClosesMinutesAfter ?? 15}
+                    onChange={(values) => {
+                      setEditingEvent({
+                        ...editingEvent,
+                        rsvpOpensHoursBefore: values.rsvpOpensHoursBefore,
+                        rsvpClosesHoursBefore: values.rsvpClosesHoursBefore,
+                        checkInOpensHoursBefore: values.checkInOpensHoursBefore,
+                        checkInClosesMinutesAfter: values.checkInClosesMinutesAfter,
+                      });
+                    }}
+                    showSetAsDefault={false}
+                  />
                   
                   <Button
                     type="button"

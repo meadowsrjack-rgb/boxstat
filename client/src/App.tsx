@@ -50,6 +50,7 @@ import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
+import ConfiguratorDemo from "@/pages/ConfiguratorDemo";
 import { useQuery } from "@tanstack/react-query";
 
 type Profile = {
@@ -299,6 +300,7 @@ function Router() {
       <Route path="/test-route" component={() => <ProtectedRoute component={TestRoute} />} />
       <Route path="/trophies-badges" component={() => <ProtectedRoute component={TrophiesBadges} />} />
       <Route path="/skills" component={() => <ProtectedRoute component={Skills} />} />
+      <Route path="/configurator-demo" component={ConfiguratorDemo} />
       <Route path="/photo-upload" component={PhotoUpload} />
       <Route path="/payments" component={RegistrationStatus} />
       <Route path="/no-profiles" component={NoProfiles} />

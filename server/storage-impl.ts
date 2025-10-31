@@ -14,6 +14,8 @@ import {
   type Division,
   type Skill,
   type Notification,
+  type EventWindow,
+  type RsvpResponse,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -28,6 +30,8 @@ import {
   type InsertDivision,
   type InsertSkill,
   type InsertNotification,
+  type InsertEventWindow,
+  type InsertRsvpResponse,
 } from "@shared/schema";
 
 // =============================================
@@ -143,6 +147,22 @@ export interface IStorage {
   updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined>;
   deleteNotification(id: number): Promise<void>;
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
+  
+  // Event Window operations
+  getEventWindow(id: number): Promise<EventWindow | undefined>;
+  getEventWindowsByEvent(eventId: number): Promise<EventWindow[]>;
+  createEventWindow(window: InsertEventWindow): Promise<EventWindow>;
+  updateEventWindow(id: number, updates: Partial<EventWindow>): Promise<EventWindow | undefined>;
+  deleteEventWindow(id: number): Promise<void>;
+  deleteEventWindowsByEvent(eventId: number): Promise<void>;
+  
+  // RSVP Response operations
+  getRsvpResponse(id: number): Promise<RsvpResponse | undefined>;
+  getRsvpResponsesByEvent(eventId: number): Promise<RsvpResponse[]>;
+  getRsvpResponseByUserAndEvent(userId: string, eventId: number): Promise<RsvpResponse | undefined>;
+  createRsvpResponse(response: InsertRsvpResponse): Promise<RsvpResponse>;
+  updateRsvpResponse(id: number, updates: Partial<RsvpResponse>): Promise<RsvpResponse | undefined>;
+  deleteRsvpResponse(id: number): Promise<void>;
 }
 
 // =============================================
@@ -165,9 +185,13 @@ class MemStorage implements IStorage {
   private divisions: Map<number, Division> = new Map();
   private skills: Map<number, Skill> = new Map();
   private notifications: Map<number, Notification> = new Map();
+  private eventWindows: Map<number, EventWindow> = new Map();
+  private rsvpResponses: Map<number, RsvpResponse> = new Map();
   private nextDivisionId = 1;
   private nextSkillId = 1;
   private nextNotificationId = 1;
+  private nextEventWindowId = 1;
+  private nextRsvpResponseId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1213,6 +1237,88 @@ class MemStorage implements IStorage {
     this.notifications.set(id, updated as any);
     return updated;
   }
+  
+  // Event Window operations
+  async getEventWindow(id: number): Promise<EventWindow | undefined> {
+    return this.eventWindows.get(id);
+  }
+  
+  async getEventWindowsByEvent(eventId: number): Promise<EventWindow[]> {
+    return Array.from(this.eventWindows.values()).filter(w => w.eventId === eventId);
+  }
+  
+  async createEventWindow(window: InsertEventWindow): Promise<EventWindow> {
+    const id = this.nextEventWindowId++;
+    const newWindow: EventWindow = {
+      ...window,
+      id,
+      isDefault: window.isDefault ?? false,
+      createdAt: new Date(),
+    };
+    this.eventWindows.set(id, newWindow);
+    return newWindow;
+  }
+  
+  async updateEventWindow(id: number, updates: Partial<EventWindow>): Promise<EventWindow | undefined> {
+    const window = this.eventWindows.get(id);
+    if (!window) return undefined;
+    
+    const updated = { ...window, ...updates, id };
+    this.eventWindows.set(id, updated);
+    return updated;
+  }
+  
+  async deleteEventWindow(id: number): Promise<void> {
+    this.eventWindows.delete(id);
+  }
+  
+  async deleteEventWindowsByEvent(eventId: number): Promise<void> {
+    const windowsToDelete = Array.from(this.eventWindows.entries())
+      .filter(([, w]) => w.eventId === eventId)
+      .map(([id]) => id);
+    
+    windowsToDelete.forEach(id => this.eventWindows.delete(id));
+  }
+  
+  // RSVP Response operations
+  async getRsvpResponse(id: number): Promise<RsvpResponse | undefined> {
+    return this.rsvpResponses.get(id);
+  }
+  
+  async getRsvpResponsesByEvent(eventId: number): Promise<RsvpResponse[]> {
+    return Array.from(this.rsvpResponses.values()).filter(r => r.eventId === eventId);
+  }
+  
+  async getRsvpResponseByUserAndEvent(userId: string, eventId: number): Promise<RsvpResponse | undefined> {
+    return Array.from(this.rsvpResponses.values()).find(r => r.userId === userId && r.eventId === eventId);
+  }
+  
+  async createRsvpResponse(response: InsertRsvpResponse): Promise<RsvpResponse> {
+    const id = this.nextRsvpResponseId++;
+    const now = new Date();
+    const newResponse: RsvpResponse = {
+      ...response,
+      id,
+      respondedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.rsvpResponses.set(id, newResponse);
+    return newResponse;
+  }
+  
+  async updateRsvpResponse(id: number, updates: Partial<RsvpResponse>): Promise<RsvpResponse | undefined> {
+    const response = this.rsvpResponses.get(id);
+    if (!response) return undefined;
+    
+    const updated = { ...response, ...updates, id, updatedAt: new Date() };
+    this.rsvpResponses.set(id, updated);
+    return updated;
+  }
+  
+  async deleteRsvpResponse(id: number): Promise<void> {
+    this.rsvpResponses.delete(id);
+  }
 }
 
 // =============================================
@@ -2116,6 +2222,122 @@ class DatabaseStorage implements IStorage {
     if (results.length === 0) return undefined;
     return this.mapDbNotificationToNotification(results[0]);
   }
+  
+  // Event Window operations
+  async getEventWindow(id: number): Promise<EventWindow | undefined> {
+    const results = await db.select().from(schema.eventWindows).where(eq(schema.eventWindows.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbEventWindowToEventWindow(results[0]);
+  }
+  
+  async getEventWindowsByEvent(eventId: number): Promise<EventWindow[]> {
+    const results = await db.select().from(schema.eventWindows).where(eq(schema.eventWindows.eventId, eventId));
+    return results.map(w => this.mapDbEventWindowToEventWindow(w));
+  }
+  
+  async createEventWindow(window: InsertEventWindow): Promise<EventWindow> {
+    const dbWindow = {
+      eventId: window.eventId,
+      windowType: window.windowType,
+      openRole: window.openRole,
+      amount: window.amount,
+      unit: window.unit,
+      direction: window.direction,
+      isDefault: window.isDefault ?? false,
+    };
+    
+    const results = await db.insert(schema.eventWindows).values(dbWindow).returning();
+    return this.mapDbEventWindowToEventWindow(results[0]);
+  }
+  
+  async updateEventWindow(id: number, updates: Partial<EventWindow>): Promise<EventWindow | undefined> {
+    const dbUpdates: any = {
+      windowType: updates.windowType,
+      openRole: updates.openRole,
+      amount: updates.amount,
+      unit: updates.unit,
+      direction: updates.direction,
+      isDefault: updates.isDefault,
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    const results = await db.update(schema.eventWindows)
+      .set(dbUpdates)
+      .where(eq(schema.eventWindows.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbEventWindowToEventWindow(results[0]);
+  }
+  
+  async deleteEventWindow(id: number): Promise<void> {
+    await db.delete(schema.eventWindows).where(eq(schema.eventWindows.id, id));
+  }
+  
+  async deleteEventWindowsByEvent(eventId: number): Promise<void> {
+    await db.delete(schema.eventWindows).where(eq(schema.eventWindows.eventId, eventId));
+  }
+  
+  // RSVP Response operations
+  async getRsvpResponse(id: number): Promise<RsvpResponse | undefined> {
+    const results = await db.select().from(schema.rsvpResponses).where(eq(schema.rsvpResponses.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbRsvpResponseToRsvpResponse(results[0]);
+  }
+  
+  async getRsvpResponsesByEvent(eventId: number): Promise<RsvpResponse[]> {
+    const results = await db.select().from(schema.rsvpResponses).where(eq(schema.rsvpResponses.eventId, eventId));
+    return results.map(r => this.mapDbRsvpResponseToRsvpResponse(r));
+  }
+  
+  async getRsvpResponseByUserAndEvent(userId: string, eventId: number): Promise<RsvpResponse | undefined> {
+    const results = await db.select().from(schema.rsvpResponses).where(
+      and(
+        eq(schema.rsvpResponses.userId, userId),
+        eq(schema.rsvpResponses.eventId, eventId)
+      )
+    );
+    if (results.length === 0) return undefined;
+    return this.mapDbRsvpResponseToRsvpResponse(results[0]);
+  }
+  
+  async createRsvpResponse(response: InsertRsvpResponse): Promise<RsvpResponse> {
+    const dbResponse = {
+      eventId: response.eventId,
+      userId: response.userId,
+      response: response.response,
+    };
+    
+    const results = await db.insert(schema.rsvpResponses).values(dbResponse).returning();
+    return this.mapDbRsvpResponseToRsvpResponse(results[0]);
+  }
+  
+  async updateRsvpResponse(id: number, updates: Partial<RsvpResponse>): Promise<RsvpResponse | undefined> {
+    const dbUpdates: any = {
+      response: updates.response,
+      respondedAt: updates.respondedAt,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    const results = await db.update(schema.rsvpResponses)
+      .set(dbUpdates)
+      .where(eq(schema.rsvpResponses.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbRsvpResponseToRsvpResponse(results[0]);
+  }
+  
+  async deleteRsvpResponse(id: number): Promise<void> {
+    await db.delete(schema.rsvpResponses).where(eq(schema.rsvpResponses.id, id));
+  }
 
   // Helper mapping functions
   private mapDbUserToUser(dbUser: any): User {
@@ -2322,6 +2544,32 @@ class DatabaseStorage implements IStorage {
       relatedEventId: dbNotification.relatedEventId,
       status: dbNotification.status || 'pending',
       createdAt: new Date(dbNotification.createdAt),
+    };
+  }
+  
+  private mapDbEventWindowToEventWindow(dbWindow: any): EventWindow {
+    return {
+      id: dbWindow.id,
+      eventId: dbWindow.eventId,
+      windowType: dbWindow.windowType as "rsvp" | "checkin",
+      openRole: dbWindow.openRole as "open" | "close",
+      amount: dbWindow.amount,
+      unit: dbWindow.unit as "minutes" | "hours" | "days",
+      direction: dbWindow.direction as "before" | "after",
+      isDefault: dbWindow.isDefault ?? false,
+      createdAt: new Date(dbWindow.createdAt),
+    };
+  }
+  
+  private mapDbRsvpResponseToRsvpResponse(dbResponse: any): RsvpResponse {
+    return {
+      id: dbResponse.id,
+      eventId: dbResponse.eventId,
+      userId: dbResponse.userId,
+      response: dbResponse.response as "attending" | "not_attending" | "no_response",
+      respondedAt: new Date(dbResponse.respondedAt),
+      createdAt: new Date(dbResponse.createdAt),
+      updatedAt: new Date(dbResponse.updatedAt),
     };
   }
 }

@@ -246,26 +246,6 @@ export default function EventDetailModal({
         </div>
 
         <div className="space-y-6">
-          {staticMapUrl && (
-            <div className="relative rounded-lg overflow-hidden border" data-testid="map-preview">
-              <img 
-                src={staticMapUrl} 
-                alt="Event location map" 
-                className="w-full h-48 object-cover"
-              />
-              <a
-                href={getMapUrl(event.location, event.latitude, event.longitude)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="absolute bottom-2 right-2 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg shadow-lg flex items-center gap-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
-                data-testid="link-open-maps"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Open in Google Maps
-              </a>
-            </div>
-          )}
-
           <Card className="p-4" data-testid="card-event-info">
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm">
@@ -283,7 +263,25 @@ export default function EventDetailModal({
               
               <div className="flex items-start gap-3 text-sm">
                 <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
-                <span>{event.location}</span>
+                <div className="flex-1">
+                  {event.location ? (
+                    <div>
+                      <span className="block mb-2">{event.location}</span>
+                      <a
+                        href={getMapUrl(event.location, event.latitude, event.longitude)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline"
+                        data-testid="link-open-maps"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        View on Google Maps
+                      </a>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">Location not specified</span>
+                  )}
+                </div>
               </div>
 
               {event.description && (
@@ -295,6 +293,16 @@ export default function EventDetailModal({
               )}
             </div>
           </Card>
+
+          {staticMapUrl && (
+            <div className="relative rounded-lg overflow-hidden border" data-testid="map-preview">
+              <img 
+                src={staticMapUrl} 
+                alt="Event location map" 
+                className="w-full h-48 object-cover"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RSVPWheel

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, User, Users, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Smartphone, Phone, Mail, MapPin, Plus, Trash2, Calendar, Clock, Globe, Eye, EyeOff, Lock, Settings, Camera } from "lucide-react";
+import { ArrowLeft, User, Users, Shield, Bell, Link2, CreditCard, FileText, AlertTriangle, Smartphone, Phone, Mail, MapPin, Plus, Trash2, Calendar, Clock, Globe, Eye, EyeOff, Lock, Settings, Camera, Monitor } from "lucide-react";
 
 const RELATIONSHIP_OPTIONS = ["parent", "guardian", "grandparent", "sibling"];
 
@@ -45,17 +45,18 @@ export function ParentProfilePage() {
   // Update profile state when active profile loads
   React.useEffect(() => {
     if (activeProfile) {
+      const profile = activeProfile as any;
       setProfile({
-        firstName: activeProfile.firstName || "",
-        lastName: activeProfile.lastName || "",
+        firstName: profile.firstName || "",
+        lastName: profile.lastName || "",
         email: (user as any)?.email || "",
-        phoneNumber: activeProfile.phoneNumber || "",
-        address: activeProfile.address || "",
-        emergencyContact: activeProfile.emergencyContact || "",
-        emergencyPhone: activeProfile.emergencyPhone || "",
-        occupation: (activeProfile as any)?.occupation || "",
-        workPhone: (activeProfile as any)?.workPhone || "",
-        relationship: (activeProfile as any)?.relationship || "parent",
+        phoneNumber: profile.phoneNumber || "",
+        address: profile.address || "",
+        emergencyContact: profile.emergencyContact || "",
+        emergencyPhone: profile.emergencyPhone || "",
+        occupation: profile.occupation || "",
+        workPhone: profile.workPhone || "",
+        relationship: profile.relationship || "parent",
       });
     }
   }, [activeProfile, user]);
@@ -2201,8 +2202,9 @@ export function ParentDevicesPage() {
 
   // Update settings when data is loaded
   React.useEffect(() => {
-    if (devices?.settings) {
-      setSettings(prev => ({ ...prev, ...devices.settings }));
+    const devicesData = devices as any;
+    if (devicesData?.settings) {
+      setSettings(prev => ({ ...prev, ...devicesData.settings }));
     }
   }, [devices]);
 
@@ -2210,7 +2212,7 @@ export function ParentDevicesPage() {
     mutationFn: async (data: typeof settings) => {
       return apiRequest('/api/devices/settings', {
         method: 'POST',
-        body: JSON.stringify(data),
+        data,
       });
     },
     onSuccess: () => {
@@ -2253,7 +2255,7 @@ export function ParentDevicesPage() {
     },
   });
 
-  const currentDevices = devices?.devices || [
+  const currentDevices = (devices as any)?.devices || [
     {
       id: "current",
       name: "Current Device",
@@ -2421,7 +2423,7 @@ export function ParentDevicesPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {currentDevices.map((device) => (
+                {currentDevices.map((device: any) => (
                   <div key={device.id} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">

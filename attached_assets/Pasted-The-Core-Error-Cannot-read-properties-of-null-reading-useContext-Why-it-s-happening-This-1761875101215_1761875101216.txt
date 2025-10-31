@@ -1,0 +1,79 @@
+The Core Error — “Cannot read properties of null (reading 'useContext')”
+🔹 Why it’s happening
+
+This comes from this line inside useAuth.ts:
+
+const { data: user, isLoading } = useQuery({...})
+
+
+React Query’s useQuery() needs a QueryClientProvider in your React tree.
+If that provider isn’t wrapping your <App />, useContext fails because there’s no QueryClient context.
+
+✅ Fix
+
+Check your main.tsx (or index.tsx) and make sure it looks like this:
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import App from "./App";
+
+const queryClient = new QueryClient();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <App />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
+
+
+If you already have that, make sure the component using useAuth() is not rendered before this provider mounts.
+
+🧩 2️⃣ “Invalid Hook Call” Warnings
+
+These mean React is being duplicated in your project — typically Replit installed two different React versions.
+Check your dependencies in package.json:
+
+"dependencies": {
+  "react": "^18.3.1",
+  "react-dom": "^18.3.1",
+  "@tanstack/react-query": "^5.0.0"
+}
+
+
+Then run in the Replit shell:
+
+npm ls react
+
+
+If you see more than one version (for example both 17.x and 18.x), fix it by forcing a single one:
+
+npm install react@18.3.1 react-dom@18.3.1
+
+
+Then restart the Replit run.
+
+🧩 3️⃣ Content Security Policy Warnings
+
+These:
+
+The source list for the Content Security Policy directive 'default-src' contains an invalid source: ''unsafe-dynamic''.
+
+
+are Replit sandbox issues, not your app. You can safely ignore them — they don’t block rendering, just log noise from Replit’s internal CSP enforcement.
+
+🧩 4️⃣ Misc errors (useToast, useState null)
+
+These occur after the main React crash — once React fails to mount, any child hooks (useToast, useQueryClient, etc.) all break because there’s no React context. Fixing the provider/react duplication above usually clears them all.
+
+✅ TL;DR Checklist
+
+✅ Wrap your <App /> in <QueryClientProvider>.
+
+✅ Ensure only one version of React & React-DOM.
+
+✅ Ignore CSP console warnings in Replit.
+
+✅ Restart Replit after npm install or dependency change.

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import PlayerCalendar from "@/components/PlayerCalendar";
-import EventDetailPanel from "@/components/EventDetailPanel";
+import EventDetailModal from "@/components/EventDetailModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -640,9 +640,10 @@ export default function CoachDashboard() {
           )}
 
           {/* Event Detail Modal */}
-          <EventDetailPanel
+          <EventDetailModal
             event={selectedEvent}
             userId={currentUser.id}
+            userRole="coach"
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}
           />

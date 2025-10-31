@@ -4,8 +4,9 @@ import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
-import EventDetailPanel from "@/components/EventDetailPanel";
+import EventDetailModal from "@/components/EventDetailModal";
 import { useAuth } from "@/hooks/useAuth";
+import type { Event } from "@shared/schema";
 
 // Expected event shape coming from Google Calendar adapter
 type UypEvent = {
@@ -271,11 +272,12 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* Event Detail Panel */}
+      {/* Event Detail Modal */}
       {user && (
-        <EventDetailPanel
-          event={selectedEvent}
+        <EventDetailModal
+          event={selectedEvent as Event | null}
           userId={(user as any).id}
+          userRole={(user as any).role as 'admin' | 'coach' | 'player' | 'parent'}
           open={eventDetailOpen}
           onOpenChange={setEventDetailOpen}
         />

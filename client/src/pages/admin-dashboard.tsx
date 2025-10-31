@@ -2055,10 +2055,10 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   />
                   
                   <TimeWindowConfig
-                    rsvpOpensHoursBefore={form.watch("rsvpOpensHoursBefore")}
-                    rsvpClosesHoursBefore={form.watch("rsvpClosesHoursBefore")}
-                    checkInOpensHoursBefore={form.watch("checkInOpensHoursBefore")}
-                    checkInClosesMinutesAfter={form.watch("checkInClosesMinutesAfter")}
+                    rsvpOpensHoursBefore={organization?.rsvpOpenHours ?? 72}
+                    rsvpClosesHoursBefore={organization?.rsvpCloseHours ?? 24}
+                    checkInOpensHoursBefore={organization?.checkInOpenHours ?? 3}
+                    checkInClosesMinutesAfter={organization?.checkInCloseMinutes ?? 15}
                     onChange={(values) => {
                       form.setValue("rsvpOpensHoursBefore", values.rsvpOpensHoursBefore);
                       form.setValue("rsvpClosesHoursBefore", values.rsvpClosesHoursBefore);

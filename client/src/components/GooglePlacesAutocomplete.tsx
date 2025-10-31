@@ -37,6 +37,8 @@ export function GooglePlacesAutocomplete({
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
     
+    console.log('Google Maps API Key status:', apiKey ? 'CONFIGURED' : 'MISSING');
+    
     if (!apiKey) {
       setError('Google Maps API key not configured');
       setIsLoading(false);

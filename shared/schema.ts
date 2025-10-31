@@ -818,3 +818,75 @@ export const insertNotificationSchema = z.object({
 });
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// =============================================
+// Event Windows Schema (RSVP & Check-In Timing)
+// =============================================
+
+export const eventWindows = pgTable("event_windows", {
+  id: serial().primaryKey().notNull(),
+  eventId: integer("event_id").notNull(),
+  windowType: varchar("window_type").notNull(), // "rsvp" or "checkin"
+  openRole: varchar("open_role").notNull(), // "open" or "close"
+  amount: integer().notNull(), // numeric value
+  unit: varchar().notNull(), // "minutes", "hours", "days"
+  direction: varchar().notNull(), // "before" or "after"
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export interface EventWindow {
+  id: number;
+  eventId: number;
+  windowType: "rsvp" | "checkin";
+  openRole: "open" | "close";
+  amount: number;
+  unit: "minutes" | "hours" | "days";
+  direction: "before" | "after";
+  isDefault: boolean;
+  createdAt: Date;
+}
+
+export const insertEventWindowSchema = z.object({
+  eventId: z.number(),
+  windowType: z.enum(["rsvp", "checkin"]),
+  openRole: z.enum(["open", "close"]),
+  amount: z.number().min(0),
+  unit: z.enum(["minutes", "hours", "days"]),
+  direction: z.enum(["before", "after"]),
+  isDefault: z.boolean().default(false),
+});
+
+export type InsertEventWindow = z.infer<typeof insertEventWindowSchema>;
+
+// =============================================
+// RSVP Response Schema
+// =============================================
+
+export const rsvpResponses = pgTable("rsvp_responses", {
+  id: serial().primaryKey().notNull(),
+  eventId: integer("event_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  response: varchar().notNull(), // "attending", "not_attending", "no_response"
+  respondedAt: timestamp("responded_at", { mode: 'string' }).defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export interface RsvpResponse {
+  id: number;
+  eventId: number;
+  userId: string;
+  response: "attending" | "not_attending" | "no_response";
+  respondedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertRsvpResponseSchema = z.object({
+  eventId: z.number(),
+  userId: z.string(),
+  response: z.enum(["attending", "not_attending", "no_response"]),
+});
+
+export type InsertRsvpResponse = z.infer<typeof insertRsvpResponseSchema>;

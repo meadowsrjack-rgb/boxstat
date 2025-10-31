@@ -1,0 +1,165 @@
+Perfect — here’s your fully integrated, production-ready Replit prompt that merges all previous logic (RSVP + Check-In configurator, timing rules, dynamic states) and now expands it to include the event pop-up view for parents, players, coaches, and admins, with Google Maps preview, RSVP/Check-In wheels, and response listings.
+
+This version tells Replit exactly how to build both:
+✅ The Admin Dashboard RSVP/Check-In configuration embedded in Create/Edit Event modals
+✅ The Event Detail Pop-Up window that appears when anyone clicks an event card
+
+⸻
+
+🔧 Prompt for Replit
+
+Build a React + TypeScript + Tailwind + shadcn/ui component suite for Event RSVP & Check-In management — integrated into both Admin Dashboard event modals and the Event Detail pop-up shown to users (parents, players, coaches, admins).
+
+⸻
+
+⚙️ Tech Stack / Setup
+	•	Framework: React + TypeScript
+	•	Styling: Tailwind CSS
+	•	UI Kit: shadcn/ui (Card, Button, Select, Checkbox, Alert, Dialog, Progress, Tabs)
+	•	No tooltips.
+	•	Google Maps: use @react-google-maps/api for location preview (Map, Marker).
+	•	Components must be self-contained and exportable.
+	•	All state stored locally → no API calls yet.
+
+⸻
+
+🧩 PART 1 — Admin Dashboard Integration
+
+Embed the Event Windows Configurator inside the existing Create/Edit Event pop-ups.
+
+✅ All specs from the previous prompt apply:
+	•	EventWindowsConfigurator.tsx for defining RSVP / Check-In windows
+	•	Fields: type (RSVP / Check-In), role (Open / Close), amount, unit, direction, isDefault
+	•	Presets (“Typical Youth Event”, “One-Day Camp”)
+	•	Timeline preview, validation, alerts
+	•	Integrated with parent event form via onChange and onSave.
+
+Placement: inside the Admin modal below the core event fields:
+
+<h3 className="text-lg font-medium mt-6">RSVP & Check-In Windows</h3>
+<EventWindowsConfigurator ... />
+
+
+⸻
+
+🧭 PART 2 — Event Detail Pop-Up (for all roles)
+
+When a parent, player, coach, or admin clicks an event card, open an Event Detail Modal displaying:
+
+🗺️ 1️⃣ Event Overview Section
+	•	Google Map Preview (read-only)
+	•	Centered on event location from address string or lat/lng.
+	•	Show Marker and link “Open in Google Maps”.
+	•	Event Info Card: title, team/tag, date/time (formatDateTime()), and location string.
+
+⸻
+
+🎯 2️⃣ RSVP and Check-In Status Section
+
+Below the map/info card, display two stacked modules:
+
+🟢 RSVP Module
+	•	Indicator Wheel (circular progress / donut chart) showing:
+	•	% Attending (🟢)
+	•	% Not Attending (🔴)
+	•	% No Response (⚪)
+	•	Label: “RSVP Responses” + count summary (e.g., “12 of 18 responded”).
+	•	Countdown text: “RSVP closes in 1 day 4h” — calculated from eventStart and RSVP close window.
+	•	RSVP Button Logic:
+	•	Show RSVP Now button until deadline.
+	•	If user already responded → Change my RSVP button.
+	•	After deadline → button disabled / “RSVP Closed”.
+	•	Color states:
+	•	🟢 Attending
+	•	🔴 Not Attending
+	•	⚪ No Response
+
+🟩 Check-In Module
+	•	Indicator Wheel for check-in percentages (checked-in / not checked in).
+	•	Dynamic text based on timing:
+	•	“⏱ Check-In opens in 30 min” (before window)
+	•	“✅ You’re Checked In!” (after successful check-in)
+	•	“⛔ Check-In closed at 7:15 PM” (after window)
+	•	Button Logic:
+	•	If within window → “Check In Now” (QR or tap simulation).
+	•	If not yet open → disabled + countdown.
+	•	After close → disabled + timestamp.
+
+⸻
+
+👥 3️⃣ Participant List Section
+
+Under each wheel, list users (grouped by tag/team):
+
+Name	RSVP Status	Check-In Status
+John Doe	🟢 Attending	🟩 Checked In
+Jane Smith	🔴 Not Attending	—
+Alex Lee	⚪ No Response	—
+
+Admins and coaches see override icons to manually mark check-in (grace logic).
+
+⸻
+
+🔔 4️⃣ Enhancements & Logic
+	•	Auto Reminders: placeholder hook (onReminderTrigger()) for future push notifications when RSVP or Check-In opens/closes.
+	•	Grace Overrides: admins/coaches can toggle missed check-ins manually — update state immediately.
+	•	Visibility:
+	•	Players/parents see only their own RSVP + overall percent wheels.
+	•	Coaches/admins see full list and override controls.
+
+⸻
+
+🧮 Helpers (src/lib/time.ts)
+
+Same helpers from previous prompt + new utility for countdowns:
+
+export function timeUntil(date: Date): string; // "1 day 4 h 30 m"
+
+
+⸻
+
+🧱 File Structure
+
+src/
+  components/
+    EventWindowsConfigurator.tsx        // Admin create/edit modal component
+    EventDetailModal.tsx                // Pop-up view for all users
+    RSVPCheckInWheels.tsx               // Reusable indicator wheel component
+  lib/
+    time.ts                             // Date/time helpers
+
+
+⸻
+
+🎨 Styling Guidelines
+	•	Use Tailwind grid/flex layouts, rounded cards, consistent padding (p-4, gap-4).
+	•	RSVP/Check-In modules use shadcn Card + Progress or Radial chart.
+	•	Text colors: text-green-500, text-red-500, text-gray-400.
+	•	Inline sentence preview (text-sm text-muted-foreground).
+	•	Alerts: Alert variant="destructive" for invalid timing; variant="warning" for early Check-Ins.
+
+⸻
+
+✅ Acceptance Criteria
+	1.	Admin Modals: Event Windows Configurator appears inside existing Create/Edit Event dialogs.
+	2.	Event Pop-Up: When any user clicks an event, EventDetailModal opens showing:
+	•	Google Map Preview with marker.
+	•	Date/time info.
+	•	RSVP & Check-In wheels and buttons.
+	•	Countdown text + dynamic states.
+	•	Participant list (show/hide by role).
+	3.	Logic: All RSVP/Check-In timing follows the windows defined by Admin Configurator.
+	4.	Validation: RSVP deadline and Check-In window update live with event start time.
+	5.	Output: On RSVP or Check-In actions, console.log updated state (JSON) for now.
+	6.	Design: Visually integrated with existing dashboard (modal spacing, color scheme).
+
+⸻
+
+✅ In summary:
+	•	Admins: configure RSVP/Check-In windows in Create/Edit modals.
+	•	All users: click an event → see Map + date/time + dynamic RSVP/Check-In wheels + participant status list.
+	•	Everything syncs with the same logic and timing from the RSVP & Check-In Configurator.
+
+⸻
+
+Would you like me to add the data schema / mock JSON structure for RSVP and Check-In responses (e.g., { userId, response, timestamp }) so Replit can scaffold sample data and render realistic wheel percentages?

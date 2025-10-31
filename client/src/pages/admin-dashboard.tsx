@@ -51,6 +51,8 @@ import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } fro
 import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
+import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
+import type { EventWindow } from "@shared/schema";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -1614,6 +1616,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
+  const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
+  const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -1655,13 +1659,26 @@ function EventsTab({ events, teams, programs, organization }: any) {
         organizationId: organization.id,
       };
       console.log('Event API payload:', payload);
-      return await apiRequest("POST", "/api/events", payload);
+      const newEvent = await apiRequest("POST", "/api/events", payload);
+      
+      // Create event windows if configured
+      if (eventWindows.length > 0) {
+        for (const window of eventWindows) {
+          await apiRequest("POST", "/api/event-windows", {
+            ...window,
+            eventId: parseInt(newEvent.id),
+          });
+        }
+      }
+      
+      return newEvent;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Event created successfully" });
       setIsDialogOpen(false);
       form.reset();
+      setEventWindows([]);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -1683,17 +1700,47 @@ function EventsTab({ events, teams, programs, organization }: any) {
 
   const updateEvent = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      return await apiRequest("PATCH", `/api/events/${id}`, data);
+      const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, data);
+      
+      // Update event windows - delete existing and create new ones
+      await apiRequest("DELETE", `/api/event-windows/event/${id}`, {});
+      
+      if (editEventWindows.length > 0) {
+        for (const window of editEventWindows) {
+          await apiRequest("POST", "/api/event-windows", {
+            ...window,
+            eventId: parseInt(id),
+          });
+        }
+      }
+      
+      return updatedEvent;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       toast({ title: "Event updated successfully" });
       setEditingEvent(null);
+      setEditEventWindows([]);
     },
     onError: () => {
       toast({ title: "Failed to update event", variant: "destructive" });
     },
   });
+  
+  // Load event windows when editing an event
+  useEffect(() => {
+    if (editingEvent) {
+      (async () => {
+        try {
+          const windows = await apiRequest("GET", `/api/event-windows/event/${editingEvent.id}`, {});
+          setEditEventWindows(windows);
+        } catch (error) {
+          console.error('Failed to load event windows:', error);
+          setEditEventWindows([]);
+        }
+      })();
+    }
+  }, [editingEvent]);
 
   const downloadEventTemplate = () => {
     const csvContent = "Title,Type,Start Time,End Time,Location,Description\nTeam Practice,practice,2025-01-15T10:00,2025-01-15T12:00,Main Gym,Weekly team practice\nChampionship Game,game,2025-01-20T18:00,2025-01-20T20:00,Arena Stadium,Final game";
@@ -1987,6 +2034,15 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </FormItem>
                     )}
                   />
+                  
+                  <div className="border-t pt-4">
+                    <EventWindowsConfigurator
+                      eventStartTime={form.watch("startTime") ? new Date(form.watch("startTime")) : undefined}
+                      windows={eventWindows}
+                      onChange={setEventWindows}
+                    />
+                  </div>
+                  
                   <Button type="submit" className="w-full" disabled={createEvent.isPending} data-testid="button-submit-event">
                     {createEvent.isPending ? "Creating..." : "Create Event"}
                   </Button>
@@ -2106,6 +2162,15 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       data-testid="input-edit-event-description"
                     />
                   </div>
+                  
+                  <div className="border-t pt-4">
+                    <EventWindowsConfigurator
+                      eventStartTime={editingEvent.startTime ? new Date(editingEvent.startTime) : undefined}
+                      windows={editEventWindows}
+                      onChange={setEditEventWindows}
+                    />
+                  </div>
+                  
                   <Button
                     type="button"
                     className="w-full"

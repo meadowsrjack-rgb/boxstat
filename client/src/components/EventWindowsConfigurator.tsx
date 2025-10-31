@@ -7,21 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Clock, Info, Trash2, Plus } from 'lucide-react';
 import { TimeUnit, Direction, offsetFromStart, generateTimelineSentence, formatDateTime } from '@/lib/time';
-
-export interface EventWindow {
-  id: string;
-  windowType: 'rsvp' | 'checkin';
-  openRole: 'open' | 'close';
-  amount: number;
-  unit: TimeUnit;
-  direction: Direction;
-  isDefault?: boolean;
-}
+import type { EventWindow } from '@shared/schema';
 
 interface EventWindowsConfiguratorProps {
-  eventStartTime: Date;
-  windows: EventWindow[];
-  onChange: (windows: EventWindow[]) => void;
+  eventStartTime?: Date;
+  windows: Partial<EventWindow>[];
+  onChange: (windows: Partial<EventWindow>[]) => void;
   className?: string;
 }
 
@@ -66,19 +57,15 @@ export default function EventWindowsConfigurator({
     validateWindows();
   }, [windows, eventStartTime]);
 
-  const generateId = () => `window-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
   const applyPreset = (preset: Preset) => {
-    const newWindows: EventWindow[] = preset.windows.map(w => ({
+    const newWindows: Partial<EventWindow>[] = preset.windows.map(w => ({
       ...w,
-      id: generateId(),
     }));
     onChange(newWindows);
   };
 
   const addWindow = () => {
-    const newWindow: EventWindow = {
-      id: generateId(),
+    const newWindow: Partial<EventWindow> = {
       windowType: 'rsvp',
       openRole: 'open',
       amount: 1,
@@ -89,16 +76,22 @@ export default function EventWindowsConfigurator({
     onChange([...windows, newWindow]);
   };
 
-  const updateWindow = (id: string, updates: Partial<EventWindow>) => {
-    onChange(windows.map(w => (w.id === id ? { ...w, ...updates } : w)));
+  const updateWindow = (index: number, updates: Partial<EventWindow>) => {
+    onChange(windows.map((w, i) => (i === index ? { ...w, ...updates } : w)));
   };
 
-  const removeWindow = (id: string) => {
-    onChange(windows.filter(w => w.id !== id));
+  const removeWindow = (index: number) => {
+    onChange(windows.filter((_, i) => i !== index));
   };
 
   const validateWindows = () => {
     const errors: string[] = [];
+    
+    // Skip validation if event start time is not set
+    if (!eventStartTime) {
+      setValidationErrors([]);
+      return;
+    }
 
     const rsvpWindows = windows.filter(w => w.windowType === 'rsvp');
     const checkinWindows = windows.filter(w => w.windowType === 'checkin');
@@ -225,16 +218,16 @@ export default function EventWindowsConfigurator({
 
       {windows.length > 0 && (
         <div className="space-y-3">
-          {windows.map((window) => (
-            <Card key={window.id} className="p-4" data-testid={`window-${window.id}`}>
+          {windows.map((window, index) => (
+            <Card key={index} className="p-4" data-testid={`window-${index}`}>
               <div className="grid grid-cols-12 gap-3 items-end">
                 <div className="col-span-3">
                   <Label className="text-xs">Type</Label>
                   <Select
                     value={window.windowType}
-                    onValueChange={(value) => updateWindow(window.id, { windowType: value as 'rsvp' | 'checkin' })}
+                    onValueChange={(value) => updateWindow(index, { windowType: value as 'rsvp' | 'checkin' })}
                   >
-                    <SelectTrigger data-testid={`select-type-${window.id}`}>
+                    <SelectTrigger data-testid={`select-type-${index}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -248,9 +241,9 @@ export default function EventWindowsConfigurator({
                   <Label className="text-xs">Role</Label>
                   <Select
                     value={window.openRole}
-                    onValueChange={(value) => updateWindow(window.id, { openRole: value as 'open' | 'close' })}
+                    onValueChange={(value) => updateWindow(index, { openRole: value as 'open' | 'close' })}
                   >
-                    <SelectTrigger data-testid={`select-role-${window.id}`}>
+                    <SelectTrigger data-testid={`select-role-${index}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -266,8 +259,8 @@ export default function EventWindowsConfigurator({
                     type="number"
                     min="0"
                     value={window.amount}
-                    onChange={(e) => updateWindow(window.id, { amount: parseInt(e.target.value) || 0 })}
-                    data-testid={`input-amount-${window.id}`}
+                    onChange={(e) => updateWindow(index, { amount: parseInt(e.target.value) || 0 })}
+                    data-testid={`input-amount-${index}`}
                   />
                 </div>
 
@@ -275,9 +268,9 @@ export default function EventWindowsConfigurator({
                   <Label className="text-xs">Unit</Label>
                   <Select
                     value={window.unit}
-                    onValueChange={(value) => updateWindow(window.id, { unit: value as TimeUnit })}
+                    onValueChange={(value) => updateWindow(index, { unit: value as TimeUnit })}
                   >
-                    <SelectTrigger data-testid={`select-unit-${window.id}`}>
+                    <SelectTrigger data-testid={`select-unit-${index}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -292,9 +285,9 @@ export default function EventWindowsConfigurator({
                   <Label className="text-xs">Direction</Label>
                   <Select
                     value={window.direction}
-                    onValueChange={(value) => updateWindow(window.id, { direction: value as Direction })}
+                    onValueChange={(value) => updateWindow(index, { direction: value as Direction })}
                   >
-                    <SelectTrigger data-testid={`select-direction-${window.id}`}>
+                    <SelectTrigger data-testid={`select-direction-${index}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -309,8 +302,8 @@ export default function EventWindowsConfigurator({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => removeWindow(window.id)}
-                    data-testid={`button-remove-${window.id}`}
+                    onClick={() => removeWindow(index)}
+                    data-testid={`button-remove-${index}`}
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>

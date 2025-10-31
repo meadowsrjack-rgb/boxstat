@@ -24,6 +24,8 @@ import {
   insertDivisionSchema,
   insertSkillSchema,
   insertNotificationSchema,
+  insertEventWindowSchema,
+  insertRsvpResponseSchema,
 } from "@shared/schema";
 
 let wss: WebSocketServer | null = null;
@@ -1572,6 +1574,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: "Failed to create attendance record" 
       });
+    }
+  });
+  
+  // =============================================
+  // EVENT WINDOW ROUTES
+  // =============================================
+  
+  app.get('/api/event-windows/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const windows = await storage.getEventWindowsByEvent(eventId);
+      res.json(windows);
+    } catch (error: any) {
+      console.error('Error fetching event windows:', error);
+      res.status(500).json({ error: 'Failed to fetch event windows' });
+    }
+  });
+  
+  app.post('/api/event-windows', isAuthenticated, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin' && role !== 'coach') {
+      return res.status(403).json({ message: 'Only admins and coaches can create event windows' });
+    }
+    
+    try {
+      const windowData = insertEventWindowSchema.parse(req.body);
+      const window = await storage.createEventWindow(windowData);
+      res.json(window);
+    } catch (error: any) {
+      console.error("Event window creation error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          error: "Invalid event window data", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ error: "Failed to create event window" });
+    }
+  });
+  
+  app.patch('/api/event-windows/:id', isAuthenticated, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin' && role !== 'coach') {
+      return res.status(403).json({ message: 'Only admins and coaches can update event windows' });
+    }
+    
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateEventWindow(id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating event window:', error);
+      res.status(500).json({ error: 'Failed to update event window' });
+    }
+  });
+  
+  app.delete('/api/event-windows/:id', isAuthenticated, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin' && role !== 'coach') {
+      return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
+    }
+    
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteEventWindow(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting event window:', error);
+      res.status(500).json({ error: 'Failed to delete event window' });
+    }
+  });
+  
+  // =============================================
+  // RSVP RESPONSE ROUTES
+  // =============================================
+  
+  app.get('/api/rsvp/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const eventId = parseInt(req.params.eventId);
+      const responses = await storage.getRsvpResponsesByEvent(eventId);
+      res.json(responses);
+    } catch (error: any) {
+      console.error('Error fetching RSVP responses:', error);
+      res.status(500).json({ error: 'Failed to fetch RSVP responses' });
+    }
+  });
+  
+  app.get('/api/rsvp/user/:userId/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId, eventId } = req.params;
+      const response = await storage.getRsvpResponseByUserAndEvent(userId, parseInt(eventId));
+      res.json(response || null);
+    } catch (error: any) {
+      console.error('Error fetching RSVP response:', error);
+      res.status(500).json({ error: 'Failed to fetch RSVP response' });
+    }
+  });
+  
+  app.post('/api/rsvp', isAuthenticated, async (req: any, res) => {
+    try {
+      const rsvpData = insertRsvpResponseSchema.parse(req.body);
+      
+      // Check if response already exists
+      const existing = await storage.getRsvpResponseByUserAndEvent(rsvpData.userId, rsvpData.eventId);
+      
+      if (existing) {
+        // Update existing response
+        const updated = await storage.updateRsvpResponse(existing.id, { response: rsvpData.response });
+        res.json(updated);
+      } else {
+        // Create new response
+        const response = await storage.createRsvpResponse(rsvpData);
+        res.json(response);
+      }
+    } catch (error: any) {
+      console.error("RSVP creation error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          error: "Invalid RSVP data", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ error: "Failed to create/update RSVP response" });
+    }
+  });
+  
+  app.patch('/api/rsvp/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateRsvpResponse(id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating RSVP response:', error);
+      res.status(500).json({ error: 'Failed to update RSVP response' });
+    }
+  });
+  
+  app.delete('/api/rsvp/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteRsvpResponse(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting RSVP response:', error);
+      res.status(500).json({ error: 'Failed to delete RSVP response' });
     }
   });
   

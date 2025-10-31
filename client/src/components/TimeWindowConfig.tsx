@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { X, ChevronUp, ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface TimeWindow {
   type: "rsvp-open" | "rsvp-close" | "checkin-open" | "checkin-close";
@@ -66,6 +66,36 @@ export function TimeWindowConfig({
       timing: "after",
     },
   ]);
+
+  // Sync props to state when they change
+  useEffect(() => {
+    setWindows([
+      {
+        type: "rsvp-open",
+        value: rsvpOpensHoursBefore,
+        unit: "hours",
+        timing: "before",
+      },
+      {
+        type: "rsvp-close",
+        value: rsvpClosesHoursBefore,
+        unit: "hours",
+        timing: "before",
+      },
+      {
+        type: "checkin-open",
+        value: checkInOpensHoursBefore,
+        unit: "hours",
+        timing: "before",
+      },
+      {
+        type: "checkin-close",
+        value: checkInClosesMinutesAfter,
+        unit: "minutes",
+        timing: "after",
+      },
+    ]);
+  }, [rsvpOpensHoursBefore, rsvpClosesHoursBefore, checkInOpensHoursBefore, checkInClosesMinutesAfter]);
 
   const updateWindow = (index: number, updates: Partial<TimeWindow>) => {
     const newWindows = [...windows];

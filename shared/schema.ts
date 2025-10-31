@@ -448,17 +448,17 @@ export interface EventAssignment {
 }
 
 export interface Event {
-  id: string;
+  id: number;
   organizationId: string;
   title: string;
   description?: string;
-  eventType?: string; // Configurable: "practice", "game", etc.
+  eventType: string; // Configurable: "practice", "game", etc.
   startTime: Date;
   endTime: Date;
   location: string;
   latitude?: number;
   longitude?: number;
-  teamId?: string;
+  teamId?: number;
   opponentTeam?: string;
   visibility?: EventVisibility;
   assignTo?: EventAssignment;
@@ -469,6 +469,7 @@ export interface Event {
   sendNotifications?: boolean;
   createdBy?: string;
   status?: string; // active, cancelled, completed, draft
+  tags?: string[];
   isActive: boolean;
   createdAt: Date;
 }

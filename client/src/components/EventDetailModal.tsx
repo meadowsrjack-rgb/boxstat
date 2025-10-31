@@ -13,20 +13,7 @@ import { formatDateTime, offsetFromStart } from '@/lib/time';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-
-interface Event {
-  id: number;
-  title: string;
-  description?: string;
-  eventType: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  latitude?: number;
-  longitude?: number;
-  teamId?: number;
-  tags?: string[];
-}
+import type { Event, User as UserType } from '@shared/schema';
 
 interface EventWindow {
   id: number;
@@ -50,14 +37,6 @@ interface Attendance {
   eventId: number;
   userId: string;
   checkedInAt: string;
-}
-
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  teamId?: number;
 }
 
 interface EventDetailModalProps {
@@ -93,7 +72,7 @@ export default function EventDetailModal({
     enabled: open && !!event,
   });
 
-  const { data: users = [] } = useQuery<User[]>({
+  const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ['/api/users'],
     enabled: open && (userRole === 'admin' || userRole === 'coach'),
   });

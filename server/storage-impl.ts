@@ -173,7 +173,7 @@ class MemStorage implements IStorage {
   private organizations: Map<string, Organization> = new Map();
   private users: Map<string, User> = new Map();
   private teams: Map<string, Team> = new Map();
-  private events: Map<string, Event> = new Map();
+  private events: Map<number, Event> = new Map();
   private attendances: Map<string, Attendance> = new Map();
   private awards: Map<string, Award> = new Map();
   private userAwards: Map<string, UserAward> = new Map();
@@ -187,6 +187,7 @@ class MemStorage implements IStorage {
   private notifications: Map<number, Notification> = new Map();
   private eventWindows: Map<number, EventWindow> = new Map();
   private rsvpResponses: Map<number, RsvpResponse> = new Map();
+  private nextEventId = 1;
   private nextDivisionId = 1;
   private nextSkillId = 1;
   private nextNotificationId = 1;
@@ -797,7 +798,7 @@ class MemStorage implements IStorage {
   
   // Event operations
   async getEvent(id: string): Promise<Event | undefined> {
-    return this.events.get(id);
+    return this.events.get(parseInt(id));
   }
   
   async getEventsByOrganization(organizationId: string): Promise<Event[]> {
@@ -807,8 +808,9 @@ class MemStorage implements IStorage {
   }
   
   async getEventsByTeam(teamId: string): Promise<Event[]> {
+    const teamIdNum = parseInt(teamId);
     return Array.from(this.events.values())
-      .filter(event => event.teamId === teamId)
+      .filter(event => event.teamId === teamIdNum)
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
   }
   
@@ -822,7 +824,9 @@ class MemStorage implements IStorage {
   async createEvent(event: InsertEvent): Promise<Event> {
     const newEvent: Event = {
       ...event,
-      id: this.generateId(),
+      id: this.nextEventId++,
+      eventType: event.eventType ?? 'event',
+      teamId: event.teamId ? parseInt(event.teamId) : undefined,
       startTime: new Date(event.startTime),
       endTime: new Date(event.endTime),
       isActive: event.isActive ?? true,
@@ -833,16 +837,17 @@ class MemStorage implements IStorage {
   }
   
   async updateEvent(id: string, updates: Partial<Event>): Promise<Event | undefined> {
-    const event = this.events.get(id);
+    const eventId = parseInt(id);
+    const event = this.events.get(eventId);
     if (!event) return undefined;
     
     const updated = { ...event, ...updates };
-    this.events.set(id, updated);
+    this.events.set(eventId, updated);
     return updated;
   }
   
   async deleteEvent(id: string): Promise<void> {
-    this.events.delete(id);
+    this.events.delete(parseInt(id));
   }
   
   // Attendance operations
@@ -1656,7 +1661,7 @@ class DatabaseStorage implements IStorage {
       location: updates.location,
       latitude: updates.latitude,
       longitude: updates.longitude,
-      teamId: updates.teamId ? parseInt(updates.teamId) : undefined,
+      teamId: updates.teamId,
       opponentTeam: updates.opponentTeam,
       isActive: updates.isActive,
     };

@@ -1548,6 +1548,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ATTENDANCE ROUTES
   // =============================================
   
+  // Get all attendances for a specific event
+  app.get('/api/attendances/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const attendances = await storage.getAttendancesByEvent(req.params.eventId);
+      res.json(attendances);
+    } catch (error: any) {
+      console.error('Error fetching attendances:', error);
+      res.status(500).json({ error: 'Failed to fetch attendances' });
+    }
+  });
+  
+  // Create a new attendance/check-in
+  app.post('/api/attendances', isAuthenticated, async (req: any, res) => {
+    try {
+      const attendanceData = insertAttendanceSchema.parse(req.body);
+      const attendance = await storage.createAttendance(attendanceData);
+      res.json(attendance);
+    } catch (error: any) {
+      console.error("Attendance creation error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({ 
+          error: "Invalid attendance data", 
+          details: error.errors 
+        });
+      }
+      res.status(500).json({ 
+        error: "Failed to create attendance record" 
+      });
+    }
+  });
+  
+  // Legacy routes (kept for backward compatibility)
   app.get('/api/attendance/event/:eventId', isAuthenticated, async (req: any, res) => {
     const attendances = await storage.getAttendancesByEvent(req.params.eventId);
     res.json(attendances);

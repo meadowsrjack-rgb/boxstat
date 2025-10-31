@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
-import EventDetailPanel from "@/components/EventDetailPanel";
+import EventDetailModal from "@/components/EventDetailModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -253,7 +253,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedEvent, setSelectedEvent] = useState<UypEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | 'slide-in-left' | 'slide-in-right' | null>(null);
@@ -499,11 +499,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   const todayEvents = useMemo(() => {
     const today = new Date();
-    return displayEvents.filter((ev) => {
-      const dt = new Date(ev.startTime || (ev as any).start_time);
+    return (allEvents || []).filter((ev: Event) => {
+      const dt = new Date(ev.startTime);
       return isSameDay(dt, today);
     });
-  }, [displayEvents]);
+  }, [allEvents]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date();
@@ -512,18 +512,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     if (isSelectedToday) {
       // Show actual upcoming events when today is selected
       const start = startOfDay(new Date());
-      return displayEvents
-        .filter((ev) => isAfter(new Date(ev.startTime || (ev as any).start_time), start))
-        .filter((ev) => !isSameDay(new Date(ev.startTime || (ev as any).start_time), new Date()))
+      return (allEvents || [])
+        .filter((ev: Event) => isAfter(new Date(ev.startTime), start))
+        .filter((ev: Event) => !isSameDay(new Date(ev.startTime), new Date()))
         .slice(0, 3);
     } else {
       // Show selected day's events when a different day is selected
-      return displayEvents.filter((ev) => {
-        const dt = new Date(ev.startTime || (ev as any).start_time);
+      return (allEvents || []).filter((ev: Event) => {
+        const dt = new Date(ev.startTime);
         return isSameDay(dt, selectedDate);
       });
     }
-  }, [displayEvents, selectedDate]);
+  }, [allEvents, selectedDate]);
 
   // Filter events relevant to the current user/player
   const relevantEvents = useMemo(() => {
@@ -887,7 +887,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(convertEventToUypEvent(event));
+                          setSelectedEvent(event);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`event-item-${event.id}`}
@@ -921,7 +921,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(convertEventToUypEvent(event));
+                          setSelectedEvent(event);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`upcoming-event-item-${event.id}`}
@@ -961,9 +961,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           )}
 
           {/* Event Detail Modal */}
-          <EventDetailPanel
+          <EventDetailModal
             event={selectedEvent}
             userId={currentUser.id}
+            userRole={currentUser.role as 'admin' | 'coach' | 'player' | 'parent'}
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}
           />

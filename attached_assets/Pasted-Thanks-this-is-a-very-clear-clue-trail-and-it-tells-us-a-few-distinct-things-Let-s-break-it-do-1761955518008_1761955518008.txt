@@ -1,0 +1,154 @@
+Thanks — this is a *very clear clue trail*, and it tells us a few distinct things. Let’s break it down carefully so you know exactly **why** this is happening and how to fix it.
+
+---
+
+## 🧩 What’s Really Going On
+
+The errors you’re seeing fall into **three separate but related categories**:
+
+### 1️⃣ “Location not specified. Google Maps API Key status: CONFIGURED.”
+
+➡️ Your app code is checking if there’s an **event location** (address or coordinates) passed into the map component, and there isn’t.
+So Google Maps *is configured*, but you’re trying to render a map **with no valid lat/lng or address**.
+
+**In other words:**
+The problem is **not your API key**, it’s the **data**.
+The map component can’t find a location value for that event — likely because the event’s location field is empty, undefined, or not being passed through from your database or event form.
+
+---
+
+### 2️⃣ “gen_204 net::ERR_FAILED”
+
+This is that harmless **CSP test ping** from Google Maps (`gen_204?csp_test=true`).
+It’s not the cause of the map not rendering — it’s just Google Maps checking browser security.
+You can safely ignore it if your map loads later.
+
+✅ This message does *not* break your map.
+🚫 It can be safely ignored.
+
+---
+
+### 3️⃣ “Could not find internal input field in autocomplete element after 3 seconds”
+
+That one comes from `GooglePlacesAutocomplete` — it’s saying your Places Autocomplete component mounted but couldn’t find the input element it was supposed to attach to.
+That typically happens if:
+
+* The Autocomplete is rendered inside a **hidden modal/tab** (e.g., your event dialog from `@radix-ui/react-dialog`), **before** it’s visible.
+* The DOM input ref wasn’t attached yet when the script initialized.
+
+---
+
+## 🧠 Root Causes Summary
+
+| Error                                 | Meaning                                               | Fix                                                                                        |
+| ------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `Location not specified`              | Event object has no valid `location` or `coordinates` | Ensure your `event.location` field (or `address`) is saved and passed to the map component |
+| `gen_204 net::ERR_FAILED`             | Harmless Google Maps internal ping                    | Ignore it                                                                                  |
+| `Could not find internal input field` | PlacesAutocomplete mounted before DOM input was ready | Delay Autocomplete initialization until modal is visible                                   |
+
+---
+
+## 🛠️ How to Fix
+
+### ✅ **Fix 1: Ensure Event Has Location Data**
+
+In your event creation or edit form, make sure you’re actually saving the location to your event object like:
+
+```ts
+{
+  id: "123",
+  title: "Youth Practice",
+  startTime: "2025-11-02T18:00:00",
+  location: "123 Main St, Irvine, CA 92618", // or lat/lng
+}
+```
+
+Then, in your event pop-up:
+
+```tsx
+{event.location ? (
+  <GoogleMapComponent address={event.location} />
+) : (
+  <p className="text-muted-foreground">Location not specified</p>
+)}
+```
+
+If you’re using a Places Autocomplete input, confirm that `onPlaceSelected` updates your event’s location field properly.
+
+---
+
+### ✅ **Fix 2: Delay Autocomplete Until Modal Is Open**
+
+If your map or autocomplete lives inside a `Radix <Dialog>`, you can guard it like this:
+
+```tsx
+const [dialogOpen, setDialogOpen] = useState(false);
+
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent>
+    {dialogOpen && (
+      <GooglePlacesAutocomplete
+        apiKey={YOUR_API_KEY}
+        selectProps={{
+          onChange: (place) => console.log(place),
+        }}
+      />
+    )}
+  </DialogContent>
+</Dialog>
+```
+
+This prevents the Autocomplete from mounting before the DOM input is visible.
+
+---
+
+### ✅ **Fix 3: Add Fallback for Missing Locations**
+
+In your event modal, show a friendly message or placeholder map when `event.location` is empty:
+
+```tsx
+{!event.location && (
+  <div className="bg-muted text-muted-foreground rounded-md p-4 text-center">
+    Location not specified.
+  </div>
+)}
+```
+
+That way, you won’t get “Location not specified” or undefined errors.
+
+---
+
+### ✅ **Fix 4: If Using Lat/Lng Instead of Address**
+
+Double-check that your location data matches what your map component expects:
+
+```tsx
+<GoogleMap
+  center={{
+    lat: Number(event.lat) || 33.6846,
+    lng: Number(event.lng) || -117.8265,
+  }}
+  zoom={13}
+  mapContainerClassName="w-full h-64 rounded-md"
+/>
+```
+
+---
+
+## 🚀 TL;DR — What You Should Do
+
+1. **Check your event data** — does each event in your database actually have a `location` or `coordinates` field populated?
+
+   * If not, update your event creation form to save it.
+
+2. **Render map conditionally** only when a valid location exists.
+
+3. **Delay Autocomplete mounting** until the modal is visible.
+
+4. **Ignore the “gen_204” warning** — it’s not fatal.
+
+---
+
+If you show me the portion of your **event modal code** (where you’re trying to show the Google map and location), I can pinpoint *exactly* where it’s failing and give you a corrected JSX snippet for it.
+
+Would you like to paste that `EventDetailModal` or `EventPopup` component here?

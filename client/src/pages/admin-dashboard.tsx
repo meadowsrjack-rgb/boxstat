@@ -1957,6 +1957,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         <FormLabel>Location</FormLabel>
                         <FormControl>
                           <GooglePlacesAutocomplete
+                            key={isDialogOpen ? 'open' : 'closed'}
                             value={field.value || ""}
                             onChange={field.onChange}
                             onPlaceSelect={(place) => {
@@ -2052,12 +2053,13 @@ function EventsTab({ events, teams, programs, organization }: any) {
           </Dialog>
 
           {/* Edit Event Dialog */}
-          <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Event</DialogTitle>
-              </DialogHeader>
-              {editingEvent && (
+          {editingEvent && (
+            <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Event</DialogTitle>
+                </DialogHeader>
+                {editingEvent && (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-title">Event Title</Label>
@@ -2109,12 +2111,21 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-location">Location</Label>
-                    <Input
-                      id="edit-event-location"
-                      defaultValue={editingEvent.location || ""}
-                      onChange={(e) => setEditingEvent({...editingEvent, location: e.target.value})}
+                    <GooglePlacesAutocomplete
+                      value={editingEvent.location || ""}
+                      onChange={(value) => setEditingEvent({...editingEvent, location: value})}
+                      onPlaceSelect={(place) => {
+                        setEditingEvent({
+                          ...editingEvent,
+                          location: place.address,
+                          latitude: place.latitude,
+                          longitude: place.longitude
+                        });
+                      }}
+                      placeholder="Search for a location..."
                       data-testid="input-edit-event-location"
                     />
+                    <p className="text-xs text-gray-500">Search and select a location for accurate check-in geo-fencing</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-targetType">Event For</Label>
@@ -2184,6 +2195,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
               )}
             </DialogContent>
           </Dialog>
+          )}
 
           {/* Event Details Dialog */}
           <Dialog open={!!selectedEventForDetails} onOpenChange={(open) => !open && setSelectedEventForDetails(null)}>

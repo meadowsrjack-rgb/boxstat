@@ -14,6 +14,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, User as UserType } from '@shared/schema';
+import { MapPreview } from '@/components/MapPreview';
 
 interface EventWindow {
   id: number;
@@ -182,16 +183,9 @@ export default function EventDetailModal({
 
   const getMapUrl = (location: string, lat?: number, lng?: number) => {
     if (lat && lng) {
-      return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
     }
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
-  };
-
-  const getStaticMapUrl = (lat?: number, lng?: number) => {
-    if (!lat || !lng) return null;
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return null;
-    return `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=14&size=600x200&markers=color:red%7C${lat},${lng}&key=${apiKey}`;
+    return `https://www.openstreetmap.org/search?query=${encodeURIComponent(location)}`;
   };
 
   const getEventTypeColor = (eventType: string) => {
@@ -213,7 +207,6 @@ export default function EventDetailModal({
 
   if (!event) return null;
 
-  const staticMapUrl = getStaticMapUrl(event.latitude, event.longitude);
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
 
   return (
@@ -275,7 +268,7 @@ export default function EventDetailModal({
                         data-testid="link-open-maps"
                       >
                         <ExternalLink className="h-4 w-4" />
-                        View on Google Maps
+                        View on OpenStreetMap
                       </a>
                     </div>
                   ) : (
@@ -294,14 +287,13 @@ export default function EventDetailModal({
             </div>
           </Card>
 
-          {staticMapUrl && (
-            <div className="relative rounded-lg overflow-hidden border" data-testid="map-preview">
-              <img 
-                src={staticMapUrl} 
-                alt="Event location map" 
-                className="w-full h-48 object-cover"
-              />
-            </div>
+          {event.latitude && event.longitude && (
+            <MapPreview
+              lat={event.latitude}
+              lng={event.longitude}
+              locationName={event.location}
+              height="h-48"
+            />
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

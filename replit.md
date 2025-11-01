@@ -35,7 +35,7 @@ Preferred communication style: Simple, everyday language.
 - **Team Management**: Teams organized into programs with Notion-synced rosters. Coaches can join existing teams and manage players.
 - **Roster Management**: Coach dashboards display Notion players; actions for players without app accounts are disabled.
 - **Notion Sync**: Player data syncs from Notion databases on startup and daily.
-- **Event & Scheduling**: In-app event management for admins/coaches with CRUD, color-coded UI. Players can RSVP and check-in via GPS (200m radius geo-fencing). Google Maps Places Autocomplete for location input.
+- **Event & Scheduling**: In-app event management for admins/coaches with CRUD, color-coded UI. Players can RSVP and check-in via GPS (200m radius geo-fencing). OpenStreetMap with Nominatim geocoding for location search and Leaflet for interactive maps.
 - **Payment Integration**: Stripe for secure payment processing (fees, uniforms, tournaments) with transaction and subscription tracking.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5) and export/share them.
@@ -62,4 +62,4 @@ Preferred communication style: Simple, everyday language.
 - **Radix UI**: Accessible component primitives.
 - **Tailwind CSS**: Utility-first CSS framework.
 - **TanStack Query**: Server state management and caching.
-- **Google Maps Places API**: For location autocomplete and geo-fencing functionality.
+- **Leaflet & OpenStreetMap**: Free, open-source mapping solution with Nominatim geocoding for location search and coordinates for geo-fencing.

@@ -48,7 +48,7 @@ import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
 import UnifiedAccount from "./unified-account";
 import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
-import { GooglePlacesAutocomplete } from "@/components/GooglePlacesAutocomplete";
+import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
@@ -1959,26 +1959,16 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          {isDialogOpen ? (
-                            <GooglePlacesAutocomplete
-                              value={field.value || ""}
-                              onChange={field.onChange}
-                              onPlaceSelect={(place) => {
-                                field.onChange(place.address);
-                                form.setValue("latitude", place.latitude as any);
-                                form.setValue("longitude", place.longitude as any);
-                              }}
-                              placeholder="Search for a location..."
-                              data-testid="input-event-location"
-                            />
-                          ) : (
-                            <Input
-                              {...field}
-                              placeholder="Search for a location..."
-                              data-testid="input-event-location"
-                              disabled
-                            />
-                          )}
+                          <LocationSearch
+                            value={field.value || ""}
+                            onLocationSelect={(location) => {
+                              field.onChange(location.name);
+                              form.setValue("latitude", location.lat as any);
+                              form.setValue("longitude", location.lng as any);
+                            }}
+                            placeholder="Search for a location..."
+                            className="w-full"
+                          />
                         </FormControl>
                         <FormDescription>
                           Search and select a location for accurate check-in geo-fencing
@@ -2122,20 +2112,18 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-location">Location</Label>
-                    <GooglePlacesAutocomplete
-                      key={editingEvent?.id || 'new'}
+                    <LocationSearch
                       value={editingEvent.location || ""}
-                      onChange={(value) => setEditingEvent({...editingEvent, location: value})}
-                      onPlaceSelect={(place) => {
+                      onLocationSelect={(location) => {
                         setEditingEvent({
                           ...editingEvent,
-                          location: place.address,
-                          latitude: place.latitude,
-                          longitude: place.longitude
+                          location: location.name,
+                          latitude: location.lat,
+                          longitude: location.lng
                         });
                       }}
                       placeholder="Search for a location..."
-                      data-testid="input-edit-event-location"
+                      className="w-full"
                     />
                     <p className="text-xs text-gray-500">Search and select a location for accurate check-in geo-fencing</p>
                   </div>

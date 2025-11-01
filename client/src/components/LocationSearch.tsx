@@ -1,0 +1,141 @@
+import { useState, useEffect, useRef } from 'react';
+import { Input } from '@/components/ui/input';
+import { MapPin, Loader2 } from 'lucide-react';
+
+interface LocationResult {
+  place_id: string;
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    road?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  };
+}
+
+interface LocationSearchProps {
+  value?: string;
+  onLocationSelect: (location: { name: string; lat: number; lng: number }) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+export function LocationSearch({ 
+  value = '', 
+  onLocationSelect, 
+  placeholder = "Search location",
+  className = "" 
+}: LocationSearchProps) {
+  const [query, setQuery] = useState(value);
+  const [results, setResults] = useState<LocationResult[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout>();
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (query.length < 3) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        // Nominatim usage policy: add email parameter for identification
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?` +
+          `format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&email=support@uypbasketball.com`
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Nominatim API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setResults(data);
+        setShowResults(data.length > 0);
+      } catch (error) {
+        console.error('Error searching location:', error);
+        setResults([]);
+        setShowResults(false);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 500);
+  }, [query]);
+
+  const handleSelect = (result: LocationResult) => {
+    setQuery(result.display_name);
+    setShowResults(false);
+    setResults([]);
+    onLocationSelect({
+      name: result.display_name,
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+    });
+  };
+
+  return (
+    <div ref={wrapperRef} className={`relative ${className}`}>
+      <div className="relative">
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          className="pl-10"
+          data-testid="input-location-search"
+        />
+        {isLoading && (
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-500" />
+        )}
+      </div>
+      
+      {showResults && results.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-y-auto">
+          <ul>
+            {results.map((result) => (
+              <li
+                key={result.place_id}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
+                onClick={() => handleSelect(result)}
+                data-testid={`option-location-${result.place_id}`}
+              >
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{result.display_name}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      
+      {showResults && !isLoading && results.length === 0 && query.length >= 3 && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg p-4">
+          <p className="text-sm text-gray-500">No locations found</p>
+        </div>
+      )}
+    </div>
+  );
+}

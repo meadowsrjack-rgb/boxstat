@@ -25,7 +25,7 @@ Preferred communication style: Simple, everyday language.
 ### Database Architecture
 - **Database**: PostgreSQL with Neon serverless hosting.
 - **ORM**: Drizzle ORM for type-safe operations.
-- **Schema**: Supports users, teams, events, payments, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
+- **Schema**: Supports users, teams, events, payments, facilities, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
 - **Programs**: Supports 10 programs (e.g., Skills Academy, FNHTL, Youth-Club, High-School) with support for ongoing/infinite programs.
 
 ### Key Features & Design Decisions
@@ -35,7 +35,8 @@ Preferred communication style: Simple, everyday language.
 - **Team Management**: Teams organized into programs with Notion-synced rosters. Coaches can join existing teams and manage players.
 - **Roster Management**: Coach dashboards display Notion players; actions for players without app accounts are disabled.
 - **Notion Sync**: Player data syncs from Notion databases on startup and daily.
-- **Event & Scheduling**: In-app event management for admins/coaches with CRUD, color-coded UI. Players can RSVP and check-in via GPS (200m radius geo-fencing). OpenStreetMap with Nominatim geocoding for location search and Leaflet for interactive maps.
+- **Event & Scheduling**: In-app event management for admins/coaches with CRUD, color-coded UI. Players can RSVP and check-in via GPS (200m radius geo-fencing). OpenStreetMap with Nominatim geocoding for location search and Leaflet for interactive maps. LocationSearch component displays saved facilities as quick-select options for easy event location setup.
+- **Facility Management**: Admin-only CRUD operations for predefined facility locations. Five facilities are seeded on development startup (Momentous Sports Center, Ladera Sports Center, AIM Sports Group, MAP Sports Facility, Clava Sports Facility). Facilities auto-populate in event creation with stored addresses and coordinates.
 - **Payment Integration**: Stripe for secure payment processing (fees, uniforms, tournaments) with transaction and subscription tracking.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5) and export/share them.

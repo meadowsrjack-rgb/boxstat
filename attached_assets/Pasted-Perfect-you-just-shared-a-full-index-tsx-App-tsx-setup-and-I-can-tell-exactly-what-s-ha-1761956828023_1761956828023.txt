@@ -1,0 +1,113 @@
+Perfect — you just shared a **full `index.tsx` + `App.tsx` setup**, and I can tell exactly what’s happening here.
+You’re running into **two distinct groups of issues**:
+
+---
+
+## 🧩 **A. Core Routing Context Error**
+
+> “location not specified” or “Cannot read properties of null (reading 'useContext')”
+
+### 🔍 What’s happening
+
+You’re using **`wouter`**, which requires a `<Router>` **provider** from that library at the root of your app.
+However, in your setup, you named your main component **`Router()`**, which *overwrites* the imported `Router` symbol from `wouter`.
+That means your `<Switch>` and `<Route>` calls are running **without an actual `wouter` context**, causing `useLocation()` to fail.
+
+---
+
+### ✅ **Fix**
+
+Rename your custom router component to something else (e.g. `AppRouter`) and wrap it with the real `<Router>` from `wouter`.
+
+```tsx
+import { Router as WouterRouter } from "wouter"; // 👈 rename the import
+
+function AppRouter() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
+  ...
+  return (
+    <Switch>
+      {/* all your routes */}
+    </Switch>
+  );
+}
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WouterRouter>   {/* 👈 this adds the missing context */}
+        <AppRouter />
+        <Toaster />
+      </WouterRouter>
+    </QueryClientProvider>
+  );
+}
+```
+
+That **eliminates the “location not specified”** or “useContext(null)” errors you’re seeing.
+
+---
+
+## 🧩 **B. Google Maps + Autocomplete Warnings**
+
+```
+GET https://maps.googleapis.com/maps/api/mapsjs/gen_204?csp_test=true net::ERR_FAILED
+Could not find internal input field in autocomplete element after 3 seconds
+```
+
+These aren’t fatal — they mean:
+
+* The **Maps API is configured** (`CONFIGURED` log shows success)
+* But the **Autocomplete field** wasn’t rendered or wasn’t ready when `google.maps.places.Autocomplete` tried to attach to it.
+
+### ✅ Fix suggestions
+
+1. **Ensure the input ref exists before initializing**
+
+   ```ts
+   if (inputRef.current && window.google) {
+     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {...});
+   }
+   ```
+2. Add a small delay (e.g. 500ms) before initializing if your input is conditionally rendered.
+3. Check your `Autocomplete` script load:
+
+   ```html
+   <script
+     async
+     src={`https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places`}
+   ></script>
+   ```
+4. You can safely ignore `gen_204` test pings — those are **CSP test calls** from Google.
+
+---
+
+## 🧩 **C. Radix UI Warning**
+
+```
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+```
+
+That’s a **non-breaking accessibility warning** from Radix UI’s Dialog component — it just means you don’t have a `DialogDescription`.
+You can fix it later by adding:
+
+```tsx
+<DialogDescription>This explains what the dialog is about.</DialogDescription>
+```
+
+or simply ignore it for now — it won’t crash your app.
+
+---
+
+## ✅ **Final Summary**
+
+| Issue                                        | Root Cause                                      | Fix                                                             |
+| -------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------- |
+| “Location not specified” / `useContext` null | Missing `<Router>` provider and naming conflict | Rename your component → `AppRouter`, wrap with `<WouterRouter>` |
+| Google Maps errors                           | Autocomplete initializing too early             | Ensure input ref exists, delay init, ignore gen_204             |
+| Radix warning                                | Missing dialog description                      | Add `<DialogDescription>` or ignore                             |
+
+---
+
+If you paste your **`GooglePlacesAutocomplete.tsx`** file, I can show you *exactly* where to fix the “Could not find internal input” part. Would you like that?

@@ -26,6 +26,7 @@ import {
   insertNotificationSchema,
   insertEventWindowSchema,
   insertRsvpResponseSchema,
+  insertFacilitySchema,
 } from "@shared/schema";
 
 let wss: WebSocketServer | null = null;
@@ -2354,6 +2355,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating package selections:", error);
       res.status(500).json({ error: "Failed to create package selections", details: error.message });
+    }
+  });
+  
+  // =============================================
+  // FACILITY ROUTES
+  // =============================================
+  
+  app.get('/api/facilities', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const facilities = await storage.getFacilitiesByOrganization(organizationId);
+      res.json(facilities);
+    } catch (error: any) {
+      console.error('Error fetching facilities:', error);
+      res.status(500).json({ error: 'Failed to fetch facilities', message: error.message });
+    }
+  });
+  
+  app.get('/api/facilities/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid facility ID' });
+      }
+      
+      const facility = await storage.getFacility(id);
+      if (!facility) {
+        return res.status(404).json({ error: 'Facility not found' });
+      }
+      
+      res.json(facility);
+    } catch (error: any) {
+      console.error('Error fetching facility:', error);
+      res.status(500).json({ error: 'Failed to fetch facility', message: error.message });
+    }
+  });
+  
+  app.post('/api/facilities', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId, id } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create facilities' });
+      }
+      
+      const facilityData = insertFacilitySchema.parse({
+        ...req.body,
+        organizationId,
+        createdBy: id,
+      });
+      const facility = await storage.createFacility(facilityData);
+      res.status(201).json(facility);
+    } catch (error: any) {
+      console.error('Error creating facility:', error);
+      res.status(400).json({ error: 'Failed to create facility', message: error.message });
+    }
+  });
+  
+  app.patch('/api/facilities/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update facilities' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid facility ID' });
+      }
+      
+      const updated = await storage.updateFacility(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Facility not found' });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating facility:', error);
+      res.status(400).json({ error: 'Failed to update facility', message: error.message });
+    }
+  });
+  
+  app.delete('/api/facilities/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can delete facilities' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid facility ID' });
+      }
+      
+      await storage.deleteFacility(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting facility:', error);
+      res.status(500).json({ error: 'Failed to delete facility', message: error.message });
     }
   });
   

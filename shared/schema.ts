@@ -256,6 +256,19 @@ export const attendances = pgTable("attendances", {
   longitude: numeric(),
 });
 
+// Facilities table (saved locations for quick event creation)
+export const facilities = pgTable("facilities", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  address: varchar().notNull(),
+  latitude: doublePrecision().notNull(),
+  longitude: doublePrecision().notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  createdBy: varchar("created_by"),
+});
+
 // Badges table
 export const badges = pgTable("badges", {
   id: serial().primaryKey().notNull(),
@@ -536,6 +549,34 @@ export const insertAttendanceSchema = z.object({
 });
 
 export type InsertAttendance = z.infer<typeof insertAttendanceSchema>;
+
+// =============================================
+// Facility Schema (Saved Locations)
+// =============================================
+
+export interface Facility {
+  id: number;
+  organizationId: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
+  createdAt: Date;
+  createdBy?: string;
+}
+
+export const insertFacilitySchema = z.object({
+  organizationId: z.string(),
+  name: z.string().min(1, "Facility name is required"),
+  address: z.string().min(1, "Address is required"),
+  latitude: z.number(),
+  longitude: z.number(),
+  isActive: z.boolean().default(true),
+  createdBy: z.string().optional(),
+});
+
+export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 
 // =============================================
 // Award Schema (Badges & Trophies)

@@ -1,0 +1,151 @@
+Thanks — this log dump is super helpful. Let’s separate what’s noise from what’s actually **breaking your event location display**.
+
+---
+
+## 🧭 TL;DR — The Real Problem
+
+Your event creation payload shows:
+
+```
+location: ''
+latitude: undefined
+```
+
+That means your app is **successfully saving events but with an empty location field**, so when you open an event, the map component has nothing to render.
+
+Everything else (the service worker, gen_204, aria warnings) is unrelated noise.
+
+---
+
+## 🧩 Root Cause
+
+From your log:
+
+```
+📍 Creating event with data:
+{ title: 'test39', type: 'practice', startTime: '2025-10-31T19:08', endTime: '2025-10-31T21:08', location: '', ... }
+```
+
+and then:
+
+```
+Event API payload:
+{ title: 'test39', startTime: '...', endTime: '...', location: '', latitude: undefined, ... }
+```
+
+So the **location picker (GooglePlacesAutocomplete)** is not passing the selected place back to the form.
+That’s why your event has `""` for location — not because the map can’t load.
+
+---
+
+## 🧠 What’s Happening Technically
+
+* Your `<GooglePlacesAutocomplete />` script initializes too early (hence:
+  `"Could not find internal input field in autocomplete element after 10 seconds"`).
+* Because it never attaches to the input, the user can’t select a valid place, so the form submits `location: ''`.
+
+---
+
+## 🛠️ How to Fix It
+
+### ✅ 1. Mount GooglePlacesAutocomplete *only when the form/modal is visible*
+
+Inside your event form modal (Radix `<Dialog>` or similar):
+
+```tsx
+{isDialogOpen && (
+  <GooglePlacesAutocomplete
+    apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+    selectProps={{
+      placeholder: "Search location",
+      onChange: (place) => {
+        // Defensive: handle missing geometry
+        const { formatted_address, geometry } = place.value;
+        const lat = geometry?.location?.lat();
+        const lng = geometry?.location?.lng();
+        setFormData((f) => ({
+          ...f,
+          location: formatted_address || "",
+          latitude: lat,
+          longitude: lng,
+        }));
+      },
+    }}
+  />
+)}
+```
+
+This guarantees the autocomplete attaches correctly once the modal DOM exists.
+
+---
+
+### ✅ 2. Validate before submitting
+
+Before calling your create-event API, check for missing coordinates:
+
+```ts
+if (!formData.location || !formData.latitude || !formData.longitude) {
+  alert("Please select a valid location before saving the event.");
+  return;
+}
+```
+
+---
+
+### ✅ 3. Display the map only when coordinates exist
+
+In your event preview popup:
+
+```tsx
+{event.latitude && event.longitude ? (
+  <GoogleMap
+    center={{ lat: event.latitude, lng: event.longitude }}
+    zoom={14}
+    mapContainerClassName="w-full h-64 rounded-lg"
+  >
+    <Marker position={{ lat: event.latitude, lng: event.longitude }} />
+  </GoogleMap>
+) : (
+  <p className="text-muted-foreground">Location not specified.</p>
+)}
+```
+
+---
+
+### ✅ 4. (Optional) Persist the address & coords in backend
+
+Make sure your backend event schema includes:
+
+```ts
+location: string;
+latitude: number;
+longitude: number;
+```
+
+and that you’re saving those values from the event form.
+
+---
+
+## 🧹 Ignore These
+
+| Log                                                 | Meaning                               | Action                                    |
+| --------------------------------------------------- | ------------------------------------- | ----------------------------------------- |
+| `gen_204?csp_test=true net::ERR_BLOCKED_BY_CLIENT`  | Adblock / CSP ping                    | Ignore                                    |
+| `ServiceWorkerRegistration`                         | Replit cache                          | Harmless                                  |
+| `Missing Description for DialogContent`             | Accessibility warning from Radix      | Cosmetic                                  |
+| `Cannot update a component while rendering another` | React re-render warning               | Not breaking anything                     |
+| `WebSocket failed: closed before connection`        | Dev socket noise in Replit            | Ignore                                    |
+| `Unexpected token '<', "<!DOCTYPE "`                | Backend returned HTML instead of JSON | Check endpoint later, not related to maps |
+
+---
+
+## ✅ Summary
+
+* **Root cause:** Location picker never attached → empty `location`, `latitude`, `longitude`.
+* **Fix:** Mount autocomplete only when visible + set those fields on selection.
+* **Verify:** In your console, when selecting a place, you should see the formatted address and coordinates logged.
+* **Result:** New events will save with full location info → event popups show maps correctly.
+
+---
+
+If you want, you can paste your **event creation form JSX** (where GooglePlacesAutocomplete appears), and I’ll rewrite it with the proper visibility guard and onChange handler so it works 100%.

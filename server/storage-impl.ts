@@ -16,6 +16,7 @@ import {
   type Notification,
   type EventWindow,
   type RsvpResponse,
+  type Facility,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -32,6 +33,7 @@ import {
   type InsertNotification,
   type InsertEventWindow,
   type InsertRsvpResponse,
+  type InsertFacility,
 } from "@shared/schema";
 
 // =============================================
@@ -163,6 +165,13 @@ export interface IStorage {
   createRsvpResponse(response: InsertRsvpResponse): Promise<RsvpResponse>;
   updateRsvpResponse(id: number, updates: Partial<RsvpResponse>): Promise<RsvpResponse | undefined>;
   deleteRsvpResponse(id: number): Promise<void>;
+  
+  // Facility operations
+  getFacility(id: number): Promise<Facility | undefined>;
+  getFacilitiesByOrganization(organizationId: string): Promise<Facility[]>;
+  createFacility(facility: InsertFacility): Promise<Facility>;
+  updateFacility(id: number, updates: Partial<Facility>): Promise<Facility | undefined>;
+  deleteFacility(id: number): Promise<void>;
 }
 
 // =============================================
@@ -1324,6 +1333,38 @@ class MemStorage implements IStorage {
   async deleteRsvpResponse(id: number): Promise<void> {
     this.rsvpResponses.delete(id);
   }
+  
+  // Facility operations (MemStorage stub - not used in production)
+  async getFacility(id: number): Promise<Facility | undefined> {
+    return undefined;
+  }
+  
+  async getFacilitiesByOrganization(organizationId: string): Promise<Facility[]> {
+    return [];
+  }
+  
+  async createFacility(facility: InsertFacility): Promise<Facility> {
+    const now = new Date();
+    return {
+      id: 1,
+      organizationId: facility.organizationId,
+      name: facility.name,
+      address: facility.address,
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+      isActive: facility.isActive ?? true,
+      createdAt: now,
+      createdBy: facility.createdBy,
+    };
+  }
+  
+  async updateFacility(id: number, updates: Partial<Facility>): Promise<Facility | undefined> {
+    return undefined;
+  }
+  
+  async deleteFacility(id: number): Promise<void> {
+    return;
+  }
 }
 
 // =============================================
@@ -2344,6 +2385,66 @@ class DatabaseStorage implements IStorage {
     await db.delete(schema.rsvpResponses).where(eq(schema.rsvpResponses.id, id));
   }
 
+  // Facility operations
+  async getFacility(id: number): Promise<Facility | undefined> {
+    const results = await db.select().from(schema.facilities).where(eq(schema.facilities.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbFacilityToFacility(results[0]);
+  }
+  
+  async getFacilitiesByOrganization(organizationId: string): Promise<Facility[]> {
+    const results = await db.select()
+      .from(schema.facilities)
+      .where(
+        and(
+          eq(schema.facilities.organizationId, organizationId),
+          eq(schema.facilities.isActive, true)
+        )
+      );
+    return results.map(this.mapDbFacilityToFacility.bind(this));
+  }
+  
+  async createFacility(facility: InsertFacility): Promise<Facility> {
+    const dbFacility = {
+      organizationId: facility.organizationId,
+      name: facility.name,
+      address: facility.address,
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+      isActive: facility.isActive ?? true,
+      createdBy: facility.createdBy,
+    };
+    
+    const results = await db.insert(schema.facilities).values(dbFacility).returning();
+    return this.mapDbFacilityToFacility(results[0]);
+  }
+  
+  async updateFacility(id: number, updates: Partial<Facility>): Promise<Facility | undefined> {
+    const dbUpdates: any = {
+      name: updates.name,
+      address: updates.address,
+      latitude: updates.latitude,
+      longitude: updates.longitude,
+      isActive: updates.isActive,
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    const results = await db.update(schema.facilities)
+      .set(dbUpdates)
+      .where(eq(schema.facilities.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbFacilityToFacility(results[0]);
+  }
+  
+  async deleteFacility(id: number): Promise<void> {
+    await db.delete(schema.facilities).where(eq(schema.facilities.id, id));
+  }
+
   // Helper mapping functions
   private mapDbUserToUser(dbUser: any): User {
     return {
@@ -2575,6 +2676,20 @@ class DatabaseStorage implements IStorage {
       respondedAt: new Date(dbResponse.respondedAt),
       createdAt: new Date(dbResponse.createdAt),
       updatedAt: new Date(dbResponse.updatedAt),
+    };
+  }
+  
+  private mapDbFacilityToFacility(dbFacility: any): Facility {
+    return {
+      id: dbFacility.id,
+      organizationId: dbFacility.organizationId,
+      name: dbFacility.name,
+      address: dbFacility.address,
+      latitude: dbFacility.latitude,
+      longitude: dbFacility.longitude,
+      isActive: dbFacility.isActive ?? true,
+      createdAt: new Date(dbFacility.createdAt),
+      createdBy: dbFacility.createdBy,
     };
   }
 }

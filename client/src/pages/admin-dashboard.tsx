@@ -1956,18 +1956,27 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          <GooglePlacesAutocomplete
-                            key={isDialogOpen ? 'open' : 'closed'}
-                            value={field.value || ""}
-                            onChange={field.onChange}
-                            onPlaceSelect={(place) => {
-                              field.onChange(place.address);
-                              form.setValue("latitude", place.latitude as any);
-                              form.setValue("longitude", place.longitude as any);
-                            }}
-                            placeholder="Search for a location..."
-                            data-testid="input-event-location"
-                          />
+                          {isDialogOpen && (
+                            <GooglePlacesAutocomplete
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              onPlaceSelect={(place) => {
+                                field.onChange(place.address);
+                                form.setValue("latitude", place.latitude as any);
+                                form.setValue("longitude", place.longitude as any);
+                              }}
+                              placeholder="Search for a location..."
+                              data-testid="input-event-location"
+                            />
+                          )}
+                          {!isDialogOpen && (
+                            <Input
+                              {...field}
+                              placeholder="Search for a location..."
+                              data-testid="input-event-location"
+                              disabled
+                            />
+                          )}
                         </FormControl>
                         <FormDescription>
                           Search and select a location for accurate check-in geo-fencing

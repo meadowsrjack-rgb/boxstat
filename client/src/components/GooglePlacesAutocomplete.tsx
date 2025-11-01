@@ -49,7 +49,7 @@ export function GooglePlacesAutocomplete({
     let inputEventListener: ((e: any) => void) | null = null;
     let observer: MutationObserver | null = null;
     let shadowObserver: MutationObserver | null = null;
-    let timeoutId: NodeJS.Timeout | null = null;
+    let retryIntervalId: NodeJS.Timeout | null = null;
 
     async function initAutocomplete() {
       try {
@@ -168,9 +168,9 @@ export function GooglePlacesAutocomplete({
               shadowObserver.disconnect();
               shadowObserver = null;
             }
-            if (timeoutId) {
-              clearTimeout(timeoutId);
-              timeoutId = null;
+            if (retryIntervalId) {
+              clearInterval(retryIntervalId);
+              retryIntervalId = null;
             }
           }
         };
@@ -201,10 +201,26 @@ export function GooglePlacesAutocomplete({
             });
           }
           
-          // Set max timeout of 3 seconds
-          timeoutId = setTimeout(() => {
-            if (!foundInput) {
-              console.warn('Could not find internal input field in autocomplete element after 3 seconds');
+          // Extended timeout with retry logic - up to 10 seconds
+          let retries = 0;
+          const maxRetries = 20; // 20 retries * 500ms = 10 seconds
+          
+          retryIntervalId = setInterval(() => {
+            if (foundInput) {
+              clearInterval(retryIntervalId!);
+              retryIntervalId = null;
+              return;
+            }
+            
+            // Try to find input again
+            findAndAttachToInput();
+            retries++;
+            
+            // Stop after max retries
+            if (retries >= maxRetries && !foundInput) {
+              console.warn('Could not find internal input field in autocomplete element after 10 seconds');
+              clearInterval(retryIntervalId!);
+              retryIntervalId = null;
               if (observer) {
                 observer.disconnect();
                 observer = null;
@@ -214,7 +230,7 @@ export function GooglePlacesAutocomplete({
                 shadowObserver = null;
               }
             }
-          }, 3000);
+          }, 500);
         }
 
         if (isMounted) {
@@ -249,8 +265,8 @@ export function GooglePlacesAutocomplete({
       if (shadowObserver) {
         shadowObserver.disconnect();
       }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (retryIntervalId) {
+        clearInterval(retryIntervalId);
       }
       
       // Clean up event listener

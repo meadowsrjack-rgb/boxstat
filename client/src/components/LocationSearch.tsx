@@ -43,11 +43,12 @@ export function LocationSearch({
   const [results, setResults] = useState<LocationResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
   
   // Fetch saved facilities
-  const { data: facilities = [] } = useQuery<Facility[]>({
+  const { data: facilities = [], isLoading: facilitiesLoading } = useQuery<Facility[]>({
     queryKey: ['/api/facilities'],
   });
 
@@ -55,17 +56,28 @@ export function LocationSearch({
     const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setShowResults(false);
+        setIsFocused(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+  
+  // Show dropdown when facilities load and input is focused
+  useEffect(() => {
+    if (isFocused && !facilitiesLoading && facilities.length > 0 && query.length < 3) {
+      setShowResults(true);
+    }
+  }, [isFocused, facilitiesLoading, facilities.length, query.length]);
 
   useEffect(() => {
     if (query.length < 3) {
       setResults([]);
-      setShowResults(false);
+      // Keep showResults true if there are facilities to show
+      if (facilities.length === 0) {
+        setShowResults(false);
+      }
       return;
     }
 
@@ -88,16 +100,16 @@ export function LocationSearch({
         
         const data = await response.json();
         setResults(data);
-        setShowResults(data.length > 0);
+        setShowResults(true);
       } catch (error) {
         console.error('Error searching location:', error);
         setResults([]);
-        setShowResults(false);
+        setShowResults(facilities.length > 0); // Keep open if facilities exist
       } finally {
         setIsLoading(false);
       }
     }, 500);
-  }, [query]);
+  }, [query, facilities.length]);
 
   const handleSelect = (result: LocationResult) => {
     setQuery(result.display_name);
@@ -128,6 +140,12 @@ export function LocationSearch({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => {
+            setIsFocused(true);
+            if (facilities.length > 0 || results.length > 0) {
+              setShowResults(true);
+            }
+          }}
           placeholder={placeholder}
           className="pl-10"
           data-testid="input-location-search"

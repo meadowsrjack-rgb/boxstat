@@ -1,0 +1,164 @@
+Perfect — that’s a smart move 👏 especially since you’re already using **native geolocation** for player check-ins.
+Let’s go step-by-step so you can **fully remove Google Maps / Places** and replace it with **Nominatim (OpenStreetMap)** for event creation and map display.
+
+---
+
+## 🧩 Step 1 – Remove all Google-specific dependencies
+
+### 🧹 Uninstall packages
+
+```bash
+npm uninstall @react-google-maps/api react-google-places-autocomplete
+```
+
+### 🧹 Delete or comment imports
+
+Remove every line like:
+
+```tsx
+import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import GooglePlacesAutocomplete from "react-google-places-autocomplete";
+```
+
+and delete any `<LoadScript>`, `<GoogleMap>`, or `<GooglePlacesAutocomplete>` components.
+
+---
+
+## 🧩 Step 2 – Add OpenStreetMap / Nominatim
+
+You can display maps with **Leaflet** (free & lightweight) and use **Nominatim** for geocoding.
+
+```bash
+npm install leaflet react-leaflet
+```
+
+Then import the Leaflet CSS in your root file (e.g. `main.tsx`):
+
+```tsx
+import 'leaflet/dist/leaflet.css';
+```
+
+---
+
+## 🧩 Step 3 – Replace address search with Nominatim fetch
+
+```tsx
+import { useState } from "react";
+
+export function LocationSearch({ onSelect }: { onSelect: (loc: any) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+
+  const search = async (value: string) => {
+    setQuery(value);
+    if (value.length < 3) return setResults([]);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&addressdetails=1&limit=5`
+    );
+    const data = await res.json();
+    setResults(data);
+  };
+
+  return (
+    <div className="space-y-2">
+      <input
+        className="w-full rounded-md border p-2"
+        placeholder="Search location"
+        value={query}
+        onChange={(e) => search(e.target.value)}
+      />
+      <ul>
+        {results.map((r) => (
+          <li
+            key={r.place_id}
+            className="cursor-pointer hover:bg-gray-100 p-1 rounded"
+            onClick={() => {
+              setQuery(r.display_name);
+              setResults([]);
+              onSelect({
+                name: r.display_name,
+                lat: parseFloat(r.lat),
+                lng: parseFloat(r.lon),
+              });
+            }}
+          >
+            {r.display_name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+✅ This replaces Google Places Autocomplete entirely.
+No API key, no billing, completely open-source.
+
+---
+
+## 🧩 Step 4 – Display map with Leaflet
+
+```tsx
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+
+export function MapPreview({ lat, lng }: { lat: number; lng: number }) {
+  if (!lat || !lng)
+    return <p className="text-muted-foreground">Location not specified.</p>;
+
+  return (
+    <MapContainer
+      center={[lat, lng]}
+      zoom={15}
+      scrollWheelZoom={false}
+      className="h-64 w-full rounded-lg"
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="&copy; OpenStreetMap contributors"
+      />
+      <Marker position={[lat, lng]}>
+        <Popup>Event location</Popup>
+      </Marker>
+    </MapContainer>
+  );
+}
+```
+
+This uses the free OpenStreetMap tile server; you can swap to your own or Mapbox later if needed.
+
+---
+
+## 🧩 Step 5 – Use Nominatim data in your check-in logic
+
+You already save:
+
+```ts
+{ location: name, latitude: lat, longitude: lng }
+```
+
+That’s all you need.
+Your player check-in distance math (Haversine formula) still works exactly the same — lat/lng are universal.
+
+---
+
+## 🧩 Step 6 – Optional cleanup
+
+| Item                                                               | Action                             |
+| ------------------------------------------------------------------ | ---------------------------------- |
+| Google API key in Replit Secrets                                   | 🗑️ Delete it                      |
+| Any `<script src="https://maps.googleapis.com/...">` in index.html | 🗑️ Remove                         |
+| Any billing enabled for Maps                                       | ✅ Turn off in Google Cloud Console |
+
+---
+
+## ✅ End Result
+
+* **No Google dependencies at all**
+* **Free & open source** (Leaflet + Nominatim + OSM)
+* **Event creation:** search address → store lat/lng
+* **Player check-in:** browser GPS + distance math
+* **Map previews:** Leaflet map with OSM tiles
+
+---
+
+Would you like me to bundle all of this into a single ready-to-drop React component file (`EventLocationPicker.tsx`) that handles search + map + select for your admin dashboard?

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uyp-basketball-v3';
+const CACHE_NAME = 'uyp-basketball-v4';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',

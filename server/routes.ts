@@ -1473,6 +1473,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Only admins and coaches can create events' });
       }
       
+      console.log('📍 CREATE EVENT - Received body:', JSON.stringify({
+        location: req.body.location,
+        latitude: req.body.latitude,
+        longitude: req.body.longitude
+      }, null, 2));
+      
       // Transform targetType/targetId into visibility/assignTo structure
       const { targetType, targetId, ...restData } = req.body;
       let visibility: any = {};
@@ -1522,6 +1528,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role !== 'admin' && role !== 'coach') {
         return res.status(403).json({ message: 'Only admins and coaches can update events' });
       }
+      
+      console.log('📍 UPDATE EVENT - Received body:', JSON.stringify({
+        location: req.body.location,
+        latitude: req.body.latitude,
+        longitude: req.body.longitude
+      }, null, 2));
       
       const updated = await storage.updateEvent(req.params.id, req.body);
       res.json(updated);

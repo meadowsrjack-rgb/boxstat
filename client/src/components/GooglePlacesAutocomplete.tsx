@@ -113,7 +113,8 @@ export function GooglePlacesAutocomplete({
             const lat = typeof location.lat === 'function' ? location.lat() : location.lat;
             const lng = typeof location.lng === 'function' ? location.lng() : location.lng;
 
-            console.log('Google Places selected:', { address, lat, lng });
+            console.log('✅ Google Places selected:', { address, lat, lng });
+            console.log('✅ Will call onPlaceSelect with:', { address, latitude: lat, longitude: lng });
 
             // Update state
             setManualInput(address);

@@ -1884,7 +1884,10 @@ function EventsTab({ events, teams, programs, organization }: any) {
                 <DialogTitle>Create New Event</DialogTitle>
               </DialogHeader>
               <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createEvent.mutate(data))} className="space-y-4">
+                <form onSubmit={form.handleSubmit((data) => {
+                  console.log('📍 Creating event with data:', data);
+                  createEvent.mutate(data);
+                })} className="space-y-4">
                   <FormField
                     control={form.control}
                     name="title"

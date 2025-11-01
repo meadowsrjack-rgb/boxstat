@@ -17,8 +17,6 @@ interface GooglePlacesAutocompleteProps {
   disabled?: boolean;
   className?: string;
   'data-testid'?: string;
-  currentLatitude?: number | null;
-  currentLongitude?: number | null;
 }
 
 export function GooglePlacesAutocomplete({
@@ -29,16 +27,12 @@ export function GooglePlacesAutocomplete({
   disabled = false,
   className,
   'data-testid': testId = 'input-location-autocomplete',
-  currentLatitude,
-  currentLongitude,
 }: GooglePlacesAutocompleteProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteElementRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState(value);
-  const [manualLat, setManualLat] = useState<string>(currentLatitude?.toString() || '');
-  const [manualLng, setManualLng] = useState<string>(currentLongitude?.toString() || '');
 
   useEffect(() => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -211,8 +205,6 @@ export function GooglePlacesAutocomplete({
           timeoutId = setTimeout(() => {
             if (!foundInput) {
               console.warn('Could not find internal input field in autocomplete element after 3 seconds');
-              console.warn('This usually means Google Cloud billing/APIs are not enabled. Falling back to manual input.');
-              
               if (observer) {
                 observer.disconnect();
                 observer = null;
@@ -220,12 +212,6 @@ export function GooglePlacesAutocomplete({
               if (shadowObserver) {
                 shadowObserver.disconnect();
                 shadowObserver = null;
-              }
-              
-              // Show error to help user understand what to do
-              if (isMounted) {
-                setError('Google Maps autocomplete not available. Please enable billing and required APIs in Google Cloud Console, then refresh the page.');
-                setIsLoading(false);
               }
             }
           }, 3000);
@@ -300,19 +286,6 @@ export function GooglePlacesAutocomplete({
     setManualInput(value);
   }, [value]);
 
-  const handleManualCoordinatesChange = () => {
-    const lat = parseFloat(manualLat);
-    const lng = parseFloat(manualLng);
-    
-    if (!isNaN(lat) && !isNaN(lng) && manualInput && onPlaceSelect) {
-      onPlaceSelect({
-        address: manualInput,
-        latitude: lat,
-        longitude: lng,
-      });
-    }
-  };
-
   if (error) {
     return (
       <div className="space-y-3">
@@ -333,38 +306,8 @@ export function GooglePlacesAutocomplete({
             data-testid={testId}
           />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs text-muted-foreground">Latitude</label>
-            <Input
-              type="number"
-              step="any"
-              value={manualLat}
-              onChange={(e) => setManualLat(e.target.value)}
-              onBlur={handleManualCoordinatesChange}
-              placeholder="e.g., 40.7128"
-              disabled={disabled}
-              className="text-sm"
-              data-testid="input-manual-latitude"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">Longitude</label>
-            <Input
-              type="number"
-              step="any"
-              value={manualLng}
-              onChange={(e) => setManualLng(e.target.value)}
-              onBlur={handleManualCoordinatesChange}
-              placeholder="e.g., -74.0060"
-              disabled={disabled}
-              className="text-sm"
-              data-testid="input-manual-longitude"
-            />
-          </div>
-        </div>
         <p className="text-xs text-muted-foreground" data-testid="text-manual-input-help">
-          Manual fallback mode. Enter address and coordinates separately. You can find coordinates on Google Maps by right-clicking a location.
+          Using manual input. Enter address and coordinates manually.
         </p>
       </div>
     );

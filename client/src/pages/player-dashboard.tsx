@@ -372,9 +372,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // Check-ins (client derives tasks from events; server stores submissions)
   const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
-    queryKey: ["/api/checkins", currentUser.id],
+    queryKey: ["/api/attendances", currentUser.id],
     queryFn: async () => {
-      const res = await fetch(`/api/checkins?userId=${currentUser.id}`, { credentials: "include" });
+      const res = await fetch(`/api/attendances?userId=${currentUser.id}`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -410,7 +410,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   const createCheckInMutation = useMutation({
     mutationFn: async (payload: { eventId: string | number; type: "advance" | "onsite"; lat?: number; lng?: number }) => {
-      const res = await fetch(`/api/checkins`, {
+      const res = await fetch(`/api/attendances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -423,7 +423,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances", currentUser.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "awards"] }); // refresh badges
       toast({ title: "Checked in", description: "We recorded your check-in." });
     },

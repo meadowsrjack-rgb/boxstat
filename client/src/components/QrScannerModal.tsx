@@ -28,7 +28,7 @@ export default function QrScannerModal({
 
   const { mutate: checkInWithQr, isPending } = useMutation({
     mutationFn: async (qrPayload: any) => {
-      const res = await fetch(`/api/checkins`, {
+      const res = await fetch(`/api/attendances`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -47,7 +47,7 @@ export default function QrScannerModal({
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/checkins'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
       onCheckedIn?.();
       onOpenChange(false);
       toast({

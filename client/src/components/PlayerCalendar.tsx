@@ -3,7 +3,7 @@ import { format, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { CheckIn } from "@shared/schema";
+import type { Attendance } from "@shared/schema";
 
 type UypEvent = {
   id: string;
@@ -57,10 +57,10 @@ export default function PlayerCalendar({
   };
 
   // Checkins query
-  const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
-    queryKey: ["/api/checkins", currentUser.id],
+  const { data: checkins = [] as Attendance[] } = useQuery<Attendance[]>({
+    queryKey: ["/api/attendances", currentUser.id],
     queryFn: async () => {
-      const res = await fetch(`/api/checkins?userId=${currentUser.id}`, { credentials: "include" });
+      const res = await fetch(`/api/attendances?userId=${currentUser.id}`, { credentials: "include" });
       if (!res.ok) return [];
       return res.json();
     },
@@ -69,13 +69,13 @@ export default function PlayerCalendar({
   });
 
   // Checkin mutation
-  const createCheckInMutation = useMutation({
+  const createAttendanceMutation = useMutation({
     mutationFn: async (payload: { eventId: string | number; type: "advance" | "onsite"; lat?: number; lng?: number }) => {
-      const res = await apiRequest("POST", `/api/checkins`, { ...payload, userId: currentUser.id });
+      const res = await apiRequest("POST", `/api/attendances`, { ...payload, userId: currentUser.id });
       return res;
     },
     onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances", currentUser.id] });
       if (variables.type === "advance") {
         toast({ title: "RSVP Confirmed", description: "Thank you for your RSVP. Be sure to Check-in on arrival." });
       } else {
@@ -93,11 +93,11 @@ export default function PlayerCalendar({
   // Remove RSVP mutation
   const removeRsvpMutation = useMutation({
     mutationFn: async (payload: { eventId: string | number; type: "advance" }) => {
-      const res = await apiRequest("DELETE", `/api/checkins/${payload.eventId}/${payload.type}?userId=${currentUser.id}`);
+      const res = await apiRequest("DELETE", `/api/attendances/${payload.eventId}/${payload.type}?userId=${currentUser.id}`);
       return res;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/checkins", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances", currentUser.id] });
       toast({ title: "RSVP Removed", description: "Your RSVP has been cancelled." });
     },
     onError: (e: any) =>
@@ -110,7 +110,7 @@ export default function PlayerCalendar({
 
   // Organize checkins by event
   const checkinByEvent = useMemo(() => {
-    const map = new Map<string | number, { advance?: CheckIn; onsite?: CheckIn }>();
+    const map = new Map<string | number, { advance?: Attendance; onsite?: Attendance }>();
     for (const c of checkins) {
       const entry = map.get(c.eventId) || {};
       if (c.type === "advance") entry.advance = c;

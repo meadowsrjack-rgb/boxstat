@@ -91,7 +91,7 @@ export default function CheckInButton({
       lat?: number; 
       lng?: number;
     }) => {
-      const res = await fetch(`/api/checkins`, {
+      const res = await fetch(`/api/attendances`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -108,7 +108,7 @@ export default function CheckInButton({
     },
     onSuccess: () => {
       // Invalidate all check-in related queries
-      queryClient.invalidateQueries({ queryKey: ['/api/checkins'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
       
       // Invalidate attendance for this specific event
       queryClient.invalidateQueries({ queryKey: ['/api/attendance/event', event.id] });

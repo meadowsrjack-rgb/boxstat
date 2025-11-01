@@ -112,7 +112,7 @@ export default function EventDetailModal({
         rsvpOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 3 * 24 * 60 * 60 * 1000),
         rsvpClose: new Date(new Date(event?.startTime || Date.now()).getTime() - 1 * 24 * 60 * 60 * 1000),
         checkinOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 30 * 60 * 1000),
-        checkinClose: new Date(event?.startTime || Date.now()),
+        checkinClose: new Date(new Date(event?.startTime || Date.now()).getTime() + 30 * 60 * 1000),
       };
     }
 
@@ -134,7 +134,7 @@ export default function EventDetailModal({
         : new Date(eventStart.getTime() - 30 * 60 * 1000),
       checkinClose: checkinCloseWindow
         ? offsetFromStart(eventStart, checkinCloseWindow.amount, checkinCloseWindow.unit, checkinCloseWindow.direction)
-        : new Date(eventStart.getTime()),
+        : new Date(eventStart.getTime() + 30 * 60 * 1000),
     };
   }, [windows, event]);
 

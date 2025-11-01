@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
-import { MapPin, Loader2 } from 'lucide-react';
+import { MapPin, Loader2, Building2 } from 'lucide-react';
 
 interface LocationResult {
   place_id: string;
@@ -14,6 +15,15 @@ interface LocationResult {
     postcode?: string;
     country?: string;
   };
+}
+
+interface Facility {
+  id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  isActive: boolean;
 }
 
 interface LocationSearchProps {
@@ -35,6 +45,11 @@ export function LocationSearch({
   const [showResults, setShowResults] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Fetch saved facilities
+  const { data: facilities = [] } = useQuery<Facility[]>({
+    queryKey: ['/api/facilities'],
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,6 +109,17 @@ export function LocationSearch({
       lng: parseFloat(result.lon),
     });
   };
+  
+  const handleFacilitySelect = (facility: Facility) => {
+    setQuery(facility.address);
+    setShowResults(false);
+    setResults([]);
+    onLocationSelect({
+      name: facility.address,
+      lat: facility.latitude,
+      lng: facility.longitude,
+    });
+  };
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
@@ -111,29 +137,71 @@ export function LocationSearch({
         )}
       </div>
       
-      {showResults && results.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-60 overflow-y-auto">
-          <ul>
-            {results.map((result) => (
-              <li
-                key={result.place_id}
-                className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
-                onClick={() => handleSelect(result)}
-                data-testid={`option-location-${result.place_id}`}
-              >
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{result.display_name}</span>
+      {showResults && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-80 overflow-y-auto">
+          {/* Saved Facilities Section */}
+          {facilities.length > 0 && query.length < 3 && (
+            <div>
+              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  Saved Facilities
+                </p>
+              </div>
+              <ul>
+                {facilities.filter(f => f.isActive).map((facility) => (
+                  <li
+                    key={facility.id}
+                    className="px-4 py-2.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0"
+                    onClick={() => handleFacilitySelect(facility)}
+                    data-testid={`facility-option-${facility.id}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Building2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{facility.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{facility.address}</p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* Search Results Section */}
+          {results.length > 0 && (
+            <div>
+              {facilities.length > 0 && query.length >= 3 && (
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                    Search Results
+                  </p>
                 </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {showResults && !isLoading && results.length === 0 && query.length >= 3 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg p-4">
-          <p className="text-sm text-gray-500">No locations found</p>
+              )}
+              <ul>
+                {results.map((result) => (
+                  <li
+                    key={result.place_id}
+                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
+                    onClick={() => handleSelect(result)}
+                    data-testid={`option-location-${result.place_id}`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-sm">{result.display_name}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {/* No Results Message */}
+          {!isLoading && results.length === 0 && query.length >= 3 && (
+            <div className="p-4">
+              <p className="text-sm text-gray-500">No locations found</p>
+            </div>
+          )}
         </div>
       )}
     </div>

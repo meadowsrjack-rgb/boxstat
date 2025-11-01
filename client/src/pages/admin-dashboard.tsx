@@ -2112,6 +2112,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-event-location">Location</Label>
                     <GooglePlacesAutocomplete
+                      key={editingEvent?.id || 'new'}
                       value={editingEvent.location || ""}
                       onChange={(value) => setEditingEvent({...editingEvent, location: value})}
                       onPlaceSelect={(place) => {

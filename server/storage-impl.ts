@@ -1403,6 +1403,69 @@ class DatabaseStorage implements IStorage {
       console.error('Error initializing test users:', error);
     }
   }
+  
+  async initializeFacilities(): Promise<void> {
+    try {
+      // Check if facilities already exist
+      const existingFacilities = await this.getFacilitiesByOrganization(this.defaultOrgId);
+      
+      if (existingFacilities.length === 0) {
+        // Get admin user to use as creator
+        const adminUser = await this.getUserByEmail("test@example.com", this.defaultOrgId);
+        const createdBy = adminUser?.id || "system";
+        
+        // Predefined facilities with addresses and coordinates
+        const facilities = [
+          {
+            name: "Momentous Sports Center",
+            address: "20950 Currier Rd, Walnut, CA 91789",
+            latitude: 34.0205,
+            longitude: -117.8647,
+          },
+          {
+            name: "Ladera Sports Center",
+            address: "5000 Clark Ave, Lakewood, CA 90712",
+            latitude: 33.8536,
+            longitude: -118.1337,
+          },
+          {
+            name: "AIM Sports Group",
+            address: "17871 Gothard St, Huntington Beach, CA 92647",
+            latitude: 33.7175,
+            longitude: -117.9897,
+          },
+          {
+            name: "MAP Sports Facility",
+            address: "1324 S Grand Ave, Santa Ana, CA 92705",
+            latitude: 33.7295,
+            longitude: -117.8661,
+          },
+          {
+            name: "Clava Sports Facility",
+            address: "8432 Stanton Ave, Buena Park, CA 90620",
+            latitude: 33.8578,
+            longitude: -118.0048,
+          },
+        ];
+        
+        // Create each facility
+        for (const facility of facilities) {
+          await this.createFacility({
+            organizationId: this.defaultOrgId,
+            name: facility.name,
+            address: facility.address,
+            latitude: facility.latitude,
+            longitude: facility.longitude,
+            isActive: true,
+            createdBy,
+          });
+          console.log(`✅ Created facility: ${facility.name}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing facilities:', error);
+    }
+  }
 
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {

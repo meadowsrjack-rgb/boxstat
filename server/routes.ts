@@ -93,10 +93,11 @@ const isAuthenticated = (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Initialize test users in development
+  // Initialize test users and facilities in development
   if (process.env.NODE_ENV === 'development') {
     // Type assertion to access the method
     await (storage as any).initializeTestUsers?.();
+    await (storage as any).initializeFacilities?.();
   }
   
   // =============================================

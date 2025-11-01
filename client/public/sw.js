@@ -21,6 +21,13 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - Network first for JS files, cache first for others
 self.addEventListener('fetch', (event) => {
+  // Skip service worker for Google Maps API requests (including CSP tests)
+  if (event.request.url.includes('maps.googleapis.com') || 
+      event.request.url.includes('maps.gstatic.com') ||
+      event.request.url.includes('fonts.googleapis.com')) {
+    return;
+  }
+
   // Network-first strategy for JavaScript files to avoid stale code
   if (event.request.url.includes('.js') || event.request.url.includes('.css')) {
     event.respondWith(

@@ -1956,7 +1956,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                          {isDialogOpen && (
+                          {isDialogOpen ? (
                             <GooglePlacesAutocomplete
                               value={field.value || ""}
                               onChange={field.onChange}
@@ -1968,8 +1968,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                               placeholder="Search for a location..."
                               data-testid="input-event-location"
                             />
-                          )}
-                          {!isDialogOpen && (
+                          ) : (
                             <Input
                               {...field}
                               placeholder="Search for a location..."

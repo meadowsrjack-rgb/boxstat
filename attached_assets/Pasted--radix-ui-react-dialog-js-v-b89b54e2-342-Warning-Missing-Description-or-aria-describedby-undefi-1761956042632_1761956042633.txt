@@ -1,0 +1,44 @@
+@radix-ui_react-dialog.js?v=b89b54e2:342 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=b89b54e2:342
+GooglePlacesAutocomplete.tsx:40 Google Maps API Key status: CONFIGURED
+@radix-ui_react-dialog.js?v=b89b54e2:342 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=b89b54e2:342
+admin-dashboard.tsx:1738 Failed to load event windows: TypeError: Failed to execute 'fetch' on 'Window': Request with GET/HEAD method cannot have body.
+    at apiRequest (queryClient.ts:35:21)
+    at admin-dashboard.tsx:1735:33
+    at admin-dashboard.tsx:1741:7
+    at commitHookEffectListMount (chunk-RPCDYKBN.js?v=b89b54e2:16915:34)
+    at commitPassiveMountOnFiber (chunk-RPCDYKBN.js?v=b89b54e2:18156:19)
+    at commitPassiveMountEffects_complete (chunk-RPCDYKBN.js?v=b89b54e2:18129:17)
+    at commitPassiveMountEffects_begin (chunk-RPCDYKBN.js?v=b89b54e2:18119:15)
+    at commitPassiveMountEffects (chunk-RPCDYKBN.js?v=b89b54e2:18109:11)
+    at flushPassiveEffectsImpl (chunk-RPCDYKBN.js?v=b89b54e2:19490:11)
+    at flushPassiveEffects (chunk-RPCDYKBN.js?v=b89b54e2:19447:22)
+(anonymous) @ admin-dashboard.tsx:1738
+GooglePlacesAutocomplete.tsx:207 Could not find internal input field in autocomplete element after 3 seconds
+(anonymous) @ GooglePlacesAutocomplete.tsx:207
+2player-dashboard.tsx:791 Awards Summary: undefined
+d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/api/notifications/unread-count:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+player-dashboard.tsx:233 Failed to load privacy settings: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+loadPrivacySettings @ player-dashboard.tsx:233
+d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/api/notifications/vapid-public-key:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+player-dashboard.tsx:233 Failed to load privacy settings: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+loadPrivacySettings @ player-dashboard.tsx:233
+@radix-ui_react-dialog.js?v=b89b54e2:342 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=b89b54e2:342
+GooglePlacesAutocomplete.tsx:40 Google Maps API Key status: CONFIGURED
+@radix-ui_react-dialog.js?v=b89b54e2:342 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ @radix-ui_react-dialog.js?v=b89b54e2:342
+commitHookEffectListMount @ chunk-RPCDYKBN.js?v=b89b54e2:16915
+commitPassiveMountOnFiber @ chunk-RPCDYKBN.js?v=b89b54e2:18156
+commitPassiveMountEffects_complete @ chunk-RPCDYKBN.js?v=b89b54e2:18129
+commitPassiveMountEffects_begin @ chunk-RPCDYKBN.js?v=b89b54e2:18119
+commitPassiveMountEffects @ chunk-RPCDYKBN.js?v=b89b54e2:18109
+flushPassiveEffectsImpl @ chunk-RPCDYKBN.js?v=b89b54e2:19490
+flushPassiveEffects @ chunk-RPCDYKBN.js?v=b89b54e2:19447
+commitRootImpl @ chunk-RPCDYKBN.js?v=b89b54e2:19416
+commitRoot @ chunk-RPCDYKBN.js?v=b89b54e2:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=b89b54e2:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=b89b54e2:9119
+(anonymous) @ chunk-RPCDYKBN.js?v=b89b54e2:18627
+GooglePlacesAutocomplete.tsx:207 Could not find internal input field in autocomplete element after 3 seconds

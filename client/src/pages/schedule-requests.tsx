@@ -17,7 +17,7 @@ import { z } from "zod";
 
 const scheduleRequestSchema = z.object({
   teamId: z.string().min(1, "Team is required"),
-  requestType: z.enum(["game", "practice", "tournament"]),
+  requestType: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course"]),
   requestedDate: z.string().min(1, "Date is required"),
   requestedTime: z.string().min(1, "Time is required"),
   duration: z.number().min(30, "Duration must be at least 30 minutes"),
@@ -32,7 +32,7 @@ type ScheduleRequestFormData = z.infer<typeof scheduleRequestSchema>;
 interface ScheduleRequest {
   id: string;
   teamId: string;
-  requestType: 'game' | 'practice' | 'tournament';
+  requestType: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course';
   requestedDate: string;
   requestedTime: string;
   duration: number;
@@ -227,9 +227,18 @@ export default function ScheduleRequests() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="practice">Practice</SelectItem>
                             <SelectItem value="game">Game</SelectItem>
                             <SelectItem value="tournament">Tournament</SelectItem>
+                            <SelectItem value="camp">Camp</SelectItem>
+                            <SelectItem value="exhibition">Exhibition</SelectItem>
+                            <SelectItem value="practice">Practice</SelectItem>
+                            <SelectItem value="skills">Skills</SelectItem>
+                            <SelectItem value="workshop">Workshop</SelectItem>
+                            <SelectItem value="talk">Talk</SelectItem>
+                            <SelectItem value="combine">Combine</SelectItem>
+                            <SelectItem value="training">Training</SelectItem>
+                            <SelectItem value="meeting">Meeting</SelectItem>
+                            <SelectItem value="course">Course</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

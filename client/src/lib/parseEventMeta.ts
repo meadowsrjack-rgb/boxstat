@@ -7,7 +7,7 @@ export interface ParsedEvent {
   start: string; // ISO string
   end: string; // ISO string
   location: string;
-  type: 'practice' | 'game' | 'tournament' | 'camp' | 'skills' | 'other';
+  type: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course' | 'other';
   ageTags: string[];
   teamTags: string[];
   coaches: string[];
@@ -23,16 +23,30 @@ export function parseEventMeta(event: any): ParsedEvent {
   const combinedText = `${title} ${description}`.toLowerCase();
   
   let type: ParsedEvent['type'] = 'other';
-  if (combinedText.includes('practice') || combinedText.includes('training')) {
-    type = 'practice';
-  } else if (combinedText.includes('game') || combinedText.includes('match')) {
+  if (combinedText.includes('game') || combinedText.includes('match')) {
     type = 'game';
   } else if (combinedText.includes('tournament') || combinedText.includes('tourney')) {
     type = 'tournament';
   } else if (combinedText.includes('camp')) {
     type = 'camp';
+  } else if (combinedText.includes('exhibition') || combinedText.includes('showcase')) {
+    type = 'exhibition';
+  } else if (combinedText.includes('practice')) {
+    type = 'practice';
   } else if (combinedText.includes('skills') || combinedText.includes('skill')) {
     type = 'skills';
+  } else if (combinedText.includes('workshop')) {
+    type = 'workshop';
+  } else if (combinedText.includes('talk') || combinedText.includes('seminar')) {
+    type = 'talk';
+  } else if (combinedText.includes('combine')) {
+    type = 'combine';
+  } else if (combinedText.includes('training')) {
+    type = 'training';
+  } else if (combinedText.includes('meeting')) {
+    type = 'meeting';
+  } else if (combinedText.includes('course') || combinedText.includes('class')) {
+    type = 'course';
   }
 
   // Parse age groups from title
@@ -87,16 +101,30 @@ export function parseEventMeta(event: any): ParsedEvent {
 
 export function getEventTypeDotColor(type: ParsedEvent['type']): string {
   switch (type) {
-    case 'practice':
-      return 'bg-blue-500';
     case 'game':
       return 'bg-green-500';
     case 'tournament':
       return 'bg-purple-500';
     case 'camp':
       return 'bg-orange-500';
+    case 'exhibition':
+      return 'bg-pink-500';
+    case 'practice':
+      return 'bg-blue-500';
     case 'skills':
       return 'bg-yellow-500';
+    case 'workshop':
+      return 'bg-indigo-500';
+    case 'talk':
+      return 'bg-teal-500';
+    case 'combine':
+      return 'bg-cyan-500';
+    case 'training':
+      return 'bg-sky-500';
+    case 'meeting':
+      return 'bg-slate-500';
+    case 'course':
+      return 'bg-amber-500';
     default:
       return 'bg-gray-500';
   }

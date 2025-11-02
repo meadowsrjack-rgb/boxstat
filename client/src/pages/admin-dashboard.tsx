@@ -1896,10 +1896,18 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="practice">Practice</SelectItem>
                             <SelectItem value="game">Game</SelectItem>
                             <SelectItem value="tournament">Tournament</SelectItem>
+                            <SelectItem value="camp">Camp</SelectItem>
+                            <SelectItem value="exhibition">Exhibition</SelectItem>
+                            <SelectItem value="practice">Practice</SelectItem>
+                            <SelectItem value="skills">Skills</SelectItem>
+                            <SelectItem value="workshop">Workshop</SelectItem>
+                            <SelectItem value="talk">Talk</SelectItem>
+                            <SelectItem value="combine">Combine</SelectItem>
+                            <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="meeting">Meeting</SelectItem>
+                            <SelectItem value="course">Course</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -2063,10 +2071,18 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="practice">Practice</SelectItem>
                         <SelectItem value="game">Game</SelectItem>
                         <SelectItem value="tournament">Tournament</SelectItem>
+                        <SelectItem value="camp">Camp</SelectItem>
+                        <SelectItem value="exhibition">Exhibition</SelectItem>
+                        <SelectItem value="practice">Practice</SelectItem>
+                        <SelectItem value="skills">Skills</SelectItem>
+                        <SelectItem value="workshop">Workshop</SelectItem>
+                        <SelectItem value="talk">Talk</SelectItem>
+                        <SelectItem value="combine">Combine</SelectItem>
+                        <SelectItem value="training">Training</SelectItem>
                         <SelectItem value="meeting">Meeting</SelectItem>
+                        <SelectItem value="course">Course</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

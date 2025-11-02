@@ -44,9 +44,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
-import CoachDashboard from "./coach-dashboard";
 import PlayerDashboard from "./player-dashboard";
-import UnifiedAccount from "./unified-account";
 import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
@@ -253,10 +251,6 @@ export default function AdminDashboard() {
                 <DollarSign className="w-4 h-4 mr-2" />
                 Products
               </TabsTrigger>
-              <TabsTrigger value="preview" data-testid="tab-preview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Eye className="w-4 h-4 mr-2" />
-                Preview
-              </TabsTrigger>
               <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Layers className="w-4 h-4 mr-2" />
                 Divisions
@@ -321,10 +315,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="products">
             <ProductsTab organization={organization} />
-          </TabsContent>
-
-          <TabsContent value="preview">
-            <PreviewTab users={users} />
           </TabsContent>
 
           <TabsContent value="divisions">
@@ -3855,199 +3845,4 @@ function SettingsTab({ organization }: any) {
       </CardContent>
     </Card>
   );
-}
-
-// Preview Tab Component
-function PreviewTab({ users }: { users: any[] }) {
-  const [selectedUserId, setSelectedUserId] = useState<string>("");
-  const [previewUser, setPreviewUser] = useState<any>(null);
-
-  const handleUserSelect = (userId: string) => {
-    setSelectedUserId(userId);
-    const user = users.find((u: any) => u.id === userId);
-    setPreviewUser(user);
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "parent":
-        return "Parent (Unified Account)";
-      case "player":
-        return "Player";
-      case "coach":
-        return "Coach";
-      case "admin":
-        return "Admin";
-      default:
-        return role;
-    }
-  };
-
-  // Create a mock auth context for preview
-  const PreviewWrapper = ({ children }: { children: React.ReactNode }) => {
-    return (
-      <div className="border-2 border-dashed border-blue-300 rounded-lg overflow-hidden bg-white">
-        <div className="bg-blue-50 border-b border-blue-300 px-4 py-2 flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue-600" />
-          <span className="text-sm font-medium text-blue-900">
-            Previewing as: {previewUser?.firstName} {previewUser?.lastName} ({getRoleLabel(previewUser?.role)})
-          </span>
-        </div>
-        <div className="preview-content">
-          {children}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>User Dashboard Preview</CardTitle>
-          <CardDescription>Select a user to preview their account/dashboard as they would see it</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* User Selector */}
-            <div>
-              <Label htmlFor="preview-user-select">Select User to Preview</Label>
-              <Select value={selectedUserId} onValueChange={handleUserSelect}>
-                <SelectTrigger id="preview-user-select" data-testid="select-preview-user">
-                  <SelectValue placeholder="Choose a user..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.length === 0 ? (
-                    <div className="px-2 py-6 text-center text-sm text-gray-500">
-                      No users available
-                    </div>
-                  ) : (
-                    <>
-                      {users.filter((u: any) => u.role === "parent").length > 0 && (
-                        <>
-                          <SelectGroup>
-                            <SelectLabel>Parents</SelectLabel>
-                            {users.filter((u: any) => u.role === "parent").map((user: any) => (
-                              <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                                {user.firstName} {user.lastName} ({user.email})
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          <SelectSeparator />
-                        </>
-                      )}
-                      
-                      {users.filter((u: any) => u.role === "player").length > 0 && (
-                        <>
-                          <SelectGroup>
-                            <SelectLabel>Players</SelectLabel>
-                            {users.filter((u: any) => u.role === "player").map((user: any) => (
-                              <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                                {user.firstName} {user.lastName} {user.accountHolderId && "(Child)"}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                          <SelectSeparator />
-                        </>
-                      )}
-                      
-                      {users.filter((u: any) => u.role === "coach").length > 0 && (
-                        <SelectGroup>
-                          <SelectLabel>Coaches</SelectLabel>
-                          {users.filter((u: any) => u.role === "coach").map((user: any) => (
-                            <SelectItem key={user.id} value={user.id} data-testid={`user-option-${user.id}`}>
-                              {user.firstName} {user.lastName} ({user.email})
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {previewUser && (
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-600">Name:</span>
-                    <p className="font-medium">{previewUser.firstName} {previewUser.lastName}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Role:</span>
-                    <p className="font-medium">{getRoleLabel(previewUser.role)}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Email:</span>
-                    <p className="font-medium">{previewUser.email}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Status:</span>
-                    <Badge variant={previewUser.isActive ? "default" : "outline"}>
-                      {previewUser.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preview Area */}
-      {previewUser && (
-        <PreviewWrapper>
-          {/* Parent or Player role shows Unified Account */}
-          {(previewUser.role === "parent" || previewUser.role === "player") && (
-            <div data-testid="preview-unified-account">
-              <UnifiedAccountPreview userId={previewUser.id} />
-            </div>
-          )}
-          
-          {/* Coach role shows Coach Dashboard */}
-          {previewUser.role === "coach" && (
-            <div data-testid="preview-coach-dashboard">
-              <CoachDashboardPreview userId={previewUser.id} />
-            </div>
-          )}
-
-          {/* Admin role */}
-          {previewUser.role === "admin" && (
-            <div className="p-12 text-center">
-              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold mb-2">Admin Dashboard</h3>
-              <p className="text-gray-600">Admin users see the Admin Dashboard (current view)</p>
-            </div>
-          )}
-        </PreviewWrapper>
-      )}
-
-      {!previewUser && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Eye className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">No User Selected</h3>
-            <p className="text-gray-600">Select a user above to preview their dashboard</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// Unified Account Preview Component (mimics user's view)
-function UnifiedAccountPreview({ userId }: { userId: string }) {
-  // Temporarily override auth context for preview
-  const originalFetch = window.fetch;
-  
-  // Mock fetch to return preview user data
-  const mockUserData = { id: userId };
-  
-  return <UnifiedAccount />;
-}
-
-// Coach Dashboard Preview Component
-function CoachDashboardPreview({ userId }: { userId: string }) {
-  return <CoachDashboard />;
 }

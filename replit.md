@@ -27,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 - **ORM**: Drizzle ORM for type-safe operations.
 - **Schema**: Supports users, teams, events, payments, facilities, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
 - **Programs**: Supports 10 programs (e.g., Skills Academy, FNHTL, Youth-Club, High-School) with support for ongoing/infinite programs.
+- **Divisions**: Age/level divisions with linked teams (team_ids array). Used to organize players into age groups and associate them with relevant teams.
 - **User Fields**: Comprehensive user data including organization_id, division_id, products (JSONB array for active subscriptions), skills_assessments (JSONB year-tagged results), height_in (INTEGER), position (PG/SG/SF/PF/C), profile_visibility (BOOLEAN), bio (TEXT), notes (TEXT for admin use), guardian_id (FK to users), emergency_contact_json (JSONB), and last_login (TIMESTAMP). Includes performance tracking fields: total_practices, total_games, consecutive_checkins, videos_completed, years_active.
 
 ### Key Features & Design Decisions

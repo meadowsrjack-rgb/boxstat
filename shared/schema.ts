@@ -207,7 +207,7 @@ export const divisions = pgTable("divisions", {
   name: varchar().notNull(),
   description: text(),
   ageRange: varchar("age_range"), // e.g., "6th-8th", "U12", "14-17"
-  programIds: text("program_ids").array(), // JSON array of linked program IDs
+  teamIds: text("team_ids").array(), // JSON array of linked team IDs
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
@@ -929,7 +929,7 @@ export interface Division {
   name: string;
   description?: string;
   ageRange?: string;
-  programIds?: string[];
+  teamIds?: string[];
   isActive: boolean;
   createdAt: Date;
 }
@@ -939,7 +939,7 @@ export const insertDivisionSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
   ageRange: z.string().optional(),
-  programIds: z.array(z.string()).default([]),
+  teamIds: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
 });
 

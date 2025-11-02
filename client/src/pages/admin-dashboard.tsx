@@ -327,7 +327,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="divisions">
-            <DivisionsTab divisions={divisions} programs={programs} organization={organization} />
+            <DivisionsTab divisions={divisions} teams={teams} organization={organization} />
           </TabsContent>
 
           <TabsContent value="skills">
@@ -903,13 +903,11 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
-                        {divisions
-                          ?.filter((division: any) => !selectedProgram || division.programIds?.includes(selectedProgram))
-                          .map((division: any) => (
-                            <SelectItem key={division.id} value={division.id}>
-                              {division.name}
-                            </SelectItem>
-                          ))}
+                        {divisions?.map((division: any) => (
+                          <SelectItem key={division.id} value={division.id}>
+                            {division.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -3524,7 +3522,7 @@ function formatStripePrice(price: any): string {
 }
 
 // Divisions Tab Component
-function DivisionsTab({ divisions, programs, organization }: any) {
+function DivisionsTab({ divisions, teams, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any>(null);
@@ -3536,7 +3534,7 @@ function DivisionsTab({ divisions, programs, organization }: any) {
       name: "",
       description: "",
       ageRange: "",
-      programIds: [],
+      teamIds: [],
       isActive: true,
     },
   });
@@ -3580,7 +3578,7 @@ function DivisionsTab({ divisions, programs, organization }: any) {
       name: division.name,
       description: division.description || "",
       ageRange: division.ageRange || "",
-      programIds: division.programIds || [],
+      teamIds: division.teamIds || [],
       isActive: division.isActive,
     });
     setIsDialogOpen(true);
@@ -3655,10 +3653,10 @@ function DivisionsTab({ divisions, programs, organization }: any) {
                 />
                 <FormField
                   control={form.control}
-                  name="programIds"
+                  name="teamIds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Linked Programs</FormLabel>
+                      <FormLabel>Linked Teams</FormLabel>
                       <FormControl>
                         <Select
                           value={field.value?.[0] || ""}
@@ -3669,19 +3667,19 @@ function DivisionsTab({ divisions, programs, organization }: any) {
                             }
                           }}
                         >
-                          <SelectTrigger data-testid="select-division-programs">
-                            <SelectValue placeholder="Select programs..." />
+                          <SelectTrigger data-testid="select-division-teams">
+                            <SelectValue placeholder="Select teams..." />
                           </SelectTrigger>
                           <SelectContent>
-                            {programs.map((program: any) => (
-                              <SelectItem key={program.id} value={program.id.toString()}>
-                                {program.name}
+                            {teams.map((team: any) => (
+                              <SelectItem key={team.id} value={team.id.toString()}>
+                                {team.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormDescription>Selected: {field.value?.length || 0} program(s)</FormDescription>
+                      <FormDescription>Selected: {field.value?.length || 0} team(s)</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -3718,7 +3716,7 @@ function DivisionsTab({ divisions, programs, organization }: any) {
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Age Range</TableHead>
-              <TableHead>Programs</TableHead>
+              <TableHead>Teams</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -3731,7 +3729,7 @@ function DivisionsTab({ divisions, programs, organization }: any) {
                 </TableCell>
                 <TableCell>{division.description || "-"}</TableCell>
                 <TableCell>{division.ageRange || "-"}</TableCell>
-                <TableCell>{division.programIds?.length || 0}</TableCell>
+                <TableCell>{division.teamIds?.length || 0}</TableCell>
                 <TableCell>
                   <Badge variant={division.isActive ? "default" : "secondary"} data-testid={`badge-division-status-${division.id}`}>
                     {division.isActive ? "Active" : "Inactive"}

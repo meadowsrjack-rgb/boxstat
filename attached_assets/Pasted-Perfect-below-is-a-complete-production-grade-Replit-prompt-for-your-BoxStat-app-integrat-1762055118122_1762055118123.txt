@@ -1,0 +1,305 @@
+Perfect — below is a **complete, production-grade Replit prompt** for your **BoxStat app**, integrating:
+✅ full **relational awards + badges system**
+✅ a centralized **JSON-based award configuration**
+✅ **automatic trigger logic** (check-ins, feedback, progress tracking)
+✅ **RSVP system fix** (proper recording, updating, and trigger-linking)
+✅ full **admin + player dashboard sync**
+
+---
+
+# 🧠 PROMPT FOR REPLIT AI / DEV AGENT
+
+> **Objective:**
+> Upgrade the **BoxStat App** by:
+>
+> * Implementing a **relational Awards & Badges System** with all trophy and badge logic.
+> * Adding a unified `awards.config.json` that defines all award triggers, thresholds, and categories.
+> * Ensuring all triggers automatically update the player’s awards, dashboards, and database tables.
+> * Fixing the **RSVP logic** so that RSVP submissions, streaks, and check-ins are correctly tracked and stored.
+> * Updating the Admin and Player dashboards to reflect new awards and RSVP data in real time.
+
+---
+
+## ⚙️ 1️⃣ Database Schema Changes (PostgreSQL / Supabase)
+
+### Amend `users` Table
+
+```sql
+ALTER TABLE users
+ADD COLUMN height_in INTEGER,
+ADD COLUMN position TEXT CHECK (position IN ('PG','SG','SF','PF','C')),
+ADD COLUMN profile_visibility BOOLEAN DEFAULT TRUE,
+ADD COLUMN total_games INTEGER DEFAULT 0,
+ADD COLUMN total_fnh_games INTEGER DEFAULT 0,
+ADD COLUMN total_practices INTEGER DEFAULT 0,
+ADD COLUMN total_skills_sessions INTEGER DEFAULT 0,
+ADD COLUMN total_checkins INTEGER DEFAULT 0,
+ADD COLUMN total_rsvps INTEGER DEFAULT 0,
+ADD COLUMN consecutive_rsvps INTEGER DEFAULT 0,
+ADD COLUMN years_active INTEGER DEFAULT 0,
+ADD COLUMN videos_completed INTEGER DEFAULT 0;
+```
+
+### Create `awards` Table
+
+```sql
+CREATE TABLE awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  award_name TEXT,
+  award_tier TEXT CHECK (award_tier IN ('Trophy','Badge')),
+  award_class TEXT CHECK (award_class IN ('Legacy','Team','Coach','HallOfFame','Superstar','AllStar','Starter','Prospect')),
+  award_type TEXT CHECK (award_type IN ('annual','lifetime','milestone')),
+  year INTEGER,
+  description TEXT,
+  visible BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Create `checkins`, `coach_feedback`, `rsvps`
+
+```sql
+CREATE TABLE checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  event_type TEXT CHECK (event_type IN ('Practice','Game','FNH','Skill')),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE coach_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  coach_id UUID REFERENCES users(id),
+  feedback_type TEXT CHECK (feedback_type IN ('MVP','Hustle','Teammate','Student')),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE rsvps (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  event_id UUID,
+  event_type TEXT,
+  status TEXT CHECK (status IN ('yes','no','late','missed')),
+  submitted_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## 📦 2️⃣ Add Config File — `/config/awards.config.json`
+
+```json
+{
+  "Trophies": {
+    "Heart & Hustle Award": {
+      "tier": "Trophy",
+      "class": "Legacy",
+      "type": "annual",
+      "description": "Recognizes the single player across all BoxStat who gave maximum effort all year.",
+      "trigger": "manual_selection"
+    },
+    "Spirit Award": {
+      "tier": "Trophy",
+      "class": "Legacy",
+      "type": "annual",
+      "description": "Recognizes the single player who uplifted team morale and represented BoxStat values.",
+      "trigger": "manual_selection"
+    },
+    "Team MVP": {
+      "tier": "Trophy",
+      "class": "Team",
+      "type": "seasonal",
+      "description": "Awarded to the player with the greatest impact on team success.",
+      "trigger": "coach_assigned"
+    },
+    "Coach’s Award": {
+      "tier": "Trophy",
+      "class": "Team",
+      "type": "seasonal",
+      "description": "Awarded by the coach for leadership and dedication.",
+      "trigger": "coach_assigned"
+    },
+    "MIP": {
+      "tier": "Trophy",
+      "class": "Team",
+      "type": "seasonal",
+      "description": "Awarded for most improved performance.",
+      "trigger": "coach_assigned"
+    },
+    "Defensive Player": {
+      "tier": "Trophy",
+      "class": "Team",
+      "type": "seasonal",
+      "description": "Awarded for outstanding defensive contribution.",
+      "trigger": "coach_assigned"
+    }
+  },
+  "Badges": {
+    "Prospect": {
+      "The Debut": { "trigger": "games_played >= 1" },
+      "Friday Lights": { "trigger": "fnh_games >= 1" },
+      "Practice Rookie": { "trigger": "practices >= 10" },
+      "Skill Starter": { "trigger": "skills >= 10" },
+      "Game Planner": { "trigger": "rsvps >= 1" },
+      "Checked In": { "trigger": "checkins >= 1" },
+      "Road Warrior": { "trigger": "events_away >= 1" },
+      "Film Rookie": { "trigger": "videos >= 1" },
+      "First Ten": { "trigger": "games_played >= 10" },
+      "FNH Rookie": { "trigger": "fnh_games >= 10" }
+    },
+    "Starter": {
+      "Locked In": { "trigger": "consecutive_practices >= 10" },
+      "Dedicated Grinder": { "trigger": "practices >= 25" },
+      "Skills Seeker": { "trigger": "skills >= 25" },
+      "Regular Competitor": { "trigger": "games_played >= 25" },
+      "FNH Regular": { "trigger": "fnh_games >= 25" },
+      "RSVP Streak": { "trigger": "consecutive_rsvps >= 5" },
+      "Practice Partner": { "trigger": "all_practices_in_week = true" },
+      "Film Student": { "trigger": "videos >= 5" },
+      "Back-to-Back Sessions": { "trigger": "consecutive_weeks_videos >= 2" }
+    },
+    "AllStar": {
+      "Game Changer": { "trigger": "mvp_awards >= 3" },
+      "The Engine": { "trigger": "hustle_awards >= 3" },
+      "The Glue": { "trigger": "teammate_awards >= 3" },
+      "The Protégé": { "trigger": "student_awards >= 3" },
+      "Practice Fiend": { "trigger": "practices >= 50" },
+      "Skills Devotee": { "trigger": "skills >= 50" },
+      "Seasoned Competitor": { "trigger": "games_played >= 50" },
+      "FNH Veteran": { "trigger": "fnh_games >= 50" },
+      "First Year Anniversary": { "trigger": "years_active >= 1" },
+      "Digital Scholar": { "trigger": "weeks_online >= 6" }
+    },
+    "Superstar": {
+      "Marquee Player": { "trigger": "mvp_awards >= 5" },
+      "The Workhorse": { "trigger": "hustle_awards >= 5" },
+      "The Cornerstone": { "trigger": "teammate_awards >= 5" },
+      "Coach on the Court": { "trigger": "student_awards >= 5" },
+      "Coach’s Choice": { "trigger": "has_all_coach_awards = true" },
+      "Ironman": { "trigger": "season_games_attended = 100%" },
+      "The Pillar": { "trigger": "season_practices_attended = 100%" },
+      "Practice Centurion": { "trigger": "practices >= 100" },
+      "Skills Specialist": { "trigger": "skills >= 100" },
+      "Seventy-Five Club": { "trigger": "games_played >= 75" },
+      "Team Veteran": { "trigger": "years_active >= 3" }
+    },
+    "HallOfFame": {
+      "Superstar Supreme": { "trigger": "mvp_awards >= 10" },
+      "Relentless": { "trigger": "hustle_awards >= 10" },
+      "The Linchpin": { "trigger": "teammate_awards >= 10" },
+      "The Paragon": { "trigger": "student_awards >= 10" },
+      "Dynasty Member": { "trigger": "years_active >= 5" },
+      "Franchise Player": { "trigger": "games_played >= 100" },
+      "Training Titan": { "trigger": "practices >= 250 OR skills >= 250" },
+      "Immortal Ironman": { "trigger": "full_year_games_attended = true" },
+      "Digital Triple Crown": { "trigger": "programs_completed >= 3" },
+      "The Completer": { "trigger": "has_all_superstar_badges = true" }
+    }
+  }
+}
+```
+
+---
+
+## 🔁 3️⃣ Backend Logic
+
+### **Award Engine**
+
+* Create `/server/utils/awardEngine.ts`
+* Load `awards.config.json`
+* On each relevant event (`checkin`, `feedback`, `RSVP`, etc.), recalculate:
+
+  1. Update player counters (`total_games`, `total_practices`, etc.)
+  2. Compare against config triggers.
+  3. If player meets a new trigger → insert into `awards` if not already awarded.
+* Use reusable helper:
+
+```ts
+function meetsTrigger(userStats, conditionString) {
+  // Parse "games_played >= 25", evaluate dynamically
+}
+```
+
+---
+
+## 🧩 4️⃣ RSVP System Fix
+
+**Goals:**
+
+* Ensure RSVPs are stored and linked to `users` and `events`.
+* Track consecutive RSVP streaks (`consecutive_rsvps`).
+* Handle “late” or “missed” correctly (reset streak).
+* Update `total_rsvps` counter after every submission.
+* When `consecutive_rsvps >= 5` → award “RSVP Streak” badge.
+
+**Implementation:**
+
+```ts
+POST /api/rsvp
+→ validate event_id + user_id
+→ insert or update rsvps table
+→ increment user.total_rsvps
+→ if (status === 'yes' && submitted_on_time) increment consecutive_rsvps else reset to 0
+→ call awardEngine('rsvp', user_id)
+```
+
+---
+
+## 🖥️ 5️⃣ Admin Dashboard: `Awards & Badges`
+
+**New Features:**
+
+* Display all awards grouped by Tier + Class.
+* Add “Recalculate Awards” button (calls `/api/triggers/recalculate`).
+* Allow manual override (“Grant Award” → opens modal).
+* Filters: `[All] [Trophies] [Badges] [Legacy] [Team] [Hall of Fame]`
+* Live search by player name.
+
+---
+
+## 🎮 6️⃣ Player Dashboard & Card Updates
+
+* Fetch `/api/users/:id/awards`
+* Display grouped badges by color:
+
+  * 🟨 Gold (Hall of Fame)
+  * 🟪 Purple (Superstar)
+  * 🔵 Blue (All-Star)
+  * 🟢 Green (Starter)
+  * ⚪ Gray (Prospect)
+* Include progress bar below each category (e.g. “Next: 2 MVPs away from Marquee Player”).
+* Fetch and show RSVP streak and latest stats in player card.
+
+---
+
+## 🧠 7️⃣ Backend Endpoints
+
+| Endpoint                         | Description                       |
+| -------------------------------- | --------------------------------- |
+| `GET /api/awards`                | List all awards                   |
+| `GET /api/users/:id/awards`      | Player-specific                   |
+| `POST /api/awards`               | Manual admin add                  |
+| `POST /api/triggers/recalculate` | Re-run award engine for all users |
+| `POST /api/rsvp`                 | Submit/update RSVP                |
+| `POST /api/checkin`              | Record check-in                   |
+| `POST /api/feedback`             | Coach gives MVP/Hustle/etc.       |
+
+---
+
+## ✅ 8️⃣ Final Instruction to Replit
+
+> **Implement the following in BoxStat:**
+>
+> 1. Extend `users` table with activity counters.
+> 2. Add relational `awards`, `checkins`, `coach_feedback`, and `rsvps` tables.
+> 3. Add centralized `/config/awards.config.json` defining all trophies and badges.
+> 4. Implement an award engine that auto-triggers awards when milestones or coach feedback thresholds are met.
+> 5. Fix RSVP logic — ensure RSVP submissions are stored, streaks tracked, and linked to awards.
+> 6. Update Admin Dashboard (“Awards & Badges”) for viewing, granting, and recalculating awards.
+> 7. Sync Player Dashboard and Player Card with new award/badge data and RSVP streaks.
+> 8. Confirm all awards insert into `awards` table, appear in dashboards, and persist in database.
+
+---
+
+Would you like me to include the **trigger file (`triggers.sql`)** next — defining every award’s SQL function + trigger (for direct Supabase setup)?

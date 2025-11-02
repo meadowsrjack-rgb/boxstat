@@ -41,7 +41,7 @@ Preferred communication style: Simple, everyday language.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5) and export/share them.
 - **Coach Settings**: Customizable coach profiles with experience, bio, previous teams, playing experience, and philosophy.
-- **Admin Panel**: Comprehensive CRUD operations for users, teams, events, awards, packages, divisions, skills, and notifications, with robust table views, search functionality, and a calendar view for event management. Users table includes `isActive` toggle. Functional cascading dropdowns for user editing (Program filters Team and Division).
+- **Admin Panel**: Comprehensive CRUD operations for users, teams, events, awards, divisions, skills, and notifications, with robust table views, search functionality, and a calendar view for event management. Users table includes `isActive` toggle. Functional cascading dropdowns for user editing (Program filters Team and Division). Products tab displays Stripe product catalog (read-only, managed in Stripe dashboard). Preview tab removed (November 2025).
 
 ## External Dependencies
 

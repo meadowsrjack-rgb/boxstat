@@ -51,6 +51,10 @@ import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
+import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
+import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -164,12 +168,17 @@ export default function AdminDashboard() {
     queryKey: ["/api/skills"],
   });
 
+  // Fetch evaluations
+  const { data: evaluations = [], isLoading: evaluationsLoading } = useQuery<any[]>({
+    queryKey: ["/api/evaluations"],
+  });
+
   // Fetch notifications
   const { data: notifications = [], isLoading: notificationsLoading } = useQuery<any[]>({
     queryKey: ["/api/notifications"],
   });
 
-  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardsLoading || paymentsLoading || divisionsLoading || skillsLoading || notificationsLoading;
+  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardsLoading || paymentsLoading || divisionsLoading || skillsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
   const stats = {
@@ -322,7 +331,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="skills">
-            <SkillsTab skills={skills} users={users} organization={organization} />
+            <SkillsTab evaluations={evaluations} users={users} organization={organization} />
           </TabsContent>
 
           <TabsContent value="notifications">
@@ -3217,272 +3226,288 @@ function DivisionsTab({ divisions, programs, organization }: any) {
   );
 }
 
-// Skills Tab Component
-function SkillsTab({ skills, users, organization }: any) {
+// Skills Tab Component - Displays Quarterly Evaluations
+function SkillsTab({ evaluations, users, organization }: any) {
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSkill, setEditingSkill] = useState<any>(null);
   const [filterPlayerId, setFilterPlayerId] = useState<string>("all");
-
-  const { data: currentUser } = useQuery<any>({
-    queryKey: ["/api/auth/user"],
-  });
+  const [filterQuarter, setFilterQuarter] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>("all");
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   const players = users.filter((u: any) => u.role === "player");
 
-  const form = useForm({
-    resolver: zodResolver(insertSkillSchema),
-    defaultValues: {
-      organizationId: organization?.id || "",
-      playerId: "",
-      coachId: currentUser?.id || "",
-      category: "",
-      score: 5,
-      notes: "",
-    },
-  });
-
-  const createSkill = useMutation({
-    mutationFn: async (data: any) => {
-      if (editingSkill) {
-        return await apiRequest("PATCH", `/api/skills/${editingSkill.id}`, data);
-      }
-      return await apiRequest("POST", "/api/skills", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
-      toast({ title: editingSkill ? "Skill updated successfully" : "Skill evaluation created successfully" });
-      setIsDialogOpen(false);
-      setEditingSkill(null);
-      form.reset();
-    },
-    onError: () => {
-      toast({ title: "Failed to save skill evaluation", variant: "destructive" });
-    },
-  });
-
-  const deleteSkill = useMutation({
+  const deleteEvaluation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/skills/${id}`, {});
+      return await apiRequest("DELETE", `/api/evaluations/${id}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/skills"] });
-      toast({ title: "Skill evaluation deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/evaluations"] });
+      toast({ title: "Evaluation deleted successfully" });
     },
     onError: () => {
-      toast({ title: "Failed to delete skill evaluation", variant: "destructive" });
+      toast({ title: "Failed to delete evaluation", variant: "destructive" });
     },
   });
 
-  const handleEdit = (skill: any) => {
-    setEditingSkill(skill);
-    form.reset({
-      organizationId: skill.organizationId,
-      playerId: skill.playerId,
-      coachId: skill.coachId,
-      category: skill.category,
-      score: skill.score,
-      notes: skill.notes || "",
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDialogClose = (open: boolean) => {
-    setIsDialogOpen(open);
-    if (!open) {
-      setEditingSkill(null);
-      form.reset();
+  const toggleRow = (id: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
     }
+    setExpandedRows(newExpanded);
   };
 
-  const filteredSkills = filterPlayerId === "all" 
-    ? skills 
-    : skills.filter((s: any) => s.playerId === filterPlayerId);
-
-  const renderStars = (rating: number) => {
-    return (
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-          <Star
-            key={star}
-            className={`w-3 h-3 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
-          />
-        ))}
-      </div>
-    );
+  // Calculate category average
+  const calculateCategoryAverage = (scores: EvalScores, categoryName: SkillCategoryName) => {
+    const categoryScores = scores[categoryName];
+    if (!categoryScores) return 0;
+    const values = Object.values(categoryScores);
+    if (values.length === 0) return 0;
+    return +(values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1);
   };
+
+  // Calculate overall average
+  const calculateOverallAverage = (scores: EvalScores) => {
+    const allAverages: number[] = [];
+    SKILL_CATEGORIES.forEach((cat) => {
+      const avg = calculateCategoryAverage(scores, cat.name);
+      if (avg > 0) allAverages.push(avg);
+    });
+    if (allAverages.length === 0) return 0;
+    return +(allAverages.reduce((sum, val) => sum + val, 0) / allAverages.length).toFixed(1);
+  };
+
+  // Filter evaluations
+  const filteredEvaluations = evaluations.filter((evaluation: any) => {
+    if (filterPlayerId !== "all" && evaluation.playerId !== filterPlayerId) return false;
+    if (filterQuarter !== "all" && evaluation.quarter !== filterQuarter) return false;
+    if (filterYear !== "all" && evaluation.year.toString() !== filterYear) return false;
+    return true;
+  });
+
+  // Get unique years for filter
+  const uniqueYears: string[] = (Array.from(new Set(evaluations.map((e: any) => e.year.toString()))) as string[]).sort().reverse();
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <div>
-          <CardTitle>Manage Skills</CardTitle>
-          <CardDescription>Evaluate and track player skill development</CardDescription>
+          <CardTitle>Quarterly Skill Evaluations</CardTitle>
+          <CardDescription>View detailed skill assessments from coach dashboard</CardDescription>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-skill">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Skill Evaluation
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingSkill ? "Edit Skill Evaluation" : "Create New Skill Evaluation"}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createSkill.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="playerId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Player</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-skill-player">
-                            <SelectValue placeholder="Select player..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {players.map((player: any) => (
-                            <SelectItem key={player.id} value={player.id}>
-                              {player.firstName} {player.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Skill Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., Shooting, Dribbling, Defense" data-testid="input-skill-category" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="score"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rating (1-10)</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="number"
-                          min="1"
-                          max="10"
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          data-testid="input-skill-score"
-                        />
-                      </FormControl>
-                      <FormDescription>Rate the player's skill level from 1 (beginner) to 10 (expert)</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Notes (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Additional observations..." data-testid="input-skill-notes" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={createSkill.isPending} data-testid="button-submit-skill">
-                  {createSkill.isPending ? "Saving..." : editingSkill ? "Update Evaluation" : "Create Evaluation"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label>Filter by Player</Label>
-          <Select value={filterPlayerId} onValueChange={setFilterPlayerId}>
-            <SelectTrigger data-testid="select-filter-player">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Players</SelectItem>
-              {players.map((player: any) => (
-                <SelectItem key={player.id} value={player.id}>
-                  {player.firstName} {player.lastName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <Label>Filter by Player</Label>
+            <Select value={filterPlayerId} onValueChange={setFilterPlayerId}>
+              <SelectTrigger data-testid="select-filter-player">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Players</SelectItem>
+                {players.map((player: any) => (
+                  <SelectItem key={player.id} value={player.id}>
+                    {player.firstName} {player.lastName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Filter by Quarter</Label>
+            <Select value={filterQuarter} onValueChange={setFilterQuarter}>
+              <SelectTrigger data-testid="select-filter-quarter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Quarters</SelectItem>
+                <SelectItem value="Q1">Q1</SelectItem>
+                <SelectItem value="Q2">Q2</SelectItem>
+                <SelectItem value="Q3">Q3</SelectItem>
+                <SelectItem value="Q4">Q4</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Filter by Year</Label>
+            <Select value={filterYear} onValueChange={setFilterYear}>
+              <SelectTrigger data-testid="select-filter-year">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {uniqueYears.map((year: string) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Player</TableHead>
-              <TableHead>Skill Name</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Evaluated By</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredSkills.map((skill: any) => {
-              const player = users.find((u: any) => u.id === skill.playerId);
-              const coach = users.find((u: any) => u.id === skill.coachId);
+
+        {/* Evaluations Table */}
+        {filteredEvaluations.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No evaluations found. Coaches can create evaluations from the Coach Dashboard.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredEvaluations.map((evaluation: any) => {
+              const player = users.find((u: any) => u.id === evaluation.playerId);
+              const coach = users.find((u: any) => u.id === evaluation.coachId);
+              const isExpanded = expandedRows.has(evaluation.id);
+              const overallAvg = calculateOverallAverage(evaluation.scores);
+
               return (
-                <TableRow key={skill.id} data-testid={`row-skill-${skill.id}`}>
-                  <TableCell data-testid={`text-skill-player-${skill.id}`}>
-                    {player ? `${player.firstName} ${player.lastName}` : "Unknown"}
-                  </TableCell>
-                  <TableCell>{skill.category}</TableCell>
-                  <TableCell data-testid={`rating-skill-${skill.id}`}>
-                    {renderStars(skill.score)}
-                  </TableCell>
-                  <TableCell>{coach ? `${coach.firstName} ${coach.lastName}` : "Unknown"}</TableCell>
-                  <TableCell>
-                    {skill.evaluatedAt ? new Date(skill.evaluatedAt).toLocaleDateString() : "-"}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">{skill.notes || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(skill)}
-                        data-testid={`button-edit-skill-${skill.id}`}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteSkill.mutate(skill.id)}
-                        data-testid={`button-delete-skill-${skill.id}`}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
+                <Card key={evaluation.id} className="overflow-hidden" data-testid={`card-evaluation-${evaluation.id}`}>
+                  <Collapsible open={isExpanded} onOpenChange={() => toggleRow(evaluation.id)}>
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                          {/* Player Name */}
+                          <div>
+                            <div className="text-xs text-gray-500">Player</div>
+                            <div className="font-medium" data-testid={`text-player-${evaluation.id}`}>
+                              {player ? `${player.firstName} ${player.lastName}` : "Unknown"}
+                            </div>
+                          </div>
+
+                          {/* Quarter & Year */}
+                          <div>
+                            <div className="text-xs text-gray-500">Period</div>
+                            <div className="flex gap-2">
+                              <Badge variant="outline" data-testid={`badge-quarter-${evaluation.id}`}>
+                                {evaluation.quarter}
+                              </Badge>
+                              <Badge variant="outline" data-testid={`badge-year-${evaluation.id}`}>
+                                {evaluation.year}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Overall Average */}
+                          <div>
+                            <div className="text-xs text-gray-500">Overall Avg</div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-lg font-bold text-red-600" data-testid={`text-overall-avg-${evaluation.id}`}>
+                                {overallAvg}/5
+                              </div>
+                              <div className="flex gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-3 h-3 ${star <= Math.round(overallAvg) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Coach */}
+                          <div>
+                            <div className="text-xs text-gray-500">Evaluated By</div>
+                            <div className="text-sm" data-testid={`text-coach-${evaluation.id}`}>
+                              {coach ? `${coach.firstName} ${coach.lastName}` : "Unknown"}
+                            </div>
+                          </div>
+
+                          {/* Date */}
+                          <div>
+                            <div className="text-xs text-gray-500">Date</div>
+                            <div className="text-sm">
+                              {evaluation.createdAt ? format(new Date(evaluation.createdAt), "MMM d, yyyy") : "-"}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 justify-end">
+                            <CollapsibleTrigger asChild>
+                              <Button variant="outline" size="sm" data-testid={`button-expand-${evaluation.id}`}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                {isExpanded ? "Hide" : "View"} Details
+                                <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                              </Button>
+                            </CollapsibleTrigger>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm("Are you sure you want to delete this evaluation?")) {
+                                  deleteEvaluation.mutate(evaluation.id);
+                                }
+                              }}
+                              data-testid={`button-delete-evaluation-${evaluation.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </TableCell>
-                </TableRow>
+
+                    {/* Expanded Details */}
+                    <CollapsibleContent>
+                      <div className="border-t bg-gray-50 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {SKILL_CATEGORIES.map((category) => {
+                            const categoryAvg = calculateCategoryAverage(evaluation.scores, category.name);
+                            const categoryScores = evaluation.scores[category.name] || {};
+
+                            return (
+                              <Card key={category.name} className="bg-white">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm font-semibold">{category.name}</CardTitle>
+                                    <Badge variant="secondary" className="text-xs">
+                                      Avg: {categoryAvg}/5
+                                    </Badge>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                  {category.skills.map((skill) => (
+                                    <div key={skill} className="flex items-center justify-between text-sm">
+                                      <span className="text-gray-600">{skill}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{categoryScores[skill] || "-"}/5</span>
+                                        <div className="flex gap-0.5">
+                                          {[1, 2, 3, 4, 5].map((star) => (
+                                            <Star
+                                              key={star}
+                                              className={`w-3 h-3 ${star <= (categoryScores[skill] || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                                            />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+
+                        {/* Notes */}
+                        {evaluation.notes && (
+                          <div className="mt-4 p-3 bg-white rounded-md border">
+                            <div className="text-xs text-gray-500 mb-1">Notes</div>
+                            <div className="text-sm">{evaluation.notes}</div>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
               );
             })}
-          </TableBody>
-        </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -13,6 +13,7 @@ import {
   type PackageSelection,
   type Division,
   type Skill,
+  type Evaluation,
   type Notification,
   type EventWindow,
   type RsvpResponse,
@@ -30,6 +31,7 @@ import {
   type InsertPackageSelection,
   type InsertDivision,
   type InsertSkill,
+  type InsertEvaluation,
   type InsertNotification,
   type InsertEventWindow,
   type InsertRsvpResponse,
@@ -141,6 +143,15 @@ export interface IStorage {
   updateSkill(id: number, updates: Partial<Skill>): Promise<Skill | undefined>;
   deleteSkill(id: number): Promise<void>;
   
+  // Evaluation operations
+  getEvaluation(id: number): Promise<Evaluation | undefined>;
+  getEvaluationsByOrganization(organizationId: string): Promise<Evaluation[]>;
+  getEvaluationsByPlayer(playerId: string): Promise<Evaluation[]>;
+  getEvaluationByPlayerQuarter(playerId: string, quarter: string, year: number): Promise<Evaluation | undefined>;
+  createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
+  updateEvaluation(id: number, updates: Partial<Evaluation>): Promise<Evaluation | undefined>;
+  deleteEvaluation(id: number): Promise<void>;
+  
   // Notification operations
   getNotification(id: number): Promise<Notification | undefined>;
   getNotificationsByOrganization(organizationId: string): Promise<Notification[]>;
@@ -193,12 +204,14 @@ class MemStorage implements IStorage {
   private packageSelections: Map<string, PackageSelection> = new Map();
   private divisions: Map<number, Division> = new Map();
   private skills: Map<number, Skill> = new Map();
+  private evaluations: Map<number, Evaluation> = new Map();
   private notifications: Map<number, Notification> = new Map();
   private eventWindows: Map<number, EventWindow> = new Map();
   private rsvpResponses: Map<number, RsvpResponse> = new Map();
   private nextEventId = 1;
   private nextDivisionId = 1;
   private nextSkillId = 1;
+  private nextEvaluationId = 1;
   private nextNotificationId = 1;
   private nextEventWindowId = 1;
   private nextRsvpResponseId = 1;
@@ -1194,6 +1207,74 @@ class MemStorage implements IStorage {
   
   async deleteSkill(id: number): Promise<void> {
     this.skills.delete(id);
+  }
+  
+  // Evaluation operations
+  async getEvaluation(id: number): Promise<Evaluation | undefined> {
+    const evaluation = this.evaluations.get(id);
+    if (!evaluation) return undefined;
+    return { ...evaluation, id };
+  }
+  
+  async getEvaluationsByOrganization(organizationId: string): Promise<Evaluation[]> {
+    return Array.from(this.evaluations.values())
+      .filter(evaluation => evaluation.organizationId === organizationId)
+      .map(evaluation => ({ ...evaluation, id: evaluation.id }));
+  }
+  
+  async getEvaluationsByPlayer(playerId: string): Promise<Evaluation[]> {
+    return Array.from(this.evaluations.values())
+      .filter(evaluation => evaluation.playerId === playerId)
+      .map(evaluation => ({ ...evaluation, id: evaluation.id }));
+  }
+  
+  async getEvaluationByPlayerQuarter(playerId: string, quarter: string, year: number): Promise<Evaluation | undefined> {
+    return Array.from(this.evaluations.values()).find(
+      evaluation => evaluation.playerId === playerId && evaluation.quarter === quarter && evaluation.year === year
+    );
+  }
+  
+  async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
+    // Check if evaluation already exists for this player/quarter/year (upsert logic)
+    const existing = await this.getEvaluationByPlayerQuarter(evaluation.playerId, evaluation.quarter, evaluation.year);
+    
+    if (existing) {
+      // Update existing evaluation
+      const updated: Evaluation = {
+        ...existing,
+        coachId: evaluation.coachId,
+        scores: evaluation.scores,
+        notes: evaluation.notes,
+        updatedAt: new Date(),
+      };
+      this.evaluations.set(existing.id, updated);
+      return updated;
+    }
+    
+    // Create new evaluation
+    const id = this.nextEvaluationId++;
+    const now = new Date();
+    const newEvaluation: Evaluation = {
+      ...evaluation,
+      id,
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.evaluations.set(id, newEvaluation);
+    return newEvaluation;
+  }
+  
+  async updateEvaluation(id: number, updates: Partial<Evaluation>): Promise<Evaluation | undefined> {
+    const evaluation = this.evaluations.get(id);
+    if (!evaluation) return undefined;
+    
+    const updated = { ...evaluation, ...updates, id, updatedAt: new Date() };
+    this.evaluations.set(id, updated);
+    return updated;
+  }
+  
+  async deleteEvaluation(id: number): Promise<void> {
+    this.evaluations.delete(id);
   }
   
   // Notification operations
@@ -2254,6 +2335,104 @@ class DatabaseStorage implements IStorage {
     await db.delete(schema.skills).where(eq(schema.skills.id, id));
   }
 
+  // Evaluation operations
+  async getEvaluation(id: number): Promise<Evaluation | undefined> {
+    const results = await db.select().from(schema.evaluations).where(eq(schema.evaluations.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbEvaluationToEvaluation(results[0]);
+  }
+
+  async getEvaluationsByOrganization(organizationId: string): Promise<Evaluation[]> {
+    const results = await db.select().from(schema.evaluations)
+      .where(eq(schema.evaluations.organizationId, organizationId));
+    return results.map(evaluation => this.mapDbEvaluationToEvaluation(evaluation));
+  }
+
+  async getEvaluationsByPlayer(playerId: string): Promise<Evaluation[]> {
+    const results = await db.select().from(schema.evaluations)
+      .where(eq(schema.evaluations.playerId, playerId));
+    return results.map(evaluation => this.mapDbEvaluationToEvaluation(evaluation));
+  }
+
+  async getEvaluationByPlayerQuarter(playerId: string, quarter: string, year: number): Promise<Evaluation | undefined> {
+    const results = await db.select().from(schema.evaluations)
+      .where(
+        and(
+          eq(schema.evaluations.playerId, playerId),
+          eq(schema.evaluations.quarter, quarter),
+          eq(schema.evaluations.year, year)
+        )
+      );
+    if (results.length === 0) return undefined;
+    return this.mapDbEvaluationToEvaluation(results[0]);
+  }
+
+  async createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation> {
+    // Check if evaluation already exists for this player/quarter/year (upsert logic)
+    const existing = await this.getEvaluationByPlayerQuarter(evaluation.playerId, evaluation.quarter, evaluation.year);
+    
+    if (existing) {
+      // Update existing evaluation
+      const dbUpdates = {
+        coachId: evaluation.coachId,
+        scores: evaluation.scores,
+        notes: evaluation.notes,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const results = await db.update(schema.evaluations)
+        .set(dbUpdates)
+        .where(eq(schema.evaluations.id, existing.id))
+        .returning();
+      
+      return this.mapDbEvaluationToEvaluation(results[0]);
+    }
+
+    // Create new evaluation
+    const now = new Date().toISOString();
+    const dbEvaluation = {
+      organizationId: evaluation.organizationId,
+      playerId: evaluation.playerId,
+      coachId: evaluation.coachId,
+      quarter: evaluation.quarter,
+      year: evaluation.year,
+      scores: evaluation.scores,
+      notes: evaluation.notes,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const results = await db.insert(schema.evaluations).values(dbEvaluation).returning();
+    return this.mapDbEvaluationToEvaluation(results[0]);
+  }
+
+  async updateEvaluation(id: number, updates: Partial<Evaluation>): Promise<Evaluation | undefined> {
+    const dbUpdates: any = {
+      coachId: updates.coachId,
+      quarter: updates.quarter,
+      year: updates.year,
+      scores: updates.scores,
+      notes: updates.notes,
+      updatedAt: new Date().toISOString(),
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.evaluations)
+      .set(dbUpdates)
+      .where(eq(schema.evaluations.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbEvaluationToEvaluation(results[0]);
+  }
+
+  async deleteEvaluation(id: number): Promise<void> {
+    await db.delete(schema.evaluations).where(eq(schema.evaluations.id, id));
+  }
+
   // Notification operations
   async getNotification(id: number): Promise<Notification | undefined> {
     const results = await db.select().from(schema.notifications).where(eq(schema.notifications.id, id));
@@ -2696,6 +2875,21 @@ class DatabaseStorage implements IStorage {
       notes: dbSkill.notes,
       evaluatedAt: new Date(dbSkill.evaluatedAt),
       createdAt: new Date(dbSkill.createdAt),
+    };
+  }
+
+  private mapDbEvaluationToEvaluation(dbEvaluation: any): Evaluation {
+    return {
+      id: dbEvaluation.id,
+      organizationId: dbEvaluation.organizationId,
+      playerId: dbEvaluation.playerId,
+      coachId: dbEvaluation.coachId,
+      quarter: dbEvaluation.quarter,
+      year: dbEvaluation.year,
+      scores: dbEvaluation.scores,
+      notes: dbEvaluation.notes,
+      createdAt: new Date(dbEvaluation.createdAt),
+      updatedAt: new Date(dbEvaluation.updatedAt),
     };
   }
 

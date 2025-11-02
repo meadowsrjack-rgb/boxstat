@@ -2226,6 +2226,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // EVALUATION ROUTES (Coach Dashboard)
+  // =============================================
+  
+  app.get('/api/coach/evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const { playerId, quarter, year } = req.query;
+      
+      // If specific player/quarter/year requested, return that evaluation
+      if (playerId && quarter && year) {
+        const evaluation = await storage.getEvaluationByPlayerQuarter(playerId as string, quarter as string, parseInt(year as string));
+        return res.json(evaluation || null);
+      }
+      
+      // If only playerId, return all evaluations for that player
+      if (playerId) {
+        const evaluations = await storage.getEvaluationsByPlayer(playerId as string);
+        return res.json(evaluations);
+      }
+      
+      // Otherwise return all evaluations for the organization
+      const evaluations = await storage.getEvaluationsByOrganization(organizationId);
+      res.json(evaluations);
+    } catch (error: any) {
+      console.error('Error fetching evaluations:', error);
+      res.status(500).json({ error: 'Failed to fetch evaluations', message: error.message });
+    }
+  });
+  
+  app.post('/api/coach/evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, id: coachId, organizationId } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can create evaluations' });
+      }
+      
+      const evaluationData = {
+        ...req.body,
+        organizationId,
+        coachId,
+      };
+      
+      const evaluation = await storage.createEvaluation(evaluationData);
+      res.status(201).json(evaluation);
+    } catch (error: any) {
+      console.error('Error creating evaluation:', error);
+      res.status(400).json({ error: 'Failed to create evaluation', message: error.message });
+    }
+  });
+  
+  app.get('/api/evaluations', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const { playerId } = req.query;
+      
+      if (playerId) {
+        const evaluations = await storage.getEvaluationsByPlayer(playerId as string);
+        return res.json(evaluations);
+      }
+      
+      const evaluations = await storage.getEvaluationsByOrganization(organizationId);
+      res.json(evaluations);
+    } catch (error: any) {
+      console.error('Error fetching evaluations:', error);
+      res.status(500).json({ error: 'Failed to fetch evaluations', message: error.message });
+    }
+  });
+  
+  app.delete('/api/evaluations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can delete evaluations' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid evaluation ID' });
+      }
+      
+      await storage.deleteEvaluation(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting evaluation:', error);
+      res.status(500).json({ error: 'Failed to delete evaluation', message: error.message });
+    }
+  });
+  
+  // =============================================
   // NOTIFICATION ROUTES
   // =============================================
   

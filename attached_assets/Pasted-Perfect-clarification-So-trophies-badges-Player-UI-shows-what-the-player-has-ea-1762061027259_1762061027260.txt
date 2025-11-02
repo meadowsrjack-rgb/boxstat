@@ -1,0 +1,243 @@
+Perfect clarification ✅
+
+So:
+
+* `/trophies-badges` → **Player UI** (shows what the player has earned or can earn).
+* `/admin/awards` (or “Awards” tab) → **Admin UI** (for managing awards, triggers, progress, and recipients).
+
+Here’s the corrected **Replit prompt**, scoped to your architecture.
+
+---
+
+## 🧠 **Replit Prompt – Full Awards System (Admin Awards Tab + Player Trophy Page)**
+
+**Title:** `Implement Full Awards System (Admin Awards Tab + Player Trophy Page)`
+
+**Prompt:**
+
+> Update the BoxStat app to use a fully relational awards system.
+> Players view their progress and achievements on `/trophies-badges`.
+> Admins manage all award definitions, triggers, and recipients through the **Awards tab** in the admin dashboard.
+
+---
+
+### 🧱 **1. Database Structure**
+
+#### `award_definitions` (blueprints for all trophies & badges)
+
+```sql
+CREATE TABLE IF NOT EXISTS award_definitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT UNIQUE NOT NULL,
+  tier TEXT CHECK (tier IN ('Trophy','Badge')) NOT NULL,
+  class TEXT CHECK (class IN (
+    'Legacy','Team','Coach','HallOfFame','Superstar','AllStar','Starter','Prospect',
+    'Attendance','Commitment','Variety','Time','Training'
+  )),
+  prestige TEXT CHECK (prestige IN (
+    'Prospect','Starter','AllStar','Superstar','HallOfFame'
+  )) DEFAULT 'Prospect',
+  trigger_field TEXT,
+  trigger_operator TEXT CHECK (trigger_operator IN ('>=','=','<')) DEFAULT '>=',
+  trigger_value NUMERIC,
+  trigger_type TEXT CHECK (trigger_type IN ('count','streak','boolean','manual')) DEFAULT 'count',
+  description TEXT,
+  image_url TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### `user_awards` (links each player to awards earned)
+
+```sql
+CREATE TABLE IF NOT EXISTS user_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  award_id UUID REFERENCES award_definitions(id) ON DELETE CASCADE,
+  awarded_at TIMESTAMP DEFAULT NOW(),
+  awarded_by UUID REFERENCES users(id), -- null if auto-awarded
+  year INTEGER,
+  notes TEXT,
+  visible BOOLEAN DEFAULT TRUE,
+  UNIQUE(user_id, award_id, year)
+);
+```
+
+#### Extend `users` table
+
+```sql
+ALTER TABLE users 
+ADD COLUMN IF NOT EXISTS awards JSONB DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS total_practices INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS total_games INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS consecutive_checkins INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS videos_completed INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS years_active INTEGER DEFAULT 0;
+```
+
+---
+
+### ⚙️ **2. Backend Logic – Award Engine**
+
+Create `/server/utils/awardEngine.ts`:
+
+```ts
+import { db } from '@/lib/db'
+
+export async function evaluateAwardsForUser(userId: string) {
+  const user = await db.users.findUnique({ where: { id: userId } });
+  if (!user) return;
+
+  const awards = await db.award_definitions.findMany({ where: { active: true } });
+
+  for (const award of awards) {
+    const value = user[award.trigger_field as keyof typeof user];
+    if (value === undefined) continue;
+
+    let qualifies = false;
+    switch (award.trigger_operator) {
+      case '>=': qualifies = value >= award.trigger_value; break;
+      case '=': qualifies = value === award.trigger_value; break;
+      case '<': qualifies = value < award.trigger_value; break;
+    }
+
+    if (qualifies) {
+      const existing = await db.user_awards.findFirst({
+        where: { user_id: userId, award_id: award.id }
+      });
+
+      if (!existing) {
+        await db.user_awards.create({
+          data: { user_id: userId, award_id: award.id }
+        });
+        console.log(`🏆 Awarded ${award.name} to ${user.first_name}`);
+      }
+    }
+  }
+
+  // Update awards cache in users table (for fast dashboard rendering)
+  const earned = await db.user_awards.findMany({
+    where: { user_id: userId },
+    include: { award_definitions: true }
+  });
+
+  const summary = earned.map(a => ({
+    name: a.award_definitions.name,
+    prestige: a.award_definitions.prestige,
+    tier: a.award_definitions.tier,
+    image: a.award_definitions.image_url
+  }));
+
+  await db.users.update({
+    where: { id: userId },
+    data: { awards: summary }
+  });
+
+  return summary;
+}
+```
+
+---
+
+### 🔁 **3. Integration Hooks**
+
+Wherever user progress updates (e.g. check-ins, RSVP, training completions, quizzes), add:
+
+```ts
+await updateUserSkills(userId);
+await evaluateAwardsForUser(userId);
+```
+
+This makes awards auto-update in real time like skills.
+
+---
+
+### 🧩 **4. Admin Dashboard → “Awards” Tab**
+
+#### Features:
+
+✅ Displays all awards from `award_definitions`
+✅ Allows filtering by tier, prestige, and class
+✅ Inline editing of trigger fields, values, and operator
+✅ “Test Trigger” button → manually test award for a player
+✅ “Recipients” tab → shows users from `user_awards`
+✅ “Sync Awards” button → runs `evaluateAwardsForUser()` for all users
+
+**Columns:**
+| Name | Tier | Prestige | Trigger Field | Operator | Value | Trigger Type | Recipients | Image | Status |
+
+When editing a trigger, it should update both:
+
+* `award_definitions` (for logic)
+* Reactively re-run evaluations for all users if trigger changed
+
+---
+
+### 🖥️ **5. Player UI → `/trophies-badges`**
+
+No admin logic.
+It only **reads** from the cached `users.awards` column (auto-synced from backend).
+
+Query example:
+
+```ts
+const { data: player } = useQuery(["playerProfile"], () =>
+  db.users.findUnique({ where: { id: user.id } })
+);
+```
+
+Display:
+
+```tsx
+{player.awards.map(a => (
+  <div className={`award-card prestige-${a.prestige.toLowerCase()}`}>
+    <img src={a.image} alt={a.name} />
+    <h4>{a.name}</h4>
+    <p>{a.tier}</p>
+  </div>
+))}
+```
+
+Color mapping:
+
+* Prospect → gray
+* Starter → green
+* All-Star → blue
+* Superstar → purple
+* Hall of Fame → gold
+
+---
+
+### 🧠 **6. Real-Time Triggers**
+
+**Event-based updates:**
+
+* After check-in → increments `total_practices` or `total_games`
+* After RSVP → updates `consecutive_checkins`
+* After quiz completion → increments `videos_completed`
+* After season → updates `years_active`
+* After coach assigns award → direct insert into `user_awards`
+
+Then always:
+
+```ts
+await evaluateAwardsForUser(userId);
+```
+
+---
+
+### ✅ **End Result**
+
+| Area                   | Function                                                           |
+| ---------------------- | ------------------------------------------------------------------ |
+| **/trophies-badges**   | Player display only (read from `users.awards`)                     |
+| **Admin → Awards tab** | Full CRUD + trigger configuration + recipient view                 |
+| **Backend**            | Automated relational award tracking                                |
+| **Database**           | Clean 3-table system (`award_definitions`, `user_awards`, `users`) |
+| **UX**                 | Players see updates instantly after events or milestones           |
+
+---
+
+Would you like me to include a **React layout preview** (UI mock for the Admin “Awards” tab) that matches your dashboard style — showing editable rows, triggers, and recipient counts?

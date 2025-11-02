@@ -352,6 +352,20 @@ export const skills = pgTable("skills", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
+// Quarterly Evaluations table (detailed skill assessments from coach dashboard)
+export const evaluations = pgTable("evaluations", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  playerId: varchar("player_id").notNull(),
+  coachId: varchar("coach_id").notNull(),
+  quarter: varchar().notNull(), // "Q1", "Q2", "Q3", "Q4"
+  year: integer().notNull(),
+  scores: jsonb().notNull(), // Stores the EvalScores structure: { SHOOTING: { LAYUP: 3, ... }, ... }
+  notes: text(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
 // Notifications table
 export const notifications = pgTable("notifications", {
   id: serial().primaryKey().notNull(),
@@ -823,6 +837,35 @@ export const insertSkillSchema = z.object({
 });
 
 export type InsertSkill = z.infer<typeof insertSkillSchema>;
+
+// =============================================
+// Evaluation Schema
+// =============================================
+
+export interface Evaluation {
+  id: number;
+  organizationId: string;
+  playerId: string;
+  coachId: string;
+  quarter: string; // "Q1", "Q2", "Q3", "Q4"
+  year: number;
+  scores: any; // EvalScores structure from CoachAwardDialogs
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertEvaluationSchema = z.object({
+  organizationId: z.string(),
+  playerId: z.string(),
+  coachId: z.string(),
+  quarter: z.enum(["Q1", "Q2", "Q3", "Q4"]),
+  year: z.number(),
+  scores: z.any(), // JSON object with skill categories and scores
+  notes: z.string().optional(),
+});
+
+export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 
 // =============================================
 // Notification Schema

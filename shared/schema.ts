@@ -575,6 +575,54 @@ export const insertFacilitySchema = z.object({
 export type InsertFacility = z.infer<typeof insertFacilitySchema>;
 
 // =============================================
+// Award Schema (Badges & Trophies)
+// =============================================
+
+export interface Award {
+  id: string;
+  organizationId: string;
+  name: string;
+  description?: string;
+  icon: string;
+  color: string;
+  type: "badge" | "trophy";
+  category?: string;
+  isActive: boolean;
+  createdAt: Date;
+}
+
+export const insertAwardSchema = z.object({
+  organizationId: z.string(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  icon: z.string().min(1),
+  color: z.string().default("#1E40AF"),
+  type: z.enum(["badge", "trophy"]),
+  category: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+export type InsertAward = z.infer<typeof insertAwardSchema>;
+
+// =============================================
+// User Award (Earned Awards)
+// =============================================
+
+export interface UserAward {
+  id: string;
+  userId: string;
+  awardId: string;
+  earnedAt: Date;
+}
+
+export const insertUserAwardSchema = z.object({
+  userId: z.string(),
+  awardId: z.string(),
+});
+
+export type InsertUserAward = z.infer<typeof insertUserAwardSchema>;
+
+// =============================================
 // Announcement Schema
 // =============================================
 
@@ -880,276 +928,3 @@ export const insertRsvpResponseSchema = z.object({
 });
 
 export type InsertRsvpResponse = z.infer<typeof insertRsvpResponseSchema>;
-
-// =============================================
-// User Activity Stats Schema (Materialized Stats for Awards)
-// =============================================
-
-export const userActivityStats = pgTable("user_activity_stats", {
-  userId: varchar("user_id").primaryKey().notNull(),
-  
-  // Attendance counters (computed from attendances table)
-  totalGames: integer("total_games").default(0).notNull(),
-  totalFnhGames: integer("total_fnh_games").default(0).notNull(),
-  totalPractices: integer("total_practices").default(0).notNull(),
-  totalSkillsSessions: integer("total_skills_sessions").default(0).notNull(),
-  totalCheckins: integer("total_checkins").default(0).notNull(),
-  
-  // RSVP stats (computed from rsvpResponses table)
-  totalRsvps: integer("total_rsvps").default(0).notNull(),
-  consecutiveRsvps: integer("consecutive_rsvps").default(0).notNull(),
-  maxRsvpStreak: integer("max_rsvp_streak").default(0).notNull(),
-  lastRsvpDate: timestamp("last_rsvp_date", { mode: 'string' }),
-  
-  // Practice streak
-  consecutivePractices: integer("consecutive_practices").default(0).notNull(),
-  maxPracticeStreak: integer("max_practice_streak").default(0).notNull(),
-  lastPracticeDate: timestamp("last_practice_date", { mode: 'string' }),
-  
-  // Foundation/Training program progress
-  videosCompleted: integer("videos_completed").default(0).notNull(),
-  foundationSkillsCompleted: integer("foundation_skills_completed").default(0).notNull(),
-  foundationScCompleted: integer("foundation_sc_completed").default(0).notNull(),
-  foundationIqCompleted: integer("foundation_iq_completed").default(0).notNull(),
-  trainingProgramsCompleted: integer("training_programs_completed").default(0).notNull(),
-  
-  // Account age
-  yearsActive: integer("years_active").default(0).notNull(),
-  
-  // Timestamps
-  lastUpdated: timestamp("last_updated", { mode: 'string' }).defaultNow(),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export interface UserActivityStats {
-  userId: string;
-  totalGames: number;
-  totalFnhGames: number;
-  totalPractices: number;
-  totalSkillsSessions: number;
-  totalCheckins: number;
-  totalRsvps: number;
-  consecutiveRsvps: number;
-  maxRsvpStreak: number;
-  lastRsvpDate?: Date;
-  consecutivePractices: number;
-  maxPracticeStreak: number;
-  lastPracticeDate?: Date;
-  videosCompleted: number;
-  foundationSkillsCompleted: number;
-  foundationScCompleted: number;
-  foundationIqCompleted: number;
-  trainingProgramsCompleted: number;
-  yearsActive: number;
-  lastUpdated: Date;
-  createdAt: Date;
-}
-
-export const insertUserActivityStatsSchema = z.object({
-  userId: z.string(),
-  totalGames: z.number().default(0),
-  totalFnhGames: z.number().default(0),
-  totalPractices: z.number().default(0),
-  totalSkillsSessions: z.number().default(0),
-  totalCheckins: z.number().default(0),
-  totalRsvps: z.number().default(0),
-  consecutiveRsvps: z.number().default(0),
-  maxRsvpStreak: z.number().default(0),
-  lastRsvpDate: z.string().optional(),
-  consecutivePractices: z.number().default(0),
-  maxPracticeStreak: z.number().default(0),
-  lastPracticeDate: z.string().optional(),
-  videosCompleted: z.number().default(0),
-  foundationSkillsCompleted: z.number().default(0),
-  foundationScCompleted: z.number().default(0),
-  foundationIqCompleted: z.number().default(0),
-  trainingProgramsCompleted: z.number().default(0),
-  yearsActive: z.number().default(0),
-});
-
-export type InsertUserActivityStats = z.infer<typeof insertUserActivityStatsSchema>;
-
-// =============================================
-// Trophies Schema (Companion to Badges)
-// =============================================
-
-export const trophies = pgTable("trophies", {
-  id: serial().primaryKey().notNull(),
-  name: varchar().notNull(),
-  description: text(),
-  icon: varchar().notNull(),
-  color: varchar().notNull(),
-  criteria: jsonb().notNull(),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-  slug: varchar(),
-  tier: varchar(), // "Legacy" or "Team"
-  category: varchar(),
-  type: varchar(), // "annual", "lifetime", "milestone"
-}, (table) => [
-  unique("trophies_slug_key").on(table.slug),
-]);
-
-export interface Trophy {
-  id: number;
-  name: string;
-  description?: string;
-  icon: string;
-  color: string;
-  criteria: any;
-  isActive: boolean;
-  createdAt: Date;
-  slug?: string;
-  tier?: string;
-  category?: string;
-  type?: string;
-}
-
-export const insertTrophySchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  icon: z.string(),
-  color: z.string(),
-  criteria: z.any(),
-  isActive: z.boolean().default(true),
-  slug: z.string().optional(),
-  tier: z.string().optional(),
-  category: z.string().optional(),
-  type: z.string().optional(),
-});
-
-export type InsertTrophy = z.infer<typeof insertTrophySchema>;
-
-// =============================================
-// User Trophies Schema (Earned Trophies)
-// =============================================
-
-export const userTrophies = pgTable("user_trophies", {
-  id: serial().primaryKey().notNull(),
-  userId: varchar("user_id").notNull(),
-  trophyId: integer("trophy_id").notNull(),
-  earnedAt: timestamp("earned_at", { mode: 'string' }).defaultNow(),
-  profileId: varchar("profile_id"),
-  awardedBy: varchar("awarded_by"), // coachId or "system" for auto-awards
-  notes: text(),
-}, (table) => [
-  // Prevent duplicate trophy awards
-  unique("user_trophies_user_trophy_key").on(table.userId, table.trophyId),
-  // Foreign key to trophies table
-  foreignKey({
-    columns: [table.trophyId],
-    foreignColumns: [trophies.id],
-    name: "user_trophies_trophy_id_fkey"
-  }),
-]);
-
-export interface UserTrophy {
-  id: number;
-  userId: string;
-  trophyId: number;
-  earnedAt: Date;
-  profileId?: string;
-  awardedBy?: string;
-  notes?: string;
-}
-
-export const insertUserTrophySchema = z.object({
-  userId: z.string(),
-  trophyId: z.number(),
-  profileId: z.string().optional(),
-  awardedBy: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-export type InsertUserTrophy = z.infer<typeof insertUserTrophySchema>;
-
-// =============================================
-// User Awards Schema (Unified History for All Awards)
-// =============================================
-
-export const userAwards = pgTable("user_awards", {
-  id: serial().primaryKey().notNull(),
-  userId: varchar("user_id").notNull(),
-  awardId: varchar("award_id").notNull(), // slug from awards registry (e.g., "first-rsvp", "mvp")
-  awardKind: varchar("award_kind").notNull(), // "Badge" or "Trophy"
-  awardTier: varchar("award_tier"), // "Prospect", "Starter", "AllStar", "Superstar", "HallOfFamer", "Legacy", "Team"
-  awardName: varchar("award_name").notNull(),
-  source: varchar().notNull(), // "auto", "coach", "admin"
-  awardedBy: varchar("awarded_by"), // userId of coach/admin, or "system" for auto
-  eventId: integer("event_id"), // optional link to specific event
-  season: varchar(), // season identifier if applicable
-  notes: text(),
-  earnedAt: timestamp("earned_at", { mode: 'string' }).defaultNow(),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-}, (table) => [
-  // Prevent duplicate awards - same user can't earn same award twice
-  unique("user_awards_user_award_key").on(table.userId, table.awardId),
-]);
-
-export interface UserAward {
-  id: number;
-  userId: string;
-  awardId: string;
-  awardKind: "Badge" | "Trophy";
-  awardTier?: string;
-  awardName: string;
-  source: "auto" | "coach" | "admin";
-  awardedBy?: string;
-  eventId?: number;
-  season?: string;
-  notes?: string;
-  earnedAt: Date;
-  createdAt: Date;
-}
-
-export const insertUserAwardSchema = z.object({
-  userId: z.string(),
-  awardId: z.string(),
-  awardKind: z.enum(["Badge", "Trophy"]),
-  awardTier: z.string().optional(),
-  awardName: z.string(),
-  source: z.enum(["auto", "coach", "admin"]),
-  awardedBy: z.string().optional(),
-  eventId: z.number().optional(),
-  season: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-export type InsertUserAward = z.infer<typeof insertUserAwardSchema>;
-
-// =============================================
-// Coach Awards Schema (MVP, Hustle, Teammate, Student, etc.)
-// =============================================
-
-export const coachAwards = pgTable("coach_awards", {
-  id: serial().primaryKey().notNull(),
-  userId: varchar("user_id").notNull(),
-  coachId: varchar("coach_id").notNull(),
-  awardType: varchar("award_type").notNull(), // "MVP", "Hustle", "Teammate", "Student", "Clutch", "Comeback", "Sportsmanship", "LeadByExample"
-  eventId: integer("event_id"), // optional link to specific game/practice
-  season: varchar(), // season identifier
-  notes: text(),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export interface CoachAward {
-  id: number;
-  userId: string;
-  coachId: string;
-  awardType: string;
-  eventId?: number;
-  season?: string;
-  notes?: string;
-  createdAt: Date;
-}
-
-export const insertCoachAwardSchema = z.object({
-  userId: z.string(),
-  coachId: z.string(),
-  awardType: z.enum(["MVP", "Hustle", "Teammate", "Student", "Clutch", "Comeback", "Sportsmanship", "LeadByExample"]),
-  eventId: z.number().optional(),
-  season: z.string().optional(),
-  notes: z.string().optional(),
-});
-
-export type InsertCoachAward = z.infer<typeof insertCoachAwardSchema>;

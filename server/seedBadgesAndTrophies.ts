@@ -17,8 +17,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "uyp-heart-and-hustle",
         description: "This yearly award recognizes the single player in all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game.",
         icon: "/trophies/uyp-heart-and-hustle.png",
-        color: "#C9A961", // Gold
-        tier: "Legacy",
         type: "legacy" as const,
         criteria: { type: "coach_nomination", scope: "org-wide", frequency: "yearly" },
       },
@@ -27,8 +25,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "spirit-award",
         description: "Awarded to the one player across the entire organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court.",
         icon: "/trophies/spirit-award.png",
-        color: "#C9A961", // Gold
-        tier: "Legacy",
         type: "legacy" as const,
         criteria: { type: "coach_nomination", scope: "org-wide", frequency: "yearly" },
       },
@@ -39,8 +35,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "mvp",
         description: "Awarded to the player who had the most significant impact on the team's success during the season.",
         icon: "/trophies/mvp.png",
-        color: "#DC143C", // UYP Basketball Red
-        tier: "Team",
         type: "team" as const,
         criteria: { type: "coach_award", scope: "team", frequency: "seasonal" },
       },
@@ -49,8 +43,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "coaches-award",
         description: "Given to the player who best exemplifies the team's core values and the coach's philosophy, demonstrating coachability, dedication, and a positive attitude throughout the season.",
         icon: "/trophies/coaches-award.png",
-        color: "#DC143C", // UYP Basketball Red
-        tier: "Team",
         type: "team" as const,
         criteria: { type: "coach_award", scope: "team", frequency: "seasonal" },
       },
@@ -59,8 +51,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "mip",
         description: "Awarded to the player who has shown the most significant growth and development in their skills and game sense over the course of the season.",
         icon: "/trophies/mip.png",
-        color: "#DC143C", // UYP Basketball Red
-        tier: "Team",
         type: "team" as const,
         criteria: { type: "coach_award", scope: "team", frequency: "seasonal" },
       },
@@ -69,8 +59,6 @@ export const seedBadgesAndTrophies = async () => {
         slug: "defensive-player",
         description: "Awarded to the player that has had the greatest defensive impact during the season.",
         icon: "/trophies/defensive-player.png",
-        color: "#DC143C", // UYP Basketball Red
-        tier: "Team",
         type: "team" as const,
         criteria: { type: "coach_award", scope: "team", frequency: "seasonal" },
       },

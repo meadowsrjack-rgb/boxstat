@@ -7,7 +7,7 @@ export interface ParsedEvent {
   start: string; // ISO string
   end: string; // ISO string
   location: string;
-  type: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course' | 'other';
+  type: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course' | 'tryout' | 'skills-assessment' | 'team-building' | 'parent-meeting' | 'equipment-pickup' | 'photo-day' | 'award-ceremony' | 'fnh' | 'other';
   ageTags: string[];
   teamTags: string[];
   coaches: string[];
@@ -33,8 +33,14 @@ export function parseEventMeta(event: any): ParsedEvent {
     type = 'exhibition';
   } else if (combinedText.includes('practice')) {
     type = 'practice';
+  } else if (combinedText.includes('tryout')) {
+    type = 'tryout';
+  } else if (combinedText.includes('skills assessment')) {
+    type = 'skills-assessment';
   } else if (combinedText.includes('skills') || combinedText.includes('skill')) {
     type = 'skills';
+  } else if (combinedText.includes('team building')) {
+    type = 'team-building';
   } else if (combinedText.includes('workshop')) {
     type = 'workshop';
   } else if (combinedText.includes('talk') || combinedText.includes('seminar')) {
@@ -43,8 +49,18 @@ export function parseEventMeta(event: any): ParsedEvent {
     type = 'combine';
   } else if (combinedText.includes('training')) {
     type = 'training';
+  } else if (combinedText.includes('parent meeting')) {
+    type = 'parent-meeting';
   } else if (combinedText.includes('meeting')) {
     type = 'meeting';
+  } else if (combinedText.includes('equipment pickup')) {
+    type = 'equipment-pickup';
+  } else if (combinedText.includes('photo day')) {
+    type = 'photo-day';
+  } else if (combinedText.includes('award ceremony') || combinedText.includes('awards ceremony')) {
+    type = 'award-ceremony';
+  } else if (combinedText.includes('fnh')) {
+    type = 'fnh';
   } else if (combinedText.includes('course') || combinedText.includes('class')) {
     type = 'course';
   }
@@ -125,6 +141,22 @@ export function getEventTypeDotColor(type: ParsedEvent['type']): string {
       return 'bg-slate-500';
     case 'course':
       return 'bg-amber-500';
+    case 'tryout':
+      return 'bg-red-500';
+    case 'skills-assessment':
+      return 'bg-lime-500';
+    case 'team-building':
+      return 'bg-emerald-500';
+    case 'parent-meeting':
+      return 'bg-violet-500';
+    case 'equipment-pickup':
+      return 'bg-fuchsia-500';
+    case 'photo-day':
+      return 'bg-rose-500';
+    case 'award-ceremony':
+      return 'bg-amber-500';
+    case 'fnh':
+      return 'bg-stone-500';
     default:
       return 'bg-gray-500';
   }

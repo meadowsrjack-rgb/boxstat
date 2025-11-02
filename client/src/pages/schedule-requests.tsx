@@ -17,7 +17,7 @@ import { z } from "zod";
 
 const scheduleRequestSchema = z.object({
   teamId: z.string().min(1, "Team is required"),
-  requestType: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course"]),
+  requestType: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course", "tryout", "skills-assessment", "team-building", "parent-meeting", "equipment-pickup", "photo-day", "award-ceremony", "fnh"]),
   requestedDate: z.string().min(1, "Date is required"),
   requestedTime: z.string().min(1, "Time is required"),
   duration: z.number().min(30, "Duration must be at least 30 minutes"),
@@ -32,7 +32,7 @@ type ScheduleRequestFormData = z.infer<typeof scheduleRequestSchema>;
 interface ScheduleRequest {
   id: string;
   teamId: string;
-  requestType: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course';
+  requestType: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course' | 'tryout' | 'skills-assessment' | 'team-building' | 'parent-meeting' | 'equipment-pickup' | 'photo-day' | 'award-ceremony' | 'fnh';
   requestedDate: string;
   requestedTime: string;
   duration: number;
@@ -239,6 +239,14 @@ export default function ScheduleRequests() {
                             <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="meeting">Meeting</SelectItem>
                             <SelectItem value="course">Course</SelectItem>
+                            <SelectItem value="tryout">Tryout</SelectItem>
+                            <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
+                            <SelectItem value="team-building">Team Building</SelectItem>
+                            <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
+                            <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
+                            <SelectItem value="photo-day">Photo Day</SelectItem>
+                            <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
+                            <SelectItem value="fnh">FNH</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />

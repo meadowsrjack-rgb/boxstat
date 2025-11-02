@@ -1908,6 +1908,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="meeting">Meeting</SelectItem>
                             <SelectItem value="course">Course</SelectItem>
+                            <SelectItem value="tryout">Tryout</SelectItem>
+                            <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
+                            <SelectItem value="team-building">Team Building</SelectItem>
+                            <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
+                            <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
+                            <SelectItem value="photo-day">Photo Day</SelectItem>
+                            <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
+                            <SelectItem value="fnh">FNH</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -2083,6 +2091,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         <SelectItem value="training">Training</SelectItem>
                         <SelectItem value="meeting">Meeting</SelectItem>
                         <SelectItem value="course">Course</SelectItem>
+                        <SelectItem value="tryout">Tryout</SelectItem>
+                        <SelectItem value="skills-assessment">Skills Assessment</SelectItem>
+                        <SelectItem value="team-building">Team Building</SelectItem>
+                        <SelectItem value="parent-meeting">Parent Meeting</SelectItem>
+                        <SelectItem value="equipment-pickup">Equipment Pickup</SelectItem>
+                        <SelectItem value="photo-day">Photo Day</SelectItem>
+                        <SelectItem value="award-ceremony">Award Ceremony</SelectItem>
+                        <SelectItem value="fnh">FNH</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

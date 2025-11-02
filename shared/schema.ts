@@ -88,6 +88,14 @@ export interface User {
   rating?: number;
   awardsCount?: number;
   
+  // Award tracking fields
+  awards?: any[]; // cached array of earned awards for quick display
+  totalPractices?: number; // count of practice attendances
+  totalGames?: number; // count of game attendances
+  consecutiveCheckins?: number; // current streak of consecutive check-ins
+  videosCompleted?: number; // count of training videos completed
+  yearsActive?: number; // number of years active in the program
+  
   // Payment information
   stripeCustomerId?: string; // Stripe Customer ID for payment tracking
   stripeCheckoutSessionId?: string; // Stripe Checkout Session ID for player registration
@@ -171,6 +179,12 @@ export const users = pgTable("users", {
   googleId: varchar("google_id"),
   appleId: varchar("apple_id"),
   isActive: boolean("is_active").default(true).notNull(),
+  awards: jsonb().default('[]'),
+  totalPractices: integer("total_practices").default(0),
+  totalGames: integer("total_games").default(0),
+  consecutiveCheckins: integer("consecutive_checkins").default(0),
+  videosCompleted: integer("videos_completed").default(0),
+  yearsActive: integer("years_active").default(0),
 }, (table) => [
   unique("users_email_unique").on(table.email),
 ]);
@@ -296,6 +310,56 @@ export const userBadges = pgTable("user_badges", {
   badgeType: varchar("badge_type", { length: 50 }),
 });
 
+// Award Definitions table (new awards system)
+export const awardDefinitions = pgTable("award_definitions", {
+  id: serial().primaryKey().notNull(),
+  name: text().notNull(),
+  tier: text().notNull(),
+  class: text(),
+  prestige: text().default('Prospect'),
+  triggerField: text("trigger_field"),
+  triggerOperator: text("trigger_operator").default('>='),
+  triggerValue: numeric("trigger_value"),
+  triggerType: text("trigger_type").default('count'),
+  description: text(),
+  imageUrl: text("image_url"),
+  active: boolean().default(true),
+  organizationId: varchar("organization_id"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  unique("award_definitions_name_key").on(table.name),
+]);
+
+// User Awards table (awarded awards tracking)
+export const userAwards = pgTable("user_awards", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  awardId: integer("award_id").notNull(),
+  awardedAt: timestamp("awarded_at", { mode: 'string' }).defaultNow(),
+  awardedBy: varchar("awarded_by"),
+  year: integer(),
+  notes: text(),
+  visible: boolean().default(true),
+}, (table) => [
+  unique("user_awards_unique").on(table.userId, table.awardId, table.year),
+  foreignKey({
+    columns: [table.userId],
+    foreignColumns: [users.id],
+    name: "user_awards_user_id_fkey"
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.awardId],
+    foreignColumns: [awardDefinitions.id],
+    name: "user_awards_award_id_fkey"
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.awardedBy],
+    foreignColumns: [users.id],
+    name: "user_awards_awarded_by_fkey"
+  }),
+]);
+
 // Announcements table
 export const announcements = pgTable("announcements", {
   id: serial().primaryKey().notNull(),
@@ -416,9 +480,16 @@ export const insertUserSchema = z.object({
   googleId: z.string().optional(),
   appleId: z.string().optional(),
   isActive: z.boolean().default(true),
+  awards: z.array(z.any()).default([]),
+  totalPractices: z.number().default(0),
+  totalGames: z.number().default(0),
+  consecutiveCheckins: z.number().default(0),
+  videosCompleted: z.number().default(0),
+  yearsActive: z.number().default(0),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type SelectUser = typeof users.$inferSelect;
 
 // =============================================
 // Team Schema
@@ -635,6 +706,60 @@ export const insertUserAwardSchema = z.object({
 });
 
 export type InsertUserAward = z.infer<typeof insertUserAwardSchema>;
+
+// =============================================
+// Award Definition Schema (New Awards System)
+// =============================================
+
+export interface AwardDefinition {
+  id: number;
+  name: string;
+  tier: string;
+  class?: string;
+  prestige: string;
+  triggerField?: string;
+  triggerOperator: string;
+  triggerValue?: number;
+  triggerType: string;
+  description?: string;
+  imageUrl?: string;
+  active: boolean;
+  organizationId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertAwardDefinitionSchema = createInsertSchema(awardDefinitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAwardDefinition = z.infer<typeof insertAwardDefinitionSchema>;
+export type SelectAwardDefinition = typeof awardDefinitions.$inferSelect;
+
+// =============================================
+// User Award Record Schema (New Awards System)
+// =============================================
+
+export interface UserAwardRecord {
+  id: number;
+  userId: string;
+  awardId: number;
+  awardedAt: Date;
+  awardedBy?: string;
+  year?: number;
+  notes?: string;
+  visible: boolean;
+}
+
+export const insertUserAwardRecordSchema = createInsertSchema(userAwards).omit({
+  id: true,
+  awardedAt: true,
+});
+
+export type InsertUserAwardRecord = z.infer<typeof insertUserAwardRecordSchema>;
+export type SelectUserAwardRecord = typeof userAwards.$inferSelect;
 
 // =============================================
 // Announcement Schema

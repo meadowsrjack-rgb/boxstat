@@ -36,6 +36,10 @@ import {
   type InsertEventWindow,
   type InsertRsvpResponse,
   type InsertFacility,
+  type SelectAwardDefinition,
+  type InsertAwardDefinition,
+  type SelectUserAwardRecord,
+  type InsertUserAwardRecord,
 } from "@shared/schema";
 
 // =============================================
@@ -92,6 +96,24 @@ export interface IStorage {
   // User Award operations
   getUserAwards(userId: string): Promise<UserAward[]>;
   awardUser(userAward: InsertUserAward): Promise<UserAward>;
+  
+  // Award Definition operations (new awards system)
+  getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]>;
+  getAwardDefinition(id: number): Promise<SelectAwardDefinition | undefined>;
+  createAwardDefinition(data: InsertAwardDefinition): Promise<SelectAwardDefinition>;
+  updateAwardDefinition(id: number, data: Partial<InsertAwardDefinition>): Promise<SelectAwardDefinition | undefined>;
+  deleteAwardDefinition(id: number): Promise<void>;
+  getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]>;
+  
+  // User Award Record operations (new awards system)
+  getUserAwardRecords(userId: string): Promise<SelectUserAwardRecord[]>;
+  getUserAwardsByOrganization(organizationId: string): Promise<SelectUserAwardRecord[]>;
+  createUserAward(data: InsertUserAwardRecord): Promise<SelectUserAwardRecord>;
+  deleteUserAward(id: number): Promise<void>;
+  checkUserHasAward(userId: string, awardId: number, year?: number): Promise<boolean>;
+  
+  // User Award Tracking Fields
+  updateUserAwardTracking(userId: string, updates: Partial<{totalPractices: number; totalGames: number; consecutiveCheckins: number; videosCompleted: number; yearsActive: number; awards: any[]}>): Promise<void>;
   
   // Announcement operations
   getAnnouncement(id: string): Promise<Announcement | undefined>;
@@ -208,6 +230,8 @@ class MemStorage implements IStorage {
   private notifications: Map<number, Notification> = new Map();
   private eventWindows: Map<number, EventWindow> = new Map();
   private rsvpResponses: Map<number, RsvpResponse> = new Map();
+  private awardDefinitions: Map<number, SelectAwardDefinition> = new Map();
+  private userAwardRecords: Map<number, SelectUserAwardRecord> = new Map();
   private nextEventId = 1;
   private nextDivisionId = 1;
   private nextSkillId = 1;
@@ -215,6 +239,8 @@ class MemStorage implements IStorage {
   private nextNotificationId = 1;
   private nextEventWindowId = 1;
   private nextRsvpResponseId = 1;
+  private nextAwardDefinitionId = 1;
+  private nextUserAwardRecordId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -948,6 +974,125 @@ class MemStorage implements IStorage {
     return newUserAward;
   }
   
+  // Award Definition operations (new awards system)
+  async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
+    return Array.from(this.awardDefinitions.values())
+      .filter(def => !def.organizationId || def.organizationId === organizationId);
+  }
+  
+  async getAwardDefinition(id: number): Promise<SelectAwardDefinition | undefined> {
+    return this.awardDefinitions.get(id);
+  }
+  
+  async createAwardDefinition(data: InsertAwardDefinition): Promise<SelectAwardDefinition> {
+    const now = new Date();
+    const newAwardDef: SelectAwardDefinition = {
+      id: this.nextAwardDefinitionId++,
+      name: data.name,
+      tier: data.tier,
+      class: data.class ?? null,
+      prestige: data.prestige ?? 'Prospect',
+      triggerField: data.triggerField ?? null,
+      triggerOperator: data.triggerOperator ?? '>=',
+      triggerValue: data.triggerValue ?? null,
+      triggerType: data.triggerType ?? 'count',
+      description: data.description ?? null,
+      imageUrl: data.imageUrl ?? null,
+      active: data.active ?? true,
+      organizationId: data.organizationId ?? null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    this.awardDefinitions.set(newAwardDef.id, newAwardDef);
+    return newAwardDef;
+  }
+  
+  async updateAwardDefinition(id: number, data: Partial<InsertAwardDefinition>): Promise<SelectAwardDefinition | undefined> {
+    const existing = this.awardDefinitions.get(id);
+    if (!existing) return undefined;
+    
+    const updated: SelectAwardDefinition = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    this.awardDefinitions.set(id, updated);
+    return updated;
+  }
+  
+  async deleteAwardDefinition(id: number): Promise<void> {
+    this.awardDefinitions.delete(id);
+  }
+  
+  async getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
+    return Array.from(this.awardDefinitions.values())
+      .filter(def => def.active && (!def.organizationId || def.organizationId === organizationId));
+  }
+  
+  // User Award Record operations (new awards system)
+  async getUserAwardRecords(userId: string): Promise<SelectUserAwardRecord[]> {
+    return Array.from(this.userAwardRecords.values())
+      .filter(record => record.userId === userId);
+  }
+  
+  async getUserAwardsByOrganization(organizationId: string): Promise<SelectUserAwardRecord[]> {
+    const orgUsers = Array.from(this.users.values())
+      .filter(u => u.organizationId === organizationId)
+      .map(u => u.id);
+    
+    return Array.from(this.userAwardRecords.values())
+      .filter(record => orgUsers.includes(record.userId));
+  }
+  
+  async createUserAward(data: InsertUserAwardRecord): Promise<SelectUserAwardRecord> {
+    const newRecord: SelectUserAwardRecord = {
+      id: this.nextUserAwardRecordId++,
+      userId: data.userId,
+      awardId: data.awardId,
+      awardedAt: new Date().toISOString(),
+      awardedBy: data.awardedBy ?? null,
+      year: data.year ?? null,
+      notes: data.notes ?? null,
+      visible: data.visible ?? true,
+    };
+    this.userAwardRecords.set(newRecord.id, newRecord);
+    return newRecord;
+  }
+  
+  async deleteUserAward(id: number): Promise<void> {
+    this.userAwardRecords.delete(id);
+  }
+  
+  async checkUserHasAward(userId: string, awardId: number, year?: number): Promise<boolean> {
+    const userAwards = Array.from(this.userAwardRecords.values())
+      .filter(record => record.userId === userId && record.awardId === awardId);
+    
+    if (year !== undefined) {
+      return userAwards.some(record => record.year === year);
+    }
+    
+    return userAwards.length > 0;
+  }
+  
+  // User Award Tracking Fields
+  async updateUserAwardTracking(userId: string, updates: Partial<{totalPractices: number; totalGames: number; consecutiveCheckins: number; videosCompleted: number; yearsActive: number; awards: any[]}>): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user) return;
+    
+    const updatedUser: User = {
+      ...user,
+      totalPractices: updates.totalPractices ?? user.totalPractices,
+      totalGames: updates.totalGames ?? user.totalGames,
+      consecutiveCheckins: updates.consecutiveCheckins ?? user.consecutiveCheckins,
+      videosCompleted: updates.videosCompleted ?? user.videosCompleted,
+      yearsActive: updates.yearsActive ?? user.yearsActive,
+      awards: updates.awards ?? user.awards,
+    };
+    this.users.set(userId, updatedUser);
+  }
+  
   // Announcement operations
   async getAnnouncement(id: string): Promise<Announcement | undefined> {
     return this.announcements.get(id);
@@ -1548,6 +1693,220 @@ class DatabaseStorage implements IStorage {
     }
   }
 
+  async initializeAwardDefinitions(): Promise<void> {
+    try {
+      // Check if award definitions already exist for the default organization
+      const existingAwards = await this.getAwardDefinitions(this.defaultOrgId);
+      
+      if (existingAwards.length === 0) {
+        // Define initial award definitions for all prestige levels
+        const awardDefinitions = [
+          // Prospect Level (Entry)
+          {
+            name: "First Steps",
+            tier: "Badge",
+            class: "Attendance",
+            prestige: "Prospect",
+            triggerField: "totalPractices",
+            triggerOperator: ">=",
+            triggerValue: "1",
+            triggerType: "count",
+            description: "Attend your first practice",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Early Bird",
+            tier: "Badge",
+            class: "Time",
+            prestige: "Prospect",
+            triggerField: "consecutiveCheckins",
+            triggerOperator: ">=",
+            triggerValue: "5",
+            triggerType: "count",
+            description: "Check in 5 times consecutively",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          
+          // Starter Level
+          {
+            name: "Practice Regular",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "Starter",
+            triggerField: "totalPractices",
+            triggerOperator: ">=",
+            triggerValue: "10",
+            triggerType: "count",
+            description: "Attend 10 practices",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Game Day Ready",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "Starter",
+            triggerField: "totalGames",
+            triggerOperator: ">=",
+            triggerValue: "5",
+            triggerType: "count",
+            description: "Attend 5 games",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          
+          // AllStar Level
+          {
+            name: "Practice Champion",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "AllStar",
+            triggerField: "totalPractices",
+            triggerOperator: ">=",
+            triggerValue: "25",
+            triggerType: "count",
+            description: "Attend 25 practices",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Game Veteran",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "AllStar",
+            triggerField: "totalGames",
+            triggerOperator: ">=",
+            triggerValue: "15",
+            triggerType: "count",
+            description: "Attend 15 games",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Dedicated Learner",
+            tier: "Badge",
+            class: "Training",
+            prestige: "AllStar",
+            triggerField: "videosCompleted",
+            triggerOperator: ">=",
+            triggerValue: "10",
+            triggerType: "count",
+            description: "Complete 10 training videos",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          
+          // Superstar Level
+          {
+            name: "Practice Elite",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "Superstar",
+            triggerField: "totalPractices",
+            triggerOperator: ">=",
+            triggerValue: "50",
+            triggerType: "count",
+            description: "Attend 50 practices",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Game Legend",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "Superstar",
+            triggerField: "totalGames",
+            triggerOperator: ">=",
+            triggerValue: "30",
+            triggerType: "count",
+            description: "Attend 30 games",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Training Master",
+            tier: "Badge",
+            class: "Training",
+            prestige: "Superstar",
+            triggerField: "videosCompleted",
+            triggerOperator: ">=",
+            triggerValue: "25",
+            triggerType: "count",
+            description: "Complete 25 training videos",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          
+          // HallOfFame Level
+          {
+            name: "Century Club",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "HallOfFame",
+            triggerField: "totalPractices",
+            triggerOperator: ">=",
+            triggerValue: "100",
+            triggerType: "count",
+            description: "Attend 100 practices",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Game Icon",
+            tier: "Trophy",
+            class: "Attendance",
+            prestige: "HallOfFame",
+            triggerField: "totalGames",
+            triggerOperator: ">=",
+            triggerValue: "50",
+            triggerType: "count",
+            description: "Attend 50 games",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+          {
+            name: "Loyalty Award",
+            tier: "Trophy",
+            class: "Commitment",
+            prestige: "HallOfFame",
+            triggerField: "yearsActive",
+            triggerOperator: ">=",
+            triggerValue: "3",
+            triggerType: "count",
+            description: "Be active for 3 years",
+            imageUrl: null,
+            active: true,
+            organizationId: this.defaultOrgId,
+          },
+        ];
+        
+        // Create each award definition
+        for (const award of awardDefinitions) {
+          await this.createAwardDefinition(award);
+          console.log(`✅ Created award definition: ${award.name} (${award.prestige})`);
+        }
+        
+        console.log(`✅ Initialized ${awardDefinitions.length} award definitions`);
+      }
+    } catch (error) {
+      console.error('Error initializing award definitions:', error);
+    }
+  }
+
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {
     if (id !== this.defaultOrgId) return undefined;
@@ -1984,6 +2343,152 @@ class DatabaseStorage implements IStorage {
 
     const results = await db.insert(schema.userBadges).values(dbUserAward).returning();
     return this.mapDbUserBadgeToUserAward(results[0]);
+  }
+
+  // Award Definition operations (new awards system)
+  async getAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
+    const results = await db.select().from(schema.awardDefinitions);
+    return results.filter(def => !def.organizationId || def.organizationId === organizationId);
+  }
+  
+  async getAwardDefinition(id: number): Promise<SelectAwardDefinition | undefined> {
+    const results = await db.select().from(schema.awardDefinitions)
+      .where(eq(schema.awardDefinitions.id, id));
+    if (results.length === 0) return undefined;
+    return results[0];
+  }
+  
+  async createAwardDefinition(data: InsertAwardDefinition): Promise<SelectAwardDefinition> {
+    const now = new Date().toISOString();
+    const dbData = {
+      name: data.name,
+      tier: data.tier,
+      class: data.class ?? null,
+      prestige: data.prestige ?? 'Prospect',
+      triggerField: data.triggerField ?? null,
+      triggerOperator: data.triggerOperator ?? '>=',
+      triggerValue: data.triggerValue ?? null,
+      triggerType: data.triggerType ?? 'count',
+      description: data.description ?? null,
+      imageUrl: data.imageUrl ?? null,
+      active: data.active ?? true,
+      organizationId: data.organizationId ?? null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    const results = await db.insert(schema.awardDefinitions).values(dbData).returning();
+    return results[0];
+  }
+  
+  async updateAwardDefinition(id: number, data: Partial<InsertAwardDefinition>): Promise<SelectAwardDefinition | undefined> {
+    const dbUpdates: any = {
+      name: data.name,
+      tier: data.tier,
+      class: data.class,
+      prestige: data.prestige,
+      triggerField: data.triggerField,
+      triggerOperator: data.triggerOperator,
+      triggerValue: data.triggerValue,
+      triggerType: data.triggerType,
+      description: data.description,
+      imageUrl: data.imageUrl,
+      active: data.active,
+      organizationId: data.organizationId,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    const results = await db.update(schema.awardDefinitions)
+      .set(dbUpdates)
+      .where(eq(schema.awardDefinitions.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return results[0];
+  }
+  
+  async deleteAwardDefinition(id: number): Promise<void> {
+    await db.delete(schema.awardDefinitions).where(eq(schema.awardDefinitions.id, id));
+  }
+  
+  async getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {
+    const results = await db.select().from(schema.awardDefinitions)
+      .where(eq(schema.awardDefinitions.active, true));
+    return results.filter(def => !def.organizationId || def.organizationId === organizationId);
+  }
+  
+  // User Award Record operations (new awards system)
+  async getUserAwardRecords(userId: string): Promise<SelectUserAwardRecord[]> {
+    const results = await db.select().from(schema.userAwards)
+      .where(eq(schema.userAwards.userId, userId));
+    return results;
+  }
+  
+  async getUserAwardsByOrganization(organizationId: string): Promise<SelectUserAwardRecord[]> {
+    const orgUsers = await db.select().from(schema.users);
+    const userIds = orgUsers.map(u => u.id);
+    
+    const results = await db.select().from(schema.userAwards);
+    return results.filter(record => userIds.includes(record.userId));
+  }
+  
+  async createUserAward(data: InsertUserAwardRecord): Promise<SelectUserAwardRecord> {
+    const dbData = {
+      userId: data.userId,
+      awardId: data.awardId,
+      awardedAt: new Date().toISOString(),
+      awardedBy: data.awardedBy ?? null,
+      year: data.year ?? null,
+      notes: data.notes ?? null,
+      visible: data.visible ?? true,
+    };
+    
+    const results = await db.insert(schema.userAwards).values(dbData).returning();
+    return results[0];
+  }
+  
+  async deleteUserAward(id: number): Promise<void> {
+    await db.delete(schema.userAwards).where(eq(schema.userAwards.id, id));
+  }
+  
+  async checkUserHasAward(userId: string, awardId: number, year?: number): Promise<boolean> {
+    let query = db.select().from(schema.userAwards)
+      .where(and(
+        eq(schema.userAwards.userId, userId),
+        eq(schema.userAwards.awardId, awardId)
+      ));
+    
+    const results = await query;
+    
+    if (year !== undefined) {
+      return results.some(record => record.year === year);
+    }
+    
+    return results.length > 0;
+  }
+  
+  // User Award Tracking Fields
+  async updateUserAwardTracking(userId: string, updates: Partial<{totalPractices: number; totalGames: number; consecutiveCheckins: number; videosCompleted: number; yearsActive: number; awards: any[]}>): Promise<void> {
+    const dbUpdates: any = {
+      totalPractices: updates.totalPractices,
+      totalGames: updates.totalGames,
+      consecutiveCheckins: updates.consecutiveCheckins,
+      videosCompleted: updates.videosCompleted,
+      yearsActive: updates.yearsActive,
+      awards: updates.awards,
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    await db.update(schema.users)
+      .set(dbUpdates)
+      .where(eq(schema.users.id, userId));
   }
 
   // Announcement operations

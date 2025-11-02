@@ -27,7 +27,10 @@ import {
   insertEventWindowSchema,
   insertRsvpResponseSchema,
   insertFacilitySchema,
+  insertAwardDefinitionSchema,
+  insertUserAwardRecordSchema,
 } from "@shared/schema";
+import { evaluateAwardsForUser } from "./utils/awardEngine";
 
 let wss: WebSocketServer | null = null;
 
@@ -98,6 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Type assertion to access the method
     await (storage as any).initializeTestUsers?.();
     await (storage as any).initializeFacilities?.();
+    await (storage as any).initializeAwardDefinitions?.();
   }
   
   // =============================================
@@ -267,6 +271,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         verificationToken,
         verificationExpiry,
         isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
       });
       
       // Send verification email
@@ -960,6 +970,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             hasRegistered: true,
             verified: true, // Child profiles are auto-verified through parent
             isActive: true,
+            awards: [],
+            totalPractices: 0,
+            totalGames: 0,
+            consecutiveCheckins: 0,
+            videosCompleted: 0,
+            yearsActive: 0,
           });
           createdPlayers.push(playerUser);
         }
@@ -1078,6 +1094,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasRegistered: false, // Will be set to true after payment
         verified: true, // Child profiles are auto-verified through parent
         isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
       });
       
       // Create or retrieve Stripe customer
@@ -1578,6 +1600,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);
       const attendance = await storage.createAttendance(attendanceData);
+      
+      // Award engine integration - update tracking and evaluate awards
+      try {
+        // Get event details to determine event type
+        const event = await storage.getEvent(attendanceData.eventId.toString());
+        
+        if (event && attendanceData.userId) {
+          // Get current user to read existing values
+          const user = await storage.getUser(attendanceData.userId);
+          
+          if (user) {
+            // Prepare tracking updates based on event type
+            const trackingUpdates: any = {
+              consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
+            };
+            
+            // Determine if it's a practice or game and update accordingly
+            const eventType = event.eventType?.toLowerCase() || '';
+            if (eventType.includes('practice') || eventType.includes('skills assessment')) {
+              trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
+            } else if (eventType.includes('game') || eventType.includes('tournament')) {
+              trackingUpdates.totalGames = (user.totalGames || 0) + 1;
+            }
+            
+            // Update user tracking fields
+            await storage.updateUserAwardTracking(attendanceData.userId, trackingUpdates);
+            
+            // Evaluate and grant any newly earned awards
+            await evaluateAwardsForUser(attendanceData.userId, storage);
+            
+            console.log(`✅ Awards evaluated for user ${attendanceData.userId} after check-in`);
+          }
+        }
+      } catch (awardError: any) {
+        // Log error but don't fail the attendance creation
+        console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
       res.json(attendance);
     } catch (error: any) {
       console.error("Attendance creation error:", error);
@@ -1608,6 +1668,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);
       const attendance = await storage.createAttendance(attendanceData);
+      
+      // Award engine integration - update tracking and evaluate awards
+      try {
+        // Get event details to determine event type
+        const event = await storage.getEvent(attendanceData.eventId.toString());
+        
+        if (event && attendanceData.userId) {
+          // Get current user to read existing values
+          const user = await storage.getUser(attendanceData.userId);
+          
+          if (user) {
+            // Prepare tracking updates based on event type
+            const trackingUpdates: any = {
+              consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
+            };
+            
+            // Determine if it's a practice or game and update accordingly
+            const eventType = event.eventType?.toLowerCase() || '';
+            if (eventType.includes('practice') || eventType.includes('skills assessment')) {
+              trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
+            } else if (eventType.includes('game') || eventType.includes('tournament')) {
+              trackingUpdates.totalGames = (user.totalGames || 0) + 1;
+            }
+            
+            // Update user tracking fields
+            await storage.updateUserAwardTracking(attendanceData.userId, trackingUpdates);
+            
+            // Evaluate and grant any newly earned awards
+            await evaluateAwardsForUser(attendanceData.userId, storage);
+            
+            console.log(`✅ Awards evaluated for user ${attendanceData.userId} after check-in`);
+          }
+        }
+      } catch (awardError: any) {
+        // Log error but don't fail the attendance creation
+        console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
       res.json(attendance);
     } catch (error: any) {
       console.error("Attendance creation error:", error);
@@ -1725,15 +1823,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if response already exists
       const existing = await storage.getRsvpResponseByUserAndEvent(rsvpData.userId, rsvpData.eventId);
       
+      let result;
       if (existing) {
         // Update existing response
-        const updated = await storage.updateRsvpResponse(existing.id, { response: rsvpData.response });
-        res.json(updated);
+        result = await storage.updateRsvpResponse(existing.id, { response: rsvpData.response });
       } else {
         // Create new response
-        const response = await storage.createRsvpResponse(rsvpData);
-        res.json(response);
+        result = await storage.createRsvpResponse(rsvpData);
       }
+      
+      // Award engine integration - evaluate awards for 'going' RSVPs
+      try {
+        if (rsvpData.response === 'going' && rsvpData.userId) {
+          // Optionally increment consecutiveCheckins for positive RSVPs
+          const user = await storage.getUser(rsvpData.userId);
+          
+          if (user) {
+            await storage.updateUserAwardTracking(rsvpData.userId, {
+              consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
+            });
+            
+            // Evaluate and grant any newly earned awards
+            await evaluateAwardsForUser(rsvpData.userId, storage);
+            
+            console.log(`✅ Awards evaluated for user ${rsvpData.userId} after RSVP`);
+          }
+        }
+      } catch (awardError: any) {
+        // Log error but don't fail the RSVP operation
+        console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
+      res.json(result);
     } catch (error: any) {
       console.error("RSVP creation error:", error);
       if (error.name === "ZodError") {
@@ -2597,6 +2718,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting facility:', error);
       res.status(500).json({ error: 'Failed to delete facility', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // AWARD DEFINITION ROUTES (Admin/Coach Only)
+  // =============================================
+  
+  // Get all award definitions for organization
+  app.get('/api/award-definitions', isAuthenticated, async (req: any, res) => {
+    try {
+      const { organizationId } = req.user;
+      const awardDefinitions = await storage.getAwardDefinitions(organizationId);
+      res.json(awardDefinitions);
+    } catch (error: any) {
+      console.error('Error fetching award definitions:', error);
+      res.status(500).json({ error: 'Failed to fetch award definitions', message: error.message });
+    }
+  });
+  
+  // Get single award definition
+  app.get('/api/award-definitions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid award definition ID' });
+      }
+      
+      const awardDefinition = await storage.getAwardDefinition(id);
+      if (!awardDefinition) {
+        return res.status(404).json({ error: 'Award definition not found' });
+      }
+      
+      res.json(awardDefinition);
+    } catch (error: any) {
+      console.error('Error fetching award definition:', error);
+      res.status(500).json({ error: 'Failed to fetch award definition', message: error.message });
+    }
+  });
+  
+  // Create new award definition (admin only)
+  app.post('/api/award-definitions', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create award definitions' });
+      }
+      
+      const awardDefinitionData = insertAwardDefinitionSchema.parse({
+        ...req.body,
+        organizationId,
+      });
+      const awardDefinition = await storage.createAwardDefinition(awardDefinitionData);
+      res.status(201).json(awardDefinition);
+    } catch (error: any) {
+      console.error('Error creating award definition:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          error: 'Invalid award definition data', 
+          details: error.errors 
+        });
+      }
+      res.status(400).json({ error: 'Failed to create award definition', message: error.message });
+    }
+  });
+  
+  // Update award definition (admin only)
+  app.put('/api/award-definitions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update award definitions' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid award definition ID' });
+      }
+      
+      const updated = await storage.updateAwardDefinition(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Award definition not found' });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating award definition:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          error: 'Invalid award definition data', 
+          details: error.errors 
+        });
+      }
+      res.status(400).json({ error: 'Failed to update award definition', message: error.message });
+    }
+  });
+  
+  // Delete award definition (admin only)
+  app.delete('/api/award-definitions/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can delete award definitions' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid award definition ID' });
+      }
+      
+      await storage.deleteAwardDefinition(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting award definition:', error);
+      res.status(500).json({ error: 'Failed to delete award definition', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // USER AWARDS ROUTES
+  // =============================================
+  
+  // Get user awards (for specific user or current user)
+  app.get('/api/user-awards', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id: currentUserId, role, organizationId } = req.user;
+      const { userId } = req.query;
+      
+      // Determine which user's awards to fetch
+      const targetUserId = userId || currentUserId;
+      
+      // Authorization: users can view their own awards, admins/coaches can view any user's awards
+      if (targetUserId !== currentUserId && role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Not authorized to view these awards' });
+      }
+      
+      // Verify the target user exists and belongs to the same organization
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Not authorized to view awards from other organizations' });
+      }
+      
+      const userAwards = await storage.getUserAwardRecords(targetUserId);
+      res.json(userAwards);
+    } catch (error: any) {
+      console.error('Error fetching user awards:', error);
+      res.status(500).json({ error: 'Failed to fetch user awards', message: error.message });
+    }
+  });
+  
+  // Get all user awards for organization (admin/coach only)
+  app.get('/api/user-awards/organization', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can view organization awards' });
+      }
+      
+      const userAwards = await storage.getUserAwardsByOrganization(organizationId);
+      res.json(userAwards);
+    } catch (error: any) {
+      console.error('Error fetching organization awards:', error);
+      res.status(500).json({ error: 'Failed to fetch organization awards', message: error.message });
+    }
+  });
+  
+  // Manually award to user (admin/coach only)
+  app.post('/api/user-awards', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId, id: awardedById } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can award users' });
+      }
+      
+      const { userId, awardId, year, notes } = req.body;
+      
+      // Verify the target user exists and belongs to the same organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot award users from other organizations' });
+      }
+      
+      // Verify the award definition exists
+      const awardDefinition = await storage.getAwardDefinition(awardId);
+      if (!awardDefinition) {
+        return res.status(404).json({ error: 'Award definition not found' });
+      }
+      
+      // Check if user already has this award for the same year
+      const hasAward = await storage.checkUserHasAward(userId, awardId, year);
+      if (hasAward) {
+        return res.status(400).json({ error: 'User already has this award for the specified year' });
+      }
+      
+      const userAwardData = insertUserAwardRecordSchema.parse({
+        userId,
+        awardId,
+        awardedBy: awardedById,
+        year: year || null,
+        notes: notes || null,
+        visible: true,
+      });
+      
+      const userAward = await storage.createUserAward(userAwardData);
+      
+      // Trigger award evaluation to update user's cached awards array
+      await evaluateAwardsForUser(userId, storage);
+      
+      res.status(201).json(userAward);
+    } catch (error: any) {
+      console.error('Error awarding user:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          error: 'Invalid user award data', 
+          details: error.errors 
+        });
+      }
+      res.status(400).json({ error: 'Failed to award user', message: error.message });
+    }
+  });
+  
+  // Delete user award (admin/coach only)
+  app.delete('/api/user-awards/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can delete user awards' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid user award ID' });
+      }
+      
+      await storage.deleteUserAward(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting user award:', error);
+      res.status(500).json({ error: 'Failed to delete user award', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // AWARD SYNC ROUTES
+  // =============================================
+  
+  // Manually trigger award evaluation for a user (admin/coach only)
+  app.post('/api/awards/sync/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can sync awards' });
+      }
+      
+      const { userId } = req.params;
+      
+      // Verify the target user exists and belongs to the same organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot sync awards for users from other organizations' });
+      }
+      
+      // Trigger award evaluation
+      const updatedAwards = await evaluateAwardsForUser(userId, storage);
+      
+      res.json({ 
+        success: true, 
+        message: 'Awards synced successfully',
+        awardsCount: updatedAwards.length,
+        awards: updatedAwards
+      });
+    } catch (error: any) {
+      console.error('Error syncing awards:', error);
+      res.status(500).json({ error: 'Failed to sync awards', message: error.message });
     }
   });
   

@@ -148,9 +148,9 @@ export default function AdminDashboard() {
     queryKey: ["/api/programs"],
   });
 
-  // Fetch awards
-  const { data: awards = [], isLoading: awardsLoading } = useQuery<any[]>({
-    queryKey: ["/api/awards"],
+  // Fetch award definitions
+  const { data: awardDefinitions = [], isLoading: awardDefinitionsLoading } = useQuery<any[]>({
+    queryKey: ["/api/award-definitions"],
   });
 
   // Fetch payments
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/notifications"],
   });
 
-  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardsLoading || paymentsLoading || divisionsLoading || skillsLoading || evaluationsLoading || notificationsLoading;
+  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || skillsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
   const stats = {
@@ -319,7 +319,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="awards">
-            <AwardsTab awards={awards} users={users} organization={organization} />
+            <AwardsTab awardDefinitions={awardDefinitions} users={users} organization={organization} />
           </TabsContent>
 
           <TabsContent value="products">
@@ -2506,345 +2506,763 @@ function EventsTab({ events, teams, programs, organization }: any) {
   );
 }
 
-// Awards Tab - Full Implementation
-function AwardsTab({ awards, users, organization }: any) {
+// Awards Tab - Full Implementation with all requested features
+function AwardsTab({ awardDefinitions, users, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingAward, setEditingAward] = useState<any>(null);
+  const [recipientsAward, setRecipientsAward] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterTier, setFilterTier] = useState<string>("all");
+  const [filterPrestige, setFilterPrestige] = useState<string>("all");
+  const [filterClass, setFilterClass] = useState<string>("all");
+  const [filterActive, setFilterActive] = useState<string>("all");
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const tableRef = useDragScroll();
 
-  const createAwardSchema = z.object({
-    name: z.string().min(1),
+  // Fetch user awards for recipients view
+  const { data: userAwards = [], refetch: refetchUserAwards } = useQuery<any[]>({
+    queryKey: ["/api/user-awards", recipientsAward?.id],
+    enabled: !!recipientsAward,
+  });
+
+  const awardFormSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    tier: z.enum(["Trophy", "Badge"]),
+    class: z.enum(["Legacy", "Team", "Coach", "HallOfFame", "Superstar", "AllStar", "Starter", "Prospect", "Attendance", "Commitment", "Variety", "Time", "Training"]).optional(),
+    prestige: z.enum(["Prospect", "Starter", "AllStar", "Superstar", "HallOfFame"]),
+    triggerField: z.enum(["totalPractices", "totalGames", "consecutiveCheckins", "videosCompleted", "yearsActive"]).optional(),
+    triggerOperator: z.enum([">=", "=", "<"]).default(">="),
+    triggerValue: z.number().optional(),
+    triggerType: z.enum(["count", "streak", "boolean", "manual"]).default("count"),
     description: z.string().optional(),
-    criteria: z.string().optional(),
+    imageUrl: z.string().optional(),
+    active: z.boolean().default(true),
   });
 
   const form = useForm({
-    resolver: zodResolver(createAwardSchema),
+    resolver: zodResolver(awardFormSchema),
     defaultValues: {
       name: "",
+      tier: "Badge" as const,
+      class: undefined,
+      prestige: "Prospect" as const,
+      triggerField: undefined,
+      triggerOperator: ">=" as const,
+      triggerValue: undefined,
+      triggerType: "count" as const,
       description: "",
-      criteria: "",
+      imageUrl: "",
+      active: true,
     },
   });
 
   const createAward = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/awards", {
+      return await apiRequest("POST", "/api/award-definitions", {
         ...data,
-        organizationId: organization.id,
+        organizationId: organization?.id,
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
-      toast({ title: "Award created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+      toast({ title: "Award definition created successfully" });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: () => {
-      toast({ title: "Failed to create award", variant: "destructive" });
-    },
-  });
-
-  const deleteAward = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/awards/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
-      toast({ title: "Award deleted successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete award", variant: "destructive" });
+      toast({ title: "Failed to create award definition", variant: "destructive" });
     },
   });
 
   const updateAward = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      return await apiRequest("PATCH", `/api/awards/${id}`, data);
+      return await apiRequest("PUT", `/api/award-definitions/${id}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
-      toast({ title: "Award updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+      toast({ title: "Award definition updated successfully" });
       setEditingAward(null);
     },
     onError: () => {
-      toast({ title: "Failed to update award", variant: "destructive" });
+      toast({ title: "Failed to update award definition", variant: "destructive" });
     },
   });
 
-  const downloadAwardTemplate = () => {
-    const csvContent = "Name,Description,Criteria\nMost Improved Player,Award for the player who has shown the most improvement,Demonstrated significant skill improvement over the season\nTeam Spirit Award,Award for exceptional team spirit and sportsmanship,Consistently demonstrates positive attitude and support for teammates";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'awards-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const deleteAward = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/award-definitions/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+      toast({ title: "Award definition deleted successfully" });
+      setDeleteConfirm(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete award definition", variant: "destructive" });
+    },
+  });
+
+  const deleteUserAward = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/user-awards/${id}`, {});
+    },
+    onSuccess: () => {
+      refetchUserAwards();
+      toast({ title: "User award removed successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove user award", variant: "destructive" });
+    },
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      return await apiRequest("PUT", `/api/award-definitions/${id}`, { active });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update award status", variant: "destructive" });
+    },
+  });
+
+  const handleSyncAll = async () => {
+    if (!users || users.length === 0) {
+      toast({ title: "No users to sync", variant: "destructive" });
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncProgress({ current: 0, total: users.length });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      try {
+        await apiRequest("POST", `/api/awards/sync/${user.id}`, {});
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to sync awards for user ${user.id}:`, error);
+        errorCount++;
+      }
+      setSyncProgress({ current: i + 1, total: users.length });
+    }
+
+    setIsSyncing(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
+    
+    toast({
+      title: "Award Sync Complete",
+      description: `Synced ${successCount} users. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+      variant: errorCount > 0 ? "destructive" : "default",
+    });
   };
 
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast({ 
-          title: "Invalid CSV", 
-          description: "CSV file must contain headers and at least one row of data",
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const dataLines = lines.slice(1);
-      
-      toast({ title: `Processing ${dataLines.length} awards from CSV...` });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim());
-        const awardData: any = {};
-        
-        headers.forEach((header, index) => {
-          awardData[header] = values[index] || '';
-        });
-        
-        try {
-          await apiRequest("POST", "/api/awards", {
-            organizationId: organization.id,
-            name: awardData['name'] || '',
-            description: awardData['description'] || '',
-            criteria: awardData['criteria'] || '',
-          });
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to create award:`, error);
-          errorCount++;
-        }
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
-      
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `Successfully created ${successCount} awards. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default"
-      });
-      
-      setIsBulkUploadOpen(false);
+  // Get prestige badge color
+  const getPrestigeBadgeColor = (prestige: string) => {
+    const colors: Record<string, string> = {
+      "Prospect": "bg-gray-100 text-gray-700 border-gray-300",
+      "Starter": "bg-green-100 text-green-700 border-green-300",
+      "AllStar": "bg-blue-100 text-blue-700 border-blue-300",
+      "Superstar": "bg-purple-100 text-purple-700 border-purple-300",
+      "HallOfFame": "bg-yellow-100 text-yellow-700 border-yellow-300",
     };
-    reader.readAsText(file);
+    return colors[prestige] || colors["Prospect"];
+  };
+
+  // Filter awards
+  const filteredAwards = awardDefinitions.filter((award: any) => {
+    const matchesSearch = award.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTier = filterTier === "all" || award.tier === filterTier;
+    const matchesPrestige = filterPrestige === "all" || award.prestige === filterPrestige;
+    const matchesClass = filterClass === "all" || award.class === filterClass;
+    const matchesActive = filterActive === "all" || 
+      (filterActive === "active" && award.active) || 
+      (filterActive === "inactive" && !award.active);
+    
+    return matchesSearch && matchesTier && matchesPrestige && matchesClass && matchesActive;
+  });
+
+  // Get recipient count for an award
+  const getRecipientCount = (awardId: number) => {
+    return userAwards.filter((ua: any) => ua.awardId === awardId).length;
+  };
+
+  const openEditDialog = (award: any) => {
+    setEditingAward(award);
+    
+    form.reset({
+      name: award.name || "",
+      tier: award.tier || "Badge",
+      class: award.class || undefined,
+      prestige: award.prestige || "Prospect",
+      triggerField: award.triggerField || undefined,
+      triggerOperator: award.triggerOperator || ">=",
+      triggerValue: award.triggerValue != null && award.triggerValue !== "" ? Number(award.triggerValue) : undefined,
+      triggerType: award.triggerType || "count",
+      description: award.description || "",
+      imageUrl: award.imageUrl || "",
+      active: award.active ?? true,
+    } as any);
+    setIsDialogOpen(true);
   };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Award Management</CardTitle>
-          <CardDescription>Create and assign awards to recognize achievements</CardDescription>
+          <CardTitle>Award Definitions</CardTitle>
+          <CardDescription>Manage trophies and badges for your organization</CardDescription>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSyncAll}
+            disabled={isSyncing}
+            data-testid="button-sync-awards"
+          >
+            {isSyncing ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+                Syncing {syncProgress.current}/{syncProgress.total}...
+              </>
+            ) : (
+              <>
+                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                Sync All Awards
+              </>
+            )}
+          </Button>
+          <Dialog open={isDialogOpen && !editingAward} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) {
+              setEditingAward(null);
+              form.reset();
+            }
+          }}>
             <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-bulk-upload-awards" className="w-full sm:w-auto">
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Upload
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Bulk Upload Awards</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Criteria</p>
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkUpload}
-                  data-testid="input-award-csv-upload"
-                />
-                <Button variant="outline" className="w-full" onClick={downloadAwardTemplate} data-testid="button-download-award-template">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download CSV Template
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-award" className="w-full sm:w-auto">
+              <Button data-testid="button-create-award">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Award
               </Button>
             </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Award</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createAward.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Award Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Most Improved Player" data-testid="input-award-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} data-testid="input-award-description" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="criteria"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Criteria</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Criteria for earning this award" data-testid="input-award-criteria" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={createAward.isPending} data-testid="button-submit-award">
-                  {createAward.isPending ? "Creating..." : "Create Award"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Award Dialog */}
-        <Dialog open={!!editingAward} onOpenChange={(open) => !open && setEditingAward(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Award</DialogTitle>
-            </DialogHeader>
-            {editingAward && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-award-name">Award Name</Label>
-                  <Input
-                    id="edit-award-name"
-                    defaultValue={editingAward.name || ""}
-                    onChange={(e) => setEditingAward({...editingAward, name: e.target.value})}
-                    data-testid="input-edit-award-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-award-description">Description</Label>
-                  <Textarea
-                    id="edit-award-description"
-                    defaultValue={editingAward.description || ""}
-                    onChange={(e) => setEditingAward({...editingAward, description: e.target.value})}
-                    data-testid="input-edit-award-description"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-award-criteria">Criteria</Label>
-                  <Textarea
-                    id="edit-award-criteria"
-                    defaultValue={editingAward.criteria || ""}
-                    onChange={(e) => setEditingAward({...editingAward, criteria: e.target.value})}
-                    data-testid="input-edit-award-criteria"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-award-iconUrl">Icon URL</Label>
-                  <Input
-                    id="edit-award-iconUrl"
-                    defaultValue={editingAward.iconUrl || ""}
-                    onChange={(e) => setEditingAward({...editingAward, iconUrl: e.target.value})}
-                    placeholder="https://example.com/icon.png"
-                    data-testid="input-edit-award-iconUrl"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={() => updateAward.mutate(editingAward)}
-                  disabled={updateAward.isPending}
-                  data-testid="button-submit-edit-award"
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingAward ? "Edit Award Definition" : "Create Award Definition"}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit((data) => {
+                    if (editingAward) {
+                      updateAward.mutate({ id: editingAward.id, ...data });
+                    } else {
+                      createAward.mutate(data);
+                    }
+                  })}
+                  className="space-y-4"
                 >
-                  {updateAward.isPending ? "Updating..." : "Update Award"}
-                </Button>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name *</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Heart & Hustle Award" data-testid="input-award-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="tier"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tier *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-award-tier">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Trophy">Trophy</SelectItem>
+                              <SelectItem value="Badge">Badge</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="prestige"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Prestige *</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-award-prestige">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Prospect">Prospect</SelectItem>
+                              <SelectItem value="Starter">Starter</SelectItem>
+                              <SelectItem value="AllStar">All Star</SelectItem>
+                              <SelectItem value="Superstar">Superstar</SelectItem>
+                              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="class"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Class</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-award-class">
+                              <SelectValue placeholder="Select a class..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Legacy">Legacy</SelectItem>
+                            <SelectItem value="Team">Team</SelectItem>
+                            <SelectItem value="Coach">Coach</SelectItem>
+                            <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
+                            <SelectItem value="Superstar">Superstar</SelectItem>
+                            <SelectItem value="AllStar">All Star</SelectItem>
+                            <SelectItem value="Starter">Starter</SelectItem>
+                            <SelectItem value="Prospect">Prospect</SelectItem>
+                            <SelectItem value="Attendance">Attendance</SelectItem>
+                            <SelectItem value="Commitment">Commitment</SelectItem>
+                            <SelectItem value="Variety">Variety</SelectItem>
+                            <SelectItem value="Time">Time</SelectItem>
+                            <SelectItem value="Training">Training</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="triggerField"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trigger Field</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-award-trigger-field">
+                                <SelectValue placeholder="Select field..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="totalPractices">Total Practices</SelectItem>
+                              <SelectItem value="totalGames">Total Games</SelectItem>
+                              <SelectItem value="consecutiveCheckins">Consecutive Check-ins</SelectItem>
+                              <SelectItem value="videosCompleted">Videos Completed</SelectItem>
+                              <SelectItem value="yearsActive">Years Active</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="triggerType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trigger Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-award-trigger-type">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="count">Count</SelectItem>
+                              <SelectItem value="streak">Streak</SelectItem>
+                              <SelectItem value="boolean">Boolean</SelectItem>
+                              <SelectItem value="manual">Manual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="triggerOperator"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Operator</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-award-trigger-operator">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value=">=">&gt;=</SelectItem>
+                              <SelectItem value="=">=</SelectItem>
+                              <SelectItem value="<">&lt;</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="triggerValue"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Trigger Value</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              placeholder="10"
+                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                              value={field.value || ""}
+                              data-testid="input-award-trigger-value"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} placeholder="Description of the award..." data-testid="input-award-description" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="imageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Image URL</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="https://example.com/trophy.png" data-testid="input-award-image-url" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Active</FormLabel>
+                          <FormDescription>
+                            Award is active and can be earned by users
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-award-active"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={createAward.isPending || updateAward.isPending}
+                    data-testid="button-submit-award"
+                  >
+                    {createAward.isPending || updateAward.isPending
+                      ? "Saving..."
+                      : editingAward
+                      ? "Update Award"
+                      : "Create Award"}
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3 mb-6">
+          <Input
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+            data-testid="input-search-awards"
+          />
+          <Select value={filterTier} onValueChange={setFilterTier}>
+            <SelectTrigger className="w-40" data-testid="filter-tier">
+              <SelectValue placeholder="Tier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tiers</SelectItem>
+              <SelectItem value="Trophy">Trophy</SelectItem>
+              <SelectItem value="Badge">Badge</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterPrestige} onValueChange={setFilterPrestige}>
+            <SelectTrigger className="w-40" data-testid="filter-prestige">
+              <SelectValue placeholder="Prestige" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Prestige</SelectItem>
+              <SelectItem value="Prospect">Prospect</SelectItem>
+              <SelectItem value="Starter">Starter</SelectItem>
+              <SelectItem value="AllStar">All Star</SelectItem>
+              <SelectItem value="Superstar">Superstar</SelectItem>
+              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterClass} onValueChange={setFilterClass}>
+            <SelectTrigger className="w-40" data-testid="filter-class">
+              <SelectValue placeholder="Class" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Classes</SelectItem>
+              <SelectItem value="Legacy">Legacy</SelectItem>
+              <SelectItem value="Team">Team</SelectItem>
+              <SelectItem value="Coach">Coach</SelectItem>
+              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
+              <SelectItem value="Superstar">Superstar</SelectItem>
+              <SelectItem value="AllStar">All Star</SelectItem>
+              <SelectItem value="Starter">Starter</SelectItem>
+              <SelectItem value="Prospect">Prospect</SelectItem>
+              <SelectItem value="Attendance">Attendance</SelectItem>
+              <SelectItem value="Commitment">Commitment</SelectItem>
+              <SelectItem value="Variety">Variety</SelectItem>
+              <SelectItem value="Time">Time</SelectItem>
+              <SelectItem value="Training">Training</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterActive} onValueChange={setFilterActive}>
+            <SelectTrigger className="w-40" data-testid="filter-active">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Awards Table */}
         <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Award Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Recipients</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {awards.map((award: any) => (
-              <TableRow key={award.id} data-testid={`row-award-${award.id}`}>
-                <TableCell className="font-medium">{award.name}</TableCell>
-                <TableCell>{award.description || "-"}</TableCell>
-                <TableCell>{award.recipientCount || 0}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" data-testid={`button-assign-award-${award.id}`}>
-                      Assign
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setEditingAward(award)}
-                      data-testid={`button-edit-award-${award.id}`}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => deleteAward.mutate(award.id)}
-                      data-testid={`button-delete-award-${award.id}`}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  </div>
-                </TableCell>
+                <TableHead>Name</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Prestige</TableHead>
+                <TableHead>Class</TableHead>
+                <TableHead>Trigger</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Recipients</TableHead>
+                <TableHead>Active</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredAwards.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                    No awards found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAwards.map((award: any) => (
+                  <TableRow
+                    key={award.id}
+                    className="cursor-pointer hover:bg-gray-50"
+                    data-testid={`row-award-${award.id}`}
+                  >
+                    <TableCell className="font-medium">{award.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{award.tier}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getPrestigeBadgeColor(award.prestige)}>
+                        {award.prestige}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{award.class || "-"}</TableCell>
+                    <TableCell>
+                      {award.triggerField ? (
+                        <div className="text-sm">
+                          {award.triggerField} {award.triggerOperator} {award.triggerValue}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>{award.triggerType || "-"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRecipientsAward(award)}
+                        data-testid={`button-view-recipients-${award.id}`}
+                      >
+                        <Badge variant="secondary">
+                          {getRecipientCount(award.id)} <Eye className="w-3 h-3 ml-1" />
+                        </Badge>
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={award.active ?? true}
+                        onCheckedChange={(checked) => toggleActive.mutate({ id: award.id, active: checked })}
+                        data-testid={`switch-active-${award.id}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(award)}
+                          data-testid={`button-edit-award-${award.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteConfirm(award)}
+                          data-testid={`button-delete-award-${award.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
+
+      {/* Recipients Dialog */}
+      <Dialog open={!!recipientsAward} onOpenChange={(open) => !open && setRecipientsAward(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Recipients: {recipientsAward?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Player Name</TableHead>
+                  <TableHead>Awarded At</TableHead>
+                  <TableHead>Awarded By</TableHead>
+                  <TableHead>Year</TableHead>
+                  <TableHead>Notes</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {userAwards
+                  .filter((ua: any) => ua.awardId === recipientsAward?.id)
+                  .map((ua: any) => {
+                    const user = users.find((u: any) => u.id === ua.userId);
+                    const awardedByUser = ua.awardedBy ? users.find((u: any) => u.id === ua.awardedBy) : null;
+                    return (
+                      <TableRow key={ua.id} data-testid={`recipient-row-${ua.id}`}>
+                        <TableCell>{user ? `${user.firstName} ${user.lastName}` : "Unknown"}</TableCell>
+                        <TableCell>{ua.awardedAt ? format(new Date(ua.awardedAt), "MMM d, yyyy") : "-"}</TableCell>
+                        <TableCell>
+                          {awardedByUser ? `${awardedByUser.firstName} ${awardedByUser.lastName}` : "Auto"}
+                        </TableCell>
+                        <TableCell>{ua.year || "-"}</TableCell>
+                        <TableCell>{ua.notes || "-"}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteUserAward.mutate(ua.id)}
+                            data-testid={`button-remove-recipient-${ua.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                {userAwards.filter((ua: any) => ua.awardId === recipientsAward?.id).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                      No recipients yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600">
+            Are you sure you want to delete the award "{deleteConfirm?.name}"? This action cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteAward.mutate(deleteConfirm.id)}
+              disabled={deleteAward.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteAward.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

@@ -27,6 +27,7 @@ Preferred communication style: Simple, everyday language.
 - **ORM**: Drizzle ORM for type-safe operations.
 - **Schema**: Supports users, teams, events, payments, facilities, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
 - **Programs**: Supports 10 programs (e.g., Skills Academy, FNHTL, Youth-Club, High-School) with support for ongoing/infinite programs.
+- **User Fields**: Comprehensive user data including organization_id, division_id, products (JSONB array for active subscriptions), skills_assessments (JSONB year-tagged results), height_in (INTEGER), position (PG/SG/SF/PF/C), profile_visibility (BOOLEAN), bio (TEXT), notes (TEXT for admin use), guardian_id (FK to users), emergency_contact_json (JSONB), and last_login (TIMESTAMP). Includes performance tracking fields: total_practices, total_games, consecutive_checkins, videos_completed, years_active.
 
 ### Key Features & Design Decisions
 - **Authentication Flow**: Email/password with required verification, magic link, non-blocking registration, and automatic coach detection. Users are directed to appropriate dashboards.
@@ -41,7 +42,7 @@ Preferred communication style: Simple, everyday language.
 - **UI/UX**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5) and export/share them.
 - **Coach Settings**: Customizable coach profiles with experience, bio, previous teams, playing experience, and philosophy.
-- **Admin Panel**: Comprehensive CRUD operations for users, teams, events, awards, divisions, skills, and notifications, with robust table views, search functionality, and a calendar view for event management. Users table includes `isActive` toggle and horizontal navigation buttons (Previous/Next) at the top for easy column scrolling. Functional cascading dropdowns for user editing (Program filters Team and Division). Products tab displays Stripe product catalog (read-only, managed in Stripe dashboard). Preview tab removed (November 2025).
+- **Admin Panel**: Comprehensive CRUD operations for users, teams, events, awards, divisions, skills, and notifications, with robust table views, search functionality, and a calendar view for event management. Users table includes `isActive` toggle and horizontal navigation buttons (Previous/Next) at the top for easy column scrolling through all columns (Name, Email, Phone, Role, Club, Program, Team, Division, DOB, Packages, Position, Height, Products, Skill Level, Awards, Last Login, Active, Actions). Edit form includes fields for Position, Height (inches), Bio, and Admin Notes. Functional cascading dropdowns for user editing (Program filters Team and Division). Products tab displays Stripe product catalog (read-only, managed in Stripe dashboard). Preview tab removed (November 2025).
 
 ## External Dependencies
 

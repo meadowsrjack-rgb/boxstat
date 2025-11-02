@@ -935,12 +935,68 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   </div>
                   
                   <div className="space-y-2">
+                    <Label htmlFor="edit-position" data-testid="label-edit-position">Position</Label>
+                    <Select 
+                      value={editingUser.position || "none"}
+                      onValueChange={(value) => setEditingUser({...editingUser, position: value === "none" ? "" : value})}
+                    >
+                      <SelectTrigger id="edit-position" data-testid="select-edit-position">
+                        <SelectValue placeholder="Select position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        <SelectItem value="PG">PG - Point Guard</SelectItem>
+                        <SelectItem value="SG">SG - Shooting Guard</SelectItem>
+                        <SelectItem value="SF">SF - Small Forward</SelectItem>
+                        <SelectItem value="PF">PF - Power Forward</SelectItem>
+                        <SelectItem value="C">C - Center</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-height-in" data-testid="label-edit-height-in">Height (inches)</Label>
+                    <Input 
+                      id="edit-height-in"
+                      type="number"
+                      value={editingUser.heightIn || ""}
+                      onChange={(e) => setEditingUser({...editingUser, heightIn: parseInt(e.target.value) || null})}
+                      data-testid="input-edit-height-in"
+                      placeholder="e.g., 72 for 6'0&quot;"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
                     <Label htmlFor="edit-skill" data-testid="label-edit-skill">Skill Level</Label>
                     <Input 
                       id="edit-skill"
                       value={editingUser.skill || ""}
                       onChange={(e) => setEditingUser({...editingUser, skill: e.target.value})}
                       data-testid="input-edit-skill"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-bio" data-testid="label-edit-bio">Bio</Label>
+                    <Textarea 
+                      id="edit-bio"
+                      value={editingUser.bio || ""}
+                      onChange={(e) => setEditingUser({...editingUser, bio: e.target.value})}
+                      data-testid="input-edit-bio"
+                      placeholder="Short player bio..."
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-notes" data-testid="label-edit-notes">Admin Notes</Label>
+                    <Textarea 
+                      id="edit-notes"
+                      value={editingUser.notes || ""}
+                      onChange={(e) => setEditingUser({...editingUser, notes: e.target.value})}
+                      data-testid="input-edit-notes"
+                      placeholder="Internal notes (not visible to user)..."
+                      rows={3}
                     />
                   </div>
                   
@@ -1076,6 +1132,27 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('position')}
+                  data-testid="sort-position"
+                >
+                  Position
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('heightIn')}
+                  data-testid="sort-heightIn"
+                >
+                  Height (in)
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('products')}
+                  data-testid="sort-products"
+                >
+                  Products
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('skill')}
                   data-testid="sort-skill"
                 >
@@ -1087,6 +1164,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   data-testid="sort-awards"
                 >
                   Awards
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('lastLogin')}
+                  data-testid="sort-lastLogin"
+                >
+                  Last Login
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
@@ -1116,8 +1200,20 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>{user.division || "-"}</TableCell>
                     <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>{user.packages?.join(", ") || "-"}</TableCell>
+                    <TableCell>{user.position || "-"}</TableCell>
+                    <TableCell>{user.heightIn || "-"}</TableCell>
+                    <TableCell>
+                      {user.products && Array.isArray(user.products) && user.products.length > 0 
+                        ? user.products.join(", ") 
+                        : "-"}
+                    </TableCell>
                     <TableCell>{user.skill || "-"}</TableCell>
                     <TableCell>{user.awards?.length || 0}</TableCell>
+                    <TableCell>
+                      {user.lastLogin 
+                        ? new Date(user.lastLogin).toLocaleDateString() 
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <Switch
                         checked={user.isActive !== false}

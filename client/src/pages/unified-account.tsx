@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import CheckInButton from "@/components/CheckInButton";
@@ -20,6 +21,7 @@ import {
   User,
   MapPin,
   Clock,
+  Target,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
@@ -70,6 +72,190 @@ function useDragScroll() {
   }, [isDragging, startX, scrollLeft]);
 
   return ref;
+}
+
+// Compact Circular Progress component for awards
+function CompactAwardsIndicator({ playerId }: { playerId: string }) {
+  const { data: awardsData } = useQuery<any>({
+    queryKey: [`/api/users/${playerId}/awards`],
+    enabled: !!playerId,
+  });
+
+  // Calculate total awards earned
+  const totalEarned = awardsData?.length || 0;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative w-12 h-12">
+        <svg className="w-12 h-12 transform -rotate-90">
+          <circle
+            cx="24"
+            cy="24"
+            r="20"
+            stroke="#e5e7eb"
+            strokeWidth="4"
+            fill="none"
+          />
+          <circle
+            cx="24"
+            cy="24"
+            r="20"
+            stroke="url(#awardsGradient)"
+            strokeWidth="4"
+            fill="none"
+            strokeDasharray={`${2 * Math.PI * 20}`}
+            strokeDashoffset={`${2 * Math.PI * 20 * (1 - Math.min(totalEarned / 20, 1))}`}
+            strokeLinecap="round"
+          />
+          <defs>
+            <linearGradient id="awardsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FFD700" />
+              <stop offset="100%" stopColor="#FFA500" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Trophy className="w-5 h-5 text-yellow-600" />
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-500">Awards</span>
+        <span className="text-sm font-semibold text-gray-900">{totalEarned}</span>
+      </div>
+    </div>
+  );
+}
+
+// Skills Assessment Indicator
+function SkillsIndicator({ playerId }: { playerId: string }) {
+  const { data: evaluation } = useQuery<any>({
+    queryKey: [`/api/players/${playerId}/latest-evaluation`],
+    enabled: !!playerId,
+  });
+
+  // Calculate overall skill average from evaluation scores
+  const calculateOverallSkillAverage = (evalData: any): number => {
+    if (!evalData?.scores) return 0;
+    
+    const scores = evalData.scores;
+    let totalScore = 0;
+    let totalSkills = 0;
+    
+    Object.values(scores).forEach((category: any) => {
+      if (category && typeof category === 'object') {
+        Object.values(category).forEach((skillValue: any) => {
+          if (typeof skillValue === 'number') {
+            totalScore += skillValue;
+            totalSkills++;
+          }
+        });
+      }
+    });
+    
+    if (totalSkills === 0) return 0;
+    
+    // Average is out of 5, convert to percentage
+    const average = totalScore / totalSkills;
+    return Math.round((average / 5) * 100);
+  };
+
+  const skillScore = calculateOverallSkillAverage(evaluation);
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative w-12 h-12">
+        <svg className="w-12 h-12 transform -rotate-90">
+          <circle
+            cx="24"
+            cy="24"
+            r="20"
+            stroke="#e5e7eb"
+            strokeWidth="4"
+            fill="none"
+          />
+          <circle
+            cx="24"
+            cy="24"
+            r="20"
+            stroke="url(#skillsGradient)"
+            strokeWidth="4"
+            fill="none"
+            strokeDasharray={`${2 * Math.PI * 20}`}
+            strokeDashoffset={`${2 * Math.PI * 20 * (1 - skillScore / 100)}`}
+            strokeLinecap="round"
+          />
+          <defs>
+            <linearGradient id="skillsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#3b82f6" />
+              <stop offset="100%" stopColor="#8b5cf6" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Target className="w-5 h-5 text-blue-600" />
+        </div>
+      </div>
+      <div className="flex flex-col">
+        <span className="text-xs text-gray-500">Skills</span>
+        <span className="text-sm font-semibold text-gray-900">{skillScore}%</span>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced Player Card Component
+function EnhancedPlayerCard({ player, onClick }: { player: any; onClick: () => void }) {
+  const { data: teamData } = useQuery<any>({
+    queryKey: [`/api/users/${player.id}/team`],
+    enabled: !!player.id,
+  });
+
+  return (
+    <Card
+      className="cursor-pointer hover:shadow-lg transition-shadow"
+      onClick={onClick}
+      data-testid={`player-card-${player.id}`}
+    >
+      <CardContent className="p-6">
+        {/* Header with Avatar and Status */}
+        <div className="flex items-start justify-between mb-4">
+          <Avatar className="w-16 h-16">
+            <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+              {player.firstName?.[0]}{player.lastName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          {player.teamAssignmentStatus === "pending" && (
+            <Badge variant="outline" className="bg-yellow-50">
+              Pending
+            </Badge>
+          )}
+        </div>
+
+        {/* Player Name */}
+        <h3 className="text-lg font-semibold mb-1" data-testid={`player-name-${player.id}`}>
+          {player.firstName} {player.lastName}
+        </h3>
+
+        {/* Team Name */}
+        {teamData?.name && (
+          <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
+            <User className="w-3 h-3" />
+            {teamData.name}
+          </p>
+        )}
+
+        {/* Divider */}
+        <div className="border-t border-gray-100 my-4"></div>
+
+        {/* Awards and Skills Indicators */}
+        <div className="space-y-3">
+          <CompactAwardsIndicator playerId={player.id} />
+          <SkillsIndicator playerId={player.id} />
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function UnifiedAccount() {
@@ -190,50 +376,6 @@ export default function UnifiedAccount() {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Upcoming Events</p>
-                  <p className="text-2xl font-bold" data-testid="stat-upcoming-events">
-                    {upcomingEvents.length}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Next Payment</p>
-                  <p className="text-2xl font-bold" data-testid="stat-next-payment">
-                    {nextPaymentDue ? `$${(nextPaymentDue.amount / 100).toFixed(2)}` : "None"}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Active Players</p>
-                  <p className="text-2xl font-bold" data-testid="stat-active-players">
-                    {players.length}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
 
@@ -299,75 +441,16 @@ export default function UnifiedAccount() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {players.map((player: any) => (
-                    <Card
+                    <EnhancedPlayerCard
                       key={player.id}
-                      className="cursor-pointer hover:shadow-lg transition-shadow"
+                      player={player}
                       onClick={() => openPlayerDashboard(player.id)}
-                      data-testid={`player-card-${player.id}`}
-                    >
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-4">
-                          <Avatar className="w-16 h-16">
-                            <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
-                              {player.firstName?.[0]}{player.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          {player.teamAssignmentStatus === "pending" && (
-                            <Badge variant="outline" className="bg-yellow-50">
-                              Pending
-                            </Badge>
-                          )}
-                        </div>
-
-                        <h3 className="text-lg font-semibold mb-1" data-testid={`player-name-${player.id}`}>
-                          {player.firstName} {player.lastName}
-                        </h3>
-
-                        {player.teamId && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            Team: {player.teamId}
-                          </p>
-                        )}
-
-                        {player.packageSelected && (
-                          <p className="text-sm text-gray-600 mb-2">
-                            Program: {player.packageSelected}
-                          </p>
-                        )}
-
-                        <div className="flex items-center gap-2 mt-4 text-sm text-gray-500">
-                          <Trophy className="w-4 h-4" />
-                          <span>{player.awardsCount || 0} Awards</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    />
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Upcoming Events */}
-            {upcomingEvents.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
-                <div className="space-y-3">
-                  {upcomingEvents.map((event: any) => (
-                    <Card key={event.id}>
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">{event.title}</h3>
-                          <p className="text-sm text-gray-600">
-                            {new Date(event.startTime).toLocaleDateString()} at {event.location}
-                          </p>
-                        </div>
-                        <Badge>{event.eventType || "Event"}</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
           </TabsContent>
 
           {/* Payments Tab */}

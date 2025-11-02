@@ -604,15 +604,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     return 0;
   }) : users;
 
-  const scrollTable = (direction: 'left' | 'right') => {
-    if (tableRef.current) {
-      const scrollAmount = 300;
-      tableRef.current.scrollBy({
-        left: direction === 'right' ? scrollAmount : -scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   return (
     <Card>
@@ -1026,30 +1017,31 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           </div>
         </div>
         
-        {/* Table Navigation Controls */}
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scrollTable('left')}
-            data-testid="button-scroll-left"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => scrollTable('right')}
-            data-testid="button-scroll-right"
-          >
-            Next
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
       </CardHeader>
       <CardContent>
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
+        {/* Top scrollbar for horizontal navigation */}
+        <div 
+          className="overflow-x-auto mb-2"
+          onScroll={(e) => {
+            if (tableRef.current) {
+              tableRef.current.scrollLeft = e.currentTarget.scrollLeft;
+            }
+          }}
+        >
+          <div style={{ width: tableRef.current?.scrollWidth || '100%', height: '1px' }}></div>
+        </div>
+        
+        {/* Table with bottom scrollbar and mobile swipe support */}
+        <div 
+          ref={tableRef} 
+          className="overflow-x-auto drag-scroll touch-pan-x"
+          onScroll={(e) => {
+            const topScrollbar = e.currentTarget.previousElementSibling as HTMLElement;
+            if (topScrollbar) {
+              topScrollbar.scrollLeft = e.currentTarget.scrollLeft;
+            }
+          }}
+        >
           <Table>
             <TableHeader>
               <TableRow>

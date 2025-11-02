@@ -14,7 +14,7 @@ import {
   insertTeamSchema,
   insertEventSchema,
   insertAttendanceSchema,
-  insertAwardSchema,
+  // insertAwardSchema, // Removed - replaced with new comprehensive awards system
   insertUserAwardSchema,
   insertAnnouncementSchema,
   insertMessageSchema,
@@ -1778,7 +1778,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(awards);
   });
   
-  app.post('/api/awards', isAuthenticated, async (req: any, res) => {
+  // TEMPORARILY DISABLED - Old award system replaced with new comprehensive badges/trophies system
+  // TODO: Re-implement with new userAwards schema in Phase 5
+  /* app.post('/api/awards', isAuthenticated, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can create awards' });
@@ -1787,7 +1789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const awardData = insertAwardSchema.parse(req.body);
     const award = await storage.createAward(awardData);
     res.json(award);
-  });
+  }); */
   
   app.patch('/api/awards/:id', isAuthenticated, async (req: any, res) => {
     const { role } = req.user;

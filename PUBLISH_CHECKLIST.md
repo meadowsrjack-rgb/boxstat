@@ -11,12 +11,10 @@
 
 ### Security Verified:
 - ✅ No hardcoded API keys in source code
-- ✅ Google Calendar API key safely in environment variables
 - ✅ Database credentials environment-based
 - ✅ All sensitive files excluded from git
 
 ### Application Status:
-- ✅ **Google Calendar Integration** - 100+ real events syncing hourly
 - ✅ **API Routes Working** - `/api/events` returning authentic data
 - ✅ **Demo Mode Functional** - Complete testing environment
 - ✅ **PWA Ready** - iOS installation and offline support
@@ -42,14 +40,12 @@ git push -u origin main
 
 ### Core Systems:
 - Multi-profile account management (Parent/Player/Coach)
-- Google Calendar API integration with automatic sync
 - Progressive Web App with iOS installation
 - Real-time team communication via WebSocket
 - QR code check-in system for attendance
 - Comprehensive trophies and badges system
 
 ### External Integrations:
-- Google Calendar API (upyourperformance@gmail.com)
 - SportsEngine payment processing
 - Replit Auth with OpenID Connect
 - PostgreSQL database with Neon hosting

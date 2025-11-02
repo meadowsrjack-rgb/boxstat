@@ -239,8 +239,6 @@ export const events = pgTable("events", {
   recurringType: varchar("recurring_type"),
   recurringEndDate: timestamp("recurring_end_date", { mode: 'string' }),
   playerId: varchar("player_id"),
-  googleEventId: text("google_event_id"),
-  lastSyncedAt: timestamp("last_synced_at", { mode: 'string' }),
   isActive: boolean("is_active").default(true),
   latitude: doublePrecision(),
   longitude: doublePrecision(),

@@ -12,7 +12,6 @@ export interface ParsedEvent {
   teamTags: string[];
   coaches: string[];
   originalEventType: string;
-  googleEventId?: string;
 }
 
 export function parseEventMeta(event: any): ParsedEvent {
@@ -110,8 +109,7 @@ export function parseEventMeta(event: any): ParsedEvent {
     ageTags,
     teamTags,
     coaches,
-    originalEventType: event.eventType || 'other',
-    googleEventId: event.googleEventId
+    originalEventType: event.eventType || 'other'
   };
 }
 

@@ -33,7 +33,7 @@ git remote add origin https://github.com/YOUR_USERNAME/uyp-basketball-app.git
 git add .
 
 # Commit your changes
-git commit -m "Initial commit: UYP Basketball League PWA with Google Calendar integration"
+git commit -m "Initial commit: UYP Basketball League PWA"
 
 # Push to GitHub
 git push -u origin main
@@ -45,7 +45,6 @@ Before publishing, ensure these secrets are NOT in your code:
 
 🔐 **Environment Variables** (add to GitHub Secrets if deploying):
 - `DATABASE_URL` - Your PostgreSQL connection string
-- `GOOGLE_CALENDAR_API_KEY` - Your Google Calendar API key  
 - `SESSION_SECRET` - Secure session secret
 
 🔐 **Files Already Protected**:
@@ -60,7 +59,7 @@ After pushing to GitHub:
 1. **Add Repository Description**
    - Go to your repository on GitHub
    - Click the gear icon next to "About"
-   - Add: "Progressive Web App for UYP Basketball League with Google Calendar integration, real-time chat, and multi-profile support"
+   - Add: "Progressive Web App for UYP Basketball League with real-time chat and multi-profile support"
    - Add topics: `basketball`, `pwa`, `react`, `typescript`, `youth-sports`
 
 2. **Set Up GitHub Pages** (optional for documentation)
@@ -107,11 +106,9 @@ For team development:
 ⚠️ **Before Publishing**:
 - Remove any hardcoded API keys or secrets
 - Test the app thoroughly in demo mode
-- Verify all Google Calendar integration works
 - Ensure PWA installation works on iOS
 
 ✅ **What's Ready**:
-- Complete Google Calendar integration with 100+ real events
 - Full demo mode with realistic data
 - PWA setup for iOS installation
 - Comprehensive trophies and badges system

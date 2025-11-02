@@ -1,0 +1,33 @@
+| Column                   | Type                      | Description                                                                              |
+| ------------------------ | ------------------------- | ---------------------------------------------------------------------------------------- |
+| **id**                   | `UUID PRIMARY KEY`        | Unique user identifier                                                                   |
+| **first_name**           | `TEXT`                    | Player’s first name                                                                      |
+| **last_name**            | `TEXT`                    | Player’s last name                                                                       |
+| **email**                | `TEXT UNIQUE`             | User email                                                                               |
+| **phone**                | `TEXT`                    | User phone number (formatted `+1 (123) 456-7890`)                                        |
+| **role**                 | `TEXT`                    | Role in system (`player`, `coach`, `parent`, `admin`)                                    |
+| **organization**         | `TEXT`                    | Organization or club name (e.g., UYP, BoxStat)                                           |
+| **team_id**              | `UUID` (FK → `teams`)     | Current team (nullable)                                                                  |
+| **division_id**          | `UUID` (FK → `divisions`) | Player’s age/level group (nullable)                                                      |
+| **dob**                  | `DATE`                    | Date of birth                                                                            |
+| **stripe_customer_id**   | `TEXT`                    | For payments and subscriptions                                                           |
+| **products**             | `JSONB`                   | List of active subscriptions or one-offs, e.g. `["Youth Club Monthly","Uniform Add-On"]` |
+| **skills_assessments**   | `JSONB`                   | Year-tagged results, e.g. `{ "2024": "Intermediate", "2025": "Advanced" }`               |
+| **awards**               | `JSONB`                   | Cached summary of earned awards (synced from `user_awards`)                              |
+| **height_in**            | `INTEGER`                 | Height in inches (or cm if international)                                                |
+| **position**             | `TEXT`                    | Player position (`PG`, `SG`, `SF`, `PF`, `C`)                                            |
+| **profile_visibility**   | `BOOLEAN DEFAULT TRUE`    | Whether player allows height/position shown publicly                                     |
+| **avatar_url**           | `TEXT`                    | Profile image URL                                                                        |
+| **bio**                  | `TEXT`                    | Short player bio                                                                         |
+| **notes**                | `TEXT`                    | Admin notes or internal comments                                                         |
+| **guardian_id**          | `UUID` (FK → `users.id`)  | Links to parent/guardian account if child                                                |
+| **emergency_contact**    | `JSONB`                   | `{ "name": "John Doe", "phone": "+1 (123) 555-6789" }`                                   |
+| **total_practices**      | `INTEGER DEFAULT 0`       | Running count for triggers                                                               |
+| **total_games**          | `INTEGER DEFAULT 0`       | Running count for triggers                                                               |
+| **consecutive_checkins** | `INTEGER DEFAULT 0`       | Used for streak-based badges                                                             |
+| **videos_completed**     | `INTEGER DEFAULT 0`       | Used for training / online program awards                                                |
+| **years_active**         | `INTEGER DEFAULT 0`       | Tracks years of membership                                                               |
+| **last_login**           | `TIMESTAMP`               | Last login timestamp (engagement metric)                                                 |
+| **active**               | `BOOLEAN DEFAULT TRUE`    | Whether account is active                                                                |
+| **created_at**           | `TIMESTAMP DEFAULT NOW()` | When the account was created                                                             |
+| **updated_at**           | `TIMESTAMP DEFAULT NOW()` | Last updated timestamp                                                                   |

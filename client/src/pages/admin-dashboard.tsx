@@ -604,14 +604,25 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     return 0;
   }) : users;
 
+  const scrollTable = (direction: 'left' | 'right') => {
+    if (tableRef.current) {
+      const scrollAmount = 300;
+      tableRef.current.scrollBy({
+        left: direction === 'right' ? scrollAmount : -scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>Manage players, coaches, parents, and admins</CardDescription>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between mb-4">
+          <div>
+            <CardTitle>User Management</CardTitle>
+            <CardDescription>Manage players, coaches, parents, and admins</CardDescription>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" data-testid="button-bulk-upload-users" className="w-full sm:w-auto">
@@ -956,6 +967,29 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               )}
             </DialogContent>
           </Dialog>
+          </div>
+        </div>
+        
+        {/* Table Navigation Controls */}
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scrollTable('left')}
+            data-testid="button-scroll-left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scrollTable('right')}
+            data-testid="button-scroll-right"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

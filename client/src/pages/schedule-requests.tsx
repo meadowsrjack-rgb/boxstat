@@ -15,11 +15,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const predefinedEventTypes = ["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course"];
-
 const scheduleRequestSchema = z.object({
   teamId: z.string().min(1, "Team is required"),
-  requestType: z.string().min(1, "Event type is required"),
+  requestType: z.enum(["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course"]),
   requestedDate: z.string().min(1, "Date is required"),
   requestedTime: z.string().min(1, "Time is required"),
   duration: z.number().min(30, "Duration must be at least 30 minutes"),
@@ -62,7 +60,6 @@ export default function ScheduleRequests() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [customEventType, setCustomEventType] = useState("");
 
   const form = useForm<ScheduleRequestFormData>({
     resolver: zodResolver(scheduleRequestSchema),
@@ -86,34 +83,21 @@ export default function ScheduleRequests() {
   // Create schedule request mutation
   const createRequestMutation = useMutation({
     mutationFn: async (data: ScheduleRequestFormData) => {
-      // Use custom type if selected, otherwise use the selected value
-      const finalType = data.requestType === "__custom__" ? customEventType : data.requestType;
-      
-      // Validate custom type is not empty
-      if (data.requestType === "__custom__" && !customEventType.trim()) {
-        throw new Error("Please enter a custom event type");
-      }
-      
-      return apiRequest("POST", "/api/sportsengine/schedule-requests", {
-        ...data,
-        requestType: finalType,
-      });
+      return apiRequest("POST", "/api/sportsengine/schedule-requests", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sportsengine/schedule-requests'] });
       setIsCreateDialogOpen(false);
       form.reset();
-      setCustomEventType("");
       toast({
         title: "Request Submitted",
         description: "Your schedule request has been submitted for review.",
       });
     },
-    onError: (error: any) => {
-      const message = error instanceof Error ? error.message : "Failed to submit schedule request. Please try again.";
+    onError: (error) => {
       toast({
         title: "Request Failed",
-        description: message,
+        description: "Failed to submit schedule request. Please try again.",
         variant: "destructive",
       });
     },
@@ -255,7 +239,6 @@ export default function ScheduleRequests() {
                             <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="meeting">Meeting</SelectItem>
                             <SelectItem value="course">Course</SelectItem>
-                            <SelectItem value="__custom__">Custom...</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -263,19 +246,6 @@ export default function ScheduleRequests() {
                     )}
                   />
                 </div>
-
-                {form.watch("requestType") === "__custom__" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-event-type">Custom Event Type</Label>
-                    <Input
-                      id="custom-event-type"
-                      placeholder="Enter custom event type"
-                      value={customEventType}
-                      onChange={(e) => setCustomEventType(e.target.value)}
-                      data-testid="input-custom-event-type"
-                    />
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField

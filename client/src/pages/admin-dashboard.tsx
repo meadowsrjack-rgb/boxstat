@@ -1600,14 +1600,10 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
   const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
-  const [customEventType, setCustomEventType] = useState("");
-  const [editCustomEventType, setEditCustomEventType] = useState("");
-
-  const predefinedEventTypes = ["game", "tournament", "camp", "exhibition", "practice", "skills", "workshop", "talk", "combine", "training", "meeting", "course"];
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
-    type: z.string().min(1, "Event type is required"),
+    type: z.enum(["practice", "game", "tournament", "meeting"]),
     startTime: z.string().min(1, "Start time is required"),
     endTime: z.string().min(1, "End time is required"),
     location: z.string().optional(),
@@ -1637,19 +1633,11 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const createEvent = useMutation({
     mutationFn: async (data: any) => {
       // Rename 'type' to 'eventType' for backend compatibility
-      // Use custom type if selected, otherwise use the selected value
       const { type, ...rest } = data;
-      const finalType = type === "__custom__" ? customEventType : type;
-      
-      // Validate custom type is not empty
-      if (type === "__custom__" && !customEventType.trim()) {
-        throw new Error("Please enter a custom event type");
-      }
-      
-      console.log('Event form data before submission:', { type: finalType, ...rest });
+      console.log('Event form data before submission:', { type, ...rest });
       const payload = {
         ...rest,
-        eventType: finalType,
+        eventType: type,
         organizationId: organization.id,
       };
       console.log('Event API payload:', payload);
@@ -1673,11 +1661,9 @@ function EventsTab({ events, teams, programs, organization }: any) {
       setIsDialogOpen(false);
       form.reset();
       setEventWindows([]);
-      setCustomEventType("");
     },
-    onError: (error: any) => {
-      const message = error instanceof Error ? error.message : "Failed to create event";
-      toast({ title: message, variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to create event", variant: "destructive" });
     },
   });
 
@@ -1696,18 +1682,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
 
   const updateEvent = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      // Use custom type if type is "__custom__", otherwise use the selected value
-      const finalType = data.type === "__custom__" ? editCustomEventType : data.type;
-      
-      // Validate custom type is not empty
-      if (data.type === "__custom__" && !editCustomEventType.trim()) {
-        throw new Error("Please enter a custom event type");
-      }
-      
-      const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, {
-        ...data,
-        type: finalType,
-      });
+      const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, data);
       
       // Update event windows - delete existing and create new ones
       await apiRequest("DELETE", `/api/event-windows/event/${id}`, {});
@@ -1728,15 +1703,13 @@ function EventsTab({ events, teams, programs, organization }: any) {
       toast({ title: "Event updated successfully" });
       setEditingEvent(null);
       setEditEventWindows([]);
-      setEditCustomEventType("");
     },
-    onError: (error: any) => {
-      const message = error instanceof Error ? error.message : "Failed to update event";
-      toast({ title: message, variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to update event", variant: "destructive" });
     },
   });
   
-  // Load event windows when editing an event and detect custom event type
+  // Load event windows when editing an event
   useEffect(() => {
     if (editingEvent) {
       (async () => {
@@ -1748,16 +1721,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
           setEditEventWindows([]);
         }
       })();
-      
-      // Check if the event type is custom (not in predefined list)
-      if (editingEvent.type && !predefinedEventTypes.includes(editingEvent.type)) {
-        setEditCustomEventType(editingEvent.type);
-        setEditingEvent({ ...editingEvent, type: "__custom__" });
-      } else {
-        setEditCustomEventType("");
-      }
     }
-  }, [editingEvent?.id]);
+  }, [editingEvent]);
 
   const downloadEventTemplate = () => {
     const csvContent = "Title,Type,Start Time,End Time,Location,Description\nTeam Practice,practice,2025-01-15T10:00,2025-01-15T12:00,Main Gym,Weekly team practice\nChampionship Game,game,2025-01-20T18:00,2025-01-20T20:00,Arena Stadium,Final game";
@@ -1943,25 +1908,12 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             <SelectItem value="training">Training</SelectItem>
                             <SelectItem value="meeting">Meeting</SelectItem>
                             <SelectItem value="course">Course</SelectItem>
-                            <SelectItem value="__custom__">Custom...</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  {form.watch("type") === "__custom__" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="custom-event-type">Custom Event Type</Label>
-                      <Input
-                        id="custom-event-type"
-                        placeholder="Enter custom event type"
-                        value={customEventType}
-                        onChange={(e) => setCustomEventType(e.target.value)}
-                        data-testid="input-custom-event-type"
-                      />
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -2131,22 +2083,9 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         <SelectItem value="training">Training</SelectItem>
                         <SelectItem value="meeting">Meeting</SelectItem>
                         <SelectItem value="course">Course</SelectItem>
-                        <SelectItem value="__custom__">Custom...</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {editingEvent.type === "__custom__" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-custom-event-type">Custom Event Type</Label>
-                      <Input
-                        id="edit-custom-event-type"
-                        placeholder="Enter custom event type"
-                        value={editCustomEventType}
-                        onChange={(e) => setEditCustomEventType(e.target.value)}
-                        data-testid="input-custom-event-type"
-                      />
-                    </div>
-                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="edit-event-startTime">Start Time</Label>

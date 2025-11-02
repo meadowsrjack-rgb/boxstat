@@ -79,8 +79,8 @@ export default function TrophiesBadgesPage() {
 
   // Fetch user's award records
   const { data: userAwardRecords, isLoading: loadingUserAwards } = useQuery<UserAwardRecord[]>({
-    queryKey: ["/api/user", user?.id, "awards"],
-    enabled: !!user?.id,
+    queryKey: ["/api/user-awards"],
+    enabled: !!user,
   });
 
   // Combine award definitions with user award data

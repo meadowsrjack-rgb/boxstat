@@ -1930,21 +1930,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
   
-  // User Awards
+  // User Awards (legacy endpoint - kept for backwards compatibility)
   app.get('/api/user-awards/:userId', isAuthenticated, async (req: any, res) => {
     const userAwards = await storage.getUserAwards(req.params.userId);
     res.json(userAwards);
-  });
-  
-  app.post('/api/user-awards', isAuthenticated, async (req: any, res) => {
-    const { role } = req.user;
-    if (role !== 'admin' && role !== 'coach') {
-      return res.status(403).json({ message: 'Only admins and coaches can award users' });
-    }
-    
-    const userAwardData = insertUserAwardSchema.parse(req.body);
-    const userAward = await storage.awardUser(userAwardData);
-    res.json(userAward);
   });
   
   // =============================================
@@ -2796,7 +2785,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid award definition ID' });
       }
       
-      const updated = await storage.updateAwardDefinition(id, req.body);
+      // Validate request body
+      const awardDefinitionData = insertAwardDefinitionSchema.partial().parse(req.body);
+      
+      const updated = await storage.updateAwardDefinition(id, awardDefinitionData);
       if (!updated) {
         return res.status(404).json({ error: 'Award definition not found' });
       }

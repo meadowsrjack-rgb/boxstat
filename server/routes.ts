@@ -1901,6 +1901,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PAYMENT ROUTES
   // =============================================
   
+  // Stripe Products endpoint
+  app.get('/api/stripe/products', isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    try {
+      // Fetch all products with their default prices expanded
+      const products = await stripe.products.list({
+        active: true,
+        expand: ['data.default_price'],
+        limit: 100,
+      });
+      
+      // Fetch all prices to get additional pricing info
+      const prices = await stripe.prices.list({
+        active: true,
+        limit: 100,
+      });
+      
+      // Group prices by product
+      const pricesByProduct: any = {};
+      prices.data.forEach(price => {
+        const productId = typeof price.product === 'string' ? price.product : price.product?.id;
+        if (productId) {
+          if (!pricesByProduct[productId]) {
+            pricesByProduct[productId] = [];
+          }
+          pricesByProduct[productId].push(price);
+        }
+      });
+      
+      // Map products to include all prices
+      const productsWithPrices = products.data.map(product => ({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        images: product.images,
+        metadata: product.metadata,
+        active: product.active,
+        defaultPrice: product.default_price,
+        prices: pricesByProduct[product.id] || [],
+      }));
+      
+      res.json(productsWithPrices);
+    } catch (error: any) {
+      console.error("Error fetching Stripe products:", error);
+      res.status(500).json({
+        error: "Error fetching products",
+        message: error.message,
+      });
+    }
+  });
+
   app.get('/api/payments', isAuthenticated, async (req: any, res) => {
     const { organizationId } = req.user;
     const payments = await storage.getPaymentsByOrganization(organizationId);

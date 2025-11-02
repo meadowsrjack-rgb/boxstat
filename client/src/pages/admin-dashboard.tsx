@@ -245,17 +245,13 @@ export default function AdminDashboard() {
                 <Calendar className="w-4 h-4 mr-2" />
                 Events
               </TabsTrigger>
-              <TabsTrigger value="programs" data-testid="tab-programs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Award className="w-4 h-4 mr-2" />
-                Programs
-              </TabsTrigger>
               <TabsTrigger value="awards" data-testid="tab-awards" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Trophy className="w-4 h-4 mr-2" />
                 Awards
               </TabsTrigger>
-              <TabsTrigger value="packages" data-testid="tab-packages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+              <TabsTrigger value="products" data-testid="tab-products" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
-                Packages
+                Products
               </TabsTrigger>
               <TabsTrigger value="preview" data-testid="tab-preview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Eye className="w-4 h-4 mr-2" />
@@ -319,16 +315,12 @@ export default function AdminDashboard() {
             <EventsTab events={events} teams={teams} programs={programs} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="programs">
-            <ProgramsTab programs={programs} teams={teams} organization={organization} />
-          </TabsContent>
-
           <TabsContent value="awards">
             <AwardsTab awards={awards} users={users} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="packages">
-            <PackagesTab packages={programs} organization={organization} />
+          <TabsContent value="products">
+            <ProductsTab organization={organization} />
           </TabsContent>
 
           <TabsContent value="preview">
@@ -2483,461 +2475,6 @@ function EventsTab({ events, teams, programs, organization }: any) {
   );
 }
 
-// Programs Tab - Full Implementation
-function ProgramsTab({ programs, teams, organization }: any) {
-  const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [isOngoing, setIsOngoing] = useState(false);
-  const [editingProgram, setEditingProgram] = useState<any>(null);
-  const [editIsOngoing, setEditIsOngoing] = useState(false);
-  const tableRef = useDragScroll();
-
-  const createProgramSchema = z.object({
-    name: z.string().min(1, "Program name is required"),
-    description: z.string().optional(),
-    startDate: z.string(),
-    endDate: z.string().optional(),
-    capacity: z.number().optional(),
-    fee: z.number().optional(),
-  });
-
-  const form = useForm({
-    resolver: zodResolver(createProgramSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      capacity: 0,
-      fee: 0,
-    },
-  });
-
-  const createProgram = useMutation({
-    mutationFn: async (data: any) => {
-      const programData = {
-        ...data,
-        organizationId: organization.id,
-        endDate: isOngoing ? null : data.endDate,
-      };
-      return await apiRequest("POST", "/api/programs", programData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: "Program created successfully" });
-      setIsDialogOpen(false);
-      setIsOngoing(false);
-      form.reset();
-    },
-    onError: () => {
-      toast({ title: "Failed to create program", variant: "destructive" });
-    },
-  });
-
-  const updateProgram = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      const programData = {
-        ...data,
-        endDate: editIsOngoing ? null : data.endDate,
-      };
-      return await apiRequest("PATCH", `/api/programs/${id}`, programData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: "Program updated successfully" });
-      setEditingProgram(null);
-      setEditIsOngoing(false);
-    },
-    onError: () => {
-      toast({ title: "Failed to update program", variant: "destructive" });
-    },
-  });
-
-  const downloadProgramTemplate = () => {
-    const csvContent = "Name,Description,Start Date,End Date,Capacity,Fee\nSummer Training Camp,Intensive skills training,2025-06-01,2025-08-15,30,299.99\nFall League,Competitive league play,2025-09-01,2025-11-30,50,199.99";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'programs-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast({ 
-          title: "Invalid CSV", 
-          description: "CSV file must contain headers and at least one row of data",
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const dataLines = lines.slice(1);
-      
-      toast({ title: `Processing ${dataLines.length} programs from CSV...` });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim());
-        const programData: any = {};
-        
-        headers.forEach((header, index) => {
-          programData[header] = values[index] || '';
-        });
-        
-        try {
-          await apiRequest("POST", "/api/programs", {
-            organizationId: organization.id,
-            name: programData['name'] || '',
-            description: programData['description'] || '',
-            startDate: programData['start date'] || programData['startdate'] || '',
-            endDate: programData['end date'] || programData['enddate'] || '',
-            capacity: programData['capacity'] ? parseInt(programData['capacity']) : undefined,
-            fee: programData['fee'] ? parseFloat(programData['fee']) : undefined,
-          });
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to create program:`, error);
-          errorCount++;
-        }
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `Successfully created ${successCount} programs. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default"
-      });
-      
-      setIsBulkUploadOpen(false);
-    };
-    reader.readAsText(file);
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Program Management</CardTitle>
-          <CardDescription>Create and manage training programs and sessions</CardDescription>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-bulk-upload-programs" className="w-full sm:w-auto">
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Upload
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Bulk Upload Programs</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Start Date, End Date, Capacity, Fee</p>
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkUpload}
-                  data-testid="input-program-csv-upload"
-                />
-                <Button variant="outline" className="w-full" onClick={downloadProgramTemplate} data-testid="button-download-program-template">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download CSV Template
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-create-program" className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Program
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Program</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Program Name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Summer Training Camp" data-testid="input-program-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} data-testid="input-program-description" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="startDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Start Date</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="date" data-testid="input-program-start" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="endDate"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>End Date</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="date" 
-                              disabled={isOngoing}
-                              data-testid="input-program-end" 
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            {isOngoing && "Program is ongoing"}
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={isOngoing}
-                      onCheckedChange={(checked) => {
-                        setIsOngoing(checked as boolean);
-                        if (checked) {
-                          form.setValue("endDate", "");
-                        }
-                      }}
-                      data-testid="checkbox-program-ongoing"
-                    />
-                    <Label htmlFor="ongoing" className="text-sm">
-                      This is an ongoing/infinite program (no end date)
-                    </Label>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="capacity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Capacity</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" onChange={e => field.onChange(parseInt(e.target.value))} data-testid="input-program-capacity" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="fee"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fee ($)</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" step="0.01" onChange={e => field.onChange(parseFloat(e.target.value))} data-testid="input-program-fee" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={createProgram.isPending} data-testid="button-submit-program">
-                  {createProgram.isPending ? "Creating..." : "Create Program"}
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Program Dialog */}
-        <Dialog open={!!editingProgram} onOpenChange={(open) => !open && setEditingProgram(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Program</DialogTitle>
-            </DialogHeader>
-            {editingProgram && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-program-name">Program Name</Label>
-                  <Input
-                    id="edit-program-name"
-                    defaultValue={editingProgram.name || ""}
-                    onChange={(e) => setEditingProgram({...editingProgram, name: e.target.value})}
-                    data-testid="input-edit-program-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-program-description">Description</Label>
-                  <Textarea
-                    id="edit-program-description"
-                    defaultValue={editingProgram.description || ""}
-                    onChange={(e) => setEditingProgram({...editingProgram, description: e.target.value})}
-                    data-testid="input-edit-program-description"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-program-startDate">Start Date</Label>
-                      <Input
-                        id="edit-program-startDate"
-                        type="date"
-                        defaultValue={editingProgram.startDate ? new Date(editingProgram.startDate).toISOString().split('T')[0] : ""}
-                        onChange={(e) => setEditingProgram({...editingProgram, startDate: e.target.value})}
-                        data-testid="input-edit-program-startDate"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-program-endDate">End Date</Label>
-                      <Input
-                        id="edit-program-endDate"
-                        type="date"
-                        disabled={editIsOngoing}
-                        defaultValue={editingProgram.endDate ? new Date(editingProgram.endDate).toISOString().split('T')[0] : ""}
-                        onChange={(e) => setEditingProgram({...editingProgram, endDate: e.target.value})}
-                        data-testid="input-edit-program-endDate"
-                      />
-                      {editIsOngoing && <p className="text-sm text-gray-500">Program is ongoing</p>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={editIsOngoing}
-                      onCheckedChange={(checked) => {
-                        setEditIsOngoing(checked as boolean);
-                        if (checked) {
-                          setEditingProgram({...editingProgram, endDate: null});
-                        }
-                      }}
-                      data-testid="checkbox-edit-program-ongoing"
-                    />
-                    <Label htmlFor="edit-ongoing" className="text-sm">
-                      This is an ongoing/infinite program (no end date)
-                    </Label>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-program-capacity">Capacity</Label>
-                    <Input
-                      id="edit-program-capacity"
-                      type="number"
-                      defaultValue={editingProgram.capacity || 0}
-                      onChange={(e) => setEditingProgram({...editingProgram, capacity: parseInt(e.target.value)})}
-                      data-testid="input-edit-program-capacity"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-program-fee">Fee ($)</Label>
-                    <Input
-                      id="edit-program-fee"
-                      type="number"
-                      step="0.01"
-                      defaultValue={editingProgram.fee || 0}
-                      onChange={(e) => setEditingProgram({...editingProgram, fee: parseFloat(e.target.value)})}
-                      data-testid="input-edit-program-fee"
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  className="w-full"
-                  onClick={() => updateProgram.mutate(editingProgram)}
-                  disabled={updateProgram.isPending}
-                  data-testid="button-submit-edit-program"
-                >
-                  {updateProgram.isPending ? "Updating..." : "Update Program"}
-                </Button>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div ref={tableRef} className="overflow-x-auto hide-scrollbar drag-scroll">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Program Name</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead>Fee</TableHead>
-              <TableHead>Enrollment</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {programs.map((program: any) => (
-              <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
-                <TableCell className="font-medium">{program.name}</TableCell>
-                <TableCell>
-                  {new Date(program.startDate).toLocaleDateString()} - {program.endDate ? new Date(program.endDate).toLocaleDateString() : <Badge variant="secondary">Ongoing</Badge>}
-                </TableCell>
-                <TableCell>{program.capacity || "-"}</TableCell>
-                <TableCell>${(program.fee || 0).toFixed(2)}</TableCell>
-                <TableCell>{program.enrolledCount || 0} / {program.capacity || "∞"}</TableCell>
-                <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => {
-                      setEditingProgram(program);
-                      setEditIsOngoing(!program.endDate);
-                    }}
-                    data-testid={`button-edit-program-${program.id}`}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 // Awards Tab - Full Implementation
 function AwardsTab({ awards, users, organization }: any) {
   const { toast } = useToast();
@@ -3281,477 +2818,138 @@ function AwardsTab({ awards, users, organization }: any) {
   );
 }
 
-// Packages Tab - Package Management
-function PackagesTab({ packages, organization }: any) {
-  const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<any>(null);
-  const tableRef = useDragScroll();
-
-  const createPackageSchema = z.object({
-    name: z.string().min(1, "Package name is required"),
-    description: z.string().optional(),
-    price: z.number().min(0, "Price must be positive"),
-    pricingModel: z.string().min(1, "Pricing model is required"),
-    duration: z.string().optional(),
-    installments: z.number().optional(),
-    installmentPrice: z.number().optional(),
-    category: z.string().min(1, "Program type is required"),
-    ageGroups: z.string().optional(),
+// Products Tab - Stripe Product Management
+function ProductsTab({ organization }: any) {
+  const { data: products, isLoading, error } = useQuery<any[]>({
+    queryKey: ["/api/stripe/products"],
   });
 
-  const form = useForm({
-    resolver: zodResolver(createPackageSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      price: 0,
-      pricingModel: "one-time",
-      duration: "",
-      installments: 0,
-      installmentPrice: 0,
-      category: "",
-      ageGroups: "",
-    },
-  });
-
-  const createPackage = useMutation({
-    mutationFn: async (data: any) => {
-      const packageData = {
-        ...data,
-        price: Math.round(data.price * 100), // Convert to cents
-        installmentPrice: data.installmentPrice ? Math.round(data.installmentPrice * 100) : undefined,
-        ageGroups: data.ageGroups ? data.ageGroups.split(',').map((s: string) => s.trim()) : [],
-        organizationId: organization.id,
-        isActive: true,
-      };
-      
-      if (editingPackage) {
-        return await apiRequest("PATCH", `/api/programs/${editingPackage.id}`, packageData);
-      }
-      return await apiRequest("POST", "/api/programs", packageData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: editingPackage ? "Package updated successfully" : "Package created successfully" });
-      setIsDialogOpen(false);
-      setEditingPackage(null);
-      form.reset();
-    },
-    onError: () => {
-      toast({ title: "Failed to save package", variant: "destructive" });
-    },
-  });
-
-  const deletePackage = useMutation({
-    mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/programs/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: "Package deleted successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete package", variant: "destructive" });
-    },
-  });
-
-  const handleEdit = (pkg: any) => {
-    setEditingPackage(pkg);
-    form.reset({
-      name: pkg.name,
-      description: pkg.description || "",
-      price: pkg.price / 100,
-      pricingModel: pkg.pricingModel || "one-time",
-      duration: pkg.duration || "",
-      installments: pkg.installments || 0,
-      installmentPrice: pkg.installmentPrice ? pkg.installmentPrice / 100 : 0,
-      category: pkg.category || "",
-      ageGroups: pkg.ageGroups?.join(', ') || "",
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleNewPackage = () => {
-    setEditingPackage(null);
-    form.reset();
-    setIsDialogOpen(true);
-  };
-
-  const downloadPackageTemplate = () => {
-    const csvContent = "Name,Description,Price,Pricing Model,Category\nHS Club - Pay in Full,High school club program with full payment,1200.00,one-time,High School Club\nSkills Academy - Monthly,Monthly skills training program,150.00,monthly,Skills Academy";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'packages-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast({ 
-          title: "Invalid CSV", 
-          description: "CSV file must contain headers and at least one row of data",
-          variant: "destructive" 
-        });
-        return;
-      }
-
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      const dataLines = lines.slice(1);
-      
-      toast({ title: `Processing ${dataLines.length} packages from CSV...` });
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim());
-        const packageData: any = {};
-        
-        headers.forEach((header, index) => {
-          packageData[header] = values[index] || '';
-        });
-        
-        try {
-          await apiRequest("POST", "/api/programs", {
-            organizationId: organization.id,
-            name: packageData['name'] || '',
-            description: packageData['description'] || '',
-            price: packageData['price'] ? Math.round(parseFloat(packageData['price']) * 100) : 0,
-            pricingModel: packageData['pricing model'] || packageData['pricingmodel'] || 'one-time',
-            category: packageData['category'] || '',
-            isActive: true,
-          });
-          successCount++;
-        } catch (error) {
-          console.error(`Failed to create package:`, error);
-          errorCount++;
-        }
-      }
-      
-      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      
-      toast({ 
-        title: "Bulk Upload Complete", 
-        description: `Successfully created ${successCount} packages. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-        variant: errorCount > 0 ? "destructive" : "default"
-      });
-      
-      setIsBulkUploadOpen(false);
-    };
-    reader.readAsText(file);
-  };
-
-  const groupedPackages = packages.reduce((acc: any, pkg: any) => {
-    const category = pkg.category || "Other";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(pkg);
-    return acc;
-  }, {});
-
-  return (
-    <div className="space-y-6">
+  if (isLoading) {
+    return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Package Management</CardTitle>
-            <CardDescription>Manage programs and packages available during registration</CardDescription>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" data-testid="button-bulk-upload-packages" className="w-full sm:w-auto">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Packages</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Price, Pricing Model, Category</p>
-                  <Input
-                    type="file"
-                    accept=".csv"
-                    onChange={handleBulkUpload}
-                    data-testid="input-package-csv-upload"
-                  />
-                  <Button variant="outline" className="w-full" onClick={downloadPackageTemplate} data-testid="button-download-package-template">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download CSV Template
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingPackage(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button onClick={handleNewPackage} data-testid="button-create-package" className="w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Package
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingPackage ? "Edit Package" : "Create Package"}</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createPackage.mutate(data))} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Package Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., HS Club - Pay in Full" data-testid="input-package-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Package description" data-testid="input-package-description" />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Program Type *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-package-category">
-                                <SelectValue placeholder="Select program type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Skills Academy">Skills Academy</SelectItem>
-                              <SelectItem value="Youth Club">Youth Club</SelectItem>
-                              <SelectItem value="High School Club">High School Club</SelectItem>
-                              <SelectItem value="Online Training">Online Training</SelectItem>
-                              <SelectItem value="Private Training">Private Training</SelectItem>
-                              <SelectItem value="Camps">Camps</SelectItem>
-                              <SelectItem value="Foundation">Foundation</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="pricingModel"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Pricing Model *</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-package-pricing-model">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="one-time">One-Time</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="installments">Installments</SelectItem>
-                              <SelectItem value="per-session">Per Session</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price ($) *</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              step="0.01" 
-                              onChange={e => field.onChange(parseFloat(e.target.value))}
-                              data-testid="input-package-price" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Duration</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., 3 months, per hour" data-testid="input-package-duration" />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  {form.watch("pricingModel") === "installments" && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="installments"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Number of Installments</FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number" 
-                                onChange={e => field.onChange(parseInt(e.target.value))}
-                                data-testid="input-package-installments" 
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="installmentPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Price per Installment ($)</FormLabel>
-                            <FormControl>
-                              <Input 
-                                {...field} 
-                                type="number" 
-                                step="0.01" 
-                                onChange={e => field.onChange(parseFloat(e.target.value))}
-                                data-testid="input-package-installment-price" 
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  )}
-                  <FormField
-                    control={form.control}
-                    name="ageGroups"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Age Groups (comma-separated)</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., 8-10, 11-13, 14-17" data-testid="input-package-age-groups" />
-                        </FormControl>
-                        <FormDescription>Optional: Specify age groups for this package</FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" className="w-full" disabled={createPackage.isPending} data-testid="button-submit-package">
-                    {createPackage.isPending ? "Saving..." : (editingPackage ? "Update Package" : "Create Package")}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-          </div>
+        <CardHeader>
+          <CardTitle>Stripe Products</CardTitle>
+          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-6">
-            {Object.entries(groupedPackages).map(([category, pkgs]: [string, any]) => (
-              <div key={category}>
-                <h3 className="font-semibold text-lg mb-3">{category}</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Model</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pkgs.map((pkg: any) => (
-                      <TableRow key={pkg.id} data-testid={`row-package-${pkg.id}`}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{pkg.name}</div>
-                            {pkg.description && <div className="text-sm text-gray-600">{pkg.description}</div>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div>${(pkg.price / 100).toFixed(2)}</div>
-                            {pkg.pricingModel === "installments" && pkg.installmentPrice && (
-                              <div className="text-sm text-gray-600">
-                                {pkg.installments} × ${(pkg.installmentPrice / 100).toFixed(2)}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{pkg.pricingModel}</Badge>
-                        </TableCell>
-                        <TableCell>{pkg.duration || "-"}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handleEdit(pkg)}
-                              data-testid={`button-edit-package-${pkg.id}`}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => deletePackage.mutate(pkg.id)}
-                              data-testid={`button-delete-package-${pkg.id}`}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ))}
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-products" />
           </div>
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Products</CardTitle>
+          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12" data-testid="error-products">
+            <p className="text-red-600 font-medium">Failed to load products</p>
+            <p className="text-gray-600 text-sm mt-2">Please check your Stripe connection</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!products || products.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Products</CardTitle>
+          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-12" data-testid="empty-products">
+            <p className="text-gray-600 font-medium">No products found</p>
+            <p className="text-gray-500 text-sm mt-2">Create products in your Stripe Dashboard</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle>Stripe Products</CardTitle>
+          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product Name</TableHead>
+              <TableHead>Description</TableHead>
+              <TableHead>Prices</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product: any) => (
+              <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
+                <TableCell>
+                  <div className="font-medium" data-testid={`text-product-name-${product.id}`}>
+                    {product.name}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm text-gray-600" data-testid={`text-product-description-${product.id}`}>
+                    {product.description || "-"}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {product.prices && product.prices.length > 0 ? (
+                      product.prices.map((price: any) => (
+                        <div key={price.id} className="text-sm" data-testid={`text-price-${price.id}`}>
+                          {formatStripePrice(price)}
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-sm">No prices</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge 
+                    variant={product.active ? "default" : "secondary"}
+                    data-testid={`badge-status-${product.id}`}
+                  >
+                    {product.active ? "Active" : "Inactive"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
+}
+
+// Helper function to format Stripe prices
+function formatStripePrice(price: any): string {
+  const amount = (price.unit_amount / 100).toFixed(2);
+  const currency = price.currency.toUpperCase();
+  
+  if (price.recurring) {
+    const interval = price.recurring.interval;
+    const intervalCount = price.recurring.interval_count || 1;
+    const intervalText = intervalCount > 1 
+      ? `${intervalCount} ${interval}s` 
+      : interval;
+    return `${currency} $${amount} / ${intervalText}`;
+  }
+  
+  return `${currency} $${amount} (one-time)`;
 }
 
 // Divisions Tab Component

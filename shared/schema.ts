@@ -199,7 +199,6 @@ export const teams = pgTable("teams", {
   divisionId: integer("division_id"), // FK to divisions table
   coachNames: varchar("coach_names", { length: 255 }),
   notionId: varchar("notion_id", { length: 255 }),
-  program: varchar(),
 }, (table) => [
   unique("teams_notion_id_key").on(table.notionId),
   foreignKey({
@@ -388,7 +387,6 @@ export const insertUserSchema = z.object({
   teamId: z.string().optional(),
   jerseyNumber: z.number().optional(),
   position: z.string().optional(),
-  program: z.string().optional(),
   rating: z.number().optional(),
   awardsCount: z.number().optional(),
   stripeCustomerId: z.string().optional(),
@@ -417,7 +415,6 @@ export interface Team {
   organizationId: string;
   name: string;
   ageGroup?: string;
-  program?: string; // Configurable by organization
   color: string;
   coachIds: string[]; // Multiple coaches can manage a team
   division?: string; // Legacy text division
@@ -429,7 +426,6 @@ export const insertTeamSchema = z.object({
   organizationId: z.string(),
   name: z.string().min(1),
   ageGroup: z.string().optional(),
-  program: z.string().optional(),
   color: z.string().default("#1E40AF"),
   coachIds: z.array(z.string()).default([]),
   division: z.string().optional(),

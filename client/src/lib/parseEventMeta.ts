@@ -7,7 +7,7 @@ export interface ParsedEvent {
   start: string; // ISO string
   end: string; // ISO string
   location: string;
-  type: 'game' | 'tournament' | 'camp' | 'exhibition' | 'practice' | 'skills' | 'workshop' | 'talk' | 'combine' | 'training' | 'meeting' | 'course' | 'other';
+  type: string;
   ageTags: string[];
   teamTags: string[];
   coaches: string[];
@@ -99,7 +99,7 @@ export function parseEventMeta(event: any): ParsedEvent {
   };
 }
 
-export function getEventTypeDotColor(type: ParsedEvent['type']): string {
+export function getEventTypeDotColor(type: string): string {
   switch (type) {
     case 'game':
       return 'bg-green-500';

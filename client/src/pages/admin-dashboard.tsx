@@ -2590,7 +2590,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, payload);
       
       // Update event windows - delete existing and create new ones
-      await apiRequest("DELETE", `/api/event-windows/event/${id}`, {});
+      await apiRequest("DELETE", `/api/event-windows/event/${id}`);
       
       if (editEventWindows.length > 0) {
         for (const window of editEventWindows) {
@@ -2619,7 +2619,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
     if (editingEvent) {
       (async () => {
         try {
-          const windows = await apiRequest("GET", `/api/event-windows/event/${editingEvent.id}`, {});
+          const windows = await apiRequest("GET", `/api/event-windows/event/${editingEvent.id}`);
           setEditEventWindows(windows);
         } catch (error) {
           console.error('Failed to load event windows:', error);

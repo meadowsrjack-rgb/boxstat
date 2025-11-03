@@ -1226,26 +1226,111 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle>
               User Details: {viewingUser?.firstName} {viewingUser?.lastName}
             </DialogTitle>
           </DialogHeader>
           
           {viewingUser && (
-            <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="team" data-testid="tab-team-info">🏀 Team</TabsTrigger>
-                <TabsTrigger value="billing" data-testid="tab-billing">💳 Billing</TabsTrigger>
-                <TabsTrigger value="performance" data-testid="tab-performance">📈 Stats</TabsTrigger>
-                <TabsTrigger value="skills" data-testid="tab-skills">🧠 Skills</TabsTrigger>
-                <TabsTrigger value="notes" data-testid="tab-notes">🩺 Notes</TabsTrigger>
-                <TabsTrigger value="system" data-testid="tab-system">⚙️ System</TabsTrigger>
-              </TabsList>
+            <div className="flex flex-col md:flex-row h-full">
+              {/* Sidebar Navigation */}
+              <div className="w-full md:w-48 border-b md:border-b-0 md:border-r bg-gray-50">
+                <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible" role="tablist">
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "team"}
+                    aria-controls="team-panel"
+                    onClick={() => setDetailTab("team")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "team"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-team-info"
+                  >
+                    🏀 <span className="hidden md:inline">Team Info</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "billing"}
+                    aria-controls="billing-panel"
+                    onClick={() => setDetailTab("billing")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "billing"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-billing"
+                  >
+                    💳 <span className="hidden md:inline">Billing</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "performance"}
+                    aria-controls="performance-panel"
+                    onClick={() => setDetailTab("performance")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "performance"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-performance"
+                  >
+                    📈 <span className="hidden md:inline">Performance</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "skills"}
+                    aria-controls="skills-panel"
+                    onClick={() => setDetailTab("skills")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "skills"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-skills"
+                  >
+                    🧠 <span className="hidden md:inline">Skills & Awards</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "notes"}
+                    aria-controls="notes-panel"
+                    onClick={() => setDetailTab("notes")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "notes"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-notes"
+                  >
+                    🩺 <span className="hidden md:inline">Admin Notes</span>
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={detailTab === "system"}
+                    aria-controls="system-panel"
+                    onClick={() => setDetailTab("system")}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                      detailTab === "system"
+                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                    data-testid="tab-system"
+                  >
+                    ⚙️ <span className="hidden md:inline">System Meta</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto p-6">
 
               {/* Team Info Tab */}
-              <TabsContent value="team" className="space-y-4">
+              {detailTab === "team" && (
+                <div role="tabpanel" id="team-panel" aria-labelledby="team-tab" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Role</Label>
@@ -1300,10 +1385,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <p className="text-sm p-3 bg-gray-50 rounded" data-testid="text-user-bio">{viewingUser.bio}</p>
                   </div>
                 )}
-              </TabsContent>
+                </div>
+              )}
 
               {/* Billing Tab */}
-              <TabsContent value="billing" className="space-y-4">
+              {detailTab === "billing" && (
+                <div role="tabpanel" id="billing-panel" aria-labelledby="billing-tab" className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Stripe Customer ID</Label>
@@ -1332,10 +1419,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <p className="text-sm text-gray-500">No active products</p>
                   )}
                 </div>
-              </TabsContent>
+                </div>
+              )}
 
               {/* Performance Tab */}
-              <TabsContent value="performance" className="space-y-4">
+              {detailTab === "performance" && (
+                <div role="tabpanel" id="performance-panel" aria-labelledby="performance-tab" className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="pt-6">
@@ -1398,10 +1487,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </CardContent>
                   </Card>
                 </div>
-              </TabsContent>
+                </div>
+              )}
 
               {/* Skills & Awards Tab */}
-              <TabsContent value="skills" className="space-y-4">
+              {detailTab === "skills" && (
+                <div role="tabpanel" id="skills-panel" aria-labelledby="skills-tab" className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Awards & Trophies</Label>
@@ -1437,10 +1528,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+                </div>
+              )}
 
               {/* Admin Notes Tab */}
-              <TabsContent value="notes" className="space-y-4">
+              {detailTab === "notes" && (
+                <div role="tabpanel" id="notes-panel" aria-labelledby="notes-tab" className="space-y-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Emergency Contact</Label>
@@ -1466,10 +1559,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     )}
                   </div>
                 </div>
-              </TabsContent>
+                </div>
+              )}
 
               {/* System Meta Tab */}
-              <TabsContent value="system" className="space-y-4">
+              {detailTab === "system" && (
+                <div role="tabpanel" id="system-panel" aria-labelledby="system-tab" className="space-y-4">
                 <Accordion type="single" collapsible className="w-full">
                   <AccordionItem value="system-info">
                     <AccordionTrigger>System Information</AccordionTrigger>
@@ -1523,8 +1618,10 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
-              </TabsContent>
-            </Tabs>
+                </div>
+              )}
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

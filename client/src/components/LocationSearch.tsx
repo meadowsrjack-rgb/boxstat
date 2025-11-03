@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
-import { MapPin, Loader2, Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Loader2, Building2, Edit3 } from 'lucide-react';
 
 interface LocationResult {
   place_id: string;
@@ -28,7 +29,7 @@ interface Facility {
 
 interface LocationSearchProps {
   value?: string;
-  onLocationSelect: (location: { name: string; lat: number; lng: number }) => void;
+  onLocationSelect: (location: { name: string; lat: number | null; lng: number | null }) => void;
   placeholder?: string;
   className?: string;
 }
@@ -44,6 +45,8 @@ export function LocationSearch({
   const [isLoading, setIsLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
   const debounceRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
   
@@ -132,30 +135,101 @@ export function LocationSearch({
       lng: facility.longitude,
     });
   };
+  
+  const handleManualSubmit = () => {
+    if (manualAddress.trim()) {
+      setQuery(manualAddress);
+      onLocationSelect({
+        name: manualAddress,
+        lat: null,
+        lng: null,
+      });
+      setManualMode(false);
+      setManualAddress('');
+    }
+  };
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onFocus={() => {
-            setIsFocused(true);
-            if (facilities.length > 0 || results.length > 0) {
-              setShowResults(true);
-            }
-          }}
-          placeholder={placeholder}
-          className="pl-10"
-          data-testid="input-location-search"
-        />
-        {isLoading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-500" />
-        )}
-      </div>
+      {!manualMode ? (
+        <>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => {
+                setIsFocused(true);
+                if (facilities.length > 0 || results.length > 0) {
+                  setShowResults(true);
+                }
+              }}
+              placeholder={placeholder}
+              className="pl-10 pr-10"
+              data-testid="input-location-search"
+            />
+            {isLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-500" />
+            )}
+            {!isLoading && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setManualMode(true)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                data-testid="button-manual-entry"
+              >
+                <Edit3 className="h-3.5 w-3.5 text-gray-500" />
+              </Button>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              value={manualAddress}
+              onChange={(e) => setManualAddress(e.target.value)}
+              placeholder="Enter address manually..."
+              className="pl-10"
+              data-testid="input-manual-address"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleManualSubmit();
+                }
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleManualSubmit}
+              className="flex-1"
+              data-testid="button-submit-manual"
+            >
+              Use This Address
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setManualMode(false);
+                setManualAddress('');
+              }}
+              data-testid="button-cancel-manual"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
       
-      {showResults && (
+      {!manualMode && showResults && (
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-80 overflow-y-auto">
           {/* Saved Facilities Section */}
           {facilities.length > 0 && query.length < 3 && (

@@ -25,22 +25,12 @@ interface Preset {
 const PRESETS: Preset[] = [
   {
     name: 'Typical Youth Event',
-    description: 'RSVP 3 days before to 1 day before, Check-In 30 min before to event start',
+    description: '',
     windows: [
       { windowType: 'rsvp', openRole: 'open', amount: 3, unit: 'days', direction: 'before', isDefault: true },
       { windowType: 'rsvp', openRole: 'close', amount: 1, unit: 'days', direction: 'before', isDefault: true },
       { windowType: 'checkin', openRole: 'open', amount: 30, unit: 'minutes', direction: 'before', isDefault: true },
       { windowType: 'checkin', openRole: 'close', amount: 0, unit: 'minutes', direction: 'after', isDefault: true },
-    ],
-  },
-  {
-    name: 'One-Day Camp',
-    description: 'RSVP 1 week before to 2 days before, Check-In 1 hour before to 15 min after',
-    windows: [
-      { windowType: 'rsvp', openRole: 'open', amount: 7, unit: 'days', direction: 'before', isDefault: false },
-      { windowType: 'rsvp', openRole: 'close', amount: 2, unit: 'days', direction: 'before', isDefault: false },
-      { windowType: 'checkin', openRole: 'open', amount: 1, unit: 'hours', direction: 'before', isDefault: false },
-      { windowType: 'checkin', openRole: 'close', amount: 15, unit: 'minutes', direction: 'after', isDefault: false },
     ],
   },
 ];
@@ -202,7 +192,9 @@ export default function EventWindowsConfigurator({
             data-testid={`button-preset-${preset.name.toLowerCase().replace(/\s+/g, '-')}`}
           >
             <span className="font-medium text-sm">{preset.name}</span>
-            <span className="text-xs text-muted-foreground">{preset.description}</span>
+            {preset.description && (
+              <span className="text-xs text-muted-foreground">{preset.description}</span>
+            )}
           </Button>
         ))}
       </div>

@@ -2865,8 +2865,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             value={field.value || ""}
                             onLocationSelect={(location) => {
                               field.onChange(location.name);
-                              form.setValue("latitude", location.lat as any);
-                              form.setValue("longitude", location.lng as any);
+                              form.setValue("latitude", location.lat ?? undefined as any);
+                              form.setValue("longitude", location.lng ?? undefined as any);
                             }}
                             placeholder="Search for a location..."
                             className="w-full"
@@ -3097,8 +3097,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         setEditingEvent({
                           ...editingEvent,
                           location: location.name,
-                          latitude: location.lat,
-                          longitude: location.lng
+                          latitude: location.lat ?? undefined,
+                          longitude: location.lng ?? undefined
                         });
                       }}
                       placeholder="Search for a location..."

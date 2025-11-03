@@ -1676,6 +1676,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(events);
   });
   
+  app.get('/api/events/:eventId/participants', isAuthenticated, async (req: any, res) => {
+    const { role, organizationId } = req.user;
+    const { eventId } = req.params;
+    
+    // Only admins and coaches can view participant lists
+    if (role !== 'admin' && role !== 'coach') {
+      return res.status(403).json({ message: 'Only admins and coaches can view participant lists' });
+    }
+    
+    // Get the event to check its assignTo/visibility configuration
+    const event = await storage.getEvent(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Get all users in the organization
+    const allUsers = await storage.getUsersByOrganization(organizationId);
+    
+    // Filter users based on event visibility configuration
+    const assignTo = event.assignTo || {};
+    const visibility = event.visibility || {};
+    
+    // If event has no targeting, show all users
+    if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && 
+        !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles) {
+      return res.json(allUsers);
+    }
+    
+    // Filter users who are invited to the event
+    const invitedUsers = allUsers.filter(user => {
+      // Check user-specific assignment
+      if (assignTo.users?.includes(user.id)) {
+        return true;
+      }
+      
+      // Check team-based visibility
+      if (user.teamId && (assignTo.teams?.includes(String(user.teamId)) || visibility.teams?.includes(String(user.teamId)))) {
+        return true;
+      }
+      
+      // Check division-based visibility
+      if (user.divisionId && (assignTo.divisions?.includes(String(user.divisionId)) || visibility.divisions?.includes(String(user.divisionId)))) {
+        return true;
+      }
+      
+      // Check role-based visibility
+      if (assignTo.roles?.includes(user.role) || visibility.roles?.includes(user.role)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    res.json(invitedUsers);
+  });
+  
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
       const { role, id: userId } = req.user;

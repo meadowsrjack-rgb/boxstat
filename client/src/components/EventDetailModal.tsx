@@ -74,8 +74,8 @@ export default function EventDetailModal({
   });
 
   const { data: users = [] } = useQuery<UserType[]>({
-    queryKey: ['/api/users'],
-    enabled: open && (userRole === 'admin' || userRole === 'coach'),
+    queryKey: ['/api/events', event?.id, 'participants'],
+    enabled: open && !!event && (userRole === 'admin' || userRole === 'coach'),
   });
 
   const rsvpMutation = useMutation({

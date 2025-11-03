@@ -1598,14 +1598,17 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Head Coach</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
+                            value={field.value || "none"}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-team-coach">
                                 <SelectValue placeholder="Select a coach" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="none">None</SelectItem>
                               {coaches.map((coach: any) => (
                                 <SelectItem key={coach.id} value={coach.id}>
                                   {coach.firstName} {coach.lastName}

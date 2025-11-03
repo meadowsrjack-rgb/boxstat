@@ -295,9 +295,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     ? childProfiles.find((c: any) => c.id.toString() === selectedChildId) || childProfiles[0]
     : null;
 
+  // Determine which user's team to fetch: child profile if viewing as child, otherwise current user
+  const userIdForTeam = currentChildProfile?.id || currentUser.id;
+  
   const { data: userTeam } = useQuery<Team>({
-    queryKey: ["/api/users", currentUser.id, "team"],
-    enabled: !!currentUser.id,
+    queryKey: ["/api/users", userIdForTeam, "team"],
+    enabled: !!userIdForTeam,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,

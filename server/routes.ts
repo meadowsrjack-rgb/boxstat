@@ -1543,11 +1543,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Filter events based on role, teams, and divisions
     const filteredEvents = allEvents.filter((event: any) => {
-      // If no visibility/assignTo, assume it's visible to everyone (legacy events)
-      if (!event.visibility && !event.assignTo) {
-        return true;
-      }
-      
       const visibility = event.visibility || {};
       const assignTo = event.assignTo || {};
       
@@ -1571,10 +1566,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check user-specific assignment
-      if (assignTo.users?.includes(targetUserId)) {
+      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
         return true;
       }
       
+      // Event doesn't match any targeting criteria for this user
       return false;
     });
     
@@ -1634,11 +1630,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Filter events based on role, teams, and divisions
     const filteredEvents = allEvents.filter((event: any) => {
-      // If no visibility/assignTo, assume it's visible to everyone (legacy events)
-      if (!event.visibility && !event.assignTo) {
-        return true;
-      }
-      
       const visibility = event.visibility || {};
       const assignTo = event.assignTo || {};
       
@@ -1662,10 +1653,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check user-specific assignment
-      if (assignTo.users?.includes(targetUserId)) {
+      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
         return true;
       }
       
+      // Event doesn't match any targeting criteria for this user
       return false;
     });
     

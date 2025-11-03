@@ -54,6 +54,7 @@ import type { EventWindow } from "@shared/schema";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ChevronDown } from "lucide-react";
 
 // Hook for drag-to-scroll functionality
@@ -371,11 +372,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [viewingUser, setViewingUser] = useState<any>(null);
   const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [detailTab, setDetailTab] = useState("team");
   const tableRef = useDragScroll();
 
   const createUserSchema = z.object({
@@ -1105,7 +1108,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   onClick={() => handleSort('firstName')}
                   data-testid="sort-firstName"
                 >
-                  First Name
+                  👤 First Name
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
@@ -1130,41 +1133,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('role')}
-                  data-testid="sort-role"
-                >
-                  Role
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('club')}
-                  data-testid="sort-club"
-                >
-                  Club
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('program')}
-                  data-testid="sort-program"
-                >
-                  Program
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('team')}
-                  data-testid="sort-team"
-                >
-                  Team
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('division')}
-                  data-testid="sort-division"
-                >
-                  Division
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('dob')}
                   data-testid="sort-dob"
                 >
@@ -1172,52 +1140,10 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('packages')}
-                  data-testid="sort-packages"
+                  onClick={() => handleSort('role')}
+                  data-testid="sort-role"
                 >
-                  Packages
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('position')}
-                  data-testid="sort-position"
-                >
-                  Position
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('heightIn')}
-                  data-testid="sort-heightIn"
-                >
-                  Height (in)
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('products')}
-                  data-testid="sort-products"
-                >
-                  Products
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('skill')}
-                  data-testid="sort-skill"
-                >
-                  Skill Level
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('awards')}
-                  data-testid="sort-awards"
-                >
-                  Awards
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('lastLogin')}
-                  data-testid="sort-lastLogin"
-                >
-                  Last Login
+                  Role
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
@@ -1231,36 +1157,15 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
             </TableHeader>
             <TableBody>
               {sortedUsers.map((user: any) => {
-                const userTeam = teams.find((t: any) => t.id === user.teamId);
-                const userDivision = divisions.find((d: any) => d.id === user.divisionId);
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
                     <TableCell data-testid={`text-firstname-${user.id}`}>{user.firstName || "-"}</TableCell>
                     <TableCell data-testid={`text-lastname-${user.id}`}>{user.lastName || "-"}</TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>{user.phoneNumber || user.phone || "-"}</TableCell>
+                    <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
-                    </TableCell>
-                    <TableCell>{user.club || "-"}</TableCell>
-                    <TableCell>{user.program || "-"}</TableCell>
-                    <TableCell>{userTeam?.name || "-"}</TableCell>
-                    <TableCell>{userDivision?.name || "-"}</TableCell>
-                    <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
-                    <TableCell>{user.packages?.join(", ") || "-"}</TableCell>
-                    <TableCell>{user.position || "-"}</TableCell>
-                    <TableCell>{user.heightIn || "-"}</TableCell>
-                    <TableCell>
-                      {user.products && Array.isArray(user.products) && user.products.length > 0 
-                        ? user.products.join(", ") 
-                        : "-"}
-                    </TableCell>
-                    <TableCell>{user.skill || "-"}</TableCell>
-                    <TableCell>{user.awards?.length || 0}</TableCell>
-                    <TableCell>
-                      {user.lastLogin 
-                        ? new Date(user.lastLogin).toLocaleDateString() 
-                        : "-"}
                     </TableCell>
                     <TableCell>
                       <Switch
@@ -1274,7 +1179,19 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => {
+                            setViewingUser(user);
+                            setDetailTab("team");
+                          }}
+                          data-testid={`button-view-user-${user.id}`}
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="sm" 
@@ -1284,6 +1201,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                             setSelectedProgram(programId);
                           }}
                           data-testid={`button-edit-user-${user.id}`}
+                          title="Edit User"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -1292,6 +1210,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                           size="sm" 
                           onClick={() => deleteUser.mutate(user.id)}
                           data-testid={`button-delete-user-${user.id}`}
+                          title="Delete User"
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </Button>
@@ -1304,6 +1223,311 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         </Table>
         </div>
       </CardContent>
+
+      {/* User Detail View Dialog */}
+      <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              User Details: {viewingUser?.firstName} {viewingUser?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {viewingUser && (
+            <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-6">
+                <TabsTrigger value="team" data-testid="tab-team-info">🏀 Team</TabsTrigger>
+                <TabsTrigger value="billing" data-testid="tab-billing">💳 Billing</TabsTrigger>
+                <TabsTrigger value="performance" data-testid="tab-performance">📈 Stats</TabsTrigger>
+                <TabsTrigger value="skills" data-testid="tab-skills">🧠 Skills</TabsTrigger>
+                <TabsTrigger value="notes" data-testid="tab-notes">🩺 Notes</TabsTrigger>
+                <TabsTrigger value="system" data-testid="tab-system">⚙️ System</TabsTrigger>
+              </TabsList>
+
+              {/* Team Info Tab */}
+              <TabsContent value="team" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Role</Label>
+                    <div>
+                      <Badge variant={viewingUser.role === "admin" ? "default" : "secondary"}>
+                        {viewingUser.role}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Organization</Label>
+                    <p className="text-sm" data-testid="text-user-organization">
+                      {organization?.name || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Program</Label>
+                    <p className="text-sm" data-testid="text-user-program">{viewingUser.program || "-"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Team</Label>
+                    <p className="text-sm" data-testid="text-user-team">
+                      {teams.find((t: any) => t.id === viewingUser.teamId)?.name || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Division</Label>
+                    <p className="text-sm" data-testid="text-user-division">
+                      {divisions.find((d: any) => d.id === viewingUser.divisionId)?.name || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Position</Label>
+                    <p className="text-sm" data-testid="text-user-position">{viewingUser.position || "-"}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Height</Label>
+                    <p className="text-sm" data-testid="text-user-height">
+                      {viewingUser.heightIn ? `${Math.floor(viewingUser.heightIn / 12)}'${viewingUser.heightIn % 12}" (${viewingUser.heightIn}in)` : "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Guardian</Label>
+                    <p className="text-sm" data-testid="text-user-guardian">
+                      {viewingUser.guardianId ? users.find((u: any) => u.id === viewingUser.guardianId)?.firstName + " " + users.find((u: any) => u.id === viewingUser.guardianId)?.lastName : "-"}
+                    </p>
+                  </div>
+                </div>
+                {viewingUser.bio && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Bio</Label>
+                    <p className="text-sm p-3 bg-gray-50 rounded" data-testid="text-user-bio">{viewingUser.bio}</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Billing Tab */}
+              <TabsContent value="billing" className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Stripe Customer ID</Label>
+                    <p className="text-sm font-mono text-xs" data-testid="text-user-stripe-id">
+                      {viewingUser.stripeCustomerId || "-"}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Packages</Label>
+                    <p className="text-sm" data-testid="text-user-packages">
+                      {viewingUser.packages?.join(", ") || "-"}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-gray-600">Active Products</Label>
+                  {viewingUser.products && Array.isArray(viewingUser.products) && viewingUser.products.length > 0 ? (
+                    <div className="space-y-2">
+                      {viewingUser.products.map((product: any, index: number) => (
+                        <div key={index} className="p-3 bg-gray-50 rounded border" data-testid={`product-${index}`}>
+                          <p className="text-sm font-medium">{typeof product === 'string' ? product : product.name || 'Unknown Product'}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">No active products</p>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Performance Tab */}
+              <TabsContent value="performance" className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Total Practices</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-total-practices">
+                          {viewingUser.totalPractices || 0}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Total Games</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-total-games">
+                          {viewingUser.totalGames || 0}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Consecutive Check-ins</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-consecutive-checkins">
+                          {viewingUser.consecutiveCheckins || 0}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Videos Completed</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-videos-completed">
+                          {viewingUser.videosCompleted || 0}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Years Active</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-years-active">
+                          {viewingUser.yearsActive || 0}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Skill Level</p>
+                        <p className="text-3xl font-bold mt-2" data-testid="stat-skill-level">
+                          {viewingUser.skill || "-"}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              {/* Skills & Awards Tab */}
+              <TabsContent value="skills" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Awards & Trophies</Label>
+                    {viewingUser.awards && viewingUser.awards.length > 0 ? (
+                      <div className="grid grid-cols-3 gap-3">
+                        {viewingUser.awards.map((award: any, index: number) => (
+                          <Card key={index} className="p-4 text-center" data-testid={`award-${index}`}>
+                            <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
+                            <p className="text-sm font-medium">{award.name || award}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No awards yet</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Skills Assessments</Label>
+                    {viewingUser.skillsAssessments && Object.keys(viewingUser.skillsAssessments).length > 0 ? (
+                      <div className="space-y-2">
+                        {Object.entries(viewingUser.skillsAssessments).map(([year, assessment]: [string, any]) => (
+                          <Card key={year} className="p-4" data-testid={`assessment-${year}`}>
+                            <p className="font-semibold mb-2">Year: {year}</p>
+                            <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto">
+                              {JSON.stringify(assessment, null, 2)}
+                            </pre>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No assessments recorded</p>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Admin Notes Tab */}
+              <TabsContent value="notes" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Emergency Contact</Label>
+                    {viewingUser.emergencyContactJson ? (
+                      <Card className="p-4" data-testid="emergency-contact-info">
+                        <pre className="text-sm whitespace-pre-wrap">
+                          {JSON.stringify(viewingUser.emergencyContactJson, null, 2)}
+                        </pre>
+                      </Card>
+                    ) : (
+                      <p className="text-sm text-gray-500">No emergency contact information</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-gray-600">Admin Notes (Internal)</Label>
+                    {viewingUser.notes ? (
+                      <Card className="p-4 bg-yellow-50 border-yellow-200" data-testid="admin-notes">
+                        <p className="text-sm whitespace-pre-wrap">{viewingUser.notes}</p>
+                      </Card>
+                    ) : (
+                      <p className="text-sm text-gray-500">No admin notes</p>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* System Meta Tab */}
+              <TabsContent value="system" className="space-y-4">
+                <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="system-info">
+                    <AccordionTrigger>System Information</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-2 gap-4 p-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">User ID</Label>
+                          <p className="text-sm font-mono text-xs" data-testid="text-user-id">{viewingUser.id}</p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">Active Status</Label>
+                          <div>
+                            <Badge variant={viewingUser.isActive !== false ? "default" : "secondary"}>
+                              {viewingUser.isActive !== false ? "Active" : "Inactive"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">Last Login</Label>
+                          <p className="text-sm" data-testid="text-last-login">
+                            {viewingUser.lastLogin 
+                              ? new Date(viewingUser.lastLogin).toLocaleString()
+                              : "Never"}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">Created At</Label>
+                          <p className="text-sm" data-testid="text-created-at">
+                            {viewingUser.createdAt 
+                              ? new Date(viewingUser.createdAt).toLocaleString()
+                              : "-"}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">Updated At</Label>
+                          <p className="text-sm" data-testid="text-updated-at">
+                            {viewingUser.updatedAt 
+                              ? new Date(viewingUser.updatedAt).toLocaleString()
+                              : "-"}
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-semibold text-gray-600">Verified</Label>
+                          <div>
+                            <Badge variant={viewingUser.verified ? "default" : "secondary"}>
+                              {viewingUser.verified ? "Verified" : "Not Verified"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

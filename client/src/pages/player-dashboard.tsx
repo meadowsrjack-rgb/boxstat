@@ -295,8 +295,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     ? childProfiles.find((c: any) => c.id.toString() === selectedChildId) || childProfiles[0]
     : null;
 
-  // Determine which user's team to fetch: child profile if viewing as child, otherwise current user
-  const userIdForTeam = currentChildProfile?.id || currentUser.id;
+  // Determine which user's team to fetch: 
+  // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
+  const userIdForTeam = activeProfile?.id || currentChildProfile?.id || currentUser.id;
   
   const { data: userTeam } = useQuery<Team>({
     queryKey: ["/api/users", userIdForTeam, "team"],
@@ -309,7 +310,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   });
 
   // Fetch events (backend filters based on user's role, team membership, and child profile)
-  const childProfileId = currentChildProfile?.id;
+  // Priority: activeProfile (from localStorage) > currentChildProfile (from device config)
+  const childProfileId = activeProfile?.id || currentChildProfile?.id;
   const { data: allEvents = [] } = useQuery<any[]>({
     queryKey: ["/api/events", childProfileId],
     queryFn: async () => {
@@ -1653,8 +1655,17 @@ function TeamBlock() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const { toast } = useToast();
   
+  // Fetch active profile from localStorage (same as main dashboard)
+  const localSelectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
+  const activeProfileId = (currentUser as any)?.activeProfileId || localSelectedPlayerId;
+  const { data: activeProfile } = useQuery<UserType>({
+    queryKey: [`/api/profile/${activeProfileId}`],
+    enabled: !!activeProfileId,
+  });
+  
   // Use child profile ID if viewing as child, otherwise use current user ID
-  const userIdForTeam = currentChildProfile?.id || currentUser.id;
+  // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
+  const userIdForTeam = activeProfile?.id || currentChildProfile?.id || currentUser.id;
   
   const { data: userTeam } = useQuery<Team>({
     queryKey: ["/api/users", userIdForTeam, "team"],

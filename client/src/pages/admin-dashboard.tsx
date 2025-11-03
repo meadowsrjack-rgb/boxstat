@@ -1234,7 +1234,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 const userTeam = teams.find((t: any) => t.id === user.teamId);
                 const userDivision = divisions.find((d: any) => d.id === user.divisionId);
                 return (
-                  <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                  <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
                     <TableCell data-testid={`text-firstname-${user.id}`}>{user.firstName || "-"}</TableCell>
                     <TableCell data-testid={`text-lastname-${user.id}`}>{user.lastName || "-"}</TableCell>
                     <TableCell>{user.email}</TableCell>

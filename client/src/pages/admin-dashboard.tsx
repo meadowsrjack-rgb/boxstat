@@ -874,9 +874,9 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label htmlFor="edit-team" data-testid="label-edit-team">Team</Label>
                     <Select 
-                      value={editingUser.teamId || "none"}
+                      value={editingUser.teamId ? String(editingUser.teamId) : "none"}
                       onValueChange={(value) => {
-                        const actualValue = value === "none" ? "" : value;
+                        const actualValue = value === "none" ? null : parseInt(value);
                         setEditingUser({...editingUser, teamId: actualValue});
                       }}
                     >
@@ -888,7 +888,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         {teams
                           ?.filter((team: any) => !selectedProgram || team.program === programs?.find((p: any) => p.id === selectedProgram)?.name)
                           .map((team: any) => (
-                            <SelectItem key={team.id} value={team.id}>
+                            <SelectItem key={team.id} value={String(team.id)}>
                               {team.name}
                             </SelectItem>
                           ))}
@@ -2558,8 +2558,28 @@ function EventsTab({ events, teams, programs, organization }: any) {
   });
 
   const updateEvent = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, data);
+    mutationFn: async ({ id, targetType, targetId, ...data }: any) => {
+      // Convert legacy targetType/targetId to assignTo/visibility
+      const payload: any = { ...data };
+      
+      if (targetType === 'team' && targetId) {
+        payload.assignTo = { teams: [String(targetId)] };
+        payload.visibility = { teams: [String(targetId)] };
+      } else if (targetType === 'division' && targetId) {
+        payload.assignTo = { divisions: [String(targetId)] };
+        payload.visibility = { divisions: [String(targetId)] };
+      } else if (targetType === 'user' && targetId) {
+        payload.assignTo = { users: [String(targetId)] };
+        payload.visibility = { users: [String(targetId)] };
+      } else if (targetType === 'role' && targetId) {
+        payload.assignTo = { roles: [String(targetId)] };
+        payload.visibility = { roles: [String(targetId)] };
+      } else if (targetType === 'all') {
+        payload.assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
+        payload.visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
+      }
+      
+      const updatedEvent = await apiRequest("PATCH", `/api/events/${id}`, payload);
       
       // Update event windows - delete existing and create new ones
       await apiRequest("DELETE", `/api/event-windows/event/${id}`, {});
@@ -3338,7 +3358,31 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => setEditingEvent(event)}
+                        onClick={() => {
+                          // Convert assignTo/visibility to legacy format for edit form
+                          const eventToEdit = { ...event };
+                          
+                          // Determine targetType from assignTo/visibility
+                          if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
+                            eventToEdit.targetType = 'team';
+                            eventToEdit.targetId = event.assignTo.teams[0];
+                          } else if (event.assignTo?.divisions && event.assignTo.divisions.length > 0) {
+                            eventToEdit.targetType = 'division';
+                            eventToEdit.targetId = event.assignTo.divisions[0];
+                          } else if (event.assignTo?.users && event.assignTo.users.length > 0) {
+                            eventToEdit.targetType = 'user';
+                            eventToEdit.targetId = event.assignTo.users[0];
+                          } else if (event.assignTo?.roles && event.assignTo.roles.length > 0) {
+                            eventToEdit.targetType = 'role';
+                            eventToEdit.targetId = event.assignTo.roles[0];
+                          } else if (event.targetType) {
+                            // Already has targetType, keep it
+                          } else {
+                            eventToEdit.targetType = 'all';
+                          }
+                          
+                          setEditingEvent(eventToEdit);
+                        }}
                         data-testid={`button-edit-event-${event.id}`}
                         title="Edit Event"
                       >

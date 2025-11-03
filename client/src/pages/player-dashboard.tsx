@@ -544,7 +544,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     if (!displayEvents.length) return [];
     
     const userName = `${currentUser?.firstName || ""} ${currentUser?.lastName || ""}`.trim().toLowerCase();
-    const teamName = (currentChild?.teamName || userTeam?.name || "").toLowerCase();
+    const teamName = (userTeam?.name || "").toLowerCase();
     
     return displayEvents.filter(event => {
       const title = ((event as any).title || (event as any).summary || "").toLowerCase();
@@ -560,7 +560,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
              description.includes(userName) ||
              description.includes(teamName);
     });
-  }, [displayEvents, currentUser, currentChild, userTeam]);
+  }, [displayEvents, currentUser, userTeam]);
 
   // Get events for selected date
   const eventsForSelectedDate = useMemo(() => {
@@ -1152,10 +1152,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         )}
                       </div>
 
-                      {(currentChild?.teamName || userTeam?.name) && (
+                      {userTeam?.name && (
                         <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
                           <Shirt className="h-4 w-4 text-[#d82428]" />
-                          {currentChild?.teamName || userTeam?.name}
+                          {userTeam?.name}
                         </div>
                       )}
                     </div>

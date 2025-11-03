@@ -2111,9 +2111,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         result = await storage.createRsvpResponse(rsvpData);
       }
       
-      // Award engine integration - evaluate awards for 'going' RSVPs
+      // Award engine integration - evaluate awards for 'attending' RSVPs
       try {
-        if (rsvpData.response === 'going' && rsvpData.userId) {
+        if (rsvpData.response === 'attending' && rsvpData.userId) {
           // Optionally increment consecutiveCheckins for positive RSVPs
           const user = await storage.getUser(rsvpData.userId);
           

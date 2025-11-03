@@ -95,7 +95,7 @@ export default function EventDetailModal({
 
   const rsvpMutation = useMutation({
     mutationFn: (response: 'attending' | 'not_attending') => {
-      return apiRequest('/api/rsvp-responses', 'POST', {
+      return apiRequest('/api/rsvp', 'POST', {
         eventId: event?.id,
         userId,
         response,

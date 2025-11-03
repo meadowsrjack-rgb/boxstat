@@ -55,6 +55,7 @@ import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
 import EventWindowsConfigurator from "@/components/EventWindowsConfigurator";
 import type { EventWindow } from "@shared/schema";
+import EventDetailModal from "@/components/EventDetailModal";
 import { SKILL_CATEGORIES } from "@/components/CoachAwardDialogs";
 import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachAwardDialogs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -320,7 +321,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="events">
-            <EventsTab events={events} teams={teams} programs={programs} organization={organization} />
+            <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} />
           </TabsContent>
 
           <TabsContent value="awards">
@@ -2432,7 +2433,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
 }
 
 // Events Tab - Full Implementation with Calendar and List View
-function EventsTab({ events, teams, programs, organization }: any) {
+function EventsTab({ events, teams, programs, organization, currentUser }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -3193,142 +3194,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
           </Dialog>
           )}
 
-          {/* Event Details Dialog */}
-          <Dialog open={!!selectedEventForDetails} onOpenChange={(open) => !open && setSelectedEventForDetails(null)}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-event-details">
-              <DialogHeader>
-                <DialogTitle>Event Details</DialogTitle>
-              </DialogHeader>
-              {selectedEventForDetails && (
-                <div className="space-y-6">
-                  {/* Event Information */}
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900" data-testid="text-event-title">
-                        {selectedEventForDetails.title}
-                      </h3>
-                      <Badge className="mt-2" data-testid="badge-event-type">
-                        {selectedEventForDetails.type}
-                      </Badge>
-                    </div>
-
-                    {selectedEventForDetails.description && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Description</Label>
-                        <p className="text-gray-600 mt-1" data-testid="text-event-description">
-                          {selectedEventForDetails.description}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Start Time</Label>
-                        <p className="text-gray-900 mt-1" data-testid="text-event-start-time">
-                          {format(new Date(selectedEventForDetails.startTime), "MMMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">End Time</Label>
-                        <p className="text-gray-900 mt-1" data-testid="text-event-end-time">
-                          {format(new Date(selectedEventForDetails.endTime), "MMMM d, yyyy 'at' h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-
-                    {selectedEventForDetails.location && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Location</Label>
-                        <p className="text-gray-900 mt-1" data-testid="text-event-location">
-                          {selectedEventForDetails.location}
-                        </p>
-                      </div>
-                    )}
-
-                    {selectedEventForDetails.teamId && (() => {
-                      const eventTeam = teams.find((t: any) => t.id === parseInt(selectedEventForDetails.teamId));
-                      return eventTeam ? (
-                        <div>
-                          <Label className="text-sm font-medium text-gray-700">Team</Label>
-                          <p className="text-gray-900 mt-1" data-testid="text-event-team">
-                            {eventTeam.name}
-                            {eventTeam.programType && (
-                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
-                                {eventTeam.programType}
-                              </Badge>
-                            )}
-                          </p>
-                        </div>
-                      ) : null;
-                    })()}
-
-                    {selectedEventForDetails.targetType && (
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700">Event For</Label>
-                        <p className="text-gray-900 mt-1" data-testid="text-event-for">
-                          {selectedEventForDetails.targetType === "all" ? "Everyone" : 
-                           selectedEventForDetails.targetType === "team" ? "Team Event" :
-                           selectedEventForDetails.targetType === "program" ? "Program Event" :
-                           selectedEventForDetails.targetType}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Participant List */}
-                  {eventParticipants.length > 0 && (
-                    <Card className="p-4" data-testid="card-participant-list">
-                      <h4 className="font-semibold mb-4 flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-blue-500" />
-                        Participant List (Admin View)
-                      </h4>
-                      
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b">
-                              <th className="text-left py-2 px-2">Name</th>
-                              <th className="text-center py-2 px-2">Email</th>
-                              <th className="text-center py-2 px-2">Role</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {eventParticipants.slice(0, 20).map((user) => {
-                              return (
-                                <tr key={user.id} className="border-b" data-testid={`row-participant-${user.id}`}>
-                                  <td className="py-2 px-2">
-                                    {user.firstName} {user.lastName}
-                                  </td>
-                                  <td className="text-center py-2 px-2">
-                                    {user.email}
-                                  </td>
-                                  <td className="text-center py-2 px-2">
-                                    <Badge variant="outline">{user.role}</Badge>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      
-                      {eventParticipants.length > 20 && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          Showing first 20 of {eventParticipants.length} participants
-                        </p>
-                      )}
-                    </Card>
-                  )}
-
-                  {/* Attendance List */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-3">Attendance</h4>
-                    <AttendanceList eventId={selectedEventForDetails.id} />
-                  </div>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
+          {/* Event Details Modal */}
+          <EventDetailModal
+            event={selectedEventForDetails}
+            userId={currentUser?.id || ''}
+            userRole={currentUser?.role as 'admin' | 'coach' | 'player' | 'parent'}
+            open={!!selectedEventForDetails}
+            onOpenChange={(open) => !open && setSelectedEventForDetails(null)}
+          />
         </div>
       </CardHeader>
       <CardContent>

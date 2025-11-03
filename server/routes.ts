@@ -1492,11 +1492,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Fetch user's full profile to get team membership
+    // Fetch user's full profile to get team and division membership
     const userProfile = await storage.getUser(userId);
     const teamId = userProfile?.teamId;
+    const divisionId = userProfile?.divisionId;
     
-    // Filter events based on user's role and team
+    // Filter events based on user's role, team, and division
     const filteredEvents = allEvents.filter((event: any) => {
       // If no visibility/assignTo, assume it's visible to everyone (legacy events)
       if (!event.visibility && !event.assignTo) {
@@ -1512,7 +1513,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check team-based visibility
-      if (teamId && (visibility.teams?.includes(teamId) || assignTo.teams?.includes(teamId))) {
+      if (teamId && (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId)))) {
+        return true;
+      }
+      
+      // Check division-based visibility
+      if (divisionId && (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId)))) {
         return true;
       }
       
@@ -1536,11 +1542,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Fetch user's full profile to get team membership
+    // Fetch user's full profile to get team and division membership
     const userProfile = await storage.getUser(userId);
     const teamId = userProfile?.teamId;
+    const divisionId = userProfile?.divisionId;
     
-    // Filter events based on user's role and team
+    // Filter events based on user's role, team, and division
     const filteredEvents = allEvents.filter((event: any) => {
       // If no visibility/assignTo, assume it's visible to everyone (legacy events)
       if (!event.visibility && !event.assignTo) {
@@ -1556,7 +1563,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check team-based visibility
-      if (teamId && (visibility.teams?.includes(teamId) || assignTo.teams?.includes(teamId))) {
+      if (teamId && (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId)))) {
+        return true;
+      }
+      
+      // Check division-based visibility
+      if (divisionId && (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId)))) {
         return true;
       }
       
@@ -1586,31 +1598,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('📍 CREATE EVENT - Received body:', JSON.stringify({
         location: req.body.location,
         latitude: req.body.latitude,
-        longitude: req.body.longitude
+        longitude: req.body.longitude,
+        assignTo: req.body.assignTo,
+        visibility: req.body.visibility
       }, null, 2));
       
-      // Transform targetType/targetId into visibility/assignTo structure
+      // Handle both legacy (targetType/targetId) and new (assignTo/visibility) formats
       const { targetType, targetId, ...restData } = req.body;
-      let visibility: any = {};
-      let assignTo: any = {};
+      let visibility: any = restData.visibility || {};
+      let assignTo: any = restData.assignTo || {};
       
-      if (targetType === 'all') {
-        // Event visible to everyone in the organization
-        visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
-        assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
-      } else if (targetType === 'team' && targetId) {
-        visibility = { teams: [targetId] };
-        assignTo = { teams: [targetId] };
-      } else if (targetType === 'program' && targetId) {
-        visibility = { programs: [targetId] };
-        assignTo = { programs: [targetId] };
-      } else if (targetType === 'role' && targetId) {
-        visibility = { roles: [targetId] };
-        assignTo = { roles: [targetId] };
+      // Legacy format transformation (for backward compatibility)
+      if (targetType && !restData.assignTo) {
+        if (targetType === 'all') {
+          visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
+          assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
+        } else if (targetType === 'team' && targetId) {
+          visibility = { teams: [targetId] };
+          assignTo = { teams: [targetId] };
+        } else if (targetType === 'program' && targetId) {
+          visibility = { programs: [targetId] };
+          assignTo = { programs: [targetId] };
+        } else if (targetType === 'role' && targetId) {
+          visibility = { roles: [targetId] };
+          assignTo = { roles: [targetId] };
+        }
       }
       
+      // Remove assignTo/visibility from restData to avoid duplication
+      const { assignTo: _, visibility: __, ...cleanData } = restData;
+      
       const eventData = insertEventSchema.parse({
-        ...restData,
+        ...cleanData,
         visibility,
         assignTo,
         createdBy: userId,

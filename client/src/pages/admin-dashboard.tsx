@@ -2431,6 +2431,20 @@ function EventsTab({ events, teams, programs, organization }: any) {
   const [selectedEventForDetails, setSelectedEventForDetails] = useState<any>(null);
   const [eventWindows, setEventWindows] = useState<Partial<EventWindow>[]>([]);
   const [editEventWindows, setEditEventWindows] = useState<Partial<EventWindow>[]>([]);
+  
+  // Multi-select state for event targeting
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
+
+  // Fetch users and divisions for the multi-select
+  const { data: allUsers = [] } = useQuery<any[]>({
+    queryKey: ["/api/users"],
+  });
+  
+  const { data: divisions = [] } = useQuery<any[]>({
+    queryKey: ["/api/divisions"],
+  });
 
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
@@ -2441,8 +2455,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     description: z.string().optional(),
-    targetType: z.enum(["all", "team", "program", "role"]),
-    targetId: z.string().optional(),
+    targetType: z.enum(["all", "user", "team", "division"]),
   });
 
   const form = useForm({
@@ -2457,19 +2470,39 @@ function EventsTab({ events, teams, programs, organization }: any) {
       longitude: undefined,
       description: "",
       targetType: "all" as const,
-      targetId: "",
     },
   });
 
   const createEvent = useMutation({
     mutationFn: async (data: any) => {
       // Rename 'type' to 'eventType' for backend compatibility
-      const { type, ...rest } = data;
-      console.log('Event form data before submission:', { type, ...rest });
+      const { type, targetType, ...rest } = data;
+      
+      // Build assignTo object based on targetType and selections
+      let assignTo: any = {};
+      let visibility: any = {};
+      
+      if (targetType === 'all') {
+        assignTo = { roles: ['player', 'coach', 'parent', 'admin'] };
+        visibility = { roles: ['player', 'coach', 'parent', 'admin'] };
+      } else if (targetType === 'user') {
+        assignTo = { users: selectedUsers };
+        visibility = { users: selectedUsers };
+      } else if (targetType === 'team') {
+        assignTo = { teams: selectedTeams.map(String) };
+        visibility = { teams: selectedTeams.map(String) };
+      } else if (targetType === 'division') {
+        assignTo = { divisions: selectedDivisions.map(String) };
+        visibility = { divisions: selectedDivisions.map(String) };
+      }
+      
+      console.log('Event form data before submission:', { type, targetType, assignTo, ...rest });
       const payload = {
         ...rest,
         eventType: type,
         organizationId: organization.id,
+        assignTo,
+        visibility,
       };
       console.log('Event API payload:', payload);
       const newEvent = await apiRequest("POST", "/api/events", payload);
@@ -2492,6 +2525,9 @@ function EventsTab({ events, teams, programs, organization }: any) {
       setIsDialogOpen(false);
       form.reset();
       setEventWindows([]);
+      setSelectedUsers([]);
+      setSelectedTeams([]);
+      setSelectedDivisions([]);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -2811,7 +2847,12 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Event For</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedUsers([]);
+                          setSelectedTeams([]);
+                          setSelectedDivisions([]);
+                        }} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-event-target">
                               <SelectValue />
@@ -2819,42 +2860,95 @@ function EventsTab({ events, teams, programs, organization }: any) {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="all">Everyone</SelectItem>
-                            <SelectItem value="team">Specific Team</SelectItem>
-                            <SelectItem value="program">Specific Program</SelectItem>
-                            <SelectItem value="role">Specific Role</SelectItem>
+                            <SelectItem value="user">Specific User(s)</SelectItem>
+                            <SelectItem value="team">Team(s)</SelectItem>
+                            <SelectItem value="division">Division(s)</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormDescription>Who should see this event?</FormDescription>
                       </FormItem>
                     )}
                   />
-                  {(String(form.watch("targetType")) === "team" || String(form.watch("targetType")) === "program" || String(form.watch("targetType")) === "role") && (
-                    <FormField
-                      control={form.control}
-                      name="targetId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Team</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Choose a team" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {teams.map((team: any) => (
-                                <SelectItem key={team.id} value={team.id}>
-                                  {team.name}{team.programType ? ` (${team.programType})` : ''}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            {String(form.watch("targetType")) === "team" ? "Choose which team this event is for" : ""}
-                          </FormDescription>
-                        </FormItem>
-                      )}
-                    />
+                  
+                  {String(form.watch("targetType")) === "user" && (
+                    <div className="space-y-2">
+                      <Label>Select Users</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {allUsers.filter((u: any) => u.isActive).map((user: any) => (
+                          <div key={user.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedUsers.includes(user.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedUsers([...selectedUsers, user.id]);
+                                } else {
+                                  setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                                }
+                              }}
+                              data-testid={`checkbox-user-${user.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
+                              {user.firstName} {user.lastName} ({user.email})
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{selectedUsers.length} user(s) selected</p>
+                    </div>
+                  )}
+                  
+                  {String(form.watch("targetType")) === "team" && (
+                    <div className="space-y-2">
+                      <Label>Select Teams</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {teams.filter((t: any) => t.active).map((team: any) => (
+                          <div key={team.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedTeams.includes(String(team.id))}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedTeams([...selectedTeams, String(team.id)]);
+                                } else {
+                                  setSelectedTeams(selectedTeams.filter(id => id !== String(team.id)));
+                                }
+                              }}
+                              data-testid={`checkbox-team-${team.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
+                              {team.name}{team.programType ? ` (${team.programType})` : ''}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{selectedTeams.length} team(s) selected</p>
+                    </div>
+                  )}
+                  
+                  {String(form.watch("targetType")) === "division" && (
+                    <div className="space-y-2">
+                      <Label>Select Divisions</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {divisions.filter((d: any) => d.isActive).map((division: any) => (
+                          <div key={division.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedDivisions.includes(String(division.id))}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedDivisions([...selectedDivisions, String(division.id)]);
+                                } else {
+                                  setSelectedDivisions(selectedDivisions.filter(id => id !== String(division.id)));
+                                }
+                              }}
+                              data-testid={`checkbox-division-${division.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
+                              {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{selectedDivisions.length} division(s) selected</p>
+                    </div>
                   )}
                   <FormField
                     control={form.control}

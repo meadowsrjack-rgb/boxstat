@@ -132,9 +132,9 @@ export default function EventDetailPanel({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg" data-testid="event-detail-modal">
           <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start">
               <div className="flex-1">
-                <DialogTitle className="text-xl font-semibold pr-8">
+                <DialogTitle className="text-xl font-semibold">
                   {event.title}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-2">
@@ -146,14 +146,6 @@ export default function EventDetailPanel({
                   </Badge>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-                data-testid="button-close-event-detail"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
           

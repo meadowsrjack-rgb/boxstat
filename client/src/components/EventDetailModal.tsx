@@ -213,7 +213,7 @@ export default function EventDetailModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="event-detail-modal">
         <div className="flex items-start justify-between sticky top-0 bg-white dark:bg-gray-800 pb-4 border-b">
-          <div className="flex-1 pr-8">
+          <div className="flex-1">
             <DialogTitle className="text-2xl font-bold">
               {event.title}
             </DialogTitle>
@@ -228,14 +228,6 @@ export default function EventDetailModal({
               ))}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            data-testid="button-close-modal"
-          >
-            <X className="h-5 w-5" />
-          </Button>
         </div>
 
         <div className="space-y-6">

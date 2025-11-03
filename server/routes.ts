@@ -2,8 +2,6 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { db } from "./db";
-import { users, eq } from "@shared/schema";
 import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
@@ -1495,6 +1493,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
+    // Verify user exists to prevent data leaks
+    const currentUser = await storage.getUser(userId);
+    if (!currentUser) {
+      return res.json([]);
+    }
+    
     // Determine whose team/division to filter by
     let teamIds: (string | number)[] = [];
     let divisionIds: (string | number)[] = [];
@@ -1510,10 +1514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } else if (role === 'parent') {
       // Parent Mode: Show events from ALL children's teams + parent's own events
-      const childProfiles = await db
-        .select()
-        .from(users)
-        .where(eq(users.guardianId, userId));
+      const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
+      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
       
       // Collect all team IDs and division IDs from children
       for (const child of childProfiles) {
@@ -1525,11 +1527,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userProfile = await storage.getUser(userId);
       if (userProfile?.teamId) teamIds.push(userProfile.teamId);
       if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
+      
+      // Deduplicate team and division IDs
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
     } else {
       // Regular user (player/coach): Use their own team/division
       const userProfile = await storage.getUser(userId);
-      if (userProfile?.teamId) teamIds = [userProfile.teamId];
-      if (userProfile?.divisionId) divisionIds = [userProfile.divisionId];
+      if (userProfile) {
+        if (userProfile.teamId) teamIds = [userProfile.teamId];
+        if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
+      }
     }
     
     // Filter events based on role, teams, and divisions
@@ -1597,10 +1605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } else if (role === 'parent') {
       // Parent Mode: Show events from ALL children's teams + parent's own events
-      const childProfiles = await db
-        .select()
-        .from(users)
-        .where(eq(users.guardianId, userId));
+      const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
+      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
       
       // Collect all team IDs and division IDs from children
       for (const child of childProfiles) {
@@ -1612,11 +1618,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userProfile = await storage.getUser(userId);
       if (userProfile?.teamId) teamIds.push(userProfile.teamId);
       if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
+      
+      // Deduplicate team and division IDs
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
     } else {
       // Regular user (player/coach): Use their own team/division
       const userProfile = await storage.getUser(userId);
-      if (userProfile?.teamId) teamIds = [userProfile.teamId];
-      if (userProfile?.divisionId) divisionIds = [userProfile.divisionId];
+      if (userProfile) {
+        if (userProfile.teamId) teamIds = [userProfile.teamId];
+        if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
+      }
     }
     
     // Filter events based on role, teams, and divisions

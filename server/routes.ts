@@ -1489,6 +1489,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { childProfileId } = req.query;
     const allEvents = await storage.getEventsByOrganization(organizationId);
     
+    console.log('🔍 EVENT FILTERING DEBUG - Start');
+    console.log('  userId:', userId);
+    console.log('  role:', role);
+    console.log('  childProfileId:', childProfileId);
+    
     // Admins see all events
     if (role === 'admin') {
       return res.json(allEvents);
@@ -1541,19 +1546,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    console.log('  teamIds collected:', teamIds);
+    console.log('  divisionIds collected:', divisionIds);
+    console.log('  targetUserId:', targetUserId);
+    console.log('  Total events to filter:', allEvents.length);
+    
     // Filter events based on role, teams, and divisions
     const filteredEvents = allEvents.filter((event: any) => {
       const visibility = event.visibility || {};
       const assignTo = event.assignTo || {};
       
+      console.log(`  📅 Event "${event.title}" (ID: ${event.id}) - assignTo: ${JSON.stringify(assignTo)}, visibility: ${JSON.stringify(visibility)}`);
+      
       // Check role-based visibility
       if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
+        console.log(`    ✅ MATCH: Role "${role}"`);
         return true;
       }
       
       // Check team-based visibility (check all team IDs)
       for (const teamId of teamIds) {
         if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
+          console.log(`    ✅ MATCH: Team ${teamId}`);
           return true;
         }
       }
@@ -1561,18 +1575,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check division-based visibility (check all division IDs)
       for (const divisionId of divisionIds) {
         if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
+          console.log(`    ✅ MATCH: Division ${divisionId}`);
           return true;
         }
       }
       
       // Check user-specific assignment
       if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
+        console.log(`    ✅ MATCH: User ${targetUserId}`);
         return true;
       }
       
       // Event doesn't match any targeting criteria for this user
+      console.log(`    ❌ NO MATCH`);
       return false;
     });
+    
+    console.log('  Filtered result:', filteredEvents.length, 'events shown');
+    console.log('🔍 EVENT FILTERING DEBUG - End\n');
     
     res.json(filteredEvents);
   });

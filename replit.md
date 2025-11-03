@@ -33,6 +33,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Key Features & Design Decisions
 - **Authentication Flow**: Email/password with required verification, magic link, non-blocking registration, and automatic coach detection. Users are directed to appropriate dashboards.
+- **Registration Flow**: Streamlined 5-step process for "myself" registration (Email → Intent → Info → Package → Account) and 6-step process for "my_child" registration (Email → Intent → Parent Info → Player Info → Package → Account). Payment step has been removed from initial registration to simplify onboarding; payments are handled separately via the account page. Test-only API endpoint (POST /api/test/verify-email) available in development/test environments for automated testing.
 - **User Management**: Single Parent account with linked child profiles; Dual Mode System (Parent/Player) secured by PIN. Profile deletion option available.
 - **Player Profile Management**: Profiles require verification and completion of all required fields to become public/searchable. Profile photo upload system implemented.
 - **Team Management**: Teams organized into programs with Notion-synced rosters. Coaches can join existing teams and manage players.

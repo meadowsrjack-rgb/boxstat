@@ -2,6 +2,8 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { db } from "./db";
+import { users, eq } from "@shared/schema";
 import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
@@ -1485,6 +1487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/events', isAuthenticated, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
+    const { childProfileId } = req.query;
     const allEvents = await storage.getEventsByOrganization(organizationId);
     
     // Admins see all events
@@ -1492,12 +1495,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Fetch user's full profile to get team and division membership
-    const userProfile = await storage.getUser(userId);
-    const teamId = userProfile?.teamId;
-    const divisionId = userProfile?.divisionId;
+    // Determine whose team/division to filter by
+    let teamIds: (string | number)[] = [];
+    let divisionIds: (string | number)[] = [];
+    let targetUserId = userId;
     
-    // Filter events based on user's role, team, and division
+    if (childProfileId) {
+      // Player Mode: Viewing as a specific child - only show that child's events
+      const childProfile = await storage.getUser(childProfileId as string);
+      if (childProfile) {
+        if (childProfile.teamId) teamIds = [childProfile.teamId];
+        if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
+        targetUserId = childProfileId as string;
+      }
+    } else if (role === 'parent') {
+      // Parent Mode: Show events from ALL children's teams + parent's own events
+      const childProfiles = await db
+        .select()
+        .from(users)
+        .where(eq(users.guardianId, userId));
+      
+      // Collect all team IDs and division IDs from children
+      for (const child of childProfiles) {
+        if (child.teamId) teamIds.push(child.teamId);
+        if (child.divisionId) divisionIds.push(child.divisionId);
+      }
+      
+      // Also include parent's own team/division if they have one
+      const userProfile = await storage.getUser(userId);
+      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
+      if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
+    } else {
+      // Regular user (player/coach): Use their own team/division
+      const userProfile = await storage.getUser(userId);
+      if (userProfile?.teamId) teamIds = [userProfile.teamId];
+      if (userProfile?.divisionId) divisionIds = [userProfile.divisionId];
+    }
+    
+    // Filter events based on role, teams, and divisions
     const filteredEvents = allEvents.filter((event: any) => {
       // If no visibility/assignTo, assume it's visible to everyone (legacy events)
       if (!event.visibility && !event.assignTo) {
@@ -1512,18 +1547,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       }
       
-      // Check team-based visibility
-      if (teamId && (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId)))) {
-        return true;
+      // Check team-based visibility (check all team IDs)
+      for (const teamId of teamIds) {
+        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
+          return true;
+        }
       }
       
-      // Check division-based visibility
-      if (divisionId && (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId)))) {
-        return true;
+      // Check division-based visibility (check all division IDs)
+      for (const divisionId of divisionIds) {
+        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
+          return true;
+        }
       }
       
       // Check user-specific assignment
-      if (assignTo.users?.includes(userId)) {
+      if (assignTo.users?.includes(targetUserId)) {
         return true;
       }
       
@@ -1535,6 +1574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/events/upcoming', isAuthenticated, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
+    const { childProfileId } = req.query;
     const allEvents = await storage.getUpcomingEvents(organizationId);
     
     // Admins see all events
@@ -1542,12 +1582,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Fetch user's full profile to get team and division membership
-    const userProfile = await storage.getUser(userId);
-    const teamId = userProfile?.teamId;
-    const divisionId = userProfile?.divisionId;
+    // Determine whose team/division to filter by
+    let teamIds: (string | number)[] = [];
+    let divisionIds: (string | number)[] = [];
+    let targetUserId = userId;
     
-    // Filter events based on user's role, team, and division
+    if (childProfileId) {
+      // Player Mode: Viewing as a specific child - only show that child's events
+      const childProfile = await storage.getUser(childProfileId as string);
+      if (childProfile) {
+        if (childProfile.teamId) teamIds = [childProfile.teamId];
+        if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
+        targetUserId = childProfileId as string;
+      }
+    } else if (role === 'parent') {
+      // Parent Mode: Show events from ALL children's teams + parent's own events
+      const childProfiles = await db
+        .select()
+        .from(users)
+        .where(eq(users.guardianId, userId));
+      
+      // Collect all team IDs and division IDs from children
+      for (const child of childProfiles) {
+        if (child.teamId) teamIds.push(child.teamId);
+        if (child.divisionId) divisionIds.push(child.divisionId);
+      }
+      
+      // Also include parent's own team/division if they have one
+      const userProfile = await storage.getUser(userId);
+      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
+      if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
+    } else {
+      // Regular user (player/coach): Use their own team/division
+      const userProfile = await storage.getUser(userId);
+      if (userProfile?.teamId) teamIds = [userProfile.teamId];
+      if (userProfile?.divisionId) divisionIds = [userProfile.divisionId];
+    }
+    
+    // Filter events based on role, teams, and divisions
     const filteredEvents = allEvents.filter((event: any) => {
       // If no visibility/assignTo, assume it's visible to everyone (legacy events)
       if (!event.visibility && !event.assignTo) {
@@ -1562,18 +1634,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return true;
       }
       
-      // Check team-based visibility
-      if (teamId && (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId)))) {
-        return true;
+      // Check team-based visibility (check all team IDs)
+      for (const teamId of teamIds) {
+        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
+          return true;
+        }
       }
       
-      // Check division-based visibility
-      if (divisionId && (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId)))) {
-        return true;
+      // Check division-based visibility (check all division IDs)
+      for (const divisionId of divisionIds) {
+        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
+          return true;
+        }
       }
       
       // Check user-specific assignment
-      if (assignTo.users?.includes(userId)) {
+      if (assignTo.users?.includes(targetUserId)) {
         return true;
       }
       

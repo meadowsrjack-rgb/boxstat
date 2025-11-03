@@ -12,14 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, CreditCard, Mail } from "lucide-react";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
-
-// Initialize Stripe
-const stripePromise = import.meta.env.VITE_STRIPE_PUBLIC_KEY 
-  ? loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
-  : null;
+import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, Mail } from "lucide-react";
 
 // Form schemas for each step
 const emailEntrySchema = z.object({
@@ -91,11 +84,9 @@ export default function RegistrationFlow() {
     players: Player[];
     packageId?: string;
     password?: string;
-    paymentCompleted?: boolean;
   }>({
     email: verifiedEmail || undefined,
     players: [],
-    paymentCompleted: false,
   });
 
   // Fetch available programs/packages
@@ -103,7 +94,7 @@ export default function RegistrationFlow() {
     queryKey: ["/api/programs"],
   });
 
-  const totalSteps = registrationData.registrationType === "myself" ? 6 : 7;
+  const totalSteps = registrationData.registrationType === "myself" ? 5 : 6;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -219,9 +210,7 @@ export default function RegistrationFlow() {
             {(currentStep === 4 && registrationData.registrationType === "myself") ||
              (currentStep === 5 && registrationData.registrationType === "my_child") && "Select Program/Package"}
             {(currentStep === 5 && registrationData.registrationType === "myself") ||
-             (currentStep === 6 && registrationData.registrationType === "my_child") && "Payment"}
-            {(currentStep === 6 && registrationData.registrationType === "myself") ||
-             (currentStep === 7 && registrationData.registrationType === "my_child") && "Create Account"}
+             (currentStep === 6 && registrationData.registrationType === "my_child") && "Create Account"}
             {currentStep > totalSteps && "Email Verification"}
           </CardTitle>
         </CardHeader>
@@ -328,28 +317,9 @@ export default function RegistrationFlow() {
             />
           )}
 
-          {/* Payment Step */}
+          {/* Account Creation */}
           {((currentStep === 5 && registrationData.registrationType === "myself") ||
             (currentStep === 6 && registrationData.registrationType === "my_child")) && (
-            <PaymentStep
-              packageId={registrationData.packageId || ""}
-              programs={programs}
-              emailCheckData={registrationData.emailCheckData}
-              onPaymentComplete={() => {
-                setRegistrationData({ ...registrationData, paymentCompleted: true });
-                handleNext();
-              }}
-              onSkip={() => {
-                setRegistrationData({ ...registrationData, paymentCompleted: true });
-                handleNext();
-              }}
-              onBack={handleBack}
-            />
-          )}
-
-          {/* Account Creation */}
-          {((currentStep === 6 && registrationData.registrationType === "myself") ||
-            (currentStep === 7 && registrationData.registrationType === "my_child")) && (
             <AccountCreationStep
               onSubmit={handleSubmitRegistration}
               onBack={handleBack}

@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useAppMode } from "@/hooks/useAppMode";
 import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -180,6 +181,7 @@ function calculateAge(dateOfBirth: string | null | undefined): number | null {
 
 export default function PlayerDashboard({ childId }: { childId?: number | null }) {
   const { user } = useAuth();
+  const { currentChildProfile } = useAppMode();
   const [showFoundationProgram, setShowFoundationProgram] = useState(false);
   // Initialize activeTab from URL params or localStorage, defaulting to 'activity'
   const urlParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
@@ -303,9 +305,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     refetchInterval: false,
   });
 
-  // Fetch events (backend filters based on user's role, team membership)
+  // Fetch events (backend filters based on user's role, team membership, and child profile)
+  const childProfileId = currentChildProfile?.id;
   const { data: allEvents = [] } = useQuery<any[]>({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/events", childProfileId],
+    queryFn: async () => {
+      const url = childProfileId 
+        ? `/api/events?childProfileId=${childProfileId}`
+        : "/api/events";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch events");
+      return res.json();
+    },
     enabled: !!currentUser.id,
   });
   

@@ -1800,14 +1800,14 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                     <div className="space-y-2">
                       <Label htmlFor="edit-team-program-type">Program Type</Label>
                       <Select
-                        value={editingTeam.programType || ""}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, programType: value})}
+                        value={editingTeam.programType || "none"}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, programType: value === "none" ? null : value})}
                       >
                         <SelectTrigger id="edit-team-program-type" data-testid="select-edit-team-program-type">
                           <SelectValue placeholder="Select program type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           <SelectItem value="Team">Team</SelectItem>
                           <SelectItem value="Skills">Skills</SelectItem>
                           <SelectItem value="FNH">FNH</SelectItem>
@@ -1841,14 +1841,14 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                     <div className="space-y-2">
                       <Label htmlFor="edit-team-coachId">Head Coach</Label>
                       <Select
-                        value={editingTeam.coachId || ""}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value || null})}
+                        value={editingTeam.coachId || "none"}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value === "none" ? null : value})}
                       >
                         <SelectTrigger id="edit-team-coachId" data-testid="select-edit-team-coachId">
                           <SelectValue placeholder="Select a coach" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {coaches.map((coach: any) => (
                             <SelectItem key={coach.id} value={coach.id}>
                               {coach.firstName} {coach.lastName}

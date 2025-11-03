@@ -8,6 +8,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Event Multi-Select Targeting (November 2025)
+- **Feature**: Enhanced event creation/edit to support multi-select targeting for specific users, teams, and divisions
+- **Implementation**:
+  1. Added "Specific User(s)", "Team(s)", and "Division(s)" options to Event For dropdown
+  2. Multi-select checkbox interface for each targeting type with selection counters
+  3. Backend support for `assignTo` and `visibility` JSONB fields with users/teams/divisions arrays
+  4. Event filtering based on user's assigned team/division or direct user assignment
+  5. Backward compatibility maintained for legacy targetType/targetId format
+- **Visibility Rules**: Events are visible to users if:
+  - User ID is in assignTo.users array
+  - User's teamId is in assignTo.teams array
+  - User's divisionId is in assignTo.divisions array
+  - User's role is in assignTo.roles array
+  - Admins see all events regardless of targeting
+- **UI/UX**: Selection counters show "X item(s) selected"; selections clear when targetType changes
+
 ### Team Display Fix (November 2025)
 - **Issue**: Team names not displaying on player cards (account page) and admin dashboard Team Info tab
 - **Root Cause**: Missing API endpoint `/api/users/:userId/team` and type mismatch in admin dashboard (teamId/divisionId as strings vs numbers)

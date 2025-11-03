@@ -1103,7 +1103,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         {/* Table with bottom scrollbar and mobile swipe support */}
         <div 
           ref={tableRef} 
-          className="overflow-x-auto drag-scroll touch-pan-x"
+          className="overflow-x-scroll drag-scroll touch-pan-x"
           onScroll={(e) => {
             const topScrollbar = e.currentTarget.previousElementSibling as HTMLElement;
             if (topScrollbar) {

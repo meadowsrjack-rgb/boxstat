@@ -2772,7 +2772,13 @@ function EventsTab({ events, teams, programs, organization }: any) {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit((data) => {
                   console.log('📍 Creating event with data:', data);
-                  createEvent.mutate(data);
+                  // Convert datetime-local strings to ISO strings with timezone
+                  const eventData = {
+                    ...data,
+                    startTime: data.startTime && !data.startTime.endsWith('Z') ? new Date(data.startTime).toISOString() : data.startTime,
+                    endTime: data.endTime && !data.endTime.endsWith('Z') ? new Date(data.endTime).toISOString() : data.endTime,
+                  };
+                  createEvent.mutate(eventData);
                 })} className="space-y-4">
                   <FormField
                     control={form.control}
@@ -3073,7 +3079,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <Input
                         id="edit-event-startTime"
                         type="datetime-local"
-                        defaultValue={editingEvent.startTime ? new Date(editingEvent.startTime).toISOString().slice(0, 16) : ""}
+                        defaultValue={editingEvent.startTime ? format(new Date(editingEvent.startTime), "yyyy-MM-dd'T'HH:mm") : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, startTime: e.target.value})}
                         data-testid="input-edit-event-startTime"
                       />
@@ -3083,7 +3089,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       <Input
                         id="edit-event-endTime"
                         type="datetime-local"
-                        defaultValue={editingEvent.endTime ? new Date(editingEvent.endTime).toISOString().slice(0, 16) : ""}
+                        defaultValue={editingEvent.endTime ? format(new Date(editingEvent.endTime), "yyyy-MM-dd'T'HH:mm") : ""}
                         onChange={(e) => setEditingEvent({...editingEvent, endTime: e.target.value})}
                         data-testid="input-edit-event-endTime"
                       />
@@ -3167,7 +3173,15 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   <Button
                     type="button"
                     className="w-full"
-                    onClick={() => updateEvent.mutate(editingEvent)}
+                    onClick={() => {
+                      // Convert datetime-local strings to ISO strings with timezone
+                      const updatedData = {
+                        ...editingEvent,
+                        startTime: editingEvent.startTime && !editingEvent.startTime.endsWith('Z') ? new Date(editingEvent.startTime).toISOString() : editingEvent.startTime,
+                        endTime: editingEvent.endTime && !editingEvent.endTime.endsWith('Z') ? new Date(editingEvent.endTime).toISOString() : editingEvent.endTime,
+                      };
+                      updateEvent.mutate(updatedData);
+                    }}
                     disabled={updateEvent.isPending}
                     data-testid="button-submit-edit-event"
                   >

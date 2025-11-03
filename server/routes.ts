@@ -1494,8 +1494,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('  role:', role);
     console.log('  childProfileId:', childProfileId);
     
-    // Admins see all events
-    if (role === 'admin') {
+    // Admins see all events ONLY when viewing their own dashboard (not a child's)
+    if (role === 'admin' && !childProfileId) {
+      console.log('  Admin viewing own dashboard - showing all events');
       return res.json(allEvents);
     }
     
@@ -1602,8 +1603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { childProfileId } = req.query;
     const allEvents = await storage.getUpcomingEvents(organizationId);
     
-    // Admins see all events
-    if (role === 'admin') {
+    // Admins see all events ONLY when viewing their own dashboard (not a child's)
+    if (role === 'admin' && !childProfileId) {
       return res.json(allEvents);
     }
     

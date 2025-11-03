@@ -1649,12 +1649,16 @@ function PriceCard({ title, priceLine, cta, badge }: { title: string; priceLine:
 function TeamBlock() {
   const { user } = useAuth();
   const currentUser = user as UserType;
+  const { currentChildProfile } = useAppMode();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const { toast } = useToast();
   
+  // Use child profile ID if viewing as child, otherwise use current user ID
+  const userIdForTeam = currentChildProfile?.id || currentUser.id;
+  
   const { data: userTeam } = useQuery<Team>({
-    queryKey: ["/api/users", currentUser.id, "team"],
-    enabled: !!currentUser.id,
+    queryKey: ["/api/users", userIdForTeam, "team"],
+    enabled: !!userIdForTeam,
   });
   
   // Fetch team roster with Notion data (includes players without app accounts)

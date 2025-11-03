@@ -45,7 +45,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
 import PlayerDashboard from "./player-dashboard";
-import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema } from "@shared/schema";
+import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema, insertTeamSchema } from "@shared/schema";
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
@@ -311,7 +311,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamsTab teams={teams} users={users} organization={organization} />
+            <TeamsTab teams={teams} users={users} divisions={divisions} organization={organization} />
           </TabsContent>
 
           <TabsContent value="events">
@@ -570,10 +570,17 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 
     // Handle special cases
     if (sortField === 'team') {
-      const aTeam = teams.find((t: any) => t.roster?.includes(a.id));
-      const bTeam = teams.find((t: any) => t.roster?.includes(b.id));
+      const aTeam = teams.find((t: any) => t.id === a.teamId);
+      const bTeam = teams.find((t: any) => t.id === b.teamId);
       aValue = aTeam?.name || '';
       bValue = bTeam?.name || '';
+    }
+
+    if (sortField === 'division') {
+      const aDivision = divisions.find((d: any) => d.id === a.divisionId);
+      const bDivision = divisions.find((d: any) => d.id === b.divisionId);
+      aValue = aDivision?.name || '';
+      bValue = bDivision?.name || '';
     }
 
     if (sortField === 'dob' || sortField === 'dateOfBirth') {
@@ -912,6 +919,56 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </Select>
                   </div>
                   
+                  {editingUser.role === 'coach' && (
+                    <div className="space-y-2">
+                      <Label data-testid="label-coached-teams">Teams Coached</Label>
+                      <div className="border rounded-md p-3 bg-gray-50">
+                        {(() => {
+                          const headCoachTeams = teams.filter((t: any) => t.coachId === editingUser.id);
+                          const assistantCoachTeams = teams.filter((t: any) => 
+                            Array.isArray(t.assistantCoachIds) && t.assistantCoachIds.includes(editingUser.id)
+                          );
+                          
+                          if (headCoachTeams.length === 0 && assistantCoachTeams.length === 0) {
+                            return <p className="text-sm text-gray-500">Not assigned to any teams</p>;
+                          }
+                          
+                          return (
+                            <div className="space-y-2">
+                              {headCoachTeams.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">Head Coach:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {headCoachTeams.map((team: any) => (
+                                      <Badge key={team.id} variant="default" className="text-xs">
+                                        {team.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {assistantCoachTeams.length > 0 && (
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-700 mb-1">Assistant Coach:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {assistantCoachTeams.map((team: any) => (
+                                      <Badge key={team.id} variant="secondary" className="text-xs">
+                                        {team.name}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        To modify team coaching assignments, use the Teams tab
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="space-y-2">
                     <Label htmlFor="edit-dob" data-testid="label-edit-dob">Date of Birth</Label>
                     <Input 
@@ -1174,7 +1231,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
             </TableHeader>
             <TableBody>
               {sortedUsers.map((user: any) => {
-                const userTeam = teams.find((t: any) => t.roster?.includes(user.id));
+                const userTeam = teams.find((t: any) => t.id === user.teamId);
+                const userDivision = divisions.find((d: any) => d.id === user.divisionId);
                 return (
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                     <TableCell data-testid={`text-firstname-${user.id}`}>{user.firstName || "-"}</TableCell>
@@ -1187,7 +1245,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>{user.club || "-"}</TableCell>
                     <TableCell>{user.program || "-"}</TableCell>
                     <TableCell>{userTeam?.name || "-"}</TableCell>
-                    <TableCell>{user.division || "-"}</TableCell>
+                    <TableCell>{userDivision?.name || "-"}</TableCell>
                     <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>{user.packages?.join(", ") || "-"}</TableCell>
                     <TableCell>{user.position || "-"}</TableCell>
@@ -1251,7 +1309,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 }
 
 // Teams Tab - Full Implementation
-function TeamsTab({ teams, users, organization }: any) {
+function TeamsTab({ teams, users, divisions, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -1262,22 +1320,22 @@ function TeamsTab({ teams, users, organization }: any) {
   const coaches = users.filter((u: any) => u.role === "coach");
   const players = users.filter((u: any) => u.role === "player");
 
-  const createTeamSchema = z.object({
-    name: z.string().min(1, "Team name is required"),
-    division: z.string().optional(),
-    ageGroup: z.string().optional(),
-    coachId: z.string().optional(),
-    description: z.string().optional(),
-  });
-
-  const form = useForm({
-    resolver: zodResolver(createTeamSchema),
+  const form = useForm<any>({
+    resolver: zodResolver(insertTeamSchema),
     defaultValues: {
+      organizationId: organization?.id || "",
       name: "",
-      division: "",
-      ageGroup: "",
+      programType: "",
+      divisionId: undefined as number | undefined,
       coachId: "",
-      description: "",
+      assistantCoachIds: [] as string[],
+      season: "",
+      organization: "",
+      location: "",
+      scheduleLink: "",
+      rosterSize: 0,
+      active: true,
+      notes: "",
     },
   });
 
@@ -1285,8 +1343,7 @@ function TeamsTab({ teams, users, organization }: any) {
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/teams", { 
         ...data, 
-        organizationId: organization.id,
-        roster: []
+        organizationId: organization.id
       });
     },
     onSuccess: () => {
@@ -1460,7 +1517,7 @@ function TeamsTab({ teams, users, organization }: any) {
                   Create Team
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Create New Team</DialogTitle>
                 </DialogHeader>
@@ -1471,7 +1528,7 @@ function TeamsTab({ teams, users, organization }: any) {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Team Name</FormLabel>
+                          <FormLabel>Team Name *</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Thunder U12" data-testid="input-team-name" />
                           </FormControl>
@@ -1479,45 +1536,76 @@ function TeamsTab({ teams, users, organization }: any) {
                         </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="division"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Division</FormLabel>
+                    
+                    <FormField
+                      control={form.control}
+                      name="programType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Program Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
-                              <Input {...field} placeholder="Recreational" data-testid="input-team-division" />
+                              <SelectTrigger data-testid="select-team-program-type">
+                                <SelectValue placeholder="Select program type" />
+                              </SelectTrigger>
                             </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="ageGroup"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Age Group</FormLabel>
+                            <SelectContent>
+                              <SelectItem value="Team">Team</SelectItem>
+                              <SelectItem value="Skills">Skills</SelectItem>
+                              <SelectItem value="FNH">FNH</SelectItem>
+                              <SelectItem value="Camp">Camp</SelectItem>
+                              <SelectItem value="Training">Training</SelectItem>
+                              <SelectItem value="Special">Special</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="divisionId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Division</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} 
+                            value={field.value ? field.value.toString() : "none"}
+                          >
                             <FormControl>
-                              <Input {...field} placeholder="U12" data-testid="input-team-age" />
+                              <SelectTrigger data-testid="select-team-division">
+                                <SelectValue placeholder="Select a division" />
+                              </SelectTrigger>
                             </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {divisions.map((division: any) => (
+                                <SelectItem key={division.id} value={division.id.toString()}>
+                                  {division.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <FormField
                       control={form.control}
                       name="coachId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Assign Coach</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormLabel>Head Coach</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-team-coach">
                                 <SelectValue placeholder="Select a coach" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
+                              <SelectItem value="">None</SelectItem>
                               {coaches.map((coach: any) => (
                                 <SelectItem key={coach.id} value={coach.id}>
                                   {coach.firstName} {coach.lastName}
@@ -1525,21 +1613,164 @@ function TeamsTab({ teams, users, organization }: any) {
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={form.control}
-                      name="description"
+                      name="assistantCoachIds"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Description (Optional)</FormLabel>
+                          <FormLabel>Assistant Coaches</FormLabel>
+                          <FormDescription>Select assistant coaches for this team</FormDescription>
+                          <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-assistant-coaches">
+                            {coaches.length === 0 ? (
+                              <p className="text-sm text-gray-500">No coaches available</p>
+                            ) : (
+                              coaches.map((coach: any) => {
+                                const currentValue = field.value || [];
+                                const isChecked = Array.isArray(currentValue) && currentValue.includes(coach.id);
+                                return (
+                                  <div key={coach.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          field.onChange([...currentValue, coach.id]);
+                                        } else {
+                                          field.onChange(currentValue.filter((id: string) => id !== coach.id));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-assistant-coach-${coach.id}`}
+                                    />
+                                    <Label className="text-sm font-normal cursor-pointer">
+                                      {coach.firstName} {coach.lastName}
+                                    </Label>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="season"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Season</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Winter 2025" data-testid="input-team-season" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="organization"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Club/Brand</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Basketball Academy" data-testid="input-team-organization" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Facility Location</FormLabel>
                           <FormControl>
-                            <Textarea {...field} data-testid="input-team-description" />
+                            <Input {...field} placeholder="Main Gym" data-testid="input-team-location" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="scheduleLink"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Schedule Link</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="url" placeholder="https://..." data-testid="input-team-schedule-link" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="rosterSize"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Roster Size</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="number" 
+                              placeholder="0" 
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              data-testid="input-team-roster-size" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="active"
+                      render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Active</FormLabel>
+                            <FormDescription>
+                              Is this team currently active?
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="switch-team-active"
+                            />
                           </FormControl>
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} placeholder="Internal team notes..." rows={3} data-testid="input-team-notes" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     <Button type="submit" className="w-full" disabled={createTeam.isPending} data-testid="button-submit-team">
                       {createTeam.isPending ? "Creating..." : "Create Team"}
                     </Button>
@@ -1550,44 +1781,68 @@ function TeamsTab({ teams, users, organization }: any) {
 
             {/* Edit Team Dialog */}
             <Dialog open={!!editingTeam} onOpenChange={(open) => !open && setEditingTeam(null)}>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Team</DialogTitle>
                 </DialogHeader>
                 {editingTeam && (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-team-name">Team Name</Label>
+                      <Label htmlFor="edit-team-name">Team Name *</Label>
                       <Input
                         id="edit-team-name"
-                        defaultValue={editingTeam.name || ""}
+                        value={editingTeam.name || ""}
                         onChange={(e) => setEditingTeam({...editingTeam, name: e.target.value})}
                         data-testid="input-edit-team-name"
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-program-type">Program Type</Label>
+                      <Select
+                        value={editingTeam.programType || ""}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, programType: value})}
+                      >
+                        <SelectTrigger id="edit-team-program-type" data-testid="select-edit-team-program-type">
+                          <SelectValue placeholder="Select program type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="Team">Team</SelectItem>
+                          <SelectItem value="Skills">Skills</SelectItem>
+                          <SelectItem value="FNH">FNH</SelectItem>
+                          <SelectItem value="Camp">Camp</SelectItem>
+                          <SelectItem value="Training">Training</SelectItem>
+                          <SelectItem value="Special">Special</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="edit-team-division">Division</Label>
-                      <Input
-                        id="edit-team-division"
-                        defaultValue={editingTeam.division || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, division: e.target.value})}
-                        data-testid="input-edit-team-division"
-                      />
+                      <Select
+                        value={editingTeam.divisionId?.toString() || "none"}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, divisionId: value === "none" ? null : parseInt(value)})}
+                      >
+                        <SelectTrigger id="edit-team-division" data-testid="select-edit-team-division">
+                          <SelectValue placeholder="Select a division" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {divisions.map((division: any) => (
+                            <SelectItem key={division.id} value={division.id.toString()}>
+                              {division.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="edit-team-ageGroup">Age Group</Label>
-                      <Input
-                        id="edit-team-ageGroup"
-                        defaultValue={editingTeam.ageGroup || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, ageGroup: e.target.value})}
-                        data-testid="input-edit-team-ageGroup"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edit-team-coachId">Assign Coach</Label>
+                      <Label htmlFor="edit-team-coachId">Head Coach</Label>
                       <Select
                         value={editingTeam.coachId || ""}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value})}
+                        onValueChange={(value) => setEditingTeam({...editingTeam, coachId: value || null})}
                       >
                         <SelectTrigger id="edit-team-coachId" data-testid="select-edit-team-coachId">
                           <SelectValue placeholder="Select a coach" />
@@ -1602,15 +1857,118 @@ function TeamsTab({ teams, users, organization }: any) {
                         </SelectContent>
                       </Select>
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="edit-team-description">Description</Label>
-                      <Textarea
-                        id="edit-team-description"
-                        defaultValue={editingTeam.description || ""}
-                        onChange={(e) => setEditingTeam({...editingTeam, description: e.target.value})}
-                        data-testid="input-edit-team-description"
+                      <Label htmlFor="edit-team-assistant-coaches">Assistant Coaches</Label>
+                      <div className="max-h-48 overflow-y-auto border rounded-md p-3 space-y-2" data-testid="checkbox-group-edit-assistant-coaches">
+                        {coaches.length === 0 ? (
+                          <p className="text-sm text-gray-500">No coaches available</p>
+                        ) : (
+                          coaches.map((coach: any) => (
+                            <div key={coach.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={(editingTeam.assistantCoachIds || []).includes(coach.id)}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = editingTeam.assistantCoachIds || [];
+                                  if (checked) {
+                                    setEditingTeam({...editingTeam, assistantCoachIds: [...currentValue, coach.id]});
+                                  } else {
+                                    setEditingTeam({...editingTeam, assistantCoachIds: currentValue.filter((id: string) => id !== coach.id)});
+                                  }
+                                }}
+                                data-testid={`checkbox-edit-assistant-coach-${coach.id}`}
+                              />
+                              <Label className="text-sm font-normal cursor-pointer">
+                                {coach.firstName} {coach.lastName}
+                              </Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-team-season">Season</Label>
+                        <Input
+                          id="edit-team-season"
+                          value={editingTeam.season || ""}
+                          onChange={(e) => setEditingTeam({...editingTeam, season: e.target.value})}
+                          placeholder="Winter 2025"
+                          data-testid="input-edit-team-season"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-team-organization">Club/Brand</Label>
+                        <Input
+                          id="edit-team-organization"
+                          value={editingTeam.organization || ""}
+                          onChange={(e) => setEditingTeam({...editingTeam, organization: e.target.value})}
+                          placeholder="Basketball Academy"
+                          data-testid="input-edit-team-organization"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-location">Facility Location</Label>
+                      <Input
+                        id="edit-team-location"
+                        value={editingTeam.location || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, location: e.target.value})}
+                        placeholder="Main Gym"
+                        data-testid="input-edit-team-location"
                       />
                     </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-schedule-link">Schedule Link</Label>
+                      <Input
+                        id="edit-team-schedule-link"
+                        value={editingTeam.scheduleLink || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, scheduleLink: e.target.value})}
+                        type="url"
+                        placeholder="https://..."
+                        data-testid="input-edit-team-schedule-link"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-roster-size">Roster Size</Label>
+                      <Input
+                        id="edit-team-roster-size"
+                        value={editingTeam.rosterSize || 0}
+                        onChange={(e) => setEditingTeam({...editingTeam, rosterSize: parseInt(e.target.value) || 0})}
+                        type="number"
+                        placeholder="0"
+                        data-testid="input-edit-team-roster-size"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Active</Label>
+                        <p className="text-sm text-gray-500">Is this team currently active?</p>
+                      </div>
+                      <Switch
+                        checked={editingTeam.active !== false}
+                        onCheckedChange={(checked) => setEditingTeam({...editingTeam, active: checked})}
+                        data-testid="switch-edit-team-active"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-notes">Notes</Label>
+                      <Textarea
+                        id="edit-team-notes"
+                        value={editingTeam.notes || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, notes: e.target.value})}
+                        placeholder="Internal team notes..."
+                        rows={3}
+                        data-testid="input-edit-team-notes"
+                      />
+                    </div>
+
                     <Button
                       type="button"
                       className="w-full"
@@ -1632,58 +1990,78 @@ function TeamsTab({ teams, users, organization }: any) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Team Name</TableHead>
-                <TableHead>Division</TableHead>
-                <TableHead>Age Group</TableHead>
-                <TableHead>Coach</TableHead>
-                <TableHead>Players</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {teams.map((team: any) => {
-                const coach = users.find((u: any) => u.id === team.coachId);
-                return (
-                  <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
-                    <TableCell className="font-medium">{team.name}</TableCell>
-                    <TableCell>{team.division || "-"}</TableCell>
-                    <TableCell>{team.ageGroup || "-"}</TableCell>
-                    <TableCell>
-                      {coach ? `${coach.firstName} ${coach.lastName}` : "Unassigned"}
-                    </TableCell>
-                    <TableCell>{team.roster?.length || 0}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setSelectedTeam(team)}
-                          data-testid={`button-manage-roster-${team.id}`}
+                  <TableHead>Program Type</TableHead>
+                  <TableHead>Division</TableHead>
+                  <TableHead>Coach</TableHead>
+                  <TableHead>Season</TableHead>
+                  <TableHead>Roster</TableHead>
+                  <TableHead>Active</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {teams.map((team: any) => {
+                  const coach = users.find((u: any) => u.id === team.coachId);
+                  const division = divisions.find((d: any) => d.id === team.divisionId);
+                  return (
+                    <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
+                      <TableCell className="font-medium" data-testid={`text-team-name-${team.id}`}>
+                        {team.name}
+                      </TableCell>
+                      <TableCell data-testid={`text-program-type-${team.id}`}>
+                        {team.programType ? (
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                            {team.programType}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell data-testid={`text-division-${team.id}`}>
+                        {division?.name || "-"}
+                      </TableCell>
+                      <TableCell data-testid={`text-coach-${team.id}`}>
+                        {coach ? `${coach.firstName} ${coach.lastName}` : "Unassigned"}
+                      </TableCell>
+                      <TableCell data-testid={`text-season-${team.id}`}>
+                        {team.season || "-"}
+                      </TableCell>
+                      <TableCell data-testid={`text-roster-${team.id}`}>
+                        {team.rosterSize || 0}
+                      </TableCell>
+                      <TableCell data-testid={`status-active-${team.id}`}>
+                        <Badge 
+                          variant={team.active ? "default" : "secondary"}
+                          className={team.active ? "bg-green-100 text-green-700 border-green-200" : "bg-gray-100 text-gray-500 border-gray-200"}
                         >
-                          Manage Roster
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => setEditingTeam(team)}
-                          data-testid={`button-edit-team-${team.id}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => deleteTeam.mutate(team.id)}
-                          data-testid={`button-delete-team-${team.id}`}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          {team.active ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setEditingTeam(team)}
+                            data-testid={`button-edit-team-${team.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => deleteTeam.mutate(team.id)}
+                            data-testid={`button-delete-team-${team.id}`}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
@@ -2142,11 +2520,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
                             <SelectContent>
                               {teams.map((team: any) => (
                                 <SelectItem key={team.id} value={team.id}>
-                                  {team.name}
+                                  {team.name}{team.programType ? ` (${team.programType})` : ''}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>
+                            {String(form.watch("targetType")) === "team" ? "Choose which team this event is for" : ""}
+                          </FormDescription>
                         </FormItem>
                       )}
                     />
@@ -2289,22 +2670,25 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   </div>
                   {(editingEvent.targetType === "team" || editingEvent.targetType === "program" || editingEvent.targetType === "role") && (
                     <div className="space-y-2">
-                      <Label htmlFor="edit-event-targetId">Select Target</Label>
+                      <Label htmlFor="edit-event-targetId">Select Team</Label>
                       <Select
                         value={editingEvent.targetId || ""}
                         onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
                       >
                         <SelectTrigger id="edit-event-targetId" data-testid="select-edit-event-targetId">
-                          <SelectValue placeholder="Choose a target" />
+                          <SelectValue placeholder="Choose a team" />
                         </SelectTrigger>
                         <SelectContent>
                           {teams.map((team: any) => (
                             <SelectItem key={team.id} value={team.id}>
-                              {team.name}
+                              {team.name}{team.programType ? ` (${team.programType})` : ''}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-gray-500">
+                        {editingEvent.targetType === "team" ? "Choose which team this event is for" : ""}
+                      </p>
                     </div>
                   )}
                   <div className="space-y-2">
@@ -2391,6 +2775,35 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         </p>
                       </div>
                     )}
+
+                    {selectedEventForDetails.teamId && (() => {
+                      const eventTeam = teams.find((t: any) => t.id === parseInt(selectedEventForDetails.teamId));
+                      return eventTeam ? (
+                        <div>
+                          <Label className="text-sm font-medium text-gray-700">Team</Label>
+                          <p className="text-gray-900 mt-1" data-testid="text-event-team">
+                            {eventTeam.name}
+                            {eventTeam.programType && (
+                              <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                                {eventTeam.programType}
+                              </Badge>
+                            )}
+                          </p>
+                        </div>
+                      ) : null;
+                    })()}
+
+                    {selectedEventForDetails.targetType && (
+                      <div>
+                        <Label className="text-sm font-medium text-gray-700">Event For</Label>
+                        <p className="text-gray-900 mt-1" data-testid="text-event-for">
+                          {selectedEventForDetails.targetType === "all" ? "Everyone" : 
+                           selectedEventForDetails.targetType === "team" ? "Team Event" :
+                           selectedEventForDetails.targetType === "program" ? "Program Event" :
+                           selectedEventForDetails.targetType}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Attendance List */}
@@ -2418,7 +2831,14 @@ function EventsTab({ events, teams, programs, organization }: any) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event: any) => (
+              {events.map((event: any) => {
+                // Look up team if event is team-specific
+                const eventTeam = event.teamId ? teams.find((t: any) => t.id === parseInt(event.teamId)) : null;
+                const teamDisplay = eventTeam 
+                  ? `${eventTeam.name}${eventTeam.programType ? ` (${eventTeam.programType})` : ''}`
+                  : null;
+                
+                return (
                 <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
                   <TableCell className="font-medium">{event.title}</TableCell>
                   <TableCell>
@@ -2427,7 +2847,9 @@ function EventsTab({ events, teams, programs, organization }: any) {
                   <TableCell>{new Date(event.startTime).toLocaleString()}</TableCell>
                   <TableCell>{event.location || "-"}</TableCell>
                   <TableCell>
-                    {event.targetType === "all" ? "Everyone" : event.targetType}
+                    {event.targetType === "all" ? "Everyone" : 
+                     event.targetType === "team" && teamDisplay ? teamDisplay :
+                     event.targetType}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
@@ -2461,7 +2883,8 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         ) : (

@@ -214,7 +214,7 @@ export interface IStorage {
 class MemStorage implements IStorage {
   private organizations: Map<string, Organization> = new Map();
   private users: Map<string, User> = new Map();
-  private teams: Map<string, Team> = new Map();
+  private teams: Map<number, Team> = new Map();
   private events: Map<number, Event> = new Map();
   private attendances: Map<string, Attendance> = new Map();
   private awards: Map<string, Award> = new Map();
@@ -232,6 +232,7 @@ class MemStorage implements IStorage {
   private rsvpResponses: Map<number, RsvpResponse> = new Map();
   private awardDefinitions: Map<number, SelectAwardDefinition> = new Map();
   private userAwardRecords: Map<number, SelectUserAwardRecord> = new Map();
+  private nextTeamId = 1;
   private nextEventId = 1;
   private nextDivisionId = 1;
   private nextSkillId = 1;
@@ -809,7 +810,7 @@ class MemStorage implements IStorage {
   
   // Team operations
   async getTeam(id: string): Promise<Team | undefined> {
-    return this.teams.get(id);
+    return this.teams.get(parseInt(id));
   }
   
   async getTeamsByOrganization(organizationId: string): Promise<Team[]> {
@@ -817,31 +818,52 @@ class MemStorage implements IStorage {
   }
   
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
-    return Array.from(this.teams.values()).filter(team => team.coachIds.includes(coachId));
+    return Array.from(this.teams.values()).filter(team => 
+      team.coachId === coachId || team.assistantCoachIds?.includes(coachId)
+    );
   }
   
   async createTeam(team: InsertTeam): Promise<Team> {
+    const now = new Date();
+    const id = this.nextTeamId++;
     const newTeam: Team = {
-      ...team,
-      id: this.generateId(),
-      coachIds: team.coachIds ?? [],
-      createdAt: new Date(),
+      id,
+      organizationId: team.organizationId,
+      name: team.name,
+      programType: team.programType,
+      divisionId: team.divisionId,
+      coachId: team.coachId,
+      assistantCoachIds: team.assistantCoachIds ?? [],
+      season: team.season,
+      organization: team.organization,
+      location: team.location,
+      scheduleLink: team.scheduleLink,
+      rosterSize: team.rosterSize ?? 0,
+      active: team.active ?? true,
+      notes: team.notes,
+      createdAt: now,
+      updatedAt: now,
     };
-    this.teams.set(newTeam.id, newTeam);
+    this.teams.set(id, newTeam);
     return newTeam;
   }
   
   async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
-    const team = this.teams.get(id);
+    const teamId = parseInt(id);
+    const team = this.teams.get(teamId);
     if (!team) return undefined;
     
-    const updated = { ...team, ...updates };
-    this.teams.set(id, updated);
+    const updated = { 
+      ...team, 
+      ...updates, 
+      updatedAt: new Date() 
+    };
+    this.teams.set(teamId, updated);
     return updated;
   }
   
   async deleteTeam(id: string): Promise<void> {
-    this.teams.delete(id);
+    this.teams.delete(parseInt(id));
   }
   
   // Event operations
@@ -1289,7 +1311,7 @@ class MemStorage implements IStorage {
     const newDivision: Division = {
       ...division,
       id: id.toString(),
-      programIds: division.programIds ?? [],
+      teamIds: division.teamIds ?? [],
       isActive: division.isActive ?? true,
       createdAt: new Date(),
     };
@@ -1402,6 +1424,7 @@ class MemStorage implements IStorage {
     const newEvaluation: Evaluation = {
       ...evaluation,
       id,
+      scores: evaluation.scores || {},
       createdAt: now,
       updatedAt: now,
     };
@@ -1607,6 +1630,31 @@ class DatabaseStorage implements IStorage {
   // Initialize test users for development
   async initializeTestUsers(): Promise<void> {
     try {
+      // Check if admin user already exists
+      const existingAdmin = await this.getUserByEmail("admin@example.com", this.defaultOrgId);
+      
+      if (!existingAdmin) {
+        // Create admin user with pre-verified status
+        await this.createUser({
+          organizationId: this.defaultOrgId,
+          email: "admin@example.com",
+          password: Buffer.from("admin123").toString('base64'),
+          role: "admin",
+          firstName: "Admin",
+          lastName: "User",
+          verified: true,
+          isActive: true,
+          hasRegistered: true,
+          awards: [],
+          totalPractices: 0,
+          totalGames: 0,
+          consecutiveCheckins: 0,
+          videosCompleted: 0,
+          yearsActive: 0,
+        });
+        console.log('✅ Created pre-verified admin user: admin@example.com');
+      }
+
       // Check if test user already exists
       const existingUser = await this.getUserByEmail("test@example.com", this.defaultOrgId);
       
@@ -1622,6 +1670,12 @@ class DatabaseStorage implements IStorage {
           verified: true, // Pre-verified for easy testing
           isActive: true,
           hasRegistered: true,
+          awards: [],
+          totalPractices: 0,
+          totalGames: 0,
+          consecutiveCheckins: 0,
+          videosCompleted: 0,
+          yearsActive: 0,
         });
         console.log('✅ Created pre-verified test user: test@example.com');
       }
@@ -2015,6 +2069,14 @@ class DatabaseStorage implements IStorage {
       magicLinkExpiry: user.magicLinkExpiry?.toISOString(),
       googleId: user.googleId,
       appleId: user.appleId,
+      isActive: user.isActive ?? true,
+      hasRegistered: user.hasRegistered ?? false,
+      awards: user.awards || [],
+      totalPractices: user.totalPractices || 0,
+      totalGames: user.totalGames || 0,
+      consecutiveCheckins: user.consecutiveCheckins || 0,
+      videosCompleted: user.videosCompleted || 0,
+      yearsActive: user.yearsActive || 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -2093,14 +2155,23 @@ class DatabaseStorage implements IStorage {
   }
 
   async createTeam(team: InsertTeam): Promise<Team> {
+    const now = new Date().toISOString();
     const dbTeam = {
+      organizationId: team.organizationId,
       name: team.name,
-      ageGroup: team.ageGroup || '',
-      color: team.color || '#1E40AF',
-      coachId: team.coachIds?.[0],
-      division: team.division,
-      program: team.program,
-      createdAt: new Date().toISOString(),
+      programType: team.programType,
+      divisionId: team.divisionId,
+      coachId: team.coachId,
+      assistantCoachIds: team.assistantCoachIds ?? [],
+      season: team.season,
+      organization: team.organization,
+      location: team.location,
+      scheduleLink: team.scheduleLink,
+      rosterSize: team.rosterSize ?? 0,
+      active: team.active ?? true,
+      notes: team.notes,
+      createdAt: now,
+      updatedAt: now,
     };
 
     const results = await db.insert(schema.teams).values(dbTeam).returning();
@@ -2110,12 +2181,20 @@ class DatabaseStorage implements IStorage {
   async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
     const teamId = parseInt(id);
     const dbUpdates: any = {
+      organizationId: updates.organizationId,
       name: updates.name,
-      ageGroup: updates.ageGroup,
-      color: updates.color,
-      coachId: updates.coachIds?.[0],
-      division: updates.division,
-      program: updates.program,
+      programType: updates.programType,
+      divisionId: updates.divisionId,
+      coachId: updates.coachId,
+      assistantCoachIds: updates.assistantCoachIds,
+      season: updates.season,
+      organization: updates.organization,
+      location: updates.location,
+      scheduleLink: updates.scheduleLink,
+      rosterSize: updates.rosterSize,
+      active: updates.active,
+      notes: updates.notes,
+      updatedAt: new Date().toISOString(),
     };
 
     Object.keys(dbUpdates).forEach(key => {
@@ -2745,7 +2824,7 @@ class DatabaseStorage implements IStorage {
       name: division.name,
       description: division.description,
       ageRange: division.ageRange,
-      programIds: division.programIds || [],
+      teamIds: division.teamIds || [],
       isActive: division.isActive ?? true,
       createdAt: new Date().toISOString(),
     };
@@ -2759,7 +2838,7 @@ class DatabaseStorage implements IStorage {
       name: updates.name,
       description: updates.description,
       ageRange: updates.ageRange,
-      programIds: updates.programIds,
+      teamIds: updates.teamIds,
       isActive: updates.isActive,
     };
 
@@ -3216,7 +3295,7 @@ class DatabaseStorage implements IStorage {
       accountHolderId: dbUser.parentId,
       packageSelected: undefined,
       teamAssignmentStatus: undefined,
-      hasRegistered: dbUser.profileCompleted,
+      hasRegistered: Boolean(dbUser.hasRegistered),
       teamId: dbUser.teamId?.toString(),
       jerseyNumber: dbUser.jerseyNumber,
       position: dbUser.position,
@@ -3247,15 +3326,22 @@ class DatabaseStorage implements IStorage {
 
   private mapDbTeamToTeam(dbTeam: any): Team {
     return {
-      id: dbTeam.id.toString(),
-      organizationId: this.defaultOrgId,
+      id: dbTeam.id,
+      organizationId: dbTeam.organizationId || this.defaultOrgId,
       name: dbTeam.name,
-      ageGroup: dbTeam.ageGroup,
-      program: dbTeam.program,
-      color: dbTeam.color || '#1E40AF',
-      coachIds: dbTeam.coachId ? [dbTeam.coachId] : [],
-      division: dbTeam.division,
+      programType: dbTeam.programType,
+      divisionId: dbTeam.divisionId,
+      coachId: dbTeam.coachId,
+      assistantCoachIds: dbTeam.assistantCoachIds || [],
+      season: dbTeam.season,
+      organization: dbTeam.organization,
+      location: dbTeam.location,
+      scheduleLink: dbTeam.scheduleLink,
+      rosterSize: dbTeam.rosterSize ?? 0,
+      active: dbTeam.active ?? true,
+      notes: dbTeam.notes,
       createdAt: new Date(dbTeam.createdAt),
+      updatedAt: dbTeam.updatedAt ? new Date(dbTeam.updatedAt) : undefined,
     };
   }
 
@@ -3369,7 +3455,7 @@ class DatabaseStorage implements IStorage {
       name: dbDivision.name,
       description: dbDivision.description,
       ageRange: dbDivision.ageRange,
-      programIds: dbDivision.programIds || [],
+      teamIds: dbDivision.teamIds || [],
       isActive: dbDivision.isActive ?? true,
       createdAt: new Date(dbDivision.createdAt),
     };

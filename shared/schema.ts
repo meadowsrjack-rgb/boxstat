@@ -215,21 +215,31 @@ export const divisions = pgTable("divisions", {
 // Teams table
 export const teams = pgTable("teams", {
   id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id"),
   name: varchar().notNull(),
-  ageGroup: varchar("age_group").notNull(),
-  color: varchar().default('#1E40AF').notNull(),
+  programType: varchar("program_type"),
+  divisionId: integer("division_id"),
   coachId: varchar("coach_id"),
+  assistantCoachIds: varchar("assistant_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
+  season: text(),
+  organization: text(),
+  location: text(),
+  scheduleLink: varchar("schedule_link"),
+  rosterSize: integer("roster_size").default(0),
+  active: boolean().default(true),
+  notes: text(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-  division: varchar({ length: 100 }), // legacy text division
-  divisionId: integer("division_id"), // FK to divisions table
-  coachNames: varchar("coach_names", { length: 255 }),
-  notionId: varchar("notion_id", { length: 255 }),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
-  unique("teams_notion_id_key").on(table.notionId),
   foreignKey({
     columns: [table.divisionId],
     foreignColumns: [divisions.id],
     name: "teams_division_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.coachId],
+    foreignColumns: [users.id],
+    name: "teams_coach_id_fkey"
   }),
 ]);
 
@@ -505,25 +515,38 @@ export type SelectUser = typeof users.$inferSelect;
 // =============================================
 
 export interface Team {
-  id: string;
-  organizationId: string;
+  id: number;
+  organizationId?: string;
   name: string;
-  ageGroup?: string;
-  color: string;
-  coachIds: string[]; // Multiple coaches can manage a team
-  division?: string; // Legacy text division
-  divisionId?: number; // FK to divisions table
+  programType?: string;
+  divisionId?: number;
+  coachId?: string;
+  assistantCoachIds?: string[];
+  season?: string;
+  organization?: string;
+  location?: string;
+  scheduleLink?: string;
+  rosterSize?: number;
+  active?: boolean;
+  notes?: string;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export const insertTeamSchema = z.object({
-  organizationId: z.string(),
+  organizationId: z.string().optional(),
   name: z.string().min(1),
-  ageGroup: z.string().optional(),
-  color: z.string().default("#1E40AF"),
-  coachIds: z.array(z.string()).default([]),
-  division: z.string().optional(),
+  programType: z.string().optional(),
   divisionId: z.number().optional(),
+  coachId: z.string().optional(),
+  assistantCoachIds: z.array(z.string()).default([]),
+  season: z.string().optional(),
+  organization: z.string().optional(),
+  location: z.string().optional(),
+  scheduleLink: z.string().optional(),
+  rosterSize: z.number().optional(),
+  active: z.boolean().default(true),
+  notes: z.string().optional(),
 });
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

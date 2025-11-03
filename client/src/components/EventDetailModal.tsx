@@ -90,6 +90,11 @@ export default function EventDetailModal({
 
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ['/api/events', event?.id, 'participants'],
+    queryFn: async () => {
+      const response = await fetch(`/api/events/${event?.id}/participants`);
+      if (!response.ok) throw new Error('Failed to fetch participants');
+      return response.json();
+    },
     enabled: open && !!event && (userRole === 'admin' || userRole === 'coach'),
   });
 

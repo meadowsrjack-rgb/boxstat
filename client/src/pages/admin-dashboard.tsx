@@ -3120,7 +3120,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                     <div className="space-y-2">
                       <Label htmlFor="edit-event-targetId">Select Team</Label>
                       <Select
-                        value={editingEvent.targetId || ""}
+                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
                         onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
                       >
                         <SelectTrigger id="edit-event-targetId" data-testid="select-edit-event-targetId">
@@ -3128,7 +3128,7 @@ function EventsTab({ events, teams, programs, organization }: any) {
                         </SelectTrigger>
                         <SelectContent>
                           {teams.map((team: any) => (
-                            <SelectItem key={team.id} value={team.id}>
+                            <SelectItem key={team.id} value={String(team.id)}>
                               {team.name}{team.programType ? ` (${team.programType})` : ''}
                             </SelectItem>
                           ))}
@@ -3365,18 +3365,19 @@ function EventsTab({ events, teams, programs, organization }: any) {
                           // Determine targetType from assignTo/visibility
                           if (event.assignTo?.teams && event.assignTo.teams.length > 0) {
                             eventToEdit.targetType = 'team';
-                            eventToEdit.targetId = event.assignTo.teams[0];
+                            eventToEdit.targetId = String(event.assignTo.teams[0]);
                           } else if (event.assignTo?.divisions && event.assignTo.divisions.length > 0) {
                             eventToEdit.targetType = 'division';
-                            eventToEdit.targetId = event.assignTo.divisions[0];
+                            eventToEdit.targetId = String(event.assignTo.divisions[0]);
                           } else if (event.assignTo?.users && event.assignTo.users.length > 0) {
                             eventToEdit.targetType = 'user';
-                            eventToEdit.targetId = event.assignTo.users[0];
+                            eventToEdit.targetId = String(event.assignTo.users[0]);
                           } else if (event.assignTo?.roles && event.assignTo.roles.length > 0) {
                             eventToEdit.targetType = 'role';
-                            eventToEdit.targetId = event.assignTo.roles[0];
+                            eventToEdit.targetId = String(event.assignTo.roles[0]);
                           } else if (event.targetType) {
                             // Already has targetType, keep it
+                            if (event.targetId) eventToEdit.targetId = String(event.targetId);
                           } else {
                             eventToEdit.targetType = 'all';
                           }

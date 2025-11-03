@@ -37,6 +37,10 @@ import {
   Bell,
   Layers,
   ArrowUpDown,
+  CheckCircle2,
+  XCircle,
+  Circle,
+  Shield,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -2446,6 +2450,12 @@ function EventsTab({ events, teams, programs, organization }: any) {
     queryKey: ["/api/divisions"],
   });
 
+  // Fetch participants for the selected event
+  const { data: eventParticipants = [] } = useQuery<any[]>({
+    queryKey: ['/api/events', selectedEventForDetails?.id, 'participants'],
+    enabled: !!selectedEventForDetails,
+  });
+
   const createEventSchema = z.object({
     title: z.string().min(1, "Event title is required"),
     type: z.enum(["practice", "game", "tournament", "meeting"]),
@@ -3223,6 +3233,51 @@ function EventsTab({ events, teams, programs, organization }: any) {
                       </div>
                     )}
                   </div>
+
+                  {/* Participant List */}
+                  {eventParticipants.length > 0 && (
+                    <Card className="p-4" data-testid="card-participant-list">
+                      <h4 className="font-semibold mb-4 flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-blue-500" />
+                        Participant List (Admin View)
+                      </h4>
+                      
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 px-2">Name</th>
+                              <th className="text-center py-2 px-2">Email</th>
+                              <th className="text-center py-2 px-2">Role</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {eventParticipants.slice(0, 20).map((user) => {
+                              return (
+                                <tr key={user.id} className="border-b" data-testid={`row-participant-${user.id}`}>
+                                  <td className="py-2 px-2">
+                                    {user.firstName} {user.lastName}
+                                  </td>
+                                  <td className="text-center py-2 px-2">
+                                    {user.email}
+                                  </td>
+                                  <td className="text-center py-2 px-2">
+                                    <Badge variant="outline">{user.role}</Badge>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {eventParticipants.length > 20 && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Showing first 20 of {eventParticipants.length} participants
+                        </p>
+                      )}
+                    </Card>
+                  )}
 
                   {/* Attendance List */}
                   <div>

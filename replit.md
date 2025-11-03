@@ -50,6 +50,18 @@ Preferred communication style: Simple, everyday language.
 - **Authorization**: Endpoint allows access if requester is (1) same user, (2) same organization, (3) admin role, or (4) coach role
 - **Security**: Fixed multi-tenant data leakage vulnerability by adding authorization checks before returning team data
 
+### Event Participant List (November 2025)
+- **Feature**: Added Participant List to Event Details showing which users are invited to specific events
+- **Problem Solved**: Previously, the Participant List showed ALL users in the organization instead of filtering based on event visibility/targeting
+- **Implementation**:
+  1. Created new backend endpoint `GET /api/events/:eventId/participants` with visibility-based filtering
+  2. Filters participants based on event's `assignTo` and `visibility` configuration (users, teams, divisions, roles)
+  3. Added Participant List UI to both EventDetailModal and Admin Dashboard Event Details dialog
+  4. Shows Name, Email, and Role for invited participants (limited to first 20)
+- **Authorization**: Only admins and coaches can view participant lists
+- **Filtering Logic**: Includes users if their ID is in assignTo.users, their teamId is in assignTo.teams, their divisionId is in assignTo.divisions, or their role is in assignTo.roles
+- **UI/UX**: Displays in a card with table format showing participant details; appears only when eventParticipants.length > 0
+
 ## System Architecture
 
 ### Frontend Architecture

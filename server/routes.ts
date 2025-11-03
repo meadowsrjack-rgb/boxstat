@@ -1385,6 +1385,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
   
+  // Get user's team information
+  app.get('/api/users/:userId/team', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: requesterId, organizationId: requesterOrgId, role: requesterRole } = req.user;
+      
+      // Get the user first to get their teamId
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Authorization: Allow user to view their own team, or users in same organization, or admins
+      const isSameUser = requesterId === userId;
+      const isSameOrg = requesterOrgId === user.organizationId;
+      const isAdmin = requesterRole === 'admin';
+      const isCoach = requesterRole === 'coach';
+      
+      if (!isSameUser && !isSameOrg && !isAdmin && !isCoach) {
+        return res.status(403).json({ message: 'Unauthorized to view this user\'s team' });
+      }
+      
+      if (!user.teamId) {
+        return res.json(null);
+      }
+      
+      // Get the team details
+      const team = await storage.getTeam(user.teamId);
+      
+      if (!team) {
+        return res.json(null);
+      }
+      
+      // Return team info in the format expected by the frontend
+      res.json({
+        id: team.id,
+        name: team.name,
+        ageGroup: team.divisionId ? `Division ${team.divisionId}` : 'N/A',
+        program: team.programType || 'N/A',
+        color: '#d82428', // Default UYP red
+      });
+    } catch (error: any) {
+      console.error('Error fetching user team:', error);
+      res.status(500).json({ message: 'Failed to fetch user team' });
+    }
+  });
+  
   // =============================================
   // TEAM ROUTES
   // =============================================

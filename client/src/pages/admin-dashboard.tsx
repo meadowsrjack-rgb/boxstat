@@ -1353,13 +1353,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Team</Label>
                     <p className="text-sm" data-testid="text-user-team">
-                      {teams.find((t: any) => t.id === viewingUser.teamId)?.name || "-"}
+                      {teams.find((t: any) => t.id === Number(viewingUser.teamId))?.name || "-"}
                     </p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold text-gray-600">Division</Label>
                     <p className="text-sm" data-testid="text-user-division">
-                      {divisions.find((d: any) => d.id === viewingUser.divisionId)?.name || "-"}
+                      {divisions.find((d: any) => d.id === Number(viewingUser.divisionId))?.name || "-"}
                     </p>
                   </div>
                   <div className="space-y-2">

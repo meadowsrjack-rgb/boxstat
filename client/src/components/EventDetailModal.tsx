@@ -59,17 +59,32 @@ export default function EventDetailModal({
   const [selectedTab, setSelectedTab] = useState('overview');
 
   const { data: windows = [] } = useQuery<EventWindow[]>({
-    queryKey: ['/api/event-windows', event?.id],
+    queryKey: ['/api/event-windows/event', event?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/event-windows/event/${event?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch event windows');
+      return response.json();
+    },
     enabled: open && !!event,
   });
 
   const { data: rsvps = [] } = useQuery<RsvpResponse[]>({
-    queryKey: ['/api/rsvp-responses', event?.id],
+    queryKey: ['/api/rsvp/event', event?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/rsvp/event/${event?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch RSVPs');
+      return response.json();
+    },
     enabled: open && !!event,
   });
 
   const { data: attendances = [] } = useQuery<Attendance[]>({
     queryKey: ['/api/attendances', event?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/attendances/${event?.id}`);
+      if (!response.ok) throw new Error('Failed to fetch attendances');
+      return response.json();
+    },
     enabled: open && !!event,
   });
 
@@ -87,7 +102,7 @@ export default function EventDetailModal({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/rsvp-responses'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
       toast({ title: 'RSVP Updated', description: 'Your response has been recorded.' });
     },
   });
@@ -101,7 +116,7 @@ export default function EventDetailModal({
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
       toast({ title: 'Checked In', description: 'You have been checked in successfully!' });
     },
   });

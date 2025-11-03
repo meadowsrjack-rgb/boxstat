@@ -2052,6 +2052,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to delete event window' });
     }
   });
+
+  app.delete('/api/event-windows/event/:eventId', isAuthenticated, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin' && role !== 'coach') {
+      return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
+    }
+    
+    try {
+      const eventId = parseInt(req.params.eventId);
+      await storage.deleteEventWindowsByEvent(eventId);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting event windows:', error);
+      res.status(500).json({ error: 'Failed to delete event windows' });
+    }
+  });
   
   // =============================================
   // RSVP RESPONSE ROUTES

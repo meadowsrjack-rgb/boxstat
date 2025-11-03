@@ -10,6 +10,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import CheckInButton from "@/components/CheckInButton";
+import EventDetailModal from "@/components/EventDetailModal";
+import type { Event } from "@shared/schema";
 import {
   UserPlus,
   DollarSign,
@@ -262,6 +264,9 @@ export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [selectedChildPerEvent, setSelectedChildPerEvent] = useState<Record<string, string>>({});
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
+  const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
 
   // Check for payment success in URL
@@ -588,10 +593,19 @@ export default function UnifiedAccount() {
                     {allUpcomingEvents.map((event: any) => {
                       const eventId = String(event.id);
                       const selectedChildId = selectedChildPerEvent[eventId] || players[0]?.id;
-                      const hasCoordinates = event.latitude != null && event.longitude != null;
+                      const selectedChild = players.find((p: any) => p.id === selectedChildId);
 
                       return (
-                        <Card key={event.id} className="border-2" data-testid={`event-card-${event.id}`}>
+                        <Card 
+                          key={event.id} 
+                          className="border-2 cursor-pointer hover:border-red-500 transition-colors" 
+                          data-testid={`event-card-${event.id}`}
+                          onClick={() => {
+                            setSelectedEvent(event as Event);
+                            setSelectedChildForModal(selectedChildId);
+                            setEventDetailOpen(true);
+                          }}
+                        >
                           <CardContent className="p-6">
                             <div className="space-y-4">
                               {/* Event Details */}
@@ -623,24 +637,17 @@ export default function UnifiedAccount() {
                                     <MapPin className="w-4 h-4" />
                                     <span data-testid={`event-location-${event.id}`}>{event.location}</span>
                                   </div>
-                                  {!hasCoordinates && (
-                                    <div className="mt-2">
-                                      <Badge variant="secondary" data-testid={`no-coordinates-badge-${event.id}`}>
-                                        Location coordinates not available
-                                      </Badge>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
 
                               {/* Child Selection Dropdown */}
                               {players.length > 1 && (
-                                <div className="space-y-2">
+                                <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                                   <label 
                                     className="text-sm font-medium" 
                                     data-testid={`label-select-child-${event.id}`}
                                   >
-                                    Select Child to Check In
+                                    Select Child for RSVP/Check-In
                                   </label>
                                   <Select
                                     value={selectedChildId}
@@ -674,42 +681,15 @@ export default function UnifiedAccount() {
                                 <div className="flex items-center gap-2 text-sm" data-testid={`single-child-${event.id}`}>
                                   <User className="w-4 h-4 text-gray-600" />
                                   <span className="font-medium">
-                                    Checking in: {players[0].firstName} {players[0].lastName}
+                                    For: {selectedChild?.firstName} {selectedChild?.lastName}
                                   </span>
                                 </div>
                               )}
 
-                              {/* Check-In Button */}
-                              {hasCoordinates ? (
-                                <div data-testid={`checkin-section-${event.id}`}>
-                                  <CheckInButton
-                                    event={{
-                                      id: event.id,
-                                      title: event.title,
-                                      startTime: event.startTime,
-                                      endTime: event.endTime,
-                                      location: event.location,
-                                      latitude: event.latitude,
-                                      longitude: event.longitude,
-                                    }}
-                                    userId={selectedChildId}
-                                    radiusMeters={200}
-                                    onCheckedIn={() => {
-                                      toast({
-                                        title: "Check-in Successful!",
-                                        description: `${players.find((p: any) => p.id === selectedChildId)?.firstName} has been checked in.`,
-                                      });
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <div 
-                                  className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600"
-                                  data-testid={`no-checkin-available-${event.id}`}
-                                >
-                                  Check-in is not available for this event. Location coordinates are required.
-                                </div>
-                              )}
+                              {/* Click to view details */}
+                              <div className="pt-2 border-t text-sm text-gray-500 text-center">
+                                Click to view details and RSVP/Check-In
+                              </div>
                             </div>
                           </CardContent>
                         </Card>
@@ -722,6 +702,29 @@ export default function UnifiedAccount() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Event Detail Modal */}
+      {selectedChildForModal && (
+        <>
+          <EventDetailModal
+            event={selectedEvent}
+            userId={selectedChildForModal}
+            userRole="parent"
+            open={eventDetailOpen}
+            onOpenChange={setEventDetailOpen}
+          />
+          {eventDetailOpen && selectedEvent && (
+            <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-4 border-2 border-blue-500 z-50">
+              <p className="text-sm font-medium text-gray-700">
+                RSVP/Check-In for: <span className="text-blue-600 font-semibold">
+                  {players.find((p: any) => p.id === selectedChildForModal)?.firstName}{' '}
+                  {players.find((p: any) => p.id === selectedChildForModal)?.lastName}
+                </span>
+              </p>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

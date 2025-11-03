@@ -395,6 +395,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test-only endpoint for automated testing
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    app.post('/api/test/verify-email', async (req: any, res) => {
+      try {
+        const { email } = req.body;
+        
+        if (!email) {
+          return res.status(400).json({ success: false, message: "Email is required" });
+        }
+        
+        // Find user by email
+        const user = await storage.getUserByEmail(email, "default-org");
+        
+        if (!user) {
+          return res.status(404).json({ success: false, message: "User not found" });
+        }
+        
+        // Mark user as verified
+        await storage.updateUser(user.id, {
+          verified: true,
+          verificationToken: null as any,
+          verificationExpiry: null as any,
+        });
+        
+        console.log(`[TEST] Email ${email} marked as verified for testing`);
+        
+        res.json({ 
+          success: true, 
+          message: "Email verified for testing",
+          email: user.email,
+        });
+      } catch (error: any) {
+        console.error("Test verification error:", error);
+        res.status(500).json({ success: false, message: "Test verification failed" });
+      }
+    });
+  }
+  
   // Request magic link
   app.post('/api/auth/request-magic-link', async (req: any, res) => {
     try {

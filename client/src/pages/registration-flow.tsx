@@ -94,7 +94,7 @@ export default function RegistrationFlow() {
     queryKey: ["/api/programs"],
   });
 
-  const totalSteps = registrationData.registrationType === "myself" ? 5 : 6;
+  const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {

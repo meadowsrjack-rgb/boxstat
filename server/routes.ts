@@ -1394,8 +1394,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the user first to get their teamId
       const user = await storage.getUser(userId);
       
-      console.log(`[GET /api/users/${userId}/team] User found:`, user ? `id=${user.id}, teamId=${user.teamId}, type=${typeof user.teamId}` : 'null');
-      
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
@@ -1411,16 +1409,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!user.teamId) {
-        console.log(`[GET /api/users/${userId}/team] No teamId, returning null`);
         return res.json(null);
       }
       
       // Get the team details - ensure teamId is converted to string
       const teamIdString = String(user.teamId);
-      console.log(`[GET /api/users/${userId}/team] Looking up team with id: ${teamIdString}`);
       const team = await storage.getTeam(teamIdString);
-      
-      console.log(`[GET /api/users/${userId}/team] Team found:`, team ? `id=${team.id}, name=${team.name}` : 'null');
       
       if (!team) {
         return res.json(null);

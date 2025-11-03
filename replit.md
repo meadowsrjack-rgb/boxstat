@@ -62,6 +62,22 @@ Preferred communication style: Simple, everyday language.
 - **Filtering Logic**: Includes users if their ID is in assignTo.users, their teamId is in assignTo.teams, their divisionId is in assignTo.divisions, or their role is in assignTo.roles
 - **UI/UX**: Displays in a card with table format showing participant details; appears only when eventParticipants.length > 0
 
+### Event Edit and User Team Assignment Bug Fixes (November 2025)
+- **Bug 1: Event "Event for" field not persisting when editing**
+  - **Root Cause**: Create event form uses new assignTo/visibility JSONB fields, but edit form uses legacy targetType/targetId fields, causing mismatched data when editing events
+  - **Solution**:
+    1. Edit button onClick handler converts assignTo/visibility → targetType/targetId when loading event for editing
+    2. updateEvent mutation converts targetType/targetId → assignTo/visibility when saving
+    3. All Select components use String type for values to ensure proper matching
+  - **Implementation**: Maintains backward compatibility with legacy targetType/targetId format while supporting new multi-select assignTo/visibility structure
+- **Bug 2: User team assignment not working**
+  - **Root Cause**: Type mismatch between Select component string values and integer team IDs
+  - **Solution**:
+    1. Team select dropdown converts team.id to String for Select value attribute
+    2. onValueChange parses value back to integer when saving
+    3. Select value converts teamId to String for display
+  - **Testing**: Both fixes verified with end-to-end Playwright tests
+
 ## System Architecture
 
 ### Frontend Architecture

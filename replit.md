@@ -8,6 +8,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### Family Account Event Filtering (November 2025)
+- **Problem Solved**: Team assignments in the Users table were propagating to all family members, causing events to appear on everyone's dashboard instead of only the specific player's dashboard.
+- **Solution**:
+  1. Player Mode (viewing as specific child): Events filtered by ONLY that child's teamId/divisionId
+  2. Parent Mode (no child selected): Events aggregated from ALL children's teams + parent's own team
+  3. Sibling Isolation: Siblings do not see each other's team-specific events
+- **Implementation**:
+  - Frontend passes `childProfileId` query parameter from `useAppMode()` hook
+  - Backend `/api/events` and `/api/events/upcoming` accept childProfileId
+  - Three-mode filtering: Player Mode (single child), Parent Mode (all children), Regular Mode (own team)
+  - Deduplication of teamIds/divisionIds to prevent duplicate events
+  - Data leak prevention with early null checks
+- **Technical Details**:
+  - Uses storage layer abstraction (no direct DB queries)
+  - Works with both MemStorage (testing) and DatabaseStorage (production)
+  - Maintains single-organization architecture (all family members in same org)
+
 ### Event Multi-Select Targeting (November 2025)
 - **Feature**: Enhanced event creation/edit to support multi-select targeting for specific users, teams, and divisions
 - **Implementation**:

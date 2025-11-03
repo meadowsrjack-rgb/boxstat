@@ -6,6 +6,17 @@ The UYP Basketball League Mobile App is a cross-platform solution designed to st
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### Team Display Fix (November 2025)
+- **Issue**: Team names not displaying on player cards (account page) and admin dashboard Team Info tab
+- **Root Cause**: Missing API endpoint `/api/users/:userId/team` and type mismatch in admin dashboard (teamId/divisionId as strings vs numbers)
+- **Solution**:
+  1. Created new API endpoint `GET /api/users/:userId/team` with proper authorization checks
+  2. Added Number() type coercion in admin dashboard team/division lookups
+- **Authorization**: Endpoint allows access if requester is (1) same user, (2) same organization, (3) admin role, or (4) coach role
+- **Security**: Fixed multi-tenant data leakage vulnerability by adding authorization checks before returning team data
+
 ## System Architecture
 
 ### Frontend Architecture

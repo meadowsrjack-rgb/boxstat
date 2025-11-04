@@ -2726,64 +2726,97 @@ class DatabaseStorage implements IStorage {
 
   // Program operations (placeholders - no database table yet)
   async getProgram(id: string): Promise<Program | undefined> {
-    // Get all programs and find the one with matching ID
-    const programs = await this.getProgramsByOrganization(this.defaultOrgId);
-    return programs.find(program => program.id === id);
+    const results = await db.select().from(schema.programs).where(eq(schema.programs.id, id));
+    if (results.length === 0) return undefined;
+    return this.mapDbProgramToProgram(results[0]);
   }
 
   async getProgramsByOrganization(organizationId: string): Promise<Program[]> {
-    // Return hardcoded programs until we migrate to proper database tables
-    const programs: Program[] = [
-      {
-        id: 'youth-club-full',
-        organizationId,
-        name: 'Youth Club - Full Season',
-        description: 'Complete youth basketball program with weekly training',
-        price: 299,
-        duration: '3 months',
-        isActive: true,
-        category: 'youth',
-        ageGroups: [],
-        createdAt: new Date(),
-      },
-      {
-        id: 'skills-academy',
-        organizationId,
-        name: 'Skills Academy',
-        description: 'Focused skill development program',
-        price: 199,
-        duration: '2 months',
-        isActive: true,
-        category: 'training',
-        ageGroups: [],
-        createdAt: new Date(),
-      },
-      {
-        id: 'elite-training',
-        organizationId,
-        name: 'Elite Player Development',
-        description: 'Advanced training for competitive players',
-        price: 399,
-        duration: '3 months',
-        isActive: true,
-        category: 'elite',
-        ageGroups: [],
-        createdAt: new Date(),
-      },
-    ];
-    return programs;
+    const results = await db.select().from(schema.programs)
+      .where(eq(schema.programs.organizationId, organizationId));
+    return results.map(prog => this.mapDbProgramToProgram(prog));
   }
 
   async createProgram(program: InsertProgram): Promise<Program> {
-    throw new Error("Program creation not supported in database mode yet");
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    
+    const dbProgram = {
+      id,
+      organizationId: program.organizationId,
+      name: program.name,
+      slug: program.slug,
+      description: program.description,
+      type: program.type,
+      billingCycle: program.billingCycle,
+      price: program.price,
+      billingModel: program.billingModel,
+      pricingModel: program.pricingModel,
+      duration: program.duration,
+      durationDays: program.durationDays,
+      installments: program.installments,
+      installmentPrice: program.installmentPrice,
+      stripePriceId: program.stripePriceId,
+      stripeProductId: program.stripeProductId,
+      category: program.category,
+      tags: program.tags ?? [],
+      eventTypes: program.eventTypes ?? [],
+      coverageScope: program.coverageScope ?? [],
+      ageGroups: program.ageGroups ?? [],
+      autoAssignPlayers: program.autoAssignPlayers ?? false,
+      linkedAwards: program.linkedAwards ?? [],
+      adminNotes: program.adminNotes,
+      isActive: program.isActive ?? true,
+      createdAt: now,
+    };
+
+    const results = await db.insert(schema.programs).values(dbProgram).returning();
+    return this.mapDbProgramToProgram(results[0]);
   }
 
   async updateProgram(id: string, updates: Partial<Program>): Promise<Program | undefined> {
-    return undefined;
+    const dbUpdates: any = {
+      name: updates.name,
+      slug: updates.slug,
+      description: updates.description,
+      type: updates.type,
+      billingCycle: updates.billingCycle,
+      price: updates.price,
+      billingModel: updates.billingModel,
+      pricingModel: updates.pricingModel,
+      duration: updates.duration,
+      durationDays: updates.durationDays,
+      installments: updates.installments,
+      installmentPrice: updates.installmentPrice,
+      stripePriceId: updates.stripePriceId,
+      stripeProductId: updates.stripeProductId,
+      category: updates.category,
+      tags: updates.tags,
+      eventTypes: updates.eventTypes,
+      coverageScope: updates.coverageScope,
+      ageGroups: updates.ageGroups,
+      autoAssignPlayers: updates.autoAssignPlayers,
+      linkedAwards: updates.linkedAwards,
+      adminNotes: updates.adminNotes,
+      isActive: updates.isActive,
+    };
+
+    // Remove undefined values
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.programs)
+      .set(dbUpdates)
+      .where(eq(schema.programs.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return this.mapDbProgramToProgram(results[0]);
   }
 
   async deleteProgram(id: string): Promise<void> {
-    return;
+    await db.delete(schema.programs).where(eq(schema.programs.id, id));
   }
 
   // Package Selection operations (placeholders - no database table yet)
@@ -3554,6 +3587,37 @@ class DatabaseStorage implements IStorage {
       isActive: dbFacility.isActive ?? true,
       createdAt: new Date(dbFacility.createdAt),
       createdBy: dbFacility.createdBy,
+    };
+  }
+
+  private mapDbProgramToProgram(dbProgram: any): Program {
+    return {
+      id: dbProgram.id,
+      organizationId: dbProgram.organizationId,
+      name: dbProgram.name,
+      slug: dbProgram.slug,
+      description: dbProgram.description,
+      type: dbProgram.type,
+      billingCycle: dbProgram.billingCycle,
+      price: dbProgram.price,
+      billingModel: dbProgram.billingModel,
+      pricingModel: dbProgram.pricingModel,
+      duration: dbProgram.duration,
+      durationDays: dbProgram.durationDays,
+      installments: dbProgram.installments,
+      installmentPrice: dbProgram.installmentPrice,
+      stripePriceId: dbProgram.stripePriceId,
+      stripeProductId: dbProgram.stripeProductId,
+      category: dbProgram.category,
+      tags: dbProgram.tags || [],
+      eventTypes: dbProgram.eventTypes || [],
+      coverageScope: dbProgram.coverageScope || [],
+      ageGroups: dbProgram.ageGroups || [],
+      autoAssignPlayers: dbProgram.autoAssignPlayers ?? false,
+      linkedAwards: dbProgram.linkedAwards || [],
+      adminNotes: dbProgram.adminNotes,
+      isActive: dbProgram.isActive ?? true,
+      createdAt: new Date(dbProgram.createdAt),
     };
   }
 }

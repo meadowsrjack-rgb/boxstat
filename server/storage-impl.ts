@@ -3559,8 +3559,8 @@ class DatabaseStorage implements IStorage {
 }
 
 // Export both storage implementations
-// Switched to DatabaseStorage for data persistence
-export const storage = new DatabaseStorage();
+// Use MemStorage by default (in-memory storage for development)
+export const storage = new MemStorage();
 
-// Export DatabaseStorage class for reference
-export { DatabaseStorage };
+// Export both storage classes for reference
+export { DatabaseStorage, MemStorage };

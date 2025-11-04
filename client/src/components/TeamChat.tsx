@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import type { TeamMessage, User } from "@shared/schema";
+import type { Message, User } from "@shared/schema";
 import {
   Send,
   MessageCircle,
@@ -26,7 +26,7 @@ interface TeamChatProps {
 }
 
 // Using shared schema types
-interface TeamMessageWithSender extends TeamMessage {
+interface TeamMessageWithSender extends Message {
   sender: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl' | 'userType'>;
 }
 
@@ -258,7 +258,7 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
                             : 'bg-gray-100 text-gray-900 rounded-bl-none'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">{message.message}</p>
+                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
                       </div>
                       
                       <div className="flex items-center gap-1 text-xs text-gray-500">

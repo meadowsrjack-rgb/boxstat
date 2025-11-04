@@ -2381,11 +2381,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // MESSAGE ROUTES (Team Chat)
   // =============================================
   
+  // Legacy route (kept for backwards compatibility)
   app.get('/api/messages/team/:teamId', isAuthenticated, async (req: any, res) => {
     const messages = await storage.getMessagesByTeam(req.params.teamId);
     res.json(messages);
   });
   
+  // Team-scoped message routes (used by TeamChat component)
+  app.get('/api/teams/:teamId/messages', isAuthenticated, async (req: any, res) => {
+    const messages = await storage.getMessagesByTeam(req.params.teamId);
+    res.json(messages);
+  });
+  
+  app.post('/api/teams/:teamId/messages', isAuthenticated, async (req: any, res) => {
+    const { message, messageType = 'text' } = req.body;
+    const messageData = {
+      teamId: parseInt(req.params.teamId),
+      senderId: req.user.id,
+      content: message, // Database field is 'content'
+      messageType,
+    };
+    
+    const newMessage = await storage.createMessage(messageData);
+    
+    // Broadcast to WebSocket clients if available
+    if (wss) {
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ 
+            type: 'new_team_message', 
+            teamId: parseInt(req.params.teamId),
+            message: newMessage 
+          }));
+        }
+      });
+    }
+    
+    res.json(newMessage);
+  });
+  
+  // Legacy route (kept for backwards compatibility)
   app.post('/api/messages', isAuthenticated, async (req: any, res) => {
     const messageData = insertMessageSchema.parse(req.body);
     const message = await storage.createMessage(messageData);

@@ -1223,6 +1223,11 @@ class MemStorage implements IStorage {
       ...program,
       id: this.generateId(),
       ageGroups: program.ageGroups ?? [],
+      tags: program.tags ?? [],
+      eventTypes: program.eventTypes ?? [],
+      coverageScope: program.coverageScope ?? [],
+      linkedAwards: program.linkedAwards ?? [],
+      autoAssignPlayers: program.autoAssignPlayers ?? false,
       isActive: program.isActive ?? true,
       createdAt: new Date(),
     };

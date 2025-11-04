@@ -4730,9 +4730,9 @@ function ProductsTab({ organization }: any) {
                         {["Practice", "Game", "Skills", "FNH", "Camp"].map((type) => (
                           <div key={type} className="flex items-center space-x-2">
                             <Checkbox
-                              checked={field.value?.includes(type)}
+                              checked={(field.value as string[] || []).includes(type)}
                               onCheckedChange={(checked) => {
-                                const current = field.value || [];
+                                const current = (field.value as string[]) || [];
                                 if (checked) {
                                   field.onChange([...current, type]);
                                 } else {
@@ -4761,9 +4761,9 @@ function ProductsTab({ organization }: any) {
                         {["All", "U10", "U12", "U14", "U16", "U18"].map((scope) => (
                           <div key={scope} className="flex items-center space-x-2">
                             <Checkbox
-                              checked={field.value?.includes(scope)}
+                              checked={(field.value as string[] || []).includes(scope)}
                               onCheckedChange={(checked) => {
-                                const current = field.value || [];
+                                const current = (field.value as string[]) || [];
                                 if (checked) {
                                   field.onChange([...current, scope]);
                                 } else {
@@ -4792,9 +4792,9 @@ function ProductsTab({ organization }: any) {
                         {["Youth Club", "Skills", "FNH", "Camp", "Uniform", "Add-On"].map((tag) => (
                           <div key={tag} className="flex items-center space-x-2">
                             <Checkbox
-                              checked={field.value?.includes(tag)}
+                              checked={(field.value as string[] || []).includes(tag)}
                               onCheckedChange={(checked) => {
-                                const current = field.value || [];
+                                const current = (field.value as string[]) || [];
                                 if (checked) {
                                   field.onChange([...current, tag]);
                                 } else {
@@ -4851,9 +4851,9 @@ function ProductsTab({ organization }: any) {
                           {awards.slice(0, 10).map((award: any) => (
                             <div key={award.id} className="flex items-center space-x-2">
                               <Checkbox
-                                checked={field.value?.includes(award.id)}
+                                checked={(field.value as string[] || []).includes(award.id)}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, award.id]);
                                   } else {

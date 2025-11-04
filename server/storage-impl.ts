@@ -1621,7 +1621,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, or, sql } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -2150,7 +2150,12 @@ class DatabaseStorage implements IStorage {
   }
 
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
-    const results = await db.select().from(schema.teams).where(eq(schema.teams.coachId, coachId));
+    const results = await db.select().from(schema.teams).where(
+      or(
+        eq(schema.teams.coachId, coachId),
+        sql`${coachId} = ANY(${schema.teams.assistantCoachIds})`
+      )
+    );
     return results.map(team => this.mapDbTeamToTeam(team));
   }
 

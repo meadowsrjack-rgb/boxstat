@@ -1480,6 +1480,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
   
+  // Get teams for a specific coach
+  app.get('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {
+    try {
+      const teams = await storage.getTeamsByCoach(req.params.coachId);
+      res.json(teams);
+    } catch (error: any) {
+      console.error('Error fetching coach teams:', error);
+      res.status(500).json({ message: 'Failed to fetch coach teams' });
+    }
+  });
+  
+  // Get all players from a coach's teams
+  app.get('/api/coaches/:coachId/players', isAuthenticated, async (req: any, res) => {
+    try {
+      const teams = await storage.getTeamsByCoach(req.params.coachId);
+      const allPlayers: any[] = [];
+      
+      for (const team of teams) {
+        const players = await storage.getUsersByTeam(String(team.id));
+        allPlayers.push(...players);
+      }
+      
+      // Remove duplicates (if a player is on multiple teams)
+      const uniquePlayers = allPlayers.filter((player, index, self) => 
+        index === self.findIndex(p => p.id === player.id)
+      );
+      
+      res.json(uniquePlayers);
+    } catch (error: any) {
+      console.error('Error fetching coach players:', error);
+      res.status(500).json({ message: 'Failed to fetch coach players' });
+    }
+  });
+  
+  // Join a team (add coach to assistantCoachIds)
+  app.post('/api/coaches/:coachId/teams/:teamId/join', isAuthenticated, async (req: any, res) => {
+    try {
+      const { coachId, teamId } = req.params;
+      const { id: userId, role } = req.user;
+      
+      // Verify the user is a coach or admin
+      if (role !== 'coach' && role !== 'admin') {
+        return res.status(403).json({ message: 'Only coaches can join teams' });
+      }
+      
+      // Verify the coachId matches the authenticated user (unless admin)
+      if (role !== 'admin' && userId !== coachId) {
+        return res.status(403).json({ message: 'You can only join teams for yourself' });
+      }
+      
+      // Get the team
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+      
+      // Check if coach is already assigned
+      if (team.coachId === coachId) {
+        return res.status(400).json({ message: 'You are already the head coach of this team' });
+      }
+      
+      if (team.assistantCoachIds?.includes(coachId)) {
+        return res.status(400).json({ message: 'You are already an assistant coach on this team' });
+      }
+      
+      // Add coach to assistantCoachIds
+      const updatedAssistantCoachIds = [...(team.assistantCoachIds || []), coachId];
+      await storage.updateTeam(teamId, { assistantCoachIds: updatedAssistantCoachIds });
+      
+      res.json({ success: true, message: 'Successfully joined team' });
+    } catch (error: any) {
+      console.error('Error joining team:', error);
+      res.status(500).json({ message: 'Failed to join team' });
+    }
+  });
+  
   // =============================================
   // EVENT ROUTES
   // =============================================

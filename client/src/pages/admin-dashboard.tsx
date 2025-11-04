@@ -4222,56 +4222,159 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   );
 }
 
-// Products Tab - Stripe Product Management
+// Products Tab - Package/Subscription Management
 function ProductsTab({ organization }: any) {
-  const { data: products, isLoading, error } = useQuery<any[]>({
-    queryKey: ["/api/stripe/products"],
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+
+  const { data: packages, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/programs"],
   });
+
+  const { data: awards } = useQuery<any[]>({
+    queryKey: ["/api/award-definitions"],
+  });
+
+  const form = useForm({
+    resolver: zodResolver(z.object({
+      organizationId: z.string(),
+      name: z.string().min(1, "Package name is required"),
+      slug: z.string().optional(),
+      description: z.string().optional(),
+      type: z.string().optional(),
+      billingCycle: z.string().optional(),
+      price: z.number().min(0).optional(),
+      billingModel: z.string().optional(),
+      durationDays: z.number().min(1).optional(),
+      stripePriceId: z.string().optional(),
+      stripeProductId: z.string().optional(),
+      tags: z.array(z.string()).default([]),
+      eventTypes: z.array(z.string()).default([]),
+      coverageScope: z.array(z.string()).default([]),
+      autoAssignPlayers: z.boolean().default(false),
+      linkedAwards: z.array(z.string()).default([]),
+      adminNotes: z.string().optional(),
+      isActive: z.boolean().default(true),
+    })),
+    defaultValues: {
+      organizationId: organization?.id || "",
+      name: "",
+      slug: "",
+      description: "",
+      type: "One-Time",
+      billingCycle: "",
+      price: 0,
+      billingModel: "Per Player",
+      durationDays: 90,
+      stripePriceId: "",
+      stripeProductId: "",
+      tags: [],
+      eventTypes: [],
+      coverageScope: [],
+      autoAssignPlayers: false,
+      linkedAwards: [],
+      adminNotes: "",
+      isActive: true,
+    },
+  });
+
+  const selectedType = form.watch("type");
+
+  const createPackage = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingPackage) {
+        return await apiRequest("PATCH", `/api/programs/${editingPackage.id}`, data);
+      }
+      return await apiRequest("POST", "/api/programs", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: editingPackage ? "Package updated successfully" : "Package created successfully" });
+      setIsDialogOpen(false);
+      setEditingPackage(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to save package", variant: "destructive" });
+    },
+  });
+
+  const deletePackage = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/programs/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: "Package deleted successfully" });
+      setDeleteConfirm(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete package", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (pkg: any) => {
+    setEditingPackage(pkg);
+    form.reset({
+      organizationId: pkg.organizationId,
+      name: pkg.name,
+      slug: pkg.slug || "",
+      description: pkg.description || "",
+      type: pkg.type || "One-Time",
+      billingCycle: pkg.billingCycle || "",
+      price: pkg.price || 0,
+      billingModel: pkg.billingModel || "Per Player",
+      durationDays: pkg.durationDays || 90,
+      stripePriceId: pkg.stripePriceId || "",
+      stripeProductId: pkg.stripeProductId || "",
+      tags: pkg.tags || [],
+      eventTypes: pkg.eventTypes || [],
+      coverageScope: pkg.coverageScope || [],
+      autoAssignPlayers: pkg.autoAssignPlayers || false,
+      linkedAwards: pkg.linkedAwards || [],
+      adminNotes: pkg.adminNotes || "",
+      isActive: pkg.isActive,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingPackage(null);
+    form.reset({
+      organizationId: organization?.id || "",
+      name: "",
+      slug: "",
+      description: "",
+      type: "One-Time",
+      billingCycle: "",
+      price: 0,
+      billingModel: "Per Player",
+      durationDays: 90,
+      stripePriceId: "",
+      stripeProductId: "",
+      tags: [],
+      eventTypes: [],
+      coverageScope: [],
+      autoAssignPlayers: false,
+      linkedAwards: [],
+      adminNotes: "",
+      isActive: true,
+    });
+    setIsDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Stripe Products</CardTitle>
-          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
+          <CardTitle>Package Management</CardTitle>
+          <CardDescription>Create and manage subscription packages</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-products" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Stripe Products</CardTitle>
-          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12" data-testid="error-products">
-            <p className="text-red-600 font-medium">Failed to load products</p>
-            <p className="text-gray-600 text-sm mt-2">Please check your Stripe connection</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!products || products.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Stripe Products</CardTitle>
-          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12" data-testid="empty-products">
-            <p className="text-gray-600 font-medium">No products found</p>
-            <p className="text-gray-500 text-sm mt-2">Create products in your Stripe Dashboard</p>
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-packages" />
           </div>
         </CardContent>
       </Card>
@@ -4281,79 +4384,588 @@ function ProductsTab({ organization }: any) {
   return (
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Stripe Products</CardTitle>
-          <CardDescription>Products managed in Stripe Dashboard</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Package Management</CardTitle>
+            <CardDescription>Create and manage subscription packages for your organization</CardDescription>
+          </div>
+          <Button onClick={handleCreate} data-testid="button-create-package">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Package
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Prices</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product: any) => (
-              <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
-                <TableCell>
-                  <div className="font-medium" data-testid={`text-product-name-${product.id}`}>
-                    {product.name}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="text-sm text-gray-600" data-testid={`text-product-description-${product.id}`}>
-                    {product.description || "-"}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    {product.prices && product.prices.length > 0 ? (
-                      product.prices.map((price: any) => (
-                        <div key={price.id} className="text-sm" data-testid={`text-price-${price.id}`}>
-                          {formatStripePrice(price)}
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-gray-400 text-sm">No prices</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={product.active ? "default" : "secondary"}
-                    data-testid={`badge-status-${product.id}`}
-                  >
-                    {product.active ? "Active" : "Inactive"}
-                  </Badge>
-                </TableCell>
+        {!packages || packages.length === 0 ? (
+          <div className="text-center py-12" data-testid="empty-packages">
+            <p className="text-gray-600 font-medium">No packages found</p>
+            <p className="text-gray-500 text-sm mt-2">Create your first package to get started</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Billing</TableHead>
+                <TableHead>Coverage</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {packages.map((pkg: any) => (
+                <TableRow key={pkg.id} data-testid={`row-package-${pkg.id}`}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium" data-testid={`text-package-name-${pkg.id}`}>
+                        {pkg.name}
+                      </div>
+                      {pkg.slug && (
+                        <div className="text-xs text-gray-500">{pkg.slug}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" data-testid={`badge-type-${pkg.id}`}>
+                      {pkg.type || "Program"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div data-testid={`text-price-${pkg.id}`}>
+                      ${((pkg.price || 0) / 100).toFixed(2)}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm" data-testid={`text-billing-${pkg.id}`}>
+                      {pkg.billingModel || "-"}
+                      {pkg.billingCycle && (
+                        <div className="text-xs text-gray-500">{pkg.billingCycle}</div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {(pkg.coverageScope || []).slice(0, 2).map((scope: string, idx: number) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {scope}
+                        </Badge>
+                      ))}
+                      {(pkg.coverageScope || []).length > 2 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{(pkg.coverageScope || []).length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={pkg.isActive ? "default" : "secondary"}
+                      data-testid={`badge-status-${pkg.id}`}
+                    >
+                      {pkg.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(pkg)}
+                        data-testid={`button-edit-${pkg.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteConfirm(pkg)}
+                        data-testid={`button-delete-${pkg.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
+
+      {/* Create/Edit Package Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="dialog-title-package">
+              {editingPackage ? "Edit Package" : "Create New Package"}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((data) => createPackage.mutate(data))} className="space-y-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Basic Information</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Package Name *</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Youth Club + FNH Package" {...field} data-testid="input-package-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="slug"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Slug / ID</FormLabel>
+                      <FormControl>
+                        <Input placeholder="youth_club_fnh_package" {...field} data-testid="input-slug" />
+                      </FormControl>
+                      <FormDescription>Unique key for internal mapping/API</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Includes access to Youth Club practices and Friday Night Hoops games for one season."
+                          {...field}
+                          data-testid="input-description"
+                        />
+                      </FormControl>
+                      <FormDescription>Public description for checkout and dashboard</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Pricing & Billing */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Pricing & Billing</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Type *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} data-testid="select-type">
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Subscription">Subscription</SelectItem>
+                            <SelectItem value="One-Time">One-Time</SelectItem>
+                            <SelectItem value="Program">Program</SelectItem>
+                            <SelectItem value="Add-On">Add-On</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {selectedType === "Subscription" && (
+                    <FormField
+                      control={form.control}
+                      name="billingCycle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Billing Cycle</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value} data-testid="select-billing-cycle">
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select cycle" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Monthly">Monthly</SelectItem>
+                              <SelectItem value="Quarterly">Quarterly</SelectItem>
+                              <SelectItem value="6-Month">6-Month</SelectItem>
+                              <SelectItem value="Yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Price (USD) *</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="325.00"
+                            {...field}
+                            onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                            value={field.value ? (field.value / 100).toFixed(2) : ""}
+                            data-testid="input-price"
+                          />
+                        </FormControl>
+                        <FormDescription>Enter as dollars (converted to cents)</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="billingModel"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Billing Model *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} data-testid="select-billing-model">
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select model" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Per Player">Per Player</SelectItem>
+                            <SelectItem value="Per Family">Per Family</SelectItem>
+                            <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {selectedType === "One-Time" && (
+                  <FormField
+                    control={form.control}
+                    name="durationDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration (Days)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="90"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                            value={field.value || ""}
+                            data-testid="input-duration"
+                          />
+                        </FormControl>
+                        <FormDescription>Expiration period for one-time passes</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="stripePriceId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Price ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="price_1Hx23..." {...field} data-testid="input-stripe-price-id" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stripeProductId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stripe Product ID</FormLabel>
+                        <FormControl>
+                          <Input placeholder="prod_..." {...field} data-testid="input-stripe-product-id" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Coverage & Access */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Coverage & Access</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="eventTypes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Covers Event Types</FormLabel>
+                      <FormDescription>Which event types does this package grant access to?</FormDescription>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {["Practice", "Game", "Skills", "FNH", "Camp"].map((type) => (
+                          <div key={type} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.value?.includes(type)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, type]);
+                                } else {
+                                  field.onChange(current.filter((t: string) => t !== type));
+                                }
+                              }}
+                              data-testid={`checkbox-event-type-${type.toLowerCase()}`}
+                            />
+                            <Label className="text-sm font-normal">{type}</Label>
+                          </div>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="coverageScope"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Coverage Scope</FormLabel>
+                      <FormDescription>Which age divisions does this package apply to?</FormDescription>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {["All", "U10", "U12", "U14", "U16", "U18"].map((scope) => (
+                          <div key={scope} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.value?.includes(scope)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, scope]);
+                                } else {
+                                  field.onChange(current.filter((s: string) => s !== scope));
+                                }
+                              }}
+                              data-testid={`checkbox-coverage-${scope.toLowerCase()}`}
+                            />
+                            <Label className="text-sm font-normal">{scope}</Label>
+                          </div>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="tags"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tags</FormLabel>
+                      <FormDescription>Categorize this package</FormDescription>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {["Youth Club", "Skills", "FNH", "Camp", "Uniform", "Add-On"].map((tag) => (
+                          <div key={tag} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.value?.includes(tag)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, tag]);
+                                } else {
+                                  field.onChange(current.filter((t: string) => t !== tag));
+                                }
+                              }}
+                              data-testid={`checkbox-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                            />
+                            <Label className="text-sm font-normal">{tag}</Label>
+                          </div>
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Automation & Awards */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Automation & Awards</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="autoAssignPlayers"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Auto Assign Players</FormLabel>
+                        <FormDescription>
+                          Automatically mark players active under this plan when purchased
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-auto-assign"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="linkedAwards"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Linked Awards (Optional)</FormLabel>
+                      <FormDescription>Awards earned automatically for completing this package</FormDescription>
+                      {awards && awards.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {awards.slice(0, 10).map((award: any) => (
+                            <div key={award.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={field.value?.includes(award.id)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, award.id]);
+                                  } else {
+                                    field.onChange(current.filter((id: string) => id !== award.id));
+                                  }
+                                }}
+                                data-testid={`checkbox-award-${award.id}`}
+                              />
+                              <Label className="text-sm font-normal">{award.name}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 mt-2">No awards available. Create awards first.</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Admin Notes */}
+              <FormField
+                control={form.control}
+                name="adminNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Admin Notes</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Used for Season 2025 Youth Packages"
+                        {...field}
+                        data-testid="input-admin-notes"
+                      />
+                    </FormControl>
+                    <FormDescription>Internal notes not shown to users</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Active Status */}
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active Status</FormLabel>
+                      <FormDescription>
+                        Enable or disable this package for sale
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  data-testid="button-cancel"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={createPackage.isPending}
+                  data-testid="button-save-package"
+                >
+                  {createPackage.isPending ? "Saving..." : (editingPackage ? "Update Package" : "Create Package")}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <p className="text-gray-600">
+            Are you sure you want to delete the package "{deleteConfirm?.name}"? This action cannot be undone.
+          </p>
+          <div className="flex gap-2 justify-end mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletePackage.mutate(deleteConfirm.id)}
+              disabled={deletePackage.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deletePackage.isPending ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
-}
-
-// Helper function to format Stripe prices
-function formatStripePrice(price: any): string {
-  const amount = (price.unit_amount / 100).toFixed(2);
-  const currency = price.currency.toUpperCase();
-  
-  if (price.recurring) {
-    const interval = price.recurring.interval;
-    const intervalCount = price.recurring.interval_count || 1;
-    const intervalText = intervalCount > 1 
-      ? `${intervalCount} ${interval}s` 
-      : interval;
-    return `${currency} $${amount} / ${intervalText}`;
-  }
-  
-  return `${currency} $${amount} (one-time)`;
 }
 
 // Divisions Tab Component

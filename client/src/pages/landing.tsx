@@ -52,6 +52,17 @@ export default function Landing() {
                 SIGN IN
               </button>
             </div>
+
+            {/* Privacy Policy Link */}
+            <div className="text-gray-600 text-xs mt-4">
+              <button 
+                onClick={() => setLocation('/privacy-policy')}
+                className="hover:text-gray-900 underline transition-colors"
+                data-testid="link-privacy-policy"
+              >
+                Privacy Policy
+              </button>
+            </div>
           </div>
         </div>
       </div>

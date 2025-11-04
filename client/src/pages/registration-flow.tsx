@@ -1288,7 +1288,7 @@ function AccountCreationStep({
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>
-                  I accept the Terms of Service and Privacy Policy *
+                  I accept the Terms of Service and <a href="/privacy-policy" target="_blank" className="text-primary hover:underline">Privacy Policy</a> *
                 </FormLabel>
                 <FormMessage />
               </div>

@@ -888,14 +888,27 @@ export interface Program {
   id: string;
   organizationId: string;
   name: string;
+  slug?: string; // Unique key for internal mapping/API (e.g., "youth_club_fnh_package")
   description?: string;
+  type?: string; // "Subscription", "One-Time", "Program", "Add-On"
+  billingCycle?: string; // "Monthly", "Quarterly", "6-Month", "Yearly" (only for subscriptions)
   price?: number; // Price in cents (e.g., 14900 for $149.00)
-  pricingModel?: string; // "one-time", "monthly", "installments", etc.
-  duration?: string; // "1 month", "3 months", "6 months", "12 weeks", "per hour", etc.
+  billingModel?: string; // "Per Player", "Per Family", "Organization-Wide"
+  pricingModel?: string; // DEPRECATED: Use "type" instead. Kept for backwards compatibility
+  duration?: string; // DEPRECATED: Use "durationDays" instead. Kept for backwards compatibility
+  durationDays?: number; // Expiration period for one-time passes (e.g., 90 days)
   installments?: number; // Number of installments if pricing model is "installments"
   installmentPrice?: number; // Price per installment in cents
-  category?: string; // "HS Club", "Skills Academy", "Youth Club", "FNH", "Training", etc.
-  ageGroups: string[]; // e.g., ["8-10", "11-13", "14-17"]
+  stripePriceId?: string; // Stripe Price ID for payment integration
+  stripeProductId?: string; // Stripe Product ID for payment integration
+  category?: string; // DEPRECATED: Use "tags" instead. Kept for backwards compatibility
+  tags?: string[]; // Categories: ["Youth Club", "Skills", "FNH", "Camp", "Uniform"]
+  eventTypes?: string[]; // Event types this package grants access to: ["Practice", "Game", "Skills", "FNH", "Camp"]
+  coverageScope?: string[]; // Age divisions or "All": ["U10", "U12", "U14"] or ["All"]
+  ageGroups?: string[]; // DEPRECATED: Use "coverageScope" instead. Kept for backwards compatibility
+  autoAssignPlayers?: boolean; // Auto-mark players active when purchased
+  linkedAwards?: string[]; // Award IDs earned automatically for completing this package
+  adminNotes?: string; // Internal notes not shown to users
   isActive: boolean;
   createdAt: Date;
 }
@@ -903,14 +916,27 @@ export interface Program {
 export const insertProgramSchema = z.object({
   organizationId: z.string(),
   name: z.string().min(1),
+  slug: z.string().optional(),
   description: z.string().optional(),
+  type: z.string().optional(),
+  billingCycle: z.string().optional(),
   price: z.number().optional(),
-  pricingModel: z.string().optional(),
-  duration: z.string().optional(),
+  billingModel: z.string().optional(),
+  pricingModel: z.string().optional(), // DEPRECATED
+  duration: z.string().optional(), // DEPRECATED
+  durationDays: z.number().optional(),
   installments: z.number().optional(),
   installmentPrice: z.number().optional(),
-  category: z.string().optional(),
-  ageGroups: z.array(z.string()).default([]),
+  stripePriceId: z.string().optional(),
+  stripeProductId: z.string().optional(),
+  category: z.string().optional(), // DEPRECATED
+  tags: z.array(z.string()).default([]),
+  eventTypes: z.array(z.string()).default([]),
+  coverageScope: z.array(z.string()).default([]),
+  ageGroups: z.array(z.string()).default([]), // DEPRECATED
+  autoAssignPlayers: z.boolean().default(false),
+  linkedAwards: z.array(z.string()).default([]),
+  adminNotes: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 

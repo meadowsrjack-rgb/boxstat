@@ -1,0 +1,90 @@
+Admin dashboard, update “Create Package” Form
+
+Here’s the full schema and the purpose of each field 👇
+
+Field Name	Type / Input	Purpose	Example
+Package Name	Text	Display name shown to users	“Youth Club + FNH Package”
+Slug / ID	Auto or text	Unique key for internal mapping / API	youth_club_fnh_package
+Description	Textarea (rich text optional)	Public description for checkout and dashboard	“Includes access to Youth Club practices and Friday Night Hoops games for one season.”
+Type	Dropdown	Defines nature of product	Subscription, One-Time, Program, Add-On
+Billing Cycle	Dropdown	Only if subscription; defines recurrence	Monthly, Quarterly, 6-Month, Yearly
+Price	Number (USD)	Billing price per cycle or one-off	325.00
+Billing Model	Dropdown	Defines who it covers	Per Player, Per Family, Organization-Wide
+Duration (if one-time)	Number + Unit	Expiration period for one-time passes	90 days
+Stripe Product ID / Price ID	Text (optional)	For Stripe sync	price_1Hx23...
+Active Status	Toggle	Enables/disables sale	✅ Active
+Tags	Multi-select	Categorize by program type	Youth Club, Skills, FNH, Camp, Uniform
+Covers Event Types	Multi-select	Determines which event types the plan grants access to	Practice, Game, Skills, FNH
+Coverage Scope	Multi-select	Which players or age divisions this plan applies to	U10, U12, U14, or “All”
+Auto Assign to Players	Toggle	Automatically mark players active under this plan when purchased	✅ Yes
+Linked Awards / Badges (Optional)	Multi-select	Awards earned automatically for completing this package	“Foundation Graduate”, “Team Veteran”
+Admin Notes	Textarea	Internal notes not shown to users	“Used for Season 2025 Youth Packages”
+🧮 How It Works After Creation
+
+Once a package is created:
+
+It appears in the Packages List (Admin > Packages) with key details:
+Name | Type | Billing | Coverage | Active | Linked Stripe ID
+
+When purchased, the system:
+
+Adds an entry in user_subscriptions
+
+Automatically checks coverage type:
+
+If family, marks all child players of that parent active
+
+If per-player, only the selected player gets access
+
+If it expires, flags the player(s) or family as inactive
+
+Automation Enhancements
+
+Add checkbox → Sync to Stripe
+→ automatically create product + price via Stripe API
+
+Add webhook handler to update status when payments succeed/expire
+
+🎨 UI Structure Suggestion
+───────────────────────────────
+🧾 Create New Package
+───────────────────────────────
+[ Package Name        ]  
+[ Description         ]  
+[ Type: Subscription ⌄ ]  [ Billing Cycle: Monthly ⌄ ]
+[ Price: $______ ]  [ Billing Model: Per Family ⌄ ]
+[ Duration (days): ___ ]  (only if one-time)
+[ Stripe Price ID: ________ ]
+
+[ Covers Event Types: □ Practice □ Game □ FNH □ Camp ]
+[ Coverage Scope: □ U10 □ U12 □ U14 □ All ]
+[ Tags: □ Youth Club □ Skills □ Uniform □ Add-On ]
+
+[ Auto Assign Players ☐ ] [ Active ☐ ]
+───────────────────────────────
+[ Save Package ] [ Cancel ]
+───────────────────────────────
+
+⚙️ Database Tables This Supports
+
+packages
+| id | name | slug | description | type | billing_cycle | price | billing_model | coverage_scope | event_types | stripe_price_id | active |
+
+user_subscriptions
+| id | user_id | package_id | status | started_at | expires_at | auto_assigned | payment_id |
+
+✅ TL;DR
+
+Your admin “Create Package” form should define:
+
+What the package is, who it covers, how it bills, and what access it unlocks.
+
+That structure will let you:
+
+auto-link coverage per player/family
+
+track payment validity
+
+connect to Stripe easily
+
+display clear status in the parent dashboard (Active / Due / Expired)

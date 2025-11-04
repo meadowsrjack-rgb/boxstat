@@ -12,6 +12,8 @@ import { apiRequest } from "@/lib/queryClient";
 import CheckInButton from "@/components/CheckInButton";
 import EventDetailModal from "@/components/EventDetailModal";
 import type { Event } from "@shared/schema";
+import { derivePlayerStatus, getStatusColor, getStatusLabel } from "@/utils/deriveStatus";
+import type { Payment, Program } from "@/utils/deriveStatus";
 import {
   UserPlus,
   DollarSign,
@@ -205,12 +207,35 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
   );
 }
 
-// Enhanced Player Card Component
-function EnhancedPlayerCard({ player, onClick }: { player: any; onClick: () => void }) {
+// Enhanced Player Card Component with Payment Status
+function EnhancedPlayerCard({ 
+  player, 
+  onClick,
+  payments,
+  programs,
+  parentId
+}: { 
+  player: any; 
+  onClick: () => void;
+  payments?: Payment[];
+  programs?: Program[];
+  parentId?: string;
+}) {
   const { data: teamData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/team`],
     enabled: !!player.id,
   });
+
+  // Derive payment status for this player
+  const { status, plan } = derivePlayerStatus(
+    payments, 
+    programs, 
+    player.id, 
+    parentId,
+    player.packageSelected
+  );
+  const statusColor = getStatusColor(status);
+  const statusLabel = getStatusLabel(status);
 
   return (
     <Card
@@ -246,6 +271,17 @@ function EnhancedPlayerCard({ player, onClick }: { player: any; onClick: () => v
             {teamData.name}
           </p>
         )}
+
+        {/* Payment Status Indicator */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${statusColor}`} data-testid={`status-indicator-${player.id}`}></span>
+            <span className="text-sm font-medium" data-testid={`status-label-${player.id}`}>{statusLabel}</span>
+          </div>
+          {plan && (
+            <span className="text-xs text-gray-400" data-testid={`plan-name-${player.id}`}>{plan}</span>
+          )}
+        </div>
 
         {/* Divider */}
         <div className="border-t border-gray-100 my-4"></div>
@@ -299,8 +335,13 @@ export default function UnifiedAccount() {
   });
 
   // Fetch payments
-  const { data: payments = [] } = useQuery<any[]>({
+  const { data: payments = [] } = useQuery<Payment[]>({
     queryKey: ["/api/payments"],
+  });
+
+  // Fetch programs (packages)
+  const { data: programs = [] } = useQuery<Program[]>({
+    queryKey: ["/api/programs"],
   });
 
   const upcomingEvents = events
@@ -450,6 +491,9 @@ export default function UnifiedAccount() {
                       key={player.id}
                       player={player}
                       onClick={() => openPlayerDashboard(player.id)}
+                      payments={payments}
+                      programs={programs}
+                      parentId={user?.id}
                     />
                   ))}
                 </div>

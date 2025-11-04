@@ -436,6 +436,7 @@ export const messages = pgTable("messages", {
 export const payments = pgTable("payments", {
   id: serial().primaryKey().notNull(),
   userId: varchar("user_id").notNull(),
+  playerId: varchar("player_id"), // For per-player billing: which specific player this payment covers
   amount: real().notNull(),
   currency: varchar().default('usd'),
   paymentType: varchar("payment_type").notNull(),

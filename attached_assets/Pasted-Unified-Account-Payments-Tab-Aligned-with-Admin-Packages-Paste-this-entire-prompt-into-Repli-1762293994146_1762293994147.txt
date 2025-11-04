@@ -1,0 +1,263 @@
+Unified Account + Payments Tab (Aligned with Admin Packages)
+
+💬 Paste this entire prompt into Replit.
+It updates /pages/unified-account.tsx and /pages/payments.tsx to visually reflect payment and player status according to the new admin package setup.
+
+🎯 Objective
+
+Enhance the Unified Account Page and Payments Tab to:
+
+Show each player’s activity/payment status with color-coded indicators.
+
+Reflect real-time payment data (subscription + one-time purchases).
+
+Cleanly separate overview (player cards) and detailed billing (payments tab).
+
+Pull package info (price, type, billing_model, etc.) directly from the packages table.
+
+🧱 1️⃣ Data Sources
+
+These are the existing tables powering the UI:
+
+players
+Field	Type	Example
+id	string	p_123
+parent_id	FK	u_456
+first_name	string	"Jaxon"
+team	string	"U10 Grey"
+division	string	"U10"
+avatar_url	string	/avatars/jaxon.png
+active_status	derived	active / overdue / paid_one_time / inactive
+subscription_name	derived	“Youth Club + FNH”
+user_products
+Field	Type	Example
+id	string	up_123
+user_id	FK	u_456
+player_id	FK	p_123
+product_id	FK	pkg_001
+type	enum	subscription / one_time
+status	enum	active / past_due / expired / paid / canceled
+billing_model	enum	family / per-player
+started_at	datetime	2025-01-05
+current_period_end	datetime	2025-02-05
+amount	decimal	325.00
+stripe_payment_id	string	pi_1234
+auto_assigned	boolean	true
+packages
+Field	Type	Example
+id	string	pkg_001
+name	string	Youth Club + FNH
+type	string	subscription
+billing_cycle	string	monthly
+billing_model	string	per-family
+price	decimal	325.00
+tags	array	[“Youth Club”, “FNH”]
+⚙️ 2️⃣ Status Logic (Server or Client-Side Hook)
+
+Add this helper function (can go in /utils/deriveStatus.ts):
+
+export function derivePlayerStatus(products, playerId) {
+  const active = products.find(
+    (p) => p.status === "active" &&
+           (p.billing_model === "family" || p.player_id === playerId)
+  );
+  if (active) return { status: "active", plan: active.product_name };
+
+  const overdue = products.find(
+    (p) => ["past_due", "expired"].includes(p.status) &&
+           (p.billing_model === "family" || p.player_id === playerId)
+  );
+  if (overdue) return { status: "overdue", plan: overdue.product_name };
+
+  const oneTime = products.find(
+    (p) => p.status === "paid" &&
+           (p.billing_model === "family" || p.player_id === playerId)
+  );
+  if (oneTime) return { status: "paid_one_time", plan: oneTime.product_name };
+
+  return { status: "inactive", plan: null };
+}
+
+🧍 3️⃣ Unified Account Page Update
+
+📄 File: /pages/unified-account.tsx
+
+🎨 UI Structure
+import { derivePlayerStatus } from "@/utils/deriveStatus";
+import { useQuery } from "@tanstack/react-query";
+
+export default function UnifiedAccountPage() {
+  const { data: players } = useQuery(["players"], fetchPlayers);
+  const { data: products } = useQuery(["user_products"], fetchUserProducts);
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-2">My Players</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Overview of each player’s activity and payment status.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {players?.map((player) => {
+          const { status, plan } = derivePlayerStatus(products, player.id);
+
+          const color =
+            status === "active" ? "bg-green-500" :
+            status === "overdue" ? "bg-red-500" :
+            status === "paid_one_time" ? "bg-purple-500" :
+            "bg-gray-300";
+
+          const label =
+            status === "active" ? "Active" :
+            status === "overdue" ? "Overdue" :
+            status === "paid_one_time" ? "One-Time Paid" :
+            "Inactive";
+
+          return (
+            <div key={player.id} className="p-4 border rounded-lg shadow-sm bg-white">
+              <div className="flex items-center gap-3 mb-3">
+                <img
+                  src={player.avatar_url || "/default-avatar.png"}
+                  alt={player.first_name}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+                <div>
+                  <h2 className="font-medium">{player.first_name}</h2>
+                  <p className="text-xs text-gray-500">{player.team || "Unassigned"}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${color}`}></span>
+                  <span className="text-sm font-medium">{label}</span>
+                </div>
+                {plan && (
+                  <span className="text-xs text-gray-400">{plan}</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end mt-8">
+        <a href="/payments" className="text-sm font-medium text-blue-600 hover:underline">
+          View Payment Details →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+
+✅ Result:
+Each player card shows:
+
+Profile photo + name + team
+
+Color-coded dot + label (Active, Overdue, Paid, Inactive)
+
+Package name (if applicable)
+
+“View Payment Details →” link
+
+💳 4️⃣ Payments Tab Update
+
+
+
+🎨 UI Structure
+import { useQuery } from "@tanstack/react-query";
+
+export default function PaymentsPage() {
+  const { data: products } = useQuery(["user_products"], fetchUserProducts);
+  const { data: packages } = useQuery(["packages"], fetchPackages);
+
+  const tableData = products?.map((p) => {
+    const pkg = packages?.find((x) => x.id === p.product_id);
+    return {
+      name: pkg?.name,
+      type: pkg?.type,
+      billingCycle: pkg?.billing_cycle,
+      status: p.status,
+      nextPayment: p.current_period_end,
+      coverage: pkg?.billing_model,
+      amount: pkg?.price,
+    };
+  });
+
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Payments</h1>
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="text-left text-gray-600 border-b">
+            <th className="py-2">Package</th>
+            <th>Type</th>
+            <th>Billing</th>
+            <th>Status</th>
+            <th>Next Payment</th>
+            <th>Coverage</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tableData?.map((row, idx) => (
+            <tr key={idx} className="border-b">
+              <td className="py-2 font-medium">{row.name}</td>
+              <td>{row.type}</td>
+              <td>{row.billingCycle || "-"}</td>
+              <td>
+                <span
+                  className={`${
+                    row.status === "active"
+                      ? "text-green-600"
+                      : row.status === "past_due"
+                      ? "text-red-600"
+                      : row.status === "paid"
+                      ? "text-purple-600"
+                      : "text-gray-500"
+                  } font-medium`}
+                >
+                  {row.status.replace("_", " ")}
+                </span>
+              </td>
+              <td>{row.nextPayment ? new Date(row.nextPayment).toLocaleDateString() : "-"}</td>
+              <td>{row.coverage}</td>
+              <td>${row.amount?.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button className="text-sm text-blue-600 hover:underline">Sync from Stripe</button>
+        <button className="text-sm text-blue-600 hover:underline">Open Stripe Portal</button>
+      </div>
+    </div>
+  );
+}
+
+
+✅ Result:
+
+Lists all purchased packages (subscription + one-time)
+
+Displays type, billing, amount, status, and next renewal
+
+Includes buttons for manual Stripe sync and portal access
+
+🔄 5️⃣ Stripe Integration Notes
+
+Since Stripe API is already set up, ensure:
+
+Your webhook events (invoice.payment_succeeded, invoice.payment_failed, checkout.session.completed) update user_products.status correctly.
+
+The React Query hooks (fetchUserProducts, fetchPackages) read from these updated tables via /api/user-products and /api/packages.
+
+✅ Final Behavior
+Scenario	Unified Account	Payments Tab
+Parent has active subscription	🟢 “Active”	Status: Active, Billing: Monthly
+Subscription overdue	🔴 “Overdue”	Status: Past Due
+One-time purchase (Uniform)	🟣 “One-Time Paid”	Status: Paid
+No active package	⚪ “Inactive”	Empty

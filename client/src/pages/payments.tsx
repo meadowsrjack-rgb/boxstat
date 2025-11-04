@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CreditCard, Package, DollarSign, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CreditCard, Package, DollarSign, AlertCircle, CheckCircle2, XCircle, RefreshCw, ExternalLink } from "lucide-react";
 import MyPurchasesCard from "@/components/payments/MyPurchasesCard";
+import type { Payment, Program as ProgramType } from "@/utils/deriveStatus";
 
 type PackageSelection = {
   id: string;
@@ -21,6 +22,9 @@ type Program = {
   description?: string;
   price?: number;
   pricingModel?: string;
+  billingModel?: string;
+  type?: string;
+  billingCycle?: string;
   category?: string;
 };
 
@@ -29,6 +33,207 @@ type User = {
   firstName: string;
   lastName: string;
 };
+
+// Detailed Billing History Component
+function BillingHistoryTable() {
+  const { user } = useAuth();
+
+  // Fetch payments
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery<Payment[]>({
+    queryKey: ["/api/payments"],
+    enabled: !!user,
+  });
+
+  // Fetch programs/packages
+  const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
+    queryKey: ["/api/programs"],
+    enabled: !!user,
+  });
+
+  const isLoading = paymentsLoading || programsLoading;
+
+  // Map payments to include package details
+  const tableData = useMemo(() => {
+    return payments.map((payment) => {
+      const pkg = programs.find((p) => p.id === payment.programId || p.id === payment.packageId);
+      return {
+        id: payment.id,
+        name: pkg?.name || payment.description || "Payment",
+        type: pkg?.type || "One-Time",
+        billingCycle: pkg?.billingCycle || "-",
+        status: payment.status || "pending",
+        paymentDate: payment.paidAt || payment.createdAt,
+        coverage: pkg?.billingModel || "-",
+        amount: pkg?.price || payment.amount * 100, // Convert to cents if needed
+      };
+    });
+  }, [payments, programs]);
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+      case "active":
+      case "paid":
+        return "bg-green-600/20 text-green-400 border-green-500/30";
+      case "past_due":
+      case "failed":
+        return "bg-red-600/20 text-red-400 border-red-500/30";
+      case "pending":
+      case "processing":
+        return "bg-purple-600/20 text-purple-400 border-purple-500/30";
+      default:
+        return "bg-gray-600/20 text-gray-400 border-gray-500/30";
+    }
+  };
+
+  // Format status label
+  const formatStatus = (status: string) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Billing History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-white/60" data-testid="loader-billing-history" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (tableData.length === 0) {
+    return (
+      <Card className="bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Billing History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-white/50 py-8" data-testid="text-no-billing-history">
+            No payment records found
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-white/5 border-white/10 shadow-[0_8px_30px_rgba(0,0,0,.35)]">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-white flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Billing History
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              data-testid="button-refresh-billing"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Sync
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open("https://billing.stripe.com", "_blank")}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              data-testid="button-stripe-portal"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Portal
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="min-w-full" data-testid="table-billing-history">
+            <thead>
+              <tr className="text-left text-white/60 border-b border-white/10">
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Package</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Type</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Billing</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Status</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Payment Date</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider">Coverage</th>
+                <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tableData.map((row, idx) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                  data-testid={`billing-row-${idx}`}
+                >
+                  <td className="py-4 px-4">
+                    <div className="text-sm font-medium text-white" data-testid={`billing-name-${idx}`}>
+                      {row.name}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-white/70" data-testid={`billing-type-${idx}`}>
+                      {row.type}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-white/70" data-testid={`billing-cycle-${idx}`}>
+                      {row.billingCycle}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <Badge
+                      variant="outline"
+                      className={getStatusColor(row.status)}
+                      data-testid={`billing-status-${idx}`}
+                    >
+                      {formatStatus(row.status)}
+                    </Badge>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-white/70" data-testid={`billing-date-${idx}`}>
+                      {row.paymentDate
+                        ? new Date(row.paymentDate).toLocaleDateString()
+                        : "-"}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="text-sm text-white/70" data-testid={`billing-coverage-${idx}`}>
+                      {row.coverage}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <div className="text-sm font-semibold text-white" data-testid={`billing-amount-${idx}`}>
+                      ${(row.amount / 100).toFixed(2)}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function PackageSelectionsSummary() {
   const { user } = useAuth();
@@ -262,6 +467,9 @@ export default function PaymentsPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        {/* Billing History Table */}
+        <BillingHistoryTable />
 
         {/* Package Selections Summary */}
         <PackageSelectionsSummary />

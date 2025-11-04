@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.uyp.basketball',
-  appName: 'UYP Basketball League',
+  appId: 'boxstat.app',
+  appName: 'BoxStat',
   webDir: 'dist/public'
 };
 

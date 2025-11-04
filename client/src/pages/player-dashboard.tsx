@@ -979,7 +979,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           {/* Event Detail Modal */}
           <EventDetailModal
             event={selectedEvent}
-            userId={currentUser.id}
+            userId={activeProfile?.id || currentChildProfile?.id || currentUser.id}
             userRole={currentUser.role as 'admin' | 'coach' | 'player' | 'parent'}
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}

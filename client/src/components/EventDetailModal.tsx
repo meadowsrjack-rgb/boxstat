@@ -102,7 +102,7 @@ export default function EventDetailModal({
     mutationFn: (response: 'attending' | 'not_attending') => {
       return apiRequest('POST', '/api/rsvp', {
         eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
-        userId,
+        userId: String(userId),
         response,
       });
     },
@@ -124,7 +124,7 @@ export default function EventDetailModal({
     mutationFn: () => {
       return apiRequest('POST', '/api/attendances', {
         eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
-        userId,
+        userId: String(userId),
         type: 'advance',
       });
     },
@@ -182,11 +182,11 @@ export default function EventDetailModal({
   }, [windows, event]);
 
   const userRsvp = useMemo(() => {
-    return rsvps.find(r => r.userId === userId);
+    return rsvps.find(r => r.userId === String(userId));
   }, [rsvps, userId]);
 
   const userCheckIn = useMemo(() => {
-    return attendances.find(a => a.userId === userId);
+    return attendances.find(a => a.userId === String(userId));
   }, [attendances, userId]);
 
   const rsvpData: RsvpData = useMemo(() => {

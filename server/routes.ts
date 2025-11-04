@@ -1862,6 +1862,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/attendances', isAuthenticated, async (req: any, res) => {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);
+      
+      // Get user role for location bypass check
+      const userRole = req.user?.role;
+      
+      // Location validation (skip for admin/coach)
+      if (userRole !== 'admin' && userRole !== 'coach') {
+        // Get event to check location requirements
+        const event = await storage.getEvent(attendanceData.eventId.toString());
+        
+        // Check for GPS coordinates using null/undefined checks (not falsy)
+        if (event && event.latitude != null && event.longitude != null) {
+          // Event has GPS coordinates, location check required
+          if (attendanceData.latitude == null || attendanceData.longitude == null) {
+            return res.status(400).json({
+              error: 'Location required',
+              message: 'You must provide your location to check in to this event.',
+            });
+          }
+          
+          // Calculate distance using server-side geo utility
+          const { distanceMeters } = await import('./utils/geo.js');
+          const distance = distanceMeters(
+            { lat: attendanceData.latitude, lng: attendanceData.longitude },
+            { lat: event.latitude, lng: event.longitude }
+          );
+          
+          // Use event's configured radius or default to 200m (use ?? to allow 0)
+          const radiusMeters = event.checkInRadius ?? 200;
+          
+          if (distance > radiusMeters) {
+            return res.status(403).json({
+              error: 'Too far away',
+              message: `You must be within ${radiusMeters}m of the event location to check in. You are currently ${Math.round(distance)}m away.`,
+              distance: Math.round(distance),
+              required: radiusMeters,
+            });
+          }
+        }
+      }
+      
       const attendance = await storage.createAttendance(attendanceData);
       
       // Award engine integration - update tracking and evaluate awards

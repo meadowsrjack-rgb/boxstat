@@ -15,6 +15,8 @@ import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Event, User as UserType } from '@shared/schema';
 import { MapPreview } from '@/components/MapPreview';
+import { useGeo } from '@/hooks/useGeo';
+import { distanceMeters } from '@/utils/geo';
 
 interface EventWindow {
   id: number;
@@ -57,6 +59,8 @@ export default function EventDetailModal({
 }: EventDetailModalProps) {
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState('overview');
+  const { getOnce } = useGeo(true);
+  const [isCheckingLocation, setIsCheckingLocation] = useState(false);
 
   const { data: windows = [] } = useQuery<EventWindow[]>({
     queryKey: ['/api/event-windows/event', event?.id],
@@ -121,11 +125,13 @@ export default function EventDetailModal({
   });
 
   const checkInMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (locationData?: { latitude: number; longitude: number }) => {
       return apiRequest('POST', '/api/attendances', {
         eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
         userId: String(userId),
         type: 'advance',
+        latitude: locationData?.latitude,
+        longitude: locationData?.longitude,
       });
     },
     onSuccess: () => {
@@ -220,8 +226,71 @@ export default function EventDetailModal({
     rsvpMutation.mutate(newResponse);
   };
 
-  const handleCheckInClick = () => {
-    checkInMutation.mutate();
+  const handleCheckInClick = async () => {
+    // Admin and coach can bypass location check
+    if (userRole === 'admin' || userRole === 'coach') {
+      checkInMutation.mutate();
+      return;
+    }
+
+    // Check if event has GPS coordinates (check for null/undefined, not falsy)
+    if (event?.latitude == null || event?.longitude == null) {
+      toast({
+        title: 'Location Required',
+        description: 'This event does not have GPS coordinates set. Please contact an admin or use QR code check-in.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Get user's current location
+    setIsCheckingLocation(true);
+    try {
+      const userLocation = await getOnce();
+      
+      if (!userLocation) {
+        toast({
+          title: 'Location Access Denied',
+          description: 'Please enable location permissions to check in.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Calculate distance
+      const distance = distanceMeters(
+        userLocation,
+        { lat: event.latitude, lng: event.longitude }
+      );
+
+      // Use event's configured radius or default to 200m (use ?? to allow 0)
+      const radiusMeters = event.checkInRadius ?? 200;
+
+      // Check if within range
+      if (distance > radiusMeters) {
+        toast({
+          title: 'Too Far Away',
+          description: `You must be within ${radiusMeters}m of the event location to check in. You are currently ${Math.round(distance)}m away.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Location verified, proceed with check-in including location data
+      checkInMutation.mutate({
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+      });
+      
+    } catch (error) {
+      toast({
+        title: 'Location Error',
+        description: 'Failed to get your location. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCheckingLocation(false);
+    }
   };
 
   const getMapUrl = (location: string, lat?: number, lng?: number) => {
@@ -347,7 +416,7 @@ export default function EventDetailModal({
               closeTime={eventWindows.checkinClose}
               onCheckInClick={handleCheckInClick}
               isUserCheckedIn={!!userCheckIn}
-              disabled={checkInMutation.isPending}
+              disabled={checkInMutation.isPending || isCheckingLocation}
             />
           </div>
 

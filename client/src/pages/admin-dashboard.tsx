@@ -4284,19 +4284,24 @@ function ProductsTab({ organization }: any) {
 
   const createPackage = useMutation({
     mutationFn: async (data: any) => {
+      console.log('📦 Package mutation called with data:', data);
       if (editingPackage) {
+        console.log('✏️ Updating package:', editingPackage.id);
         return await apiRequest("PATCH", `/api/programs/${editingPackage.id}`, data);
       }
+      console.log('➕ Creating new package');
       return await apiRequest("POST", "/api/programs", data);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      console.log('✅ Package mutation successful:', result);
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
       toast({ title: editingPackage ? "Package updated successfully" : "Package created successfully" });
       setIsDialogOpen(false);
       setEditingPackage(null);
       form.reset();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('❌ Package mutation failed:', error);
       toast({ title: "Failed to save package", variant: "destructive" });
     },
   });
@@ -4503,7 +4508,17 @@ function ProductsTab({ organization }: any) {
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => createPackage.mutate(data))} className="space-y-6">
+            <form onSubmit={form.handleSubmit(
+              (data) => {
+                console.log('📝 Form validation passed, submitting data:', data);
+                console.log('📝 Form errors:', form.formState.errors);
+                createPackage.mutate(data);
+              },
+              (errors) => {
+                console.error('❌ Form validation failed:', errors);
+                toast({ title: "Please check form errors", description: Object.values(errors).map((e: any) => e.message).join(', '), variant: "destructive" });
+              }
+            )} className="space-y-6">
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700">Basic Information</h3>

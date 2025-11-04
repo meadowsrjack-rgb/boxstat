@@ -200,6 +200,36 @@ export const users = pgTable("users", {
   unique("users_email_unique").on(table.email),
 ]);
 
+// Programs table (packages/subscriptions)
+export const programs = pgTable("programs", {
+  id: varchar().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  slug: varchar(),
+  description: text(),
+  type: varchar(), // "Subscription", "One-Time", "Program", "Add-On"
+  billingCycle: varchar("billing_cycle"), // "Monthly", "Quarterly", "6-Month", "Yearly"
+  price: integer(), // Price in cents
+  billingModel: varchar("billing_model"), // "Per Player", "Per Family", "Organization-Wide"
+  pricingModel: varchar("pricing_model"), // DEPRECATED: backwards compat
+  duration: varchar(), // DEPRECATED: backwards compat
+  durationDays: integer("duration_days"), // Expiration period in days
+  installments: integer(), // Number of installments
+  installmentPrice: integer("installment_price"), // Price per installment in cents
+  stripePriceId: varchar("stripe_price_id"),
+  stripeProductId: varchar("stripe_product_id"),
+  category: varchar(), // DEPRECATED: backwards compat
+  tags: text().array().default(sql`ARRAY[]::text[]`), // ["Youth Club", "Skills", "FNH"]
+  eventTypes: text("event_types").array().default(sql`ARRAY[]::text[]`), // ["Practice", "Game", "Skills"]
+  coverageScope: text("coverage_scope").array().default(sql`ARRAY[]::text[]`), // ["U10", "U12", "U14"] or ["All"]
+  ageGroups: text("age_groups").array().default(sql`ARRAY[]::text[]`), // DEPRECATED: backwards compat
+  autoAssignPlayers: boolean("auto_assign_players").default(false),
+  linkedAwards: text("linked_awards").array().default(sql`ARRAY[]::text[]`), // Award IDs
+  adminNotes: text("admin_notes"),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
 // Divisions table (defined before teams for FK reference)
 export const divisions = pgTable("divisions", {
   id: serial().primaryKey().notNull(),

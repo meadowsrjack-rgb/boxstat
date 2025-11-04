@@ -100,8 +100,8 @@ export default function EventDetailModal({
 
   const rsvpMutation = useMutation({
     mutationFn: (response: 'attending' | 'not_attending') => {
-      return apiRequest('/api/rsvp', 'POST', {
-        eventId: event?.id,
+      return apiRequest('POST', '/api/rsvp', {
+        eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
         userId,
         response,
       });
@@ -110,12 +110,20 @@ export default function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
       toast({ title: 'RSVP Updated', description: 'Your response has been recorded.' });
     },
+    onError: (error: any) => {
+      console.error('RSVP mutation error:', error);
+      toast({ 
+        title: 'RSVP Failed', 
+        description: error?.message || 'Failed to update RSVP. Please try again.',
+        variant: 'destructive'
+      });
+    },
   });
 
   const checkInMutation = useMutation({
     mutationFn: () => {
-      return apiRequest('/api/attendances', 'POST', {
-        eventId: event?.id,
+      return apiRequest('POST', '/api/attendances', {
+        eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
         userId,
         type: 'advance',
       });
@@ -124,15 +132,27 @@ export default function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
       toast({ title: 'Checked In', description: 'You have been checked in successfully!' });
     },
+    onError: (error: any) => {
+      console.error('Check-in mutation error:', error);
+      toast({ 
+        title: 'Check-In Failed', 
+        description: error?.message || 'Failed to check in. Please try again.',
+        variant: 'destructive'
+      });
+    },
   });
 
   const eventWindows = useMemo(() => {
     if (!windows.length || !event) {
+      // No windows configured - use sensible defaults
+      // RSVP: Opens 3 days before, never closes (far future date)
+      // Check-in: Opens 30 min before, never closes (far future date)
+      const farFuture = new Date(new Date(event?.startTime || Date.now()).getTime() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years from event
       return {
         rsvpOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 3 * 24 * 60 * 60 * 1000),
-        rsvpClose: new Date(new Date(event?.startTime || Date.now()).getTime() - 1 * 24 * 60 * 60 * 1000),
+        rsvpClose: farFuture,
         checkinOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 30 * 60 * 1000),
-        checkinClose: new Date(new Date(event?.startTime || Date.now()).getTime() + 30 * 60 * 1000),
+        checkinClose: farFuture,
       };
     }
 
@@ -142,19 +162,22 @@ export default function EventDetailModal({
     const checkinOpenWindow = windows.find(w => w.windowType === 'checkin' && w.openRole === 'open');
     const checkinCloseWindow = windows.find(w => w.windowType === 'checkin' && w.openRole === 'close');
 
+    // If close window is not configured, window never closes (far future date)
+    const farFuture = new Date(eventStart.getTime() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years from event
+
     return {
       rsvpOpen: rsvpOpenWindow 
         ? offsetFromStart(eventStart, rsvpOpenWindow.amount, rsvpOpenWindow.unit, rsvpOpenWindow.direction)
         : new Date(eventStart.getTime() - 3 * 24 * 60 * 60 * 1000),
       rsvpClose: rsvpCloseWindow
         ? offsetFromStart(eventStart, rsvpCloseWindow.amount, rsvpCloseWindow.unit, rsvpCloseWindow.direction)
-        : new Date(eventStart.getTime() - 1 * 24 * 60 * 60 * 1000),
+        : farFuture, // Never closes if not configured
       checkinOpen: checkinOpenWindow
         ? offsetFromStart(eventStart, checkinOpenWindow.amount, checkinOpenWindow.unit, checkinOpenWindow.direction)
         : new Date(eventStart.getTime() - 30 * 60 * 1000),
       checkinClose: checkinCloseWindow
         ? offsetFromStart(eventStart, checkinCloseWindow.amount, checkinCloseWindow.unit, checkinCloseWindow.direction)
-        : new Date(eventStart.getTime() + 30 * 60 * 1000),
+        : farFuture, // Never closes if not configured
     };
   }, [windows, event]);
 

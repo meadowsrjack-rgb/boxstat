@@ -59,10 +59,14 @@ export function RSVPWheel({
 
   const statusMessage = useMemo(() => {
     const now = new Date();
+    // Check if close time is far in the future (>10 years) - means no close configured
+    const yearsDiff = (closeTime.getTime() - now.getTime()) / (365 * 24 * 60 * 60 * 1000);
+    const neverCloses = yearsDiff > 10;
+    
     if (status === 'before') {
       return timeUntil(openTime, 'Opens in');
     } else if (status === 'open') {
-      return timeUntil(closeTime, 'Closes in');
+      return neverCloses ? 'RSVP Open (No close time)' : timeUntil(closeTime, 'Closes in');
     } else {
       return 'RSVP Closed';
     }
@@ -179,13 +183,17 @@ export function CheckInWheel({
 
   const statusMessage = useMemo(() => {
     const now = new Date();
+    // Check if close time is far in the future (>10 years) - means no close configured
+    const yearsDiff = (closeTime.getTime() - now.getTime()) / (365 * 24 * 60 * 60 * 1000);
+    const neverCloses = yearsDiff > 10;
+    
     if (isUserCheckedIn) {
       return "✅ You're Checked In!";
     }
     if (status === 'before') {
       return `⏱ ${timeUntil(openTime, 'Check-In opens in')}`;
     } else if (status === 'open') {
-      return `✅ Check-In is open`;
+      return neverCloses ? `✅ Check-In is open (No close time)` : `✅ Check-In is open`;
     } else {
       const closeTimeStr = closeTime.toLocaleTimeString('en-US', { 
         hour: 'numeric', 

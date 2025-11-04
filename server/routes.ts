@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { notionService } from "./notion";
 import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
@@ -1478,6 +1479,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     await storage.deleteTeam(req.params.id);
     res.json({ success: true });
+  });
+  
+  // Get team roster including Notion-synced players
+  app.get('/api/teams/:teamId/roster-with-notion', isAuthenticated, async (req: any, res) => {
+    try {
+      const teamId = req.params.teamId;
+      
+      // Get the team from database
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+      
+      // Get users assigned to this team
+      const appUsers = await storage.getUsersByTeam(teamId);
+      
+      // Get Notion players for this team if it has a notionSlug
+      let notionPlayers: any[] = [];
+      if (team.notionSlug) {
+        const notionTeam = notionService.getTeam(team.notionSlug);
+        notionPlayers = notionTeam?.roster || [];
+      }
+      
+      // Build roster combining app users and notion players
+      const roster: any[] = [];
+      
+      // Add app users
+      for (const user of appUsers) {
+        roster.push({
+          appAccountId: user.id,
+          notionId: null,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+          jerseyNumber: user.jerseyNumber,
+          position: user.position,
+          grade: user.grade,
+          hasAppAccount: true,
+        });
+      }
+      
+      // Add Notion players who don't have app accounts yet
+      for (const notionPlayer of notionPlayers) {
+        // Check if this Notion player already has an app account
+        const existingUser = appUsers.find(u => 
+          `${u.firstName} ${u.lastName}`.toLowerCase().trim() === notionPlayer.name.toLowerCase().trim()
+        );
+        
+        if (!existingUser) {
+          const nameParts = notionPlayer.name.split(' ');
+          const firstName = nameParts.slice(0, -1).join(' ') || notionPlayer.name;
+          const lastName = nameParts[nameParts.length - 1] || '';
+          
+          roster.push({
+            appAccountId: null,
+            notionId: notionPlayer.id,
+            name: notionPlayer.name,
+            firstName,
+            lastName,
+            profileImageUrl: notionPlayer.profileImageUrl,
+            jerseyNumber: notionPlayer.jerseyNumber,
+            position: notionPlayer.position,
+            grade: notionPlayer.grade,
+            hasAppAccount: false,
+          });
+        }
+      }
+      
+      res.json(roster);
+    } catch (error: any) {
+      console.error('Error fetching team roster with notion:', error);
+      res.status(500).json({ message: 'Failed to fetch team roster' });
+    }
   });
   
   // Get teams for a specific coach

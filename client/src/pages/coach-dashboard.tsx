@@ -225,17 +225,6 @@ export default function CoachDashboard() {
     return assignedPlayers;
   }, [assignedPlayers, filteredTeam, selectedTeamFilter]);
 
-  const { data: teamMessages = [] } = useQuery<any[]>({
-    queryKey: ["/api/teams", coachTeam?.id, "messages"],
-    enabled: !!coachTeam?.id,
-    queryFn: async () => {
-      const res = await fetch(`/api/teams/${coachTeam?.id}/messages`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    refetchInterval: 30000,
-  });
-
   const { data: coachEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
     queryKey: ["/api/coach/events"],
     queryFn: async () => {
@@ -564,22 +553,10 @@ export default function CoachDashboard() {
               team={(selectedTeamFilter === 'my-team' ? coachTeam : filteredTeam) || undefined}
               roster={combinedRoster}
               assignedTeams={assignedTeams}
-              messages={teamMessages}
               allTeams={allTeams}
               databaseTeams={databaseTeams}
               selectedTeamFilter={selectedTeamFilter}
               onTeamFilterChange={setSelectedTeamFilter}
-              onSend={async (m) => {
-                const teamId = selectedTeamFilter === 'my-team' ? coachTeam?.id : selectedTeamFilter;
-                const res = await fetch(`/api/teams/${teamId}/messages`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify({ message: m, messageType: "text" }),
-                });
-                if (!res.ok) toast({ title: "Failed to send", variant: "destructive" });
-                else toast({ title: "Message sent" });
-              }}
 
               onEvaluate={(p) => {
                 // Transform roster player to PlayerLite format
@@ -730,12 +707,10 @@ function RosterTab({
   team,
   roster,
   assignedTeams,
-  messages,
   allTeams,
   databaseTeams,
   selectedTeamFilter,
   onTeamFilterChange,
-  onSend,
   onEvaluate,
   onReward,
   selectedPlayerId,
@@ -744,12 +719,10 @@ function RosterTab({
   team?: CoachTeam | null;
   roster: any[];
   assignedTeams: Array<{id: number; name: string; ageGroup: string}>;
-  messages: any[];
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
   databaseTeams: Array<{id: number; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
   onTeamFilterChange: (filter: 'my-team' | number) => void;
-  onSend: (m: string) => void;
   onEvaluate: (p: PlayerLite) => void;
   onReward: (p: PlayerLite) => void;
   selectedPlayerId: string | null;

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +27,8 @@ import {
   MapPin,
   Clock,
   Target,
+  Plus,
+  CreditCard,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
@@ -304,6 +307,12 @@ export default function UnifiedAccount() {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
+  
+  // Payment dialog state
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<string>("");
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Check for payment success in URL
   useEffect(() => {
@@ -506,8 +515,188 @@ export default function UnifiedAccount() {
           <TabsContent value="payments" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Payment History</CardTitle>
-                <CardDescription>View and manage your payments</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Payment History</CardTitle>
+                    <CardDescription>View and manage your payments</CardDescription>
+                  </div>
+                  <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button data-testid="button-make-payment">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Make Payment
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md" data-testid="dialog-make-payment">
+                      <DialogHeader>
+                        <DialogTitle>Make a Payment</DialogTitle>
+                        <DialogDescription>
+                          Select a package and player to purchase
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        {/* Package Selection */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Package</label>
+                          <Select value={selectedPackage} onValueChange={setSelectedPackage}>
+                            <SelectTrigger data-testid="select-package">
+                              <SelectValue placeholder="Select a package" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {programs?.filter(p => p.price && p.price > 0).map((program: any) => (
+                                <SelectItem key={program.id} value={program.id} data-testid={`package-option-${program.id}`}>
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{program.name}</span>
+                                    <span className="ml-4 text-sm text-gray-600">
+                                      ${(program.price / 100).toFixed(2)}
+                                      {program.billingCycle && ` / ${program.billingCycle}`}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                              {(!programs || programs.filter((p: any) => p.price && p.price > 0).length === 0) && (
+                                <SelectItem value="none" disabled>No packages available</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Player Selection (for per-player billing) */}
+                        {selectedPackage && (() => {
+                          const pkg = programs?.find((p: any) => p.id === selectedPackage);
+                          const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
+                          const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+                          
+                          return (
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium">
+                                {isPerPlayer ? "Player (required)" : "Player (optional)"}
+                              </label>
+                              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                                <SelectTrigger data-testid="select-player">
+                                  <SelectValue placeholder={isPerPlayer ? "Select a player" : "All players"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {!isPerPlayer && (
+                                    <SelectItem value="" data-testid="player-option-all">
+                                      All Players (Family Plan)
+                                    </SelectItem>
+                                  )}
+                                  {players?.map((player: any) => (
+                                    <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
+                                      {player.firstName} {player.lastName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {isPerPlayer && (
+                                <p className="text-xs text-gray-600">
+                                  This is a per-player package. Select which player this payment is for.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Package Details */}
+                        {selectedPackage && (() => {
+                          const pkg = programs?.find((p: any) => p.id === selectedPackage);
+                          return pkg && (
+                            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                              <h4 className="font-semibold">{pkg.name}</h4>
+                              {(pkg as any).description && (
+                                <p className="text-sm text-gray-600">{(pkg as any).description}</p>
+                              )}
+                              <div className="flex justify-between items-center pt-2 border-t">
+                                <span className="font-medium">Total:</span>
+                                <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                              </div>
+                              {pkg.billingModel && (
+                                <p className="text-xs text-gray-600">
+                                  Billing: {pkg.billingModel}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => setPaymentDialogOpen(false)}
+                            className="flex-1"
+                            data-testid="button-cancel-payment"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              if (!selectedPackage) {
+                                toast({
+                                  title: "Error",
+                                  description: "Please select a package",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              const pkg = programs?.find((p: any) => p.id === selectedPackage);
+                              const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
+                              const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+
+                              if (isPerPlayer && !selectedPlayer) {
+                                toast({
+                                  title: "Error",
+                                  description: "Please select a player for this per-player package",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              setIsProcessingPayment(true);
+                              try {
+                                // Create checkout session
+                                const response = await apiRequest("/api/payments/create-checkout", {
+                                  method: "POST",
+                                  data: {
+                                    packageId: selectedPackage,
+                                    playerId: selectedPlayer || null,
+                                  },
+                                }) as { url: string };
+
+                                // Redirect to Stripe checkout
+                                window.location.href = response.url;
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.message || "Failed to create checkout session",
+                                  variant: "destructive",
+                                });
+                                setIsProcessingPayment(false);
+                              }
+                            }}
+                            className="flex-1"
+                            disabled={!selectedPackage || isProcessingPayment}
+                            data-testid="button-proceed-payment"
+                          >
+                            {isProcessingPayment ? (
+                              <>
+                                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Proceed to Checkout
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {payments.length === 0 ? (

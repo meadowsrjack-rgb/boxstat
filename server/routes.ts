@@ -660,6 +660,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Create checkout session for a specific package and player
+  app.post("/api/payments/create-checkout", isAuthenticated, async (req: any, res) => {
+    if (!stripe) {
+      return res.status(500).json({ error: "Stripe is not configured" });
+    }
+    
+    try {
+      const { packageId, playerId } = req.body;
+      
+      if (!packageId) {
+        return res.status(400).json({ error: "Package ID is required" });
+      }
+      
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Get the program/package
+      const program = await storage.getProgram(packageId);
+      if (!program || !program.price) {
+        return res.status(404).json({ error: "Package not found or has no price" });
+      }
+      
+      // Validate playerId if provided
+      if (playerId) {
+        const player = await storage.getUser(playerId);
+        if (!player) {
+          return res.status(400).json({ error: "Invalid player ID" });
+        }
+        
+        // Ensure player belongs to the paying user or is the paying user
+        const isValidPlayer = playerId === req.user.id || (player as any).guardianId === req.user.id;
+        if (!isValidPlayer) {
+          return res.status(403).json({ error: "You can only make payments for yourself or your children" });
+        }
+      }
+      
+      // Create or retrieve Stripe customer
+      let stripeCustomerId = user.stripeCustomerId;
+      if (!stripeCustomerId) {
+        const customer = await stripe.customers.create({
+          email: user.email,
+          metadata: {
+            userId: user.id,
+          },
+        });
+        stripeCustomerId = customer.id;
+        await storage.updateUser(user.id, { stripeCustomerId });
+      }
+      
+      // Get origin for URLs
+      const origin = `${req.protocol}://${req.get('host')}`;
+      
+      // Create Stripe Checkout Session
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        line_items: [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: program.name,
+              description: program.description || undefined,
+            },
+            unit_amount: program.price, // Price is already in cents
+          },
+          quantity: 1,
+        }],
+        mode: program.type === 'Subscription' ? 'subscription' : 'payment',
+        success_url: `${origin}/unified-account?payment=success`,
+        cancel_url: `${origin}/unified-account?payment=canceled`,
+        metadata: {
+          userId: user.id,
+          packageId: packageId,
+          playerId: playerId || '',
+          type: 'package_purchase',
+        },
+      });
+      
+      res.json({
+        url: session.url,
+        sessionId: session.id,
+      });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({
+        error: "Error creating checkout session",
+        message: error.message,
+      });
+    }
+  });
+  
   // Stripe webhook endpoint (PUBLIC - no authentication)
   app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), async (req: any, res) => {
     if (!stripe) {
@@ -738,6 +830,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             console.error(`⚠️ Could not find player ${playerId} to update`);
+          }
+          
+          return res.json({ received: true });
+        }
+        
+        // Handle new package purchase from unified account payments tab
+        if (session.metadata?.type === 'package_purchase') {
+          const userId = session.metadata.userId;
+          const packageId = session.metadata.packageId;
+          const playerId = session.metadata.playerId || null;
+          
+          if (!userId || !packageId) {
+            console.error("Missing metadata for package purchase:", { userId, packageId });
+            return res.status(400).json({ 
+              error: "Missing required metadata for package purchase",
+              received: { userId, packageId }
+            });
+          }
+          
+          // Create payment record with playerId
+          if (session.amount_total) {
+            try {
+              const program = await storage.getProgram(packageId);
+              await storage.createPayment({
+                organizationId: "default-org",
+                userId: userId,
+                playerId: playerId,
+                amount: session.amount_total / 100, // Convert from cents to dollars
+                currency: 'usd',
+                paymentType: program?.type || 'package',
+                status: 'completed',
+                description: program?.name || `Package Purchase`,
+                packageId: packageId,
+                programId: packageId,
+                stripePaymentId: session.payment_intent as string,
+              });
+              console.log(`✅ Created payment record for user ${userId}${playerId ? ` (player: ${playerId})` : ''}`);
+            } catch (paymentError: any) {
+              console.error("Error creating payment record:", paymentError);
+              // Don't fail the webhook if payment record creation fails
+            }
           }
           
           return res.json({ received: true });

@@ -345,6 +345,21 @@ export default function RegistrationFlow() {
               </Button>
             </div>
           )}
+          
+          {/* Privacy Policy Link - Show on all steps */}
+          {currentStep <= totalSteps && (
+            <div className="mt-6 text-center">
+              <div className="text-gray-500 text-xs">
+                <button 
+                  onClick={() => setLocation('/privacy-policy')}
+                  className="hover:text-gray-900 underline transition-colors"
+                  data-testid="link-privacy-policy"
+                >
+                  Privacy Policy
+                </button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

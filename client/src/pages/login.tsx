@@ -201,7 +201,7 @@ export default function LoginPage() {
             </>
           )}
           
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <p className="text-sm text-gray-600">
               Don't have an account?{" "}
               <Button
@@ -213,6 +213,17 @@ export default function LoginPage() {
                 Register here
               </Button>
             </p>
+            
+            {/* Privacy Policy Link */}
+            <div className="text-gray-500 text-xs">
+              <button 
+                onClick={() => setLocation('/privacy-policy')}
+                className="hover:text-gray-900 underline transition-colors"
+                data-testid="link-privacy-policy"
+              >
+                Privacy Policy
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -882,6 +882,7 @@ export interface Payment {
   id: string;
   organizationId: string;
   userId: string;
+  playerId?: string; // For per-player billing: which specific player this payment covers
   amount: number;
   currency: string;
   paymentType: string; // Configurable by organization
@@ -898,6 +899,7 @@ export interface Payment {
 export const insertPaymentSchema = z.object({
   organizationId: z.string(),
   userId: z.string(),
+  playerId: z.string().optional(), // For per-player billing: which specific player this payment covers
   amount: z.number().min(0),
   currency: z.string().default("usd"),
   paymentType: z.string().min(1),

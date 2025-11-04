@@ -77,14 +77,18 @@ export function derivePlayerStatus(
     if (parentId && p.userId === parentId) {
       const billingModel = program?.billingModel || program?.pricingModel;
       
+      // Normalize billing model for comparison (handle all variations)
+      const normalized = billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
+      
       // Per-family billing applies to all children
-      if (billingModel === "Per Family" || billingModel === "per-family" || 
-          billingModel === "family" || billingModel === "Per-Family") {
+      // Matches: per-family, Per Family, per_family, family, Per-Family, etc.
+      if (normalized.includes('family') || normalized === 'per_family' || normalized === 'perfamily') {
         return true;
       }
       
       // Organization-wide billing applies to all
-      if (billingModel === "Organization-Wide" || billingModel === "organization-wide") {
+      // Matches: organization-wide, Organization-Wide, organization_wide, etc.
+      if (normalized.includes('organization') || normalized === 'organization_wide') {
         return true;
       }
       
@@ -93,6 +97,11 @@ export function derivePlayerStatus(
       // Note: This is less accurate but handles older payment records
       if (playerPackageSelected && 
           (p.programId === playerPackageSelected || p.packageId === playerPackageSelected)) {
+        return true;
+      }
+      
+      // If no billing model is specified, treat as family-wide (legacy support)
+      if (!billingModel) {
         return true;
       }
       

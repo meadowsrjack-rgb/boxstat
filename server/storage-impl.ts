@@ -2689,6 +2689,7 @@ class DatabaseStorage implements IStorage {
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const dbPayment = {
       userId: payment.userId,
+      playerId: payment.playerId, // For per-player billing: which specific player this payment covers
       amount: payment.amount,
       currency: payment.currency || 'usd',
       paymentType: payment.paymentType,
@@ -3480,6 +3481,7 @@ class DatabaseStorage implements IStorage {
       id: dbPayment.id.toString(),
       organizationId: this.defaultOrgId,
       userId: dbPayment.userId,
+      playerId: dbPayment.playerId, // For per-player billing: which specific player this payment covers
       amount: dbPayment.amount,
       currency: dbPayment.currency || 'usd',
       paymentType: dbPayment.paymentType,

@@ -2588,6 +2588,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const paymentData = insertPaymentSchema.parse(req.body);
+    
+    // Validate playerId if provided
+    if (paymentData.playerId) {
+      const player = await storage.getUser(paymentData.playerId);
+      
+      // Ensure player exists
+      if (!player) {
+        return res.status(400).json({ 
+          message: 'Invalid playerId: player does not exist' 
+        });
+      }
+      
+      // For non-admin users, ensure playerId belongs to them or their children
+      if (role !== 'admin') {
+        const payingUser = await storage.getUser(paymentData.userId);
+        if (!payingUser) {
+          return res.status(400).json({ 
+            message: 'Invalid userId: user does not exist' 
+          });
+        }
+        
+        // Check if playerId is the paying user or a child of the paying user
+        const isValidPlayer = paymentData.playerId === paymentData.userId || 
+                             (player as any).guardianId === paymentData.userId;
+        
+        if (!isValidPlayer) {
+          return res.status(400).json({ 
+            message: 'Invalid playerId: player must be the paying user or their child' 
+          });
+        }
+      }
+    }
+    
     const payment = await storage.createPayment(paymentData);
     res.json(payment);
   });

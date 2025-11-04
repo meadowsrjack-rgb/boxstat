@@ -31,6 +31,7 @@ Preferred communication style: Simple, everyday language.
 - **Divisions**: Age/level divisions with linked teams (team_ids array) to organize players and associate them with relevant teams.
 - **Teams**: Comprehensive team structure following BoxStat schema.
 - **User Fields**: Comprehensive user data including organization_id, division_id, products, skills_assessments, height_in, position, profile_visibility, bio, notes, guardian_id, emergency_contact_json, and last_login. Includes performance tracking fields.
+- **Payments Table**: Added playerId field to track which specific player a payment covers in per-player billing scenarios. This ensures accurate payment status attribution across siblings with different packages. **Schema Change**: The player_id column has been added to the payments table. For new deployments, run `drizzle-kit push` to sync the schema or manually add the column: `ALTER TABLE payments ADD COLUMN IF NOT EXISTS player_id VARCHAR;`
 
 ### Key Features & Design Decisions
 - **Authentication Flow**: Email/password with required verification, magic link, non-blocking registration, and automatic coach detection. Users are directed to appropriate dashboards.
@@ -45,6 +46,7 @@ Preferred communication style: Simple, everyday language.
 - **Family Account Event Filtering**: Events are filtered to show only those relevant to the selected child in Player Mode, or aggregated from all children and the parent in Parent Mode. Siblings do not see each other's team-specific events.
 - **Facility Management**: Admin-only CRUD operations for predefined facility locations. Facilities auto-populate in event creation with stored addresses and coordinates.
 - **Payment Integration**: Stripe for secure payment processing (fees, uniforms, tournaments) with transaction and subscription tracking.
+- **Payment Status System**: Comprehensive payment status derivation using derivePlayerStatus utility that accurately handles per-player, per-family, and organization-wide billing models. Displays color-coded status indicators (Active/Pending/One-Time Paid) on player cards in Unified Account page. Payments with playerId field ensure accurate per-player billing attribution, preventing false "Active" statuses for unpaid siblings.
 - **Lead Evaluation**: Coaches can create detailed player evaluations with skill ratings (1-5) and export/share them.
 - **Coach Settings**: Customizable coach profiles with experience, bio, previous teams, playing experience, and philosophy.
 - **Admin Panel**: Comprehensive CRUD operations for users, teams, events, awards, divisions, skills, and notifications, with robust table views, search functionality, and a calendar view for event management. Detailed user view with sidebar navigation and categorized sections: Team Info, Billing, Performance, Skills & Awards, Admin Notes, and System Meta.

@@ -2363,7 +2363,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                         {team.season || "-"}
                       </TableCell>
                       <TableCell data-testid={`text-roster-${team.id}`}>
-                        {team.rosterSize || 0}
+                        {team.rosterCount || 0}
                       </TableCell>
                       <TableCell data-testid={`status-active-${team.id}`}>
                         <Badge 
@@ -2375,6 +2375,15 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setSelectedTeam(team)}
+                            data-testid={`button-view-roster-${team.id}`}
+                            title="View/Manage Roster"
+                          >
+                            <Users className="w-4 h-4" />
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="sm" 
@@ -2405,25 +2414,71 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
       {/* Roster Management Dialog */}
       {selectedTeam && (
         <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Manage Roster - {selectedTeam.name}</DialogTitle>
+              <CardDescription>
+                Select or deselect players to add or remove them from this team
+              </CardDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="max-h-96 overflow-y-auto">
-                {players.map((player: any) => (
-                  <div key={player.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                    <div className="flex items-center gap-3">
-                      <Checkbox 
-                        checked={selectedTeam.roster?.includes(player.id)}
-                        data-testid={`checkbox-player-${player.id}`}
-                      />
-                      <span>{player.firstName} {player.lastName}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="max-h-96 overflow-y-auto border rounded-lg p-4">
+                {players.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No players available</p>
+                ) : (
+                  players.map((player: any) => {
+                    const isOnTeam = player.teamId === selectedTeam.id;
+                    return (
+                      <div 
+                        key={player.id} 
+                        className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded border-b last:border-b-0"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox 
+                            checked={isOnTeam}
+                            onCheckedChange={async (checked) => {
+                              try {
+                                await apiRequest("PATCH", `/api/users/${player.id}`, {
+                                  teamId: checked ? selectedTeam.id : null
+                                });
+                                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+                                toast({ 
+                                  title: checked 
+                                    ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`
+                                    : `Removed ${player.firstName} ${player.lastName} from ${selectedTeam.name}`
+                                });
+                              } catch (error) {
+                                toast({ 
+                                  title: "Failed to update player assignment",
+                                  variant: "destructive"
+                                });
+                              }
+                            }}
+                            data-testid={`checkbox-player-${player.id}`}
+                          />
+                          <div>
+                            <p className="font-medium">{player.firstName} {player.lastName}</p>
+                            {player.teamId && player.teamId !== selectedTeam.id && (
+                              <p className="text-xs text-gray-500">
+                                Currently on: {teams.find((t: any) => t.id === player.teamId)?.name || "Unknown Team"}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {isOnTeam && (
+                          <Badge variant="default" className="bg-green-100 text-green-700 border-green-200">
+                            On Team
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
-              <Button className="w-full" data-testid="button-save-roster">Save Roster</Button>
+              <div className="text-sm text-gray-600">
+                <strong>Roster Count:</strong> {players.filter((p: any) => p.teamId === selectedTeam.id).length} players
+              </div>
             </div>
           </DialogContent>
         </Dialog>

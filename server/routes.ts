@@ -1581,9 +1581,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   app.get('/api/teams', isAuthenticated, async (req: any, res) => {
-    const { organizationId } = req.user;
-    const teams = await storage.getTeamsByOrganization(organizationId);
-    res.json(teams);
+    try {
+      const { organizationId } = req.user;
+      const teams = await storage.getTeamsByOrganization(organizationId);
+      
+      // Add roster count to each team
+      const teamsWithRosterCount = await Promise.all(
+        teams.map(async (team) => {
+          const roster = await storage.getUsersByTeam(String(team.id));
+          return {
+            ...team,
+            rosterCount: roster.length,
+          };
+        })
+      );
+      
+      res.json(teamsWithRosterCount);
+    } catch (error: any) {
+      console.error('Error fetching teams:', error);
+      res.status(500).json({ message: 'Failed to fetch teams' });
+    }
   });
   
   app.get('/api/teams/coach/:coachId', isAuthenticated, async (req: any, res) => {

@@ -123,7 +123,6 @@ export interface User {
   
   createdAt: Date;
   updatedAt: Date;
-  deletedAt?: Date;
 }
 
 // Drizzle pgTable definition for users
@@ -197,7 +196,6 @@ export const users = pgTable("users", {
   videosCompleted: integer("videos_completed").default(0),
   yearsActive: integer("years_active").default(0),
   lastLogin: timestamp("last_login", { mode: 'string' }),
-  deletedAt: timestamp("deleted_at", { mode: 'string' }),
 }, (table) => [
   unique("users_email_unique").on(table.email),
 ]);

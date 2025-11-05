@@ -765,20 +765,16 @@ class MemStorage implements IStorage {
   }
   
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      user => user.organizationId === organizationId && !user.deletedAt
-    );
+    return Array.from(this.users.values()).filter(user => user.organizationId === organizationId);
   }
   
   async getUsersByTeam(teamId: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(
-      user => user.teamId === teamId && !user.deletedAt
-    );
+    return Array.from(this.users.values()).filter(user => user.teamId === teamId);
   }
   
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(
-      user => user.organizationId === organizationId && user.role === role && !user.deletedAt
+      user => user.organizationId === organizationId && user.role === role
     );
   }
   
@@ -2033,30 +2029,18 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    const results = await db.select().from(schema.users).where(
-      sql`deleted_at IS NULL`
-    );
+    const results = await db.select().from(schema.users);
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByTeam(teamId: string): Promise<User[]> {
     const teamIdNum = parseInt(teamId);
-    const results = await db.select().from(schema.users).where(
-      and(
-        eq(schema.users.teamId, teamIdNum),
-        sql`deleted_at IS NULL`
-      )
-    );
+    const results = await db.select().from(schema.users).where(eq(schema.users.teamId, teamIdNum));
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
-    const results = await db.select().from(schema.users).where(
-      and(
-        eq(schema.users.role, role),
-        sql`deleted_at IS NULL`
-      )
-    );
+    const results = await db.select().from(schema.users).where(eq(schema.users.role, role));
     return results.map(user => this.mapDbUserToUser(user));
   }
 
@@ -2154,36 +2138,7 @@ class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<void> {
-    const now = new Date().toISOString();
-    
-    // Soft delete the user by setting deletedAt timestamp
-    await db.update(schema.users)
-      .set({ 
-        deletedAt: now,
-        isActive: false 
-      })
-      .where(eq(schema.users.id, id));
-    
-    // Handle related data
-    // 1. Soft delete all children if this is a parent/guardian
-    await db.update(schema.users)
-      .set({ 
-        deletedAt: now,
-        isActive: false 
-      })
-      .where(eq(schema.users.guardianId, id));
-    
-    // 2. Clear guardian references if this user is a guardian being deleted
-    // (This handles edge cases where children might not be auto-deleted)
-    await db.update(schema.users)
-      .set({ guardianId: null })
-      .where(and(
-        eq(schema.users.guardianId, id),
-        sql`deleted_at IS NULL`
-      ));
-    
-    // Note: We intentionally keep payment records, team memberships, 
-    // RSVPs, and awards for audit/historical purposes
+    await db.delete(schema.users).where(eq(schema.users.id, id));
   }
 
   // Team operations
@@ -3410,7 +3365,6 @@ class DatabaseStorage implements IStorage {
       isActive: Boolean(dbUser.isActive),
       createdAt: new Date(dbUser.createdAt),
       updatedAt: new Date(dbUser.updatedAt),
-      deletedAt: dbUser.deletedAt ? new Date(dbUser.deletedAt) : undefined,
     };
   }
 

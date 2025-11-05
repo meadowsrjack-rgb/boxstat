@@ -81,30 +81,14 @@ function hashPassword(password: string): string {
 }
 
 // Simple auth middleware for development
-const isAuthenticated = async (req: any, res: any, next: any) => {
+const isAuthenticated = (req: any, res: any, next: any) => {
   if (req.session && req.session.userId) {
-    // Verify user is not deleted
-    try {
-      const user = await storage.getUser(req.session.userId);
-      
-      if (!user || user.deletedAt) {
-        // User has been deleted - destroy session and return 401
-        req.session.destroy((err: any) => {
-          if (err) console.error('Error destroying session for deleted user:', err);
-        });
-        return res.status(401).json({ error: "Account has been deleted" });
-      }
-      
-      req.user = { 
-        id: req.session.userId, 
-        organizationId: req.session.organizationId || "default-org", 
-        role: req.session.role || "user" 
-      };
-      next();
-    } catch (error) {
-      console.error('Error checking user status:', error);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+    req.user = { 
+      id: req.session.userId, 
+      organizationId: req.session.organizationId || "default-org", 
+      role: req.session.role || "user" 
+    };
+    next();
   } else {
     // Return 401 for unauthenticated requests
     res.status(401).json({ error: "Not authenticated" });
@@ -183,14 +167,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ 
           success: false, 
           message: "Invalid email or password" 
-        });
-      }
-      
-      // Check if user account has been deleted
-      if (user.deletedAt) {
-        return res.status(403).json({
-          success: false,
-          message: "This account has been deleted and can no longer be accessed.",
         });
       }
       
@@ -519,11 +495,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user) {
         return res.status(404).json({ success: false, message: "Invalid magic link" });
-      }
-      
-      // Check if user account has been deleted
-      if (user.deletedAt) {
-        return res.status(403).json({ success: false, message: "This account has been deleted and can no longer be accessed." });
       }
       
       // Check if token is expired (15 minutes)
@@ -1539,29 +1510,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
-    const { role, id: currentUserId } = req.user;
+    const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
     
-    const userIdToDelete = req.params.id;
-    
-    // Soft delete the user (sets deletedAt timestamp and handles related data)
-    await storage.deleteUser(userIdToDelete);
-    
-    // If admin is deleting themselves, destroy their session
-    if (currentUserId === userIdToDelete) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error('Error destroying session:', err);
-        }
-      });
-      return res.json({ success: true, sessionDestroyed: true });
-    }
-    
-    // Note: We can't easily destroy sessions for other users in express-session
-    // The deleted user will be prevented from logging in again by auth middleware
-    
+    await storage.deleteUser(req.params.id);
     res.json({ success: true });
   });
   

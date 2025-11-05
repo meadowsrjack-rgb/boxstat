@@ -1,12 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import logoPath from "@assets/BoxStats_1761255444178.png";
+import backgroundVideo from "@assets/BoxStat mobile background_1762315879856.mp4";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-white">
+    <div className="relative min-h-screen overflow-hidden bg-black">
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ objectFit: 'cover' }}
+      >
+        <source src={backgroundVideo} type="video/mp4" />
+      </video>
+
+      {/* Dark overlay for better text readability */}
+      <div className="absolute inset-0 bg-black/20 z-0"></div>
+
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Logo at top */}
@@ -36,11 +52,11 @@ export default function Landing() {
             </Button>
 
             {/* Secondary Text/Link */}
-            <div className="text-gray-700 text-sm">
+            <div className="text-gray-100 text-sm">
               <span>HAVE AN ACCOUNT? </span>
               <button 
                 onClick={() => setLocation('/login')}
-                className="text-gray-900 font-semibold underline hover:text-gray-600 transition-colors"
+                className="text-white font-semibold underline hover:text-gray-300 transition-colors"
                 data-testid="button-sign-in"
               >
                 SIGN IN

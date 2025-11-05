@@ -213,13 +213,11 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
 // Enhanced Player Card Component with Payment Status
 function EnhancedPlayerCard({ 
   player, 
-  onClick,
   payments,
   programs,
   parentId
 }: { 
   player: any; 
-  onClick: () => void;
   payments?: Payment[];
   programs?: Program[];
   parentId?: string;
@@ -242,8 +240,7 @@ function EnhancedPlayerCard({
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-shadow"
-      onClick={onClick}
+      className="transition-shadow"
       data-testid={`player-card-${player.id}`}
     >
       <CardContent className="p-6">
@@ -313,6 +310,9 @@ export default function UnifiedAccount() {
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // View selector state (parent or player dashboard)
+  const [selectedView, setSelectedView] = useState<string>("parent");
 
   // Check for payment success in URL
   useEffect(() => {
@@ -364,12 +364,6 @@ export default function UnifiedAccount() {
 
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
-
-  const openPlayerDashboard = (playerId: string) => {
-    // Store the player ID and navigate to player dashboard
-    localStorage.setItem("selectedPlayerId", playerId);
-    setLocation("/player-dashboard");
-  };
 
   const handleSignOut = async () => {
     try {
@@ -430,6 +424,45 @@ export default function UnifiedAccount() {
               )}
             </div>
           </div>
+
+          {/* View Selector Dropdown */}
+          {players.length > 0 && (
+            <div className="mt-6">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">
+                Switch View
+              </label>
+              <Select 
+                value={selectedView} 
+                onValueChange={(value) => {
+                  if (value === "parent") {
+                    setSelectedView("parent");
+                  } else {
+                    // Navigate to player dashboard
+                    localStorage.setItem("selectedPlayerId", value);
+                    setLocation("/player-dashboard");
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-64" data-testid="select-view-switcher">
+                  <SelectValue placeholder="Select view" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="parent" data-testid="view-option-parent">
+                    Parent Dashboard
+                  </SelectItem>
+                  {players.map((player: any) => (
+                    <SelectItem 
+                      key={player.id} 
+                      value={player.id}
+                      data-testid={`view-option-player-${player.id}`}
+                    >
+                      {player.firstName} {player.lastName} - Player Dashboard
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
         </div>
       </div>
@@ -499,7 +532,6 @@ export default function UnifiedAccount() {
                     <EnhancedPlayerCard
                       key={player.id}
                       player={player}
-                      onClick={() => openPlayerDashboard(player.id)}
                       payments={payments}
                       programs={programs}
                       parentId={user?.id}

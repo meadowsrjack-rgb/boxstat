@@ -1528,6 +1528,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const userData = insertUserSchema.parse(req.body);
+    // Admin-created users are automatically verified so they can use magic link login
+    userData.verified = true;
     const user = await storage.createUser(userData);
     res.json(user);
   });

@@ -25,15 +25,6 @@ export default function Landing() {
 
       {/* Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Logo at top */}
-        <div className="flex justify-center pt-12 pb-6">
-          <img 
-            src={logoPath} 
-            alt="BoxStat Logo" 
-            className="h-72 w-72 object-contain mt-[100px] mb-[100px]"
-          />
-        </div>
-
         {/* Spacer to push content to bottom */}
         <div className="flex-1"></div>
 

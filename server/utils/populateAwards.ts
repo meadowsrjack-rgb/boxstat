@@ -24,9 +24,11 @@ export async function populateAwards(storage: IStorage, organizationId: string) 
       }
 
       // Map iconName to image URL (images are in /trophiesbadges/ folder)
-      const imageUrl = award.iconName.endsWith('.png') 
-        ? `/trophiesbadges/${award.iconName}` 
-        : `/trophiesbadges/${award.iconName}.png`;
+      // Remove 'badge-' prefix if present, since actual files don't have it
+      const fileName = award.iconName.replace(/^badge-/, '');
+      const imageUrl = fileName.endsWith('.png') 
+        ? `/trophiesbadges/${fileName}` 
+        : `/trophiesbadges/${fileName}.png`;
 
       // Map award tier to database format
       const tier = award.kind; // "Trophy" or "Badge"

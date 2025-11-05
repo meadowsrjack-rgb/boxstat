@@ -3795,7 +3795,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
               </>
             )}
           </Button>
-          <Dialog open={isDialogOpen && !editingAward} onOpenChange={(open) => {
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
               setEditingAward(null);

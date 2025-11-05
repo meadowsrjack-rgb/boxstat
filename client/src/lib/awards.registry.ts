@@ -1266,7 +1266,7 @@ export const AWARDS: Award[] = [
   {
     id: "coach-choice",
     kind: "Trophy",
-    name: "Coach's Choice",
+    name: "Coach's Award",
     tier: "Legacy",
     category: "SeasonalLegacy",
     description: "Special recognition from coach for exceptional character and dedication.",

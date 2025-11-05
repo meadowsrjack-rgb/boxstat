@@ -140,6 +140,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(user);
   });
   
+  // Update user's default dashboard preference
+  app.patch('/api/auth/user/preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const { defaultDashboardView } = req.body;
+      
+      // Validate input
+      if (defaultDashboardView !== undefined && typeof defaultDashboardView !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid dashboard view value" 
+        });
+      }
+      
+      // Update user's preference
+      const updated = await storage.updateUser(req.user.id, {
+        defaultDashboardView,
+      });
+      
+      res.json({ 
+        success: true, 
+        user: updated
+      });
+    } catch (error: any) {
+      console.error("Preference update error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to update preferences" 
+      });
+    }
+  });
+  
   app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
@@ -191,7 +222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: user.email, 
           role: user.role,
           firstName: user.firstName,
-          lastName: user.lastName 
+          lastName: user.lastName,
+          defaultDashboardView: user.defaultDashboardView
         } 
       });
     } catch (error: any) {
@@ -521,7 +553,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: user.email, 
           role: user.role,
           firstName: user.firstName,
-          lastName: user.lastName 
+          lastName: user.lastName,
+          defaultDashboardView: user.defaultDashboardView
         } 
       });
     } catch (error: any) {

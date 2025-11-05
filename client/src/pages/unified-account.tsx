@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import CheckInButton from "@/components/CheckInButton";
 import EventDetailModal from "@/components/EventDetailModal";
 import type { Event } from "@shared/schema";
@@ -29,6 +29,8 @@ import {
   Target,
   Plus,
   CreditCard,
+  Star,
+  Check,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
@@ -338,6 +340,13 @@ export default function UnifiedAccount() {
     queryKey: ["/api/account/players"],
   });
 
+  // Initialize selectedView from user's saved preference
+  useEffect(() => {
+    if (user?.defaultDashboardView) {
+      setSelectedView(user.defaultDashboardView);
+    }
+  }, [user]);
+
   // Fetch upcoming events
   const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
     queryKey: ["/api/events"],
@@ -364,6 +373,28 @@ export default function UnifiedAccount() {
 
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
+
+  const handleSetDefaultView = async () => {
+    try {
+      await apiRequest("PATCH", "/api/auth/user/preferences", {
+        defaultDashboardView: selectedView,
+      });
+      
+      toast({
+        title: "Default View Saved",
+        description: `Your default dashboard is now set to ${selectedView === "parent" ? "Parent Dashboard" : players.find((p: any) => p.id === selectedView)?.firstName + "'s Dashboard"}`,
+      });
+      
+      // Invalidate and refetch user data to update the UI
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    } catch (error) {
+      toast({
+        title: "Failed to save default",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -431,36 +462,75 @@ export default function UnifiedAccount() {
               <label className="text-sm font-medium text-gray-700 mb-2 block">
                 Switch View
               </label>
-              <Select 
-                value={selectedView} 
-                onValueChange={(value) => {
-                  if (value === "parent") {
-                    setSelectedView("parent");
-                  } else {
-                    // Navigate to player dashboard
-                    localStorage.setItem("selectedPlayerId", value);
-                    setLocation("/player-dashboard");
-                  }
-                }}
-              >
-                <SelectTrigger className="w-full sm:w-64" data-testid="select-view-switcher">
-                  <SelectValue placeholder="Select view" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="parent" data-testid="view-option-parent">
-                    Parent Dashboard
-                  </SelectItem>
-                  {players.map((player: any) => (
-                    <SelectItem 
-                      key={player.id} 
-                      value={player.id}
-                      data-testid={`view-option-player-${player.id}`}
-                    >
-                      {player.firstName} {player.lastName} - Player Dashboard
+              <div className="flex items-center gap-2">
+                <Select 
+                  value={selectedView} 
+                  onValueChange={setSelectedView}
+                >
+                  <SelectTrigger className="w-full sm:w-64" data-testid="select-view-switcher">
+                    <SelectValue placeholder="Select view" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="parent" data-testid="view-option-parent">
+                      <div className="flex items-center gap-2">
+                        Parent Dashboard
+                        {user?.defaultDashboardView === "parent" && (
+                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                        )}
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {players.map((player: any) => (
+                      <SelectItem 
+                        key={player.id} 
+                        value={player.id}
+                        data-testid={`view-option-player-${player.id}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {player.firstName} {player.lastName} - Player Dashboard
+                          {user?.defaultDashboardView === player.id && (
+                            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => {
+                    if (selectedView === "parent") {
+                      // Already on parent dashboard
+                      toast({
+                        title: "Already here!",
+                        description: "You're already on the Parent Dashboard",
+                      });
+                    } else {
+                      // Navigate to player dashboard
+                      localStorage.setItem("selectedPlayerId", selectedView);
+                      setLocation("/player-dashboard");
+                    }
+                  }}
+                  variant="default"
+                  size="icon"
+                  title="Go to selected dashboard"
+                  data-testid="button-go-to-dashboard"
+                >
+                  <ArrowLeft className="w-4 h-4 rotate-180" />
+                </Button>
+                <Button
+                  onClick={handleSetDefaultView}
+                  variant="outline"
+                  size="icon"
+                  title="Set as default view"
+                  data-testid="button-set-default-view"
+                  className={user?.defaultDashboardView === selectedView ? "border-yellow-500" : ""}
+                >
+                  {user?.defaultDashboardView === selectedView ? (
+                    <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                  ) : (
+                    <Star className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
           )}
 

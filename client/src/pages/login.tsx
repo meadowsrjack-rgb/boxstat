@@ -34,8 +34,21 @@ export default function LoginPage() {
           title: "Login Successful",
           description: "Welcome back!",
         });
+        
+        // Check for user's default dashboard preference
+        let redirectPath = "/account";
+        if (response.user?.defaultDashboardView) {
+          if (response.user.defaultDashboardView === "parent") {
+            redirectPath = "/unified-account";
+          } else {
+            // It's a player ID - set it and go to player dashboard
+            localStorage.setItem("selectedPlayerId", response.user.defaultDashboardView);
+            redirectPath = "/player-dashboard";
+          }
+        }
+        
         // Force a page reload to ensure auth state is updated
-        window.location.href = "/account";
+        window.location.href = redirectPath;
       } else {
         throw new Error(response.message || "Login failed");
       }

@@ -121,6 +121,9 @@ export interface User {
   // Status
   isActive: boolean;
   
+  // User Preferences
+  defaultDashboardView?: string; // "parent" or player ID for default landing page
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -196,6 +199,7 @@ export const users = pgTable("users", {
   videosCompleted: integer("videos_completed").default(0),
   yearsActive: integer("years_active").default(0),
   lastLogin: timestamp("last_login", { mode: 'string' }),
+  defaultDashboardView: varchar("default_dashboard_view"),
 }, (table) => [
   unique("users_email_unique").on(table.email),
 ]);

@@ -29,9 +29,21 @@ export default function MagicLinkLogin() {
           setStatus("success");
           setMessage(data.message);
           
-          // Redirect to account page after 1 second
+          // Check for user's default dashboard preference
+          let redirectPath = "/account";
+          if (data.user?.defaultDashboardView) {
+            if (data.user.defaultDashboardView === "parent") {
+              redirectPath = "/unified-account";
+            } else {
+              // It's a player ID - set it and go to player dashboard
+              localStorage.setItem("selectedPlayerId", data.user.defaultDashboardView);
+              redirectPath = "/player-dashboard";
+            }
+          }
+          
+          // Redirect to appropriate page after 1 second
           setTimeout(() => {
-            window.location.href = "/account";
+            window.location.href = redirectPath;
           }, 1000);
         } else {
           setStatus("error");

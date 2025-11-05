@@ -1847,8 +1847,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Deduplicate team and division IDs
       teamIds = [...new Set(teamIds.map(String))];
       divisionIds = [...new Set(divisionIds.map(String))];
+    } else if (role === 'coach') {
+      // Coach: Get all teams they're assigned to (as head coach or assistant)
+      const coachTeams = await storage.getTeamsByCoach(userId);
+      teamIds = coachTeams.map(team => team.id);
+      
+      // Also collect division IDs from those teams
+      for (const team of coachTeams) {
+        if (team.divisionId) divisionIds.push(team.divisionId);
+      }
+      
+      // Deduplicate
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
     } else {
-      // Regular user (player/coach): Use their own team/division
+      // Regular user (player): Use their own team/division
       const userProfile = await storage.getUser(userId);
       if (userProfile) {
         if (userProfile.teamId) teamIds = [userProfile.teamId];
@@ -1949,8 +1962,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Deduplicate team and division IDs
       teamIds = [...new Set(teamIds.map(String))];
       divisionIds = [...new Set(divisionIds.map(String))];
+    } else if (role === 'coach') {
+      // Coach: Get all teams they're assigned to (as head coach or assistant)
+      const coachTeams = await storage.getTeamsByCoach(userId);
+      teamIds = coachTeams.map(team => team.id);
+      
+      // Also collect division IDs from those teams
+      for (const team of coachTeams) {
+        if (team.divisionId) divisionIds.push(team.divisionId);
+      }
+      
+      // Deduplicate
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
     } else {
-      // Regular user (player/coach): Use their own team/division
+      // Regular user (player): Use their own team/division
       const userProfile = await storage.getUser(userId);
       if (userProfile) {
         if (userProfile.teamId) teamIds = [userProfile.teamId];

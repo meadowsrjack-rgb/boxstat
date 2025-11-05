@@ -22,14 +22,12 @@ import {
   Settings,
   Calendar,
   Trophy,
-  ArrowLeft,
   User,
   MapPin,
   Clock,
   Target,
   Plus,
   CreditCard,
-  Star,
   Check,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
@@ -217,12 +215,14 @@ function EnhancedPlayerCard({
   player, 
   payments,
   programs,
-  parentId
+  parentId,
+  onClick
 }: { 
   player: any; 
   payments?: Payment[];
   programs?: Program[];
   parentId?: string;
+  onClick?: () => void;
 }) {
   const { data: teamData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/team`],
@@ -242,8 +242,9 @@ function EnhancedPlayerCard({
 
   return (
     <Card
-      className="transition-shadow"
+      className="transition-shadow cursor-pointer hover:shadow-lg"
       data-testid={`player-card-${player.id}`}
+      onClick={onClick}
     >
       <CardContent className="p-6">
         {/* Header with Avatar and Status */}
@@ -312,9 +313,6 @@ export default function UnifiedAccount() {
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  
-  // View selector state (parent or player dashboard)
-  const [selectedView, setSelectedView] = useState<string>("parent");
 
   // Check for payment success in URL
   useEffect(() => {
@@ -339,13 +337,6 @@ export default function UnifiedAccount() {
   const { data: players = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/account/players"],
   });
-
-  // Initialize selectedView from user's saved preference
-  useEffect(() => {
-    if (user?.defaultDashboardView) {
-      setSelectedView(user.defaultDashboardView);
-    }
-  }, [user]);
 
   // Fetch upcoming events
   const { data: events = [], isLoading: eventsLoading } = useQuery<any[]>({
@@ -374,26 +365,9 @@ export default function UnifiedAccount() {
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
 
-  const handleSetDefaultView = async () => {
-    try {
-      await apiRequest("PATCH", "/api/auth/user/preferences", {
-        defaultDashboardView: selectedView,
-      });
-      
-      toast({
-        title: "Default View Saved",
-        description: `Your default dashboard is now set to ${selectedView === "parent" ? "Parent Dashboard" : players.find((p: any) => p.id === selectedView)?.firstName + "'s Dashboard"}`,
-      });
-      
-      // Invalidate and refetch user data to update the UI
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-    } catch (error) {
-      toast({
-        title: "Failed to save default",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    }
+  const handlePlayerCardClick = (playerId: string) => {
+    localStorage.setItem("selectedPlayerId", playerId);
+    setLocation("/player-dashboard");
   };
 
   const handleSignOut = async () => {
@@ -455,84 +429,6 @@ export default function UnifiedAccount() {
               )}
             </div>
           </div>
-
-          {/* View Selector Dropdown */}
-          {players.length > 0 && (
-            <div className="mt-6">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Switch View
-              </label>
-              <div className="flex items-center gap-2">
-                <Select 
-                  value={selectedView} 
-                  onValueChange={setSelectedView}
-                >
-                  <SelectTrigger className="w-full sm:w-64" data-testid="select-view-switcher">
-                    <SelectValue placeholder="Select view" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="parent" data-testid="view-option-parent">
-                      <div className="flex items-center gap-2">
-                        Parent Dashboard
-                        {user?.defaultDashboardView === "parent" && (
-                          <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                        )}
-                      </div>
-                    </SelectItem>
-                    {players.map((player: any) => (
-                      <SelectItem 
-                        key={player.id} 
-                        value={player.id}
-                        data-testid={`view-option-player-${player.id}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {player.firstName} {player.lastName} - Player Dashboard
-                          {user?.defaultDashboardView === player.id && (
-                            <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={() => {
-                    if (selectedView === "parent") {
-                      // Already on parent dashboard
-                      toast({
-                        title: "Already here!",
-                        description: "You're already on the Parent Dashboard",
-                      });
-                    } else {
-                      // Navigate to player dashboard
-                      localStorage.setItem("selectedPlayerId", selectedView);
-                      setLocation("/player-dashboard");
-                    }
-                  }}
-                  variant="default"
-                  size="icon"
-                  title="Go to selected dashboard"
-                  data-testid="button-go-to-dashboard"
-                >
-                  <ArrowLeft className="w-4 h-4 rotate-180" />
-                </Button>
-                <Button
-                  onClick={handleSetDefaultView}
-                  variant="outline"
-                  size="icon"
-                  title="Set as default view"
-                  data-testid="button-set-default-view"
-                  className={user?.defaultDashboardView === selectedView ? "border-yellow-500" : ""}
-                >
-                  {user?.defaultDashboardView === selectedView ? (
-                    <Star className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-                  ) : (
-                    <Star className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
 
         </div>
       </div>
@@ -605,6 +501,7 @@ export default function UnifiedAccount() {
                       payments={payments}
                       programs={programs}
                       parentId={user?.id}
+                      onClick={() => handlePlayerCardClick(player.id)}
                     />
                   ))}
                 </div>

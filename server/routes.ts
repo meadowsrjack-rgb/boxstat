@@ -32,6 +32,7 @@ import {
   insertUserAwardRecordSchema,
 } from "@shared/schema";
 import { evaluateAwardsForUser } from "./utils/awardEngine";
+import { populateAwards } from "./utils/populateAwards";
 
 let wss: WebSocketServer | null = null;
 
@@ -42,10 +43,14 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 // Configure multer for file uploads
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+const awardImageDir = path.join(process.cwd(), 'client', 'public', 'trophiesbadges');
 
-// Ensure upload directory exists
+// Ensure upload directories exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
+}
+if (!fs.existsSync(awardImageDir)) {
+  fs.mkdirSync(awardImageDir, { recursive: true });
 }
 
 const multerStorage = multer.diskStorage({
@@ -58,8 +63,34 @@ const multerStorage = multer.diskStorage({
   }
 });
 
+const awardImageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, awardImageDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'award-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
 const upload = multer({ 
   storage: multerStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: function (req, file, cb) {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'));
+    }
+  }
+});
+
+const uploadAwardImage = multer({ 
+  storage: awardImageStorage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: function (req, file, cb) {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
@@ -102,7 +133,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Type assertion to access the method
     await (storage as any).initializeTestUsers?.();
     await (storage as any).initializeFacilities?.();
-    await (storage as any).initializeAwardDefinitions?.();
+    
+    // Populate all 99 awards from the registry
+    await populateAwards(storage, "default-org");
   }
   
   // =============================================
@@ -1450,6 +1483,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       res.status(500).json({ error: 'Failed to upload photo', message: error.message });
+    }
+  });
+
+  // Upload award image
+  app.post('/api/upload/award-image', isAuthenticated, uploadAwardImage.single('image'), async (req: any, res) => {
+    const uploadedFilePath = req.file ? path.join(awardImageDir, req.file.filename) : null;
+    
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Only admins can upload award images
+      if (req.user.role !== 'admin') {
+        // Delete uploaded file on authorization failure
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        return res.status(403).json({ error: 'Only admins can upload award images' });
+      }
+      
+      const filename = req.file.filename;
+      const imageUrl = `/trophiesbadges/${filename}`;
+      
+      res.json({ 
+        success: true, 
+        imageUrl,
+        message: 'Award image uploaded successfully' 
+      });
+    } catch (error: any) {
+      console.error('Award image upload error:', error);
+      // Delete uploaded file on any error
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        try {
+          fs.unlinkSync(uploadedFilePath);
+        } catch (unlinkError) {
+          console.error('Failed to delete uploaded file:', unlinkError);
+        }
+      }
+      res.status(500).json({ error: 'Failed to upload award image', message: error.message });
     }
   });
 

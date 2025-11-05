@@ -3530,6 +3530,9 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useDragScroll();
 
   // Fetch user awards for recipients view
@@ -3704,8 +3707,51 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     return userAwards.filter((ua: any) => ua.awardId === awardId).length;
   };
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload/award-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const data = await response.json();
+      
+      // Update the imageUrl field with the uploaded path
+      form.setValue('imageUrl', data.imageUrl);
+      setImagePreview(data.imageUrl);
+      
+      toast({
+        title: "Image uploaded successfully",
+        description: "The award image has been uploaded and will be saved when you submit the form.",
+      });
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      toast({
+        title: "Failed to upload image",
+        description: error.message || "An error occurred while uploading the image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const openEditDialog = (award: any) => {
     setEditingAward(award);
+    setImagePreview(award.imageUrl || "");
     
     form.reset({
       name: award.name || "",
@@ -3911,6 +3957,9 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                               <SelectItem value="streak">Streak</SelectItem>
                               <SelectItem value="boolean">Boolean</SelectItem>
                               <SelectItem value="manual">Manual</SelectItem>
+                              <SelectItem value="location_away">Location Away</SelectItem>
+                              <SelectItem value="online_training">Online Training</SelectItem>
+                              <SelectItem value="completeAll">Complete All</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -3984,10 +4033,66 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                         <FormControl>
                           <Input {...field} placeholder="https://example.com/trophy.png" data-testid="input-award-image-url" />
                         </FormControl>
+                        <FormDescription>
+                          Enter a URL or upload an image below
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  
+                  {/* Image Upload */}
+                  <div className="space-y-3">
+                    <Label>Upload Image</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="cursor-pointer"
+                        data-testid="input-award-image-file"
+                      />
+                      {uploadingImage && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                          Uploading...
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Image Preview */}
+                    {(imagePreview || form.watch('imageUrl')) && (
+                      <div className="mt-3">
+                        <Label className="mb-2 block">Preview</Label>
+                        <div className="flex items-center gap-4">
+                          <img 
+                            src={imagePreview || form.watch('imageUrl')} 
+                            alt="Award preview" 
+                            className="w-24 h-24 object-contain border rounded p-2"
+                            data-testid="img-award-preview"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              form.setValue('imageUrl', '');
+                              setImagePreview('');
+                              if (fileInputRef.current) {
+                                fileInputRef.current.value = '';
+                              }
+                            }}
+                            data-testid="button-clear-image"
+                          >
+                            Clear Image
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="active"
@@ -4099,6 +4204,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Image</TableHead>
                 <TableHead>Tier</TableHead>
                 <TableHead>Prestige</TableHead>
                 <TableHead>Class</TableHead>
@@ -4112,7 +4218,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             <TableBody>
               {filteredAwards.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
                     No awards found
                   </TableCell>
                 </TableRow>
@@ -4124,6 +4230,22 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     data-testid={`row-award-${award.id}`}
                   >
                     <TableCell className="font-medium">{award.name}</TableCell>
+                    <TableCell>
+                      {award.imageUrl ? (
+                        <img 
+                          src={award.imageUrl} 
+                          alt={award.name} 
+                          className="w-12 h-12 object-contain"
+                          data-testid={`img-award-${award.id}`}
+                        />
+                      ) : (
+                        award.tier === 'Trophy' ? (
+                          <Trophy className="w-12 h-12 text-gray-300" data-testid={`icon-trophy-${award.id}`} />
+                        ) : (
+                          <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />
+                        )
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{award.tier}</Badge>
                     </TableCell>

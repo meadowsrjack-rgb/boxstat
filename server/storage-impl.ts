@@ -3410,6 +3410,7 @@ class DatabaseStorage implements IStorage {
       isActive: Boolean(dbUser.isActive),
       createdAt: new Date(dbUser.createdAt),
       updatedAt: new Date(dbUser.updatedAt),
+      deletedAt: dbUser.deletedAt ? new Date(dbUser.deletedAt) : undefined,
     };
   }
 

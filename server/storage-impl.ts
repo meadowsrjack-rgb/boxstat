@@ -2013,7 +2013,12 @@ class DatabaseStorage implements IStorage {
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const results = await db.select().from(schema.users).where(eq(schema.users.id, id));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.id, id),
+        eq(schema.users.isActive, true)
+      )
+    );
     if (results.length === 0) return undefined;
     
     const user = results[0];
@@ -2021,7 +2026,12 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string, organizationId: string): Promise<User | undefined> {
-    const results = await db.select().from(schema.users).where(eq(schema.users.email, email));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.email, email),
+        eq(schema.users.isActive, true)
+      )
+    );
     if (results.length === 0) return undefined;
     
     const user = results[0];
@@ -2029,18 +2039,28 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    const results = await db.select().from(schema.users);
+    const results = await db.select().from(schema.users).where(eq(schema.users.isActive, true));
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByTeam(teamId: string): Promise<User[]> {
     const teamIdNum = parseInt(teamId);
-    const results = await db.select().from(schema.users).where(eq(schema.users.teamId, teamIdNum));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.teamId, teamIdNum),
+        eq(schema.users.isActive, true)
+      )
+    );
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
-    const results = await db.select().from(schema.users).where(eq(schema.users.role, role));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.role, role),
+        eq(schema.users.isActive, true)
+      )
+    );
     return results.map(user => this.mapDbUserToUser(user));
   }
 

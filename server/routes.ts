@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Find user by magic link token
       const allUsers = await storage.getUsersByOrganization("default-org");
-      const user = allUsers.find(u => u.magicLinkToken === token);
+      const user = allUsers.find(u => u.magicLinkToken === token && u.isActive !== false);
       
       if (!user) {
         return res.status(404).json({ success: false, message: "Invalid magic link" });
@@ -1515,7 +1515,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
     
-    await storage.deleteUser(req.params.id);
+    // Soft delete: set isActive to false and clear credentials
+    await storage.updateUser(req.params.id, {
+      isActive: false,
+      password: null,
+      verificationToken: null,
+      verificationExpiry: null,
+      magicLinkToken: null,
+      magicLinkExpiry: null,
+    });
     res.json({ success: true });
   });
   

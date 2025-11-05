@@ -16,19 +16,26 @@ export async function populateAwards(storage: IStorage, organizationId: string) 
 
   for (const award of AWARDS) {
     try {
-      // Check if this specific award already exists by name
-      const exists = existingAwards.find(a => a.name === award.name);
-      if (exists) {
-        skipped++;
-        continue;
-      }
-
       // Map iconName to image URL (images are in /trophiesbadges/ folder)
-      // Remove 'badge-' prefix if present, since actual files don't have it
-      const fileName = award.iconName.replace(/^badge-/, '');
+      // Remove 'badge-' or 'trophy-' prefix from iconName to get the actual filename
+      const fileName = award.iconName.replace(/^(badge|trophy)-/, '');
       const imageUrl = fileName.endsWith('.png') 
         ? `/trophiesbadges/${fileName}` 
         : `/trophiesbadges/${fileName}.png`;
+
+      // Check if this specific award already exists by name
+      const exists = existingAwards.find(a => a.name === award.name);
+      if (exists) {
+        // Update the image URL if it has changed
+        if (exists.imageUrl !== imageUrl) {
+          await storage.updateAwardDefinition(exists.id, {
+            imageUrl: imageUrl
+          });
+          console.log(`  📝 Updated image URL for "${award.name}": ${imageUrl}`);
+        }
+        skipped++;
+        continue;
+      }
 
       // Map award tier to database format
       const tier = award.kind; // "Trophy" or "Badge"

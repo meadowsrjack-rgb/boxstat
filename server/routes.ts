@@ -1871,7 +1871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { teamId } = req.params;
       const { playerId } = req.body;
-      const { role } = req.user;
+      const { role, organizationId } = req.user;
 
       // Only coaches and admins can remove players
       if (role !== 'coach' && role !== 'admin') {
@@ -1894,12 +1894,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Player not found' });
       }
 
-      // Verify the player is on this team (teamId is stored as integer in DB)
-      if (player.teamId !== teamIdNum) {
-        return res.status(400).json({ message: 'Player is not on this team' });
+      // Security check: ensure player is in the same organization
+      if (player.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot remove players from other organizations' });
       }
 
       // Update the player's teamId to null (remove from team)
+      // We don't check if player.teamId === teamIdNum because:
+      // 1. The roster display might include players from Notion who don't have teamId set
+      // 2. Setting teamId to null is a safe idempotent operation
       const updatedPlayer = await storage.updateUser(playerId, { teamId: null } as any);
       
       console.log(`Removed player ${playerId} from team ${teamId}`);
@@ -2756,6 +2759,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // User Awards (legacy endpoint - kept for backwards compatibility)
+  // Alias endpoint for frontend compatibility: /api/users/:userId/awards
+  app.get('/api/users/:userId/awards', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: currentUserId, role, organizationId } = req.user;
+      
+      // Authorization: users can view their own awards, admins/coaches can view any user's awards
+      if (userId !== currentUserId && role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Not authorized to view these awards' });
+      }
+      
+      // Verify the target user exists and belongs to the same organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Not authorized to view awards from other organizations' });
+      }
+      
+      const userAwardRecords = await storage.getUserAwardRecords(userId);
+      
+      // Return summary with counts for frontend display
+      const badges = userAwardRecords.filter((a: any) => a.category === 'badge');
+      const trophies = userAwardRecords.filter((a: any) => a.category === 'trophy');
+      
+      res.json({
+        totalBadges: badges.length,
+        totalTrophies: trophies.length,
+        badges,
+        trophies,
+        allAwards: userAwardRecords,
+      });
+    } catch (error: any) {
+      console.error('Error fetching user awards:', error);
+      res.status(500).json({ error: 'Failed to fetch user awards', message: error.message });
+    }
+  });
+
+  // Badges endpoint
+  app.get('/api/users/:userId/badges', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: currentUserId, role, organizationId } = req.user;
+      
+      if (userId !== currentUserId && role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.organizationId !== organizationId) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userAwardRecords = await storage.getUserAwardRecords(userId);
+      const badges = userAwardRecords.filter((a: any) => a.category === 'badge');
+      
+      res.json(badges);
+    } catch (error: any) {
+      console.error('Error fetching badges:', error);
+      res.status(500).json({ error: 'Failed to fetch badges', message: error.message });
+    }
+  });
+
+  // Trophies endpoint
+  app.get('/api/users/:userId/trophies', isAuthenticated, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: currentUserId, role, organizationId } = req.user;
+      
+      if (userId !== currentUserId && role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+      
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser || targetUser.organizationId !== organizationId) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      const userAwardRecords = await storage.getUserAwardRecords(userId);
+      const trophies = userAwardRecords.filter((a: any) => a.category === 'trophy');
+      
+      res.json(trophies);
+    } catch (error: any) {
+      console.error('Error fetching trophies:', error);
+      res.status(500).json({ error: 'Failed to fetch trophies', message: error.message });
+    }
+  });
+
   app.get('/api/user-awards/:userId', isAuthenticated, async (req: any, res) => {
     const userAwards = await storage.getUserAwards(req.params.userId);
     res.json(userAwards);
@@ -3772,6 +3865,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Coach award endpoint (alias for /api/user-awards with different parameter naming)
+  app.post('/api/coach/award', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role, organizationId, id: awardedById } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can award users' });
+      }
+      
+      // Map frontend parameters to backend format
+      const { playerId, awardId, category, year, notes } = req.body;
+      const userId = playerId; // Frontend sends playerId, backend expects userId
+      
+      if (!userId || !awardId) {
+        return res.status(400).json({ error: 'playerId and awardId are required' });
+      }
+      
+      // Verify the target user exists and belongs to the same organization
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (targetUser.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot award users from other organizations' });
+      }
+      
+      // Verify the award definition exists
+      const awardDefinition = await storage.getAwardDefinition(awardId);
+      if (!awardDefinition) {
+        return res.status(404).json({ error: 'Award definition not found' });
+      }
+      
+      // Check if user already has this award for the same year
+      const currentYear = year || new Date().getFullYear();
+      const hasAward = await storage.checkUserHasAward(userId, awardId, currentYear);
+      if (hasAward) {
+        return res.status(400).json({ error: 'User already has this award for the specified year' });
+      }
+      
+      const userAwardData = insertUserAwardRecordSchema.parse({
+        userId,
+        awardId,
+        awardedBy: awardedById,
+        year: currentYear,
+        notes: notes || null,
+        visible: true,
+      });
+      
+      const userAward = await storage.createUserAward(userAwardData);
+      
+      // Trigger award evaluation to update user's cached awards array
+      await evaluateAwardsForUser(userId, storage);
+      
+      res.status(201).json(userAward);
+    } catch (error: any) {
+      console.error('Error awarding user:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          error: 'Invalid user award data', 
+          details: error.errors 
+        });
+      }
+      res.status(400).json({ error: 'Failed to award user', message: error.message });
+    }
+  });
+
   // Manually award to user (admin/coach only)
   app.post('/api/user-awards', isAuthenticated, async (req: any, res) => {
     try {

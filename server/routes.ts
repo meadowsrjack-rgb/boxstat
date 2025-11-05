@@ -2230,7 +2230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Determine if it's a practice or game and update accordingly
             const eventType = event.eventType?.toLowerCase() || '';
-            if (eventType.includes('practice') || eventType.includes('skills assessment')) {
+            if (eventType.includes('practice') || eventType.includes('skills session')) {
               trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
             } else if (eventType.includes('game') || eventType.includes('tournament')) {
               trackingUpdates.totalGames = (user.totalGames || 0) + 1;
@@ -2298,7 +2298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Determine if it's a practice or game and update accordingly
             const eventType = event.eventType?.toLowerCase() || '';
-            if (eventType.includes('practice') || eventType.includes('skills assessment')) {
+            if (eventType.includes('practice') || eventType.includes('skills session')) {
               trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
             } else if (eventType.includes('game') || eventType.includes('tournament')) {
               trackingUpdates.totalGames = (user.totalGames || 0) + 1;

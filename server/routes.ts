@@ -1820,6 +1820,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch team roster' });
     }
   });
+
+  // Assign a player to a team
+  app.post('/api/teams/:teamId/assign-player', isAuthenticated, async (req: any, res) => {
+    try {
+      const { teamId } = req.params;
+      const { playerId } = req.body;
+      const { role } = req.user;
+
+      // Only coaches and admins can assign players
+      if (role !== 'coach' && role !== 'admin') {
+        return res.status(403).json({ message: 'Only coaches and admins can assign players' });
+      }
+
+      if (!playerId) {
+        return res.status(400).json({ message: 'playerId is required' });
+      }
+
+      // Validate teamId is a valid integer
+      const teamIdNum = parseInt(teamId);
+      if (!Number.isInteger(teamIdNum) || teamIdNum <= 0) {
+        return res.status(400).json({ message: 'Invalid teamId' });
+      }
+
+      // Get the player
+      const player = await storage.getUser(playerId);
+      if (!player) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
+
+      // Get the team to verify it exists
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+
+      // Update the player's teamId (teamId is stored as integer in DB)
+      const updatedPlayer = await storage.updateUser(playerId, { teamId: teamIdNum } as any);
+      
+      console.log(`Assigned player ${playerId} to team ${teamId}`);
+      res.json({ success: true, player: updatedPlayer });
+    } catch (error: any) {
+      console.error('Error assigning player to team:', error);
+      res.status(500).json({ message: 'Failed to assign player to team' });
+    }
+  });
+
+  // Remove a player from a team
+  app.post('/api/teams/:teamId/remove-player', isAuthenticated, async (req: any, res) => {
+    try {
+      const { teamId } = req.params;
+      const { playerId } = req.body;
+      const { role } = req.user;
+
+      // Only coaches and admins can remove players
+      if (role !== 'coach' && role !== 'admin') {
+        return res.status(403).json({ message: 'Only coaches and admins can remove players' });
+      }
+
+      if (!playerId) {
+        return res.status(400).json({ message: 'playerId is required' });
+      }
+
+      // Validate teamId is a valid integer
+      const teamIdNum = parseInt(teamId);
+      if (!Number.isInteger(teamIdNum) || teamIdNum <= 0) {
+        return res.status(400).json({ message: 'Invalid teamId' });
+      }
+
+      // Get the player
+      const player = await storage.getUser(playerId);
+      if (!player) {
+        return res.status(404).json({ message: 'Player not found' });
+      }
+
+      // Verify the player is on this team (teamId is stored as integer in DB)
+      if (player.teamId !== teamIdNum) {
+        return res.status(400).json({ message: 'Player is not on this team' });
+      }
+
+      // Update the player's teamId to null (remove from team)
+      const updatedPlayer = await storage.updateUser(playerId, { teamId: null } as any);
+      
+      console.log(`Removed player ${playerId} from team ${teamId}`);
+      res.json({ success: true, player: updatedPlayer });
+    } catch (error: any) {
+      console.error('Error removing player from team:', error);
+      res.status(500).json({ message: 'Failed to remove player from team' });
+    }
+  });
   
   // Get teams for a specific coach
   app.get('/api/coaches/:coachId/teams', isAuthenticated, async (req: any, res) => {

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -735,6 +736,8 @@ function RosterTab({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [playerToRemove, setPlayerToRemove] = useState<{id: string; name: string} | null>(null);
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -747,19 +750,29 @@ function RosterTab({
     },
   });
 
-  // Search players
+  // Search players (searches all players in users table)
   const searchPlayers = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
       return;
     }
     try {
-      const res = await fetch(`/api/coach/players/search?q=${encodeURIComponent(query)}`, {
+      const res = await fetch(`/api/search/players?q=${encodeURIComponent(query)}`, {
         credentials: "include",
       });
       if (res.ok) {
-        const results = await res.json();
-        setSearchResults(results);
+        const data = await res.json();
+        // Transform the response format to match what the UI expects
+        const players = data.players?.map((p: any) => ({
+          id: p.id,
+          firstName: p.first_name,
+          lastName: p.last_name,
+          profileImageUrl: p.profile_image_url,
+          teamName: p.team_name,
+          appUserId: p.id,
+          hasAppProfile: true, // Players from search are app users
+        })) || [];
+        setSearchResults(players);
       }
     } catch (error) {
       console.error("Error searching players:", error);
@@ -972,8 +985,19 @@ function RosterTab({
                 {searchResults.map((player) => (
                   <div
                     key={player.id}
-                    className="p-3 flex items-center justify-between hover:bg-gray-50"
+                    className="p-3 flex items-center justify-between hover:bg-gray-50 cursor-pointer transition-colors"
                     data-testid={`search-result-${player.id}`}
+                    onClick={() => {
+                      if (player.hasAppProfile && player.appUserId) {
+                        assignPlayerMutation.mutate(player.appUserId);
+                      } else {
+                        toast({
+                          title: "Cannot Assign",
+                          description: "Player must have an app account to be assigned to a team.",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar className="h-8 w-8">
@@ -999,7 +1023,8 @@ function RosterTab({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent triggering the parent div onClick
                         if (player.hasAppProfile && player.appUserId) {
                           assignPlayerMutation.mutate(player.appUserId);
                         } else {
@@ -1110,9 +1135,8 @@ function RosterTab({
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm(`Remove ${p.name} from this team?`)) {
-                                removePlayerMutation.mutate(p.appAccountId);
-                              }
+                              setPlayerToRemove({ id: p.appAccountId, name: p.name });
+                              setRemoveDialogOpen(true);
                             }}
                             disabled={removePlayerMutation.isPending}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -1138,6 +1162,34 @@ function RosterTab({
         <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
         <TeamChat teamId={selectedTeamId} />
       </div>
+
+      {/* Remove Player Confirmation Dialog */}
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
+        <AlertDialogContent data-testid="dialog-remove-player-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Player from Team?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <strong>{playerToRemove?.name}</strong> from this team? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-remove">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (playerToRemove) {
+                  removePlayerMutation.mutate(playerToRemove.id);
+                  setRemoveDialogOpen(false);
+                  setPlayerToRemove(null);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-remove"
+            >
+              Remove Player
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

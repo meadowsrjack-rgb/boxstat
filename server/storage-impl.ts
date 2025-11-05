@@ -2138,7 +2138,36 @@ class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<void> {
-    await db.delete(schema.users).where(eq(schema.users.id, id));
+    const now = new Date().toISOString();
+    
+    // Soft delete the user by setting deletedAt timestamp
+    await db.update(schema.users)
+      .set({ 
+        deletedAt: now,
+        isActive: false 
+      })
+      .where(eq(schema.users.id, id));
+    
+    // Handle related data
+    // 1. Soft delete all children if this is a parent/guardian
+    await db.update(schema.users)
+      .set({ 
+        deletedAt: now,
+        isActive: false 
+      })
+      .where(eq(schema.users.guardianId, id));
+    
+    // 2. Clear guardian references if this user is a guardian being deleted
+    // (This handles edge cases where children might not be auto-deleted)
+    await db.update(schema.users)
+      .set({ guardianId: null })
+      .where(and(
+        eq(schema.users.guardianId, id),
+        sql`deleted_at IS NULL`
+      ));
+    
+    // Note: We intentionally keep payment records, team memberships, 
+    // RSVPs, and awards for audit/historical purposes
   }
 
   // Team operations

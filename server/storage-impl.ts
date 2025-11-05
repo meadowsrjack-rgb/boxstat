@@ -765,16 +765,20 @@ class MemStorage implements IStorage {
   }
   
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.organizationId === organizationId);
+    return Array.from(this.users.values()).filter(
+      user => user.organizationId === organizationId && !user.deletedAt
+    );
   }
   
   async getUsersByTeam(teamId: string): Promise<User[]> {
-    return Array.from(this.users.values()).filter(user => user.teamId === teamId);
+    return Array.from(this.users.values()).filter(
+      user => user.teamId === teamId && !user.deletedAt
+    );
   }
   
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
     return Array.from(this.users.values()).filter(
-      user => user.organizationId === organizationId && user.role === role
+      user => user.organizationId === organizationId && user.role === role && !user.deletedAt
     );
   }
   
@@ -2029,18 +2033,30 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    const results = await db.select().from(schema.users);
+    const results = await db.select().from(schema.users).where(
+      sql`deleted_at IS NULL`
+    );
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByTeam(teamId: string): Promise<User[]> {
     const teamIdNum = parseInt(teamId);
-    const results = await db.select().from(schema.users).where(eq(schema.users.teamId, teamIdNum));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.teamId, teamIdNum),
+        sql`deleted_at IS NULL`
+      )
+    );
     return results.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
-    const results = await db.select().from(schema.users).where(eq(schema.users.role, role));
+    const results = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.role, role),
+        sql`deleted_at IS NULL`
+      )
+    );
     return results.map(user => this.mapDbUserToUser(user));
   }
 

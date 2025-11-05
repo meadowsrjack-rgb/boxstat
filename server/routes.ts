@@ -1793,6 +1793,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EVENT ROUTES
   // =============================================
   
+  // Helper function to get team and division IDs for a user based on their role
+  async function getUserEventScope(userId: string, role: string, organizationId: string, childProfileId?: string) {
+    let teamIds: (string | number)[] = [];
+    let divisionIds: (string | number)[] = [];
+    let targetUserId = userId;
+    
+    if (childProfileId) {
+      // Player Mode: Viewing as a specific child - only show that child's events
+      const childProfile = await storage.getUser(childProfileId);
+      if (childProfile) {
+        if (childProfile.teamId) teamIds = [childProfile.teamId];
+        if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
+        targetUserId = childProfileId;
+      }
+    } else if (role === 'parent') {
+      // Parent Mode: Show events from ALL children's teams + parent's own events
+      const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
+      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
+      
+      // Collect all team IDs and division IDs from children
+      for (const child of childProfiles) {
+        if (child.teamId) teamIds.push(child.teamId);
+        if (child.divisionId) divisionIds.push(child.divisionId);
+      }
+      
+      // Also include parent's own team/division if they have one
+      const userProfile = await storage.getUser(userId);
+      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
+      if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
+      
+      // Deduplicate team and division IDs
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
+    } else if (role === 'coach') {
+      // Coach: Get all teams they're assigned to (as head coach or assistant)
+      const coachTeams = await storage.getTeamsByCoach(userId);
+      teamIds = coachTeams.map(team => team.id);
+      
+      // Also collect division IDs from those teams
+      for (const team of coachTeams) {
+        if (team.divisionId) divisionIds.push(team.divisionId);
+      }
+      
+      // Deduplicate
+      teamIds = [...new Set(teamIds.map(String))];
+      divisionIds = [...new Set(divisionIds.map(String))];
+    } else {
+      // Regular user (player): Use their own team/division
+      const userProfile = await storage.getUser(userId);
+      if (userProfile) {
+        if (userProfile.teamId) teamIds = [userProfile.teamId];
+        if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
+      }
+    }
+    
+    return { teamIds, divisionIds, targetUserId };
+  }
+  
+  // Helper function to filter events based on visibility and assignment
+  function filterEventsByScope(
+    events: any[],
+    role: string,
+    teamIds: (string | number)[],
+    divisionIds: (string | number)[],
+    targetUserId: string,
+    debug = false
+  ) {
+    return events.filter((event: any) => {
+      const visibility = event.visibility || {};
+      const assignTo = event.assignTo || {};
+      
+      if (debug) {
+        console.log(`  📅 Event "${event.title}" (ID: ${event.id}) - assignTo: ${JSON.stringify(assignTo)}, visibility: ${JSON.stringify(visibility)}`);
+      }
+      
+      // Check role-based visibility
+      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
+        if (debug) console.log(`    ✅ MATCH: Role "${role}"`);
+        return true;
+      }
+      
+      // Check team-based visibility (check all team IDs)
+      for (const teamId of teamIds) {
+        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
+          if (debug) console.log(`    ✅ MATCH: Team ${teamId}`);
+          return true;
+        }
+      }
+      
+      // Check division-based visibility (check all division IDs)
+      for (const divisionId of divisionIds) {
+        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
+          if (debug) console.log(`    ✅ MATCH: Division ${divisionId}`);
+          return true;
+        }
+      }
+      
+      // Check user-specific assignment
+      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
+        if (debug) console.log(`    ✅ MATCH: User ${targetUserId}`);
+        return true;
+      }
+      
+      // Event doesn't match any targeting criteria for this user
+      if (debug) console.log(`    ❌ NO MATCH`);
+      return false;
+    });
+  }
+  
   app.get('/api/events', isAuthenticated, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     const { childProfileId } = req.query;
@@ -1815,104 +1924,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json([]);
     }
     
-    // Determine whose team/division to filter by
-    let teamIds: (string | number)[] = [];
-    let divisionIds: (string | number)[] = [];
-    let targetUserId = userId;
-    
-    if (childProfileId) {
-      // Player Mode: Viewing as a specific child - only show that child's events
-      const childProfile = await storage.getUser(childProfileId as string);
-      if (childProfile) {
-        if (childProfile.teamId) teamIds = [childProfile.teamId];
-        if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
-        targetUserId = childProfileId as string;
-      }
-    } else if (role === 'parent') {
-      // Parent Mode: Show events from ALL children's teams + parent's own events
-      const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
-      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
-      
-      // Collect all team IDs and division IDs from children
-      for (const child of childProfiles) {
-        if (child.teamId) teamIds.push(child.teamId);
-        if (child.divisionId) divisionIds.push(child.divisionId);
-      }
-      
-      // Also include parent's own team/division if they have one
-      const userProfile = await storage.getUser(userId);
-      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
-      if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
-      
-      // Deduplicate team and division IDs
-      teamIds = [...new Set(teamIds.map(String))];
-      divisionIds = [...new Set(divisionIds.map(String))];
-    } else if (role === 'coach') {
-      // Coach: Get all teams they're assigned to (as head coach or assistant)
-      const coachTeams = await storage.getTeamsByCoach(userId);
-      teamIds = coachTeams.map(team => team.id);
-      
-      // Also collect division IDs from those teams
-      for (const team of coachTeams) {
-        if (team.divisionId) divisionIds.push(team.divisionId);
-      }
-      
-      // Deduplicate
-      teamIds = [...new Set(teamIds.map(String))];
-      divisionIds = [...new Set(divisionIds.map(String))];
-    } else {
-      // Regular user (player): Use their own team/division
-      const userProfile = await storage.getUser(userId);
-      if (userProfile) {
-        if (userProfile.teamId) teamIds = [userProfile.teamId];
-        if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
-      }
-    }
+    // Get user's event scope (teams, divisions, target user ID)
+    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+      userId,
+      role,
+      organizationId,
+      childProfileId as string | undefined
+    );
     
     console.log('  teamIds collected:', teamIds);
     console.log('  divisionIds collected:', divisionIds);
     console.log('  targetUserId:', targetUserId);
     console.log('  Total events to filter:', allEvents.length);
     
-    // Filter events based on role, teams, and divisions
-    const filteredEvents = allEvents.filter((event: any) => {
-      const visibility = event.visibility || {};
-      const assignTo = event.assignTo || {};
-      
-      console.log(`  📅 Event "${event.title}" (ID: ${event.id}) - assignTo: ${JSON.stringify(assignTo)}, visibility: ${JSON.stringify(visibility)}`);
-      
-      // Check role-based visibility
-      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
-        console.log(`    ✅ MATCH: Role "${role}"`);
-        return true;
-      }
-      
-      // Check team-based visibility (check all team IDs)
-      for (const teamId of teamIds) {
-        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
-          console.log(`    ✅ MATCH: Team ${teamId}`);
-          return true;
-        }
-      }
-      
-      // Check division-based visibility (check all division IDs)
-      for (const divisionId of divisionIds) {
-        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
-          console.log(`    ✅ MATCH: Division ${divisionId}`);
-          return true;
-        }
-      }
-      
-      // Check user-specific assignment
-      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
-        console.log(`    ✅ MATCH: User ${targetUserId}`);
-        return true;
-      }
-      
-      // Event doesn't match any targeting criteria for this user
-      console.log(`    ❌ NO MATCH`);
-      return false;
-    });
+    // Filter events using shared helper
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, true);
     
     console.log('  Filtered result:', filteredEvents.length, 'events shown');
     console.log('🔍 EVENT FILTERING DEBUG - End\n');
@@ -1930,92 +1956,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Determine whose team/division to filter by
-    let teamIds: (string | number)[] = [];
-    let divisionIds: (string | number)[] = [];
-    let targetUserId = userId;
+    // Get user's event scope (teams, divisions, target user ID)
+    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+      userId,
+      role,
+      organizationId,
+      childProfileId as string | undefined
+    );
     
-    if (childProfileId) {
-      // Player Mode: Viewing as a specific child - only show that child's events
-      const childProfile = await storage.getUser(childProfileId as string);
-      if (childProfile) {
-        if (childProfile.teamId) teamIds = [childProfile.teamId];
-        if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
-        targetUserId = childProfileId as string;
-      }
-    } else if (role === 'parent') {
-      // Parent Mode: Show events from ALL children's teams + parent's own events
-      const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
-      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
-      
-      // Collect all team IDs and division IDs from children
-      for (const child of childProfiles) {
-        if (child.teamId) teamIds.push(child.teamId);
-        if (child.divisionId) divisionIds.push(child.divisionId);
-      }
-      
-      // Also include parent's own team/division if they have one
-      const userProfile = await storage.getUser(userId);
-      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
-      if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
-      
-      // Deduplicate team and division IDs
-      teamIds = [...new Set(teamIds.map(String))];
-      divisionIds = [...new Set(divisionIds.map(String))];
-    } else if (role === 'coach') {
-      // Coach: Get all teams they're assigned to (as head coach or assistant)
-      const coachTeams = await storage.getTeamsByCoach(userId);
-      teamIds = coachTeams.map(team => team.id);
-      
-      // Also collect division IDs from those teams
-      for (const team of coachTeams) {
-        if (team.divisionId) divisionIds.push(team.divisionId);
-      }
-      
-      // Deduplicate
-      teamIds = [...new Set(teamIds.map(String))];
-      divisionIds = [...new Set(divisionIds.map(String))];
-    } else {
-      // Regular user (player): Use their own team/division
-      const userProfile = await storage.getUser(userId);
-      if (userProfile) {
-        if (userProfile.teamId) teamIds = [userProfile.teamId];
-        if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
-      }
+    // Filter events using shared helper
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, false);
+    
+    res.json(filteredEvents);
+  });
+  
+  // Coach-specific events endpoint (delegates to shared filtering logic)
+  app.get('/api/coach/events', isAuthenticated, async (req: any, res) => {
+    const { organizationId, id: userId, role } = req.user;
+    
+    // Only coaches can access this endpoint
+    if (role !== 'coach') {
+      return res.status(403).json({ message: 'Only coaches can access this endpoint' });
     }
     
-    // Filter events based on role, teams, and divisions
-    const filteredEvents = allEvents.filter((event: any) => {
-      const visibility = event.visibility || {};
-      const assignTo = event.assignTo || {};
-      
-      // Check role-based visibility
-      if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
-        return true;
-      }
-      
-      // Check team-based visibility (check all team IDs)
-      for (const teamId of teamIds) {
-        if (visibility.teams?.includes(String(teamId)) || assignTo.teams?.includes(String(teamId))) {
-          return true;
-        }
-      }
-      
-      // Check division-based visibility (check all division IDs)
-      for (const divisionId of divisionIds) {
-        if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
-          return true;
-        }
-      }
-      
-      // Check user-specific assignment
-      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
-        return true;
-      }
-      
-      // Event doesn't match any targeting criteria for this user
-      return false;
-    });
+    const allEvents = await storage.getEventsByOrganization(organizationId);
+    
+    // Use shared helper to get coach's event scope
+    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+      userId,
+      role,
+      organizationId
+    );
+    
+    // Filter events using shared helper
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, false);
     
     res.json(filteredEvents);
   });

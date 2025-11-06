@@ -816,14 +816,30 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       };
     }
     
+    // Count awards by prestige level from the allAwards array
+    const allAwards = awardsSummary.allAwards || [];
+    const prestigeCounts = {
+      HallOfFame: 0,
+      Superstar: 0,
+      AllStar: 0,
+      Starter: 0,
+      Prospect: 0,
+    };
+    
+    allAwards.forEach((award: any) => {
+      if (award.prestige && prestigeCounts.hasOwnProperty(award.prestige)) {
+        prestigeCounts[award.prestige as keyof typeof prestigeCounts]++;
+      }
+    });
+    
     // Use the actual award counts from the API
     return {
-      trophies:   { earned: awardsSummary.trophyCount || 0, total: 20 },
-      hallOfFame: { earned: awardsSummary.hofBadgesCount || 0, total: 8  },
-      superstar:  { earned: awardsSummary.superstarBadgesCount || 0, total: 12 },
-      allStar:    { earned: awardsSummary.allStarBadgesCount || 0, total: 20 },
-      starter:    { earned: awardsSummary.starterBadgesCount || 0, total: 18 },
-      prospect:   { earned: awardsSummary.rookieBadgesCount || 0, total: 24 },
+      trophies:   { earned: awardsSummary.totalTrophies || 0, total: 20 },
+      hallOfFame: { earned: prestigeCounts.HallOfFame, total: 8  },
+      superstar:  { earned: prestigeCounts.Superstar, total: 12 },
+      allStar:    { earned: prestigeCounts.AllStar, total: 20 },
+      starter:    { earned: prestigeCounts.Starter, total: 18 },
+      prospect:   { earned: prestigeCounts.Prospect, total: 24 },
     };
   }, [awardsSummary]);
 

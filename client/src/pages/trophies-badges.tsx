@@ -71,16 +71,28 @@ export default function TrophiesBadgesPage() {
   const [selectedPrestige, setSelectedPrestige] = useState<"all" | PrestigeLevel>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "prestige">("newest");
 
+  // Support Player Mode - show awards for the active child profile if one is selected
+  const activeProfileId = (user as any)?.activeProfileId;
+  const viewingUserId = activeProfileId || user?.id;
+
   // Fetch award definitions
   const { data: awardDefinitions, isLoading: loadingDefinitions } = useQuery<AwardDefinition[]>({
     queryKey: ["/api/award-definitions"],
     enabled: !!user,
   });
 
-  // Fetch user's award records
+  // Fetch user's award records (for the active profile or logged-in user)
   const { data: userAwardRecords, isLoading: loadingUserAwards } = useQuery<UserAwardRecord[]>({
-    queryKey: ["/api/user-awards"],
-    enabled: !!user,
+    queryKey: ["/api/user-awards", viewingUserId],
+    queryFn: async () => {
+      const endpoint = activeProfileId 
+        ? `/api/user-awards?userId=${activeProfileId}`
+        : "/api/user-awards";
+      const res = await fetch(endpoint, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch user awards");
+      return res.json();
+    },
+    enabled: !!user && !!viewingUserId,
   });
 
   // Combine award definitions with user award data

@@ -311,10 +311,20 @@ export default function CoachDashboard() {
     },
     onSuccess: () => {
       toast({ title: "Award given" });
-      // Invalidate cache for the awarded player's badges and trophies
+      // Invalidate ALL caches for the awarded player's awards
       if (selectedPlayer) {
+        // Unified account page uses this format
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/awards`] });
+        // Player dashboard uses this format
+        queryClient.invalidateQueries({ queryKey: ["/api/users", selectedPlayer.id, "awards"] });
+        // Legacy endpoints
         queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/badges`] });
         queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/trophies`] });
+        // Trophies-badges page - invalidate all variations
+        queryClient.invalidateQueries({ queryKey: ["/api/user-awards"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user-awards", selectedPlayer.id] });
+        // Account players query (for unified account page player cards)
+        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
       }
       setAwardsOpen(false);
       setSelectedPlayer(null);

@@ -66,14 +66,17 @@ const PRESTIGE_BORDER_COLORS = {
 
 export default function TrophiesBadgesPage() {
   const { user } = useAuth();
+  const { currentChildProfile } = useAppMode();
   const [, setLocation] = useLocation();
   const [selectedTier, setSelectedTier] = useState<"all" | TierType>("all");
   const [selectedPrestige, setSelectedPrestige] = useState<"all" | PrestigeLevel>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "prestige">("newest");
 
   // Support Player Mode - show awards for the active child profile if one is selected
-  const activeProfileId = (user as any)?.activeProfileId;
-  const viewingUserId = activeProfileId || user?.id;
+  // Priority: localStorage selectedPlayerId > currentChildProfile (device config) > user.activeProfileId > user.id
+  const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
+  const activeProfileId = (user as any)?.activeProfileId || selectedPlayerId;
+  const viewingUserId = activeProfileId || currentChildProfile?.id || user?.id;
 
   // Fetch award definitions
   const { data: awardDefinitions, isLoading: loadingDefinitions } = useQuery<AwardDefinition[]>({

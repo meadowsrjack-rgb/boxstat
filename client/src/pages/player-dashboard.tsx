@@ -331,22 +331,26 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   }, [allEvents]);
 
   // Player Tasks (server-driven)
+  // Use child profile ID if viewing as child, otherwise use current user ID
+  // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
+  const userIdForData = activeProfile?.id || currentChildProfile?.id || currentUser.id;
+  
   const { data: tasks = [] as Task[] } = useQuery<Task[]>({
-    queryKey: ["/api/users", currentUser.id, "tasks"],
-    enabled: !!currentUser.id,
+    queryKey: ["/api/users", userIdForData, "tasks"],
+    enabled: !!userIdForData,
   });
 
   // Awards summary (counts + recent items)
   const { data: awardsSummary } = useQuery<any>({
-    queryKey: ["/api/users", currentUser.id, "awards"],
-    enabled: !!currentUser.id,
+    queryKey: ["/api/users", userIdForData, "awards"],
+    enabled: !!userIdForData,
   });
 
   // Latest skill evaluation for overall skills assessment
   const { data: latestEvaluation } = useQuery<any>({
-    queryKey: ["/api/players", currentUser.id, "latest-evaluation"],
+    queryKey: ["/api/players", userIdForData, "latest-evaluation"],
     queryFn: async () => {
-      const res = await fetch(`/api/players/${currentUser.id}/latest-evaluation`, { 
+      const res = await fetch(`/api/players/${userIdForData}/latest-evaluation`, { 
         credentials: "include" 
       });
       if (!res.ok) return null;
@@ -413,7 +417,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userIdForData, "tasks"] });
       toast({ title: "Task completed", description: "Nice work!" });
     },
     onError: (e) =>
@@ -430,7 +434,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ ...payload, userId: currentUser.id }),
+        body: JSON.stringify({ ...payload, userId: userIdForData }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -439,8 +443,8 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/attendances", currentUser.id] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", currentUser.id, "awards"] }); // refresh badges
+      queryClient.invalidateQueries({ queryKey: ["/api/attendances", userIdForData] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", userIdForData, "awards"] }); // refresh badges
       toast({ title: "Checked in", description: "We recorded your check-in." });
     },
     onError: (e) =>

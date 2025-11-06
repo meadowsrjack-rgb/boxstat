@@ -88,8 +88,8 @@ function CompactAwardsIndicator({ playerId }: { playerId: string }) {
     enabled: !!playerId,
   });
 
-  // Calculate total awards earned
-  const totalEarned = awardsData?.length || 0;
+  // Calculate total awards earned (totalBadges + totalTrophies from API response)
+  const totalEarned = (awardsData?.totalBadges || 0) + (awardsData?.totalTrophies || 0);
 
   return (
     <div className="flex items-center gap-3">

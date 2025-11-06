@@ -2761,6 +2761,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User Awards (legacy endpoint - kept for backwards compatibility)
   // Alias endpoint for frontend compatibility: /api/users/:userId/awards
   app.get('/api/users/:userId/awards', isAuthenticated, async (req: any, res) => {
+    // Disable HTTP caching to ensure React Query refetches get fresh data
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const { userId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
@@ -2818,6 +2823,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Badges endpoint
   app.get('/api/users/:userId/badges', isAuthenticated, async (req: any, res) => {
+    // Disable HTTP caching
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const { userId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
@@ -2861,6 +2871,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Trophies endpoint
   app.get('/api/users/:userId/trophies', isAuthenticated, async (req: any, res) => {
+    // Disable HTTP caching
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const { userId } = req.params;
       const { id: currentUserId, role, organizationId } = req.user;
@@ -3897,9 +3912,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get user awards (for specific user or current user)
   app.get('/api/user-awards', isAuthenticated, async (req: any, res) => {
+    // Disable HTTP caching
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    
     try {
       const { id: currentUserId, role, organizationId } = req.user;
-      const { userId } = req.query;
+      const { userId} = req.query;
       
       // Determine which user's awards to fetch
       const targetUserId = userId || currentUserId;

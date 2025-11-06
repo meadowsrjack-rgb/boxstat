@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPg from "connect-pg-simple";
 import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "./db";
 
 const app = express();
 
@@ -12,17 +14,31 @@ app.set('trust proxy', 1);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Setup session middleware
+// Setup PostgreSQL session store for persistent sessions
+const PgSession = connectPg(session);
+const sessionTtl = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Create session store with PostgreSQL
+const sessionStore = new PgSession({
+  pool: db.$client,
+  ttl: sessionTtl,
+  tableName: "sessions",
+  createTableIfMissing: true,
+});
+
+// Setup session middleware with persistent PostgreSQL storage
 app.use(session({
   secret: process.env.SESSION_SECRET || 'sports-management-dev-secret-change-in-production',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days - keep user logged in
+    maxAge: sessionTtl, // 30 days - persistent login
     sameSite: 'lax'
-  }
+  },
+  rolling: true, // Reset the cookie maxAge on every request to keep session alive
 }));
 
 // Serve static files from public directory (for trophies, assets, etc.)

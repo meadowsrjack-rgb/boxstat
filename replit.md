@@ -18,7 +18,7 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js (TypeScript, ESM modules).
 - **Authentication**: Custom email/password with email verification and magic link login.
-- **Session Management**: Express sessions with PostgreSQL storage.
+- **Session Management**: Persistent Express sessions with PostgreSQL storage (30-day expiration, rolling refresh on each request). Sessions survive server restarts and keep users logged in.
 - **Payment Processing**: Stripe for payments.
 - **Communication**: WebSocket support for real-time features.
 - **API Design**: RESTful endpoints.

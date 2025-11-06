@@ -1300,5 +1300,17 @@ export const AWARDS: Award[] = [
     triggerSources: ["coachAward"],
     tags: ["MVP", "Season"]
   },
+  {
+    id: "defensive-player",
+    kind: "Trophy",
+    name: "Defensive Player",
+    tier: "Legacy",
+    category: "SeasonalLegacy",
+    description: "Awarded to the player who had the greatest defensive impact.",
+    iconName: "trophy-defensive",
+    progressKind: "manual",
+    triggerSources: ["coachAward"],
+    tags: ["Defense", "Season"]
+  },
 
 ];

@@ -8,19 +8,21 @@ import { Trophy } from "lucide-react";
 
 /* =================== Awards =================== */
 // Seasonal Team Trophies (Coach-awarded at season end)
+// IDs must match the shared/awards.registry.ts file
 export const TEAM_TROPHIES = [
-  { id: "season-mvp", name: "MVP (Most Valuable Player)", kind: "trophy" as const, description: "Biggest impact on team success" },
-  { id: "coach-award", name: "Coach's Award", kind: "trophy" as const, description: "Embodies team values & coachability" },
-  { id: "season-mip", name: "MIP (Most Improved Player)", kind: "trophy" as const, description: "Most skill & game IQ growth" },
+  { id: "mvp-season", name: "Season MVP", kind: "trophy" as const, description: "Most Valuable Player for the entire season" },
+  { id: "coach-choice", name: "Coach's Award", kind: "trophy" as const, description: "Special recognition for exceptional character and dedication" },
+  { id: "most-improved", name: "Most Improved", kind: "trophy" as const, description: "Greatest improvement over the season" },
   { id: "defensive-player", name: "Defensive Player", kind: "trophy" as const, description: "Greatest defensive impact" },
 ];
 
 // Coach Awards (assign anytime)
+// IDs must match the shared/awards.registry.ts file
 export const COACH_AWARDS = [
   { id: "game-mvp", name: "Game MVP", kind: "badge" as const, description: "Top performer in a game" },
-  { id: "hustle", name: "Hustle Award", kind: "badge" as const, description: "Maximum effort plays" },
-  { id: "teammate", name: "Teammate Award", kind: "badge" as const, description: "Uplifts & supports teammates" },
-  { id: "student", name: "Student of the Game", kind: "badge" as const, description: "Preparation & basketball IQ" },
+  { id: "hustle-award", name: "Hustle Award", kind: "badge" as const, description: "Relentless hustle and effort" },
+  { id: "teammate-award", name: "Teammate Award", kind: "badge" as const, description: "Uplifts & supports teammates" },
+  { id: "student-of-the-game", name: "Student of the Game", kind: "badge" as const, description: "Preparation & basketball IQ" },
   { id: "recruiter", name: "Recruiter", kind: "badge" as const, description: "Referred a new player who joined" },
 ];
 

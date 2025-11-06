@@ -2782,16 +2782,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const userAwardRecords = await storage.getUserAwardRecords(userId);
       
+      // Fetch award definitions to get tier information
+      const allAwardDefinitions = await storage.getAwardDefinitions(organizationId);
+      const awardDefMap = new Map(allAwardDefinitions.map(ad => [ad.id, ad]));
+      
+      // Enrich user awards with award definition data
+      const enrichedAwards = userAwardRecords.map((ua: any) => {
+        const def = awardDefMap.get(ua.awardId);
+        return {
+          ...ua,
+          tier: def?.tier,
+          name: def?.name,
+          description: def?.description,
+          imageUrl: def?.imageUrl,
+          prestige: def?.prestige,
+        };
+      });
+      
       // Return summary with counts for frontend display
-      const badges = userAwardRecords.filter((a: any) => a.category === 'badge');
-      const trophies = userAwardRecords.filter((a: any) => a.category === 'trophy');
+      const badges = enrichedAwards.filter((a: any) => a.tier === 'Badge');
+      const trophies = enrichedAwards.filter((a: any) => a.tier === 'Trophy');
       
       res.json({
         totalBadges: badges.length,
         totalTrophies: trophies.length,
         badges,
         trophies,
-        allAwards: userAwardRecords,
+        allAwards: enrichedAwards,
       });
     } catch (error: any) {
       console.error('Error fetching user awards:', error);
@@ -2815,7 +2832,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userAwardRecords = await storage.getUserAwardRecords(userId);
-      const badges = userAwardRecords.filter((a: any) => a.category === 'badge');
+      
+      // Fetch award definitions to get tier information
+      const allAwardDefinitions = await storage.getAwardDefinitions(organizationId);
+      const awardDefMap = new Map(allAwardDefinitions.map(ad => [ad.id, ad]));
+      
+      // Enrich and filter badges
+      const badges = userAwardRecords
+        .map((ua: any) => {
+          const def = awardDefMap.get(ua.awardId);
+          return {
+            ...ua,
+            tier: def?.tier,
+            name: def?.name,
+            description: def?.description,
+            imageUrl: def?.imageUrl,
+            prestige: def?.prestige,
+          };
+        })
+        .filter((a: any) => a.tier === 'Badge');
       
       res.json(badges);
     } catch (error: any) {
@@ -2840,7 +2875,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userAwardRecords = await storage.getUserAwardRecords(userId);
-      const trophies = userAwardRecords.filter((a: any) => a.category === 'trophy');
+      
+      // Fetch award definitions to get tier information
+      const allAwardDefinitions = await storage.getAwardDefinitions(organizationId);
+      const awardDefMap = new Map(allAwardDefinitions.map(ad => [ad.id, ad]));
+      
+      // Enrich and filter trophies
+      const trophies = userAwardRecords
+        .map((ua: any) => {
+          const def = awardDefMap.get(ua.awardId);
+          return {
+            ...ua,
+            tier: def?.tier,
+            name: def?.name,
+            description: def?.description,
+            imageUrl: def?.imageUrl,
+            prestige: def?.prestige,
+          };
+        })
+        .filter((a: any) => a.tier === 'Trophy');
       
       res.json(trophies);
     } catch (error: any) {
@@ -3866,8 +3919,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Not authorized to view awards from other organizations' });
       }
       
-      const userAwards = await storage.getUserAwardRecords(targetUserId);
-      res.json(userAwards);
+      const userAwardRecords = await storage.getUserAwardRecords(targetUserId);
+      
+      // Fetch award definitions to enrich the data
+      const allAwardDefinitions = await storage.getAwardDefinitions(organizationId);
+      const awardDefMap = new Map(allAwardDefinitions.map(ad => [ad.id, ad]));
+      
+      // Enrich user awards with award definition data
+      const enrichedAwards = userAwardRecords.map((ua: any) => {
+        const def = awardDefMap.get(ua.awardId);
+        return {
+          ...ua,
+          tier: def?.tier,
+          name: def?.name,
+          description: def?.description,
+          imageUrl: def?.imageUrl,
+          prestige: def?.prestige,
+        };
+      });
+      
+      res.json(enrichedAwards);
     } catch (error: any) {
       console.error('Error fetching user awards:', error);
       res.status(500).json({ error: 'Failed to fetch user awards', message: error.message });

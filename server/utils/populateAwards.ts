@@ -1,4 +1,4 @@
-import { AWARDS } from "../../client/src/lib/awards.registry";
+import { AWARDS } from "@shared/awards.registry";
 import type { IStorage } from "../storage";
 
 /**

@@ -3711,6 +3711,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to fetch award definitions', message: error.message });
     }
   });
+
+  // Get badges from registry (for coaches to award)
+  app.get('/api/admin/badges', isAuthenticated, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can view badges' });
+      }
+      
+      // Import the awards registry
+      const { AWARDS } = await import('@shared/awards.registry');
+      
+      // Filter to only return badges (not trophies) that can be manually awarded
+      const badges = AWARDS.filter((award: any) => 
+        award.kind === 'Badge' && 
+        award.triggerSources && 
+        award.triggerSources.includes('coachAward')
+      );
+      
+      res.json(badges);
+    } catch (error: any) {
+      console.error('Error fetching badges:', error);
+      res.status(500).json({ error: 'Failed to fetch badges', message: error.message });
+    }
+  });
   
   // Get single award definition
   app.get('/api/award-definitions/:id', isAuthenticated, async (req: any, res) => {
@@ -3891,22 +3916,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Cannot award users from other organizations' });
       }
       
-      // Verify the award definition exists
-      const awardDefinition = await storage.getAwardDefinition(awardId);
-      if (!awardDefinition) {
-        return res.status(404).json({ error: 'Award definition not found' });
+      // awardId is a string from the registry (e.g., "game-mvp")
+      // Find the corresponding award in the registry and then look up the DB record by name
+      const { AWARDS } = await import('@shared/awards.registry');
+      const registryAward = AWARDS.find((a: any) => a.id === awardId);
+      if (!registryAward) {
+        return res.status(404).json({ error: `Award not found in registry: ${awardId}` });
       }
+      
+      // Look up the database award definition by name
+      const allAwardDefs = await storage.getAwardDefinitions(organizationId);
+      const awardDefinition = allAwardDefs.find((a: any) => a.name === registryAward.name);
+      if (!awardDefinition) {
+        return res.status(404).json({ error: `Award definition not found in database: ${registryAward.name}` });
+      }
+      
+      const dbAwardId = awardDefinition.id; // This is the integer ID
       
       // Check if user already has this award for the same year
       const currentYear = year || new Date().getFullYear();
-      const hasAward = await storage.checkUserHasAward(userId, awardId, currentYear);
+      const hasAward = await storage.checkUserHasAward(userId, dbAwardId, currentYear);
       if (hasAward) {
         return res.status(400).json({ error: 'User already has this award for the specified year' });
       }
       
       const userAwardData = insertUserAwardRecordSchema.parse({
         userId,
-        awardId,
+        awardId: dbAwardId,
         awardedBy: awardedById,
         year: currentYear,
         notes: notes || null,

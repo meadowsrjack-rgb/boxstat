@@ -1,4 +1,4 @@
-import { Award } from "@/lib/awards.types";
+import { Award } from "@shared/awards.types";
 
 interface AwardCardProps {
   award: Award;

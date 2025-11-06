@@ -1,4 +1,4 @@
-import { Award } from "@/lib/awards.types";
+import { Award } from "@shared/awards.types";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";

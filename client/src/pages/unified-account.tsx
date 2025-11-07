@@ -29,6 +29,9 @@ import {
   Plus,
   CreditCard,
   Check,
+  Eye,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
@@ -216,18 +219,39 @@ function EnhancedPlayerCard({
   payments,
   programs,
   parentId,
-  onClick
+  onViewDashboard,
+  onToggleLock
 }: { 
   player: any; 
   payments?: Payment[];
   programs?: Program[];
   parentId?: string;
-  onClick?: () => void;
+  onViewDashboard: (playerId: string) => void;
+  onToggleLock: (playerId: string) => void;
 }) {
+  const [isDeviceLocked, setIsDeviceLocked] = useState(
+    localStorage.getItem("deviceLockedToPlayer") === player.id
+  );
+  
   const { data: teamData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/team`],
     enabled: !!player.id,
   });
+
+  // Listen for lock changes
+  useEffect(() => {
+    const checkLockStatus = () => {
+      setIsDeviceLocked(localStorage.getItem("deviceLockedToPlayer") === player.id);
+    };
+    
+    window.addEventListener('deviceLockChanged', checkLockStatus);
+    window.addEventListener('storage', checkLockStatus);
+    
+    return () => {
+      window.removeEventListener('deviceLockChanged', checkLockStatus);
+      window.removeEventListener('storage', checkLockStatus);
+    };
+  }, [player.id]);
 
   // Derive payment status for this player
   const { status, plan } = derivePlayerStatus(
@@ -242,12 +266,11 @@ function EnhancedPlayerCard({
 
   return (
     <Card
-      className="transition-shadow cursor-pointer hover:shadow-lg"
+      className="transition-shadow hover:shadow-lg"
       data-testid={`player-card-${player.id}`}
-      onClick={onClick}
     >
       <CardContent className="p-6">
-        {/* Header with Avatar and Status */}
+        {/* Header with Avatar and Action Buttons */}
         <div className="flex items-start justify-between mb-4">
           <Avatar className="w-16 h-16">
             <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
@@ -255,11 +278,42 @@ function EnhancedPlayerCard({
               {player.firstName?.[0]}{player.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
-          {player.teamAssignmentStatus === "pending" && (
-            <Badge variant="outline" className="bg-yellow-50">
-              Pending
-            </Badge>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {player.teamAssignmentStatus === "pending" && (
+              <Badge variant="outline" className="bg-yellow-50">
+                Pending
+              </Badge>
+            )}
+            
+            {/* Lock/Unlock Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => onToggleLock(player.id)}
+              data-testid={`button-lock-${player.id}`}
+              title={isDeviceLocked ? "Unlock device from this player" : "Lock device to this player"}
+            >
+              {isDeviceLocked ? (
+                <Lock className="h-4 w-4 text-red-600" />
+              ) : (
+                <Unlock className="h-4 w-4 text-gray-400" />
+              )}
+            </Button>
+            
+            {/* View Dashboard Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => onViewDashboard(player.id)}
+              data-testid={`button-view-dashboard-${player.id}`}
+              title="View player dashboard"
+            >
+              <Eye className="h-4 w-4 text-blue-600" />
+            </Button>
+          </div>
         </div>
 
         {/* Player Name */}
@@ -294,6 +348,16 @@ function EnhancedPlayerCard({
           <CompactAwardsIndicator playerId={player.id} />
           <SkillsIndicator playerId={player.id} />
         </div>
+        
+        {/* Lock Status Indicator */}
+        {isDeviceLocked && (
+          <div className="mt-4 pt-3 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-xs text-red-600">
+              <Lock className="h-3 w-3" />
+              <span>Device locked to this player</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -313,6 +377,15 @@ export default function UnifiedAccount() {
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Check if device is locked - redirect to player dashboard if so
+  useEffect(() => {
+    const lockedPlayerId = localStorage.getItem("deviceLockedToPlayer");
+    if (lockedPlayerId) {
+      localStorage.setItem("selectedPlayerId", lockedPlayerId);
+      setLocation("/player-dashboard");
+    }
+  }, [setLocation]);
 
   // Check for payment success in URL
   useEffect(() => {
@@ -365,9 +438,39 @@ export default function UnifiedAccount() {
   const pendingPayments = payments.filter((p: any) => p.status === "pending");
   const nextPaymentDue = pendingPayments.length > 0 ? pendingPayments[0] : null;
 
-  const handlePlayerCardClick = (playerId: string) => {
+  const handleViewDashboard = (playerId: string) => {
     localStorage.setItem("selectedPlayerId", playerId);
     setLocation("/player-dashboard");
+  };
+
+  const handleToggleLock = (playerId: string) => {
+    const currentLock = localStorage.getItem("deviceLockedToPlayer");
+    
+    if (currentLock === playerId) {
+      // Unlock the device
+      localStorage.removeItem("deviceLockedToPlayer");
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('deviceLockChanged'));
+      
+      toast({
+        title: "Device Unlocked",
+        description: "You can now access all player dashboards and the account page.",
+      });
+    } else {
+      // Lock the device to this player
+      localStorage.setItem("deviceLockedToPlayer", playerId);
+      localStorage.setItem("selectedPlayerId", playerId);
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('deviceLockChanged'));
+      
+      toast({
+        title: "Device Locked",
+        description: `This device is now locked to ${players.find((p: any) => p.id === playerId)?.firstName}'s dashboard.`,
+      });
+      setLocation("/player-dashboard");
+    }
   };
 
   const handleSignOut = async () => {
@@ -501,7 +604,8 @@ export default function UnifiedAccount() {
                       payments={payments}
                       programs={programs}
                       parentId={user?.id}
-                      onClick={() => handlePlayerCardClick(player.id)}
+                      onViewDashboard={handleViewDashboard}
+                      onToggleLock={handleToggleLock}
                     />
                   ))}
                 </div>

@@ -196,6 +196,31 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
+  
+  // Check if device is locked to this player
+  const [isDeviceLocked, setIsDeviceLocked] = useState(false);
+  
+  useEffect(() => {
+    const checkLockStatus = () => {
+      const lockedPlayerId = localStorage.getItem("deviceLockedToPlayer");
+      const currentPlayerId = localStorage.getItem("selectedPlayerId");
+      setIsDeviceLocked(lockedPlayerId === currentPlayerId && lockedPlayerId !== null);
+    };
+    
+    checkLockStatus();
+    
+    // Listen for storage changes (including from same window)
+    window.addEventListener('storage', checkLockStatus);
+    
+    // Also listen for custom event for same-window updates
+    const handleLockChange = () => checkLockStatus();
+    window.addEventListener('deviceLockChanged', handleLockChange);
+    
+    return () => {
+      window.removeEventListener('storage', checkLockStatus);
+      window.removeEventListener('deviceLockChanged', handleLockChange);
+    };
+  }, []);
 
   // Sync activeTab with URL changes (for back button navigation)
   useEffect(() => {
@@ -854,16 +879,22 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-12 w-12"
-              onClick={() => setLocation("/unified-account")}
-              aria-label="Back to Account"
-              data-testid="button-back-to-account"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
+            {isDeviceLocked ? (
+              <div className="h-12 w-12 flex items-center justify-center" data-testid="indicator-device-locked">
+                <Lock className="h-5 w-5 text-red-600" />
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12"
+                onClick={() => setLocation("/unified-account")}
+                aria-label="Back to Account"
+                data-testid="button-back-to-account"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+            )}
             <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button

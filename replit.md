@@ -13,7 +13,7 @@ Preferred communication style: Simple, everyday language.
 - **UI/Styling**: Radix UI components with shadcn/ui design system, Tailwind CSS.
 - **Routing & State**: Wouter for routing, TanStack Query for server state management.
 - **PWA**: Full Progressive Web App capabilities for a native-like experience.
-- **Native iOS Deployment**: Capacitor integration configured for native iOS app deployment via Xcode. Includes iOS-specific configurations, permissions (location, camera, photo library, push notifications), and complete App Store deployment workflow. See `XCODE_DEPLOYMENT_GUIDE.md` for full instructions.
+- **Native iOS Deployment**: Capacitor integration configured for native iOS app deployment via Xcode. Includes iOS-specific configurations, permissions (location, camera, photo library, push notifications), and complete App Store deployment workflow. **Deployment Documentation**: `MAC_SETUP_GUIDE.md` (complete Mac environment setup from scratch), `QUICK_START_IOS.md` (quick reference checklist with troubleshooting), `XCODE_DEPLOYMENT_GUIDE.md` (full App Store submission guide), and `check_mac_environment.sh` (automated environment verification script).
 - **UI/UX Decisions**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 
 ### Backend Architecture

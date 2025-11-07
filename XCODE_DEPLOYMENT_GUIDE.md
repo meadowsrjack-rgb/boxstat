@@ -2,6 +2,25 @@
 
 This guide will help you export the UYP Basketball app and deploy it to the Apple App Store using Xcode.
 
+---
+
+## ⚠️ First Time Setup?
+
+**If this is your first time setting up your Mac for iOS development**, start here:
+
+1. **[MAC_SETUP_GUIDE.md](./MAC_SETUP_GUIDE.md)** - Complete Mac environment setup from scratch
+2. **[QUICK_START_IOS.md](./QUICK_START_IOS.md)** - Quick reference checklist with troubleshooting
+
+These guides cover:
+- Installing Xcode, Node.js, CocoaPods
+- Running automated environment checks
+- Fixing common errors (UTF-8, xcode-select, Podfile paths)
+- Opening your project in Xcode for the first time
+
+**Once your environment is set up and you can run the app in Xcode simulator**, return to this guide for App Store submission.
+
+---
+
 ## Prerequisites
 
 ### Required Tools
@@ -9,11 +28,15 @@ This guide will help you export the UYP Basketball app and deploy it to the Appl
 - **Xcode 15+** (Download from Mac App Store)
 - **Apple Developer Account** ($99/year for App Store distribution)
 - **CocoaPods** (iOS dependency manager)
+- **Node.js 18+** and **npm**
 
-### Install CocoaPods
+### Environment Setup
+If you haven't already, run the automated environment checker:
 ```bash
-sudo gem install cocoapods
+./check_mac_environment.sh
 ```
+
+All checks should pass before proceeding.
 
 ## Step 1: Build the Web App
 

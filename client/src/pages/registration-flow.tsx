@@ -38,10 +38,6 @@ const playerInfoSchema = z.object({
   gender: z.string().optional(),
 });
 
-const packageSelectionSchema = z.object({
-  packageId: z.string().min(1, "Please select a program/package"),
-});
-
 const accountCreationSchema = z.object({
   password: z.string()
     .min(8, "Password must be at least 8 characters")
@@ -58,7 +54,6 @@ const accountCreationSchema = z.object({
 type RegistrationIntent = z.infer<typeof registrationIntentSchema>;
 type ParentInfo = z.infer<typeof parentInfoSchema>;
 type PlayerInfo = z.infer<typeof playerInfoSchema>;
-type PackageSelection = z.infer<typeof packageSelectionSchema>;
 type AccountCreation = z.infer<typeof accountCreationSchema>;
 
 interface Player extends PlayerInfo {
@@ -82,19 +77,13 @@ export default function RegistrationFlow() {
     registrationType?: "myself" | "my_child";
     parentInfo?: ParentInfo;
     players: Player[];
-    packageId?: string;
     password?: string;
   }>({
     email: verifiedEmail || undefined,
     players: [],
   });
 
-  // Fetch available programs/packages
-  const { data: programs = [] } = useQuery<any[]>({
-    queryKey: ["/api/programs"],
-  });
-
-  const totalSteps = registrationData.registrationType === "my_child" ? 6 : 5;
+  const totalSteps = registrationData.registrationType === "my_child" ? 5 : 4;
 
   const registrationMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -208,9 +197,7 @@ export default function RegistrationFlow() {
             {currentStep === 3 && registrationData.registrationType === "my_child" && "Parent/Guardian Information"}
             {currentStep === 4 && registrationData.registrationType === "my_child" && "Player Information"}
             {(currentStep === 4 && registrationData.registrationType === "myself") ||
-             (currentStep === 5 && registrationData.registrationType === "my_child") && "Select Program/Package"}
-            {(currentStep === 5 && registrationData.registrationType === "myself") ||
-             (currentStep === 6 && registrationData.registrationType === "my_child") && "Create Account"}
+             (currentStep === 5 && registrationData.registrationType === "my_child") && "Create Account"}
             {currentStep > totalSteps && "Email Verification"}
           </CardTitle>
         </CardHeader>
@@ -303,23 +290,9 @@ export default function RegistrationFlow() {
             />
           )}
 
-          {/* Package Selection */}
+          {/* Account Creation */}
           {((currentStep === 4 && registrationData.registrationType === "myself") ||
             (currentStep === 5 && registrationData.registrationType === "my_child")) && (
-            <PackageSelectionStep
-              programs={programs}
-              emailCheckData={registrationData.emailCheckData}
-              onSubmit={(data) => {
-                setRegistrationData({ ...registrationData, packageId: data.packageId });
-                handleNext();
-              }}
-              onBack={handleBack}
-            />
-          )}
-
-          {/* Account Creation */}
-          {((currentStep === 5 && registrationData.registrationType === "myself") ||
-            (currentStep === 6 && registrationData.registrationType === "my_child")) && (
             <AccountCreationStep
               onSubmit={handleSubmitRegistration}
               onBack={handleBack}
@@ -1086,153 +1059,6 @@ function PlayerListStep({
         </Button>
       </div>
     </div>
-  );
-}
-
-function PackageSelectionStep({
-  programs,
-  emailCheckData,
-  onSubmit,
-  onBack,
-}: {
-  programs: any[];
-  emailCheckData?: any;
-  onSubmit: (data: PackageSelection) => void;
-  onBack: () => void;
-}) {
-  // Get active subscriptions from Stripe
-  const activeSubscriptions = emailCheckData?.stripeCustomer?.subscriptions || [];
-  const lastPayment = emailCheckData?.stripeCustomer?.payments?.[0];
-  
-  // Function to check if a program is recommended (matches Stripe subscription)
-  const isRecommended = (program: any) => {
-    // Check if any active subscription matches this program
-    return activeSubscriptions.some((sub: any) => {
-      // Match by product ID or price ID
-      return sub.productId === program.stripeProductId || 
-             sub.priceId === program.stripePriceId ||
-             // Match by package ID in payment metadata
-             (lastPayment?.packageId === program.id);
-    });
-  };
-  
-  const form = useForm<PackageSelection>({
-    resolver: zodResolver(packageSelectionSchema),
-    defaultValues: {
-      packageId: "",
-    },
-  });
-
-  // Group programs by category
-  const groupedPrograms = programs.reduce((acc: any, program: any) => {
-    const category = program.category || "Other";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(program);
-    return acc;
-  }, {});
-
-  // Sort programs to show recommended ones first
-  Object.keys(groupedPrograms).forEach(category => {
-    groupedPrograms[category].sort((a: any, b: any) => {
-      const aRecommended = isRecommended(a);
-      const bRecommended = isRecommended(b);
-      if (aRecommended && !bRecommended) return -1;
-      if (!aRecommended && bRecommended) return 1;
-      return 0;
-    });
-  });
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="packageId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Select Program/Package *</FormLabel>
-              <FormControl>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {Object.entries(groupedPrograms).map(([category, categoryPrograms]: [string, any]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-sm text-gray-700 mb-2">{category}</h3>
-                      {categoryPrograms.map((program: any) => {
-                        const recommended = isRecommended(program);
-                        return (
-                        <button
-                          key={program.id}
-                          type="button"
-                          onClick={() => field.onChange(program.id)}
-                          className={`w-full text-left p-4 border-2 rounded-lg mb-2 transition-all ${
-                            field.value === program.id
-                              ? "border-blue-600 bg-blue-50"
-                              : recommended 
-                              ? "border-green-500 bg-green-50 hover:border-green-600"
-                              : "border-gray-200 hover:border-blue-300"
-                          }`}
-                          data-testid={`option-package-${program.id}`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <Package className={`w-5 h-5 ${recommended ? 'text-green-600' : 'text-blue-600'}`} />
-                                <h4 className="font-semibold">{program.name}</h4>
-                                {recommended && (
-                                  <span className="ml-2 text-xs font-medium px-2 py-1 bg-green-600 text-white rounded-full">
-                                    Recommended
-                                  </span>
-                                )}
-                              </div>
-                              {program.description && (
-                                <p className="text-sm text-gray-600 mt-1">{program.description}</p>
-                              )}
-                              <div className="flex items-center gap-3 mt-2 text-sm">
-                                <span className="font-medium text-blue-600">
-                                  ${(program.price / 100).toFixed(2)}
-                                </span>
-                                {program.pricingModel && (
-                                  <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                                    {program.pricingModel}
-                                  </span>
-                                )}
-                                {program.duration && (
-                                  <span className="text-gray-600">{program.duration}</span>
-                                )}
-                              </div>
-                              {program.pricingModel === "installments" && program.installmentPrice && (
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {program.installments} payments of ${(program.installmentPrice / 100).toFixed(2)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                </div>
-              </FormControl>
-              <FormDescription>
-                Payment processing will be completed once packages are finalized.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-between pt-4">
-          <Button type="button" onClick={onBack} variant="outline" data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </form>
-    </Form>
   );
 }
 

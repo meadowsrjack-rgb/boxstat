@@ -51,6 +51,8 @@
         <!-- Location Services - Required for geo-fencing check-ins -->
         <key>NSLocationWhenInUseUsageDescription</key>
         <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        <key>NSLocationAlwaysUsageDescription</key>
+        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
         <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
         <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
         

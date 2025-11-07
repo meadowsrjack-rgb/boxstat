@@ -79,6 +79,19 @@
                 <false/>
                 <key>NSAllowsLocalNetworking</key>
                 <true/>
+                <!-- Allow connections to Replit production backend -->
+                <key>NSExceptionDomains</key>
+                <dict>
+                        <key>boxstat.replit.app</key>
+                        <dict>
+                                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                                <false/>
+                                <key>NSIncludesSubdomains</key>
+                                <true/>
+                                <key>NSExceptionRequiresForwardSecrecy</key>
+                                <true/>
+                        </dict>
+                </dict>
         </dict>
 </dict>
 </plist>

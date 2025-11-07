@@ -5,9 +5,9 @@ const config: CapacitorConfig = {
   appName: 'BoxStat',
   webDir: 'dist/public',
   server: {
-    // Use your production URL when deployed
-    // url: 'https://your-app.replit.app',
-    // cleartext: true,
+    // Production backend URL
+    url: 'https://boxstat.replit.app',
+    cleartext: false, // Use HTTPS for security
   },
   ios: {
     contentInset: 'automatic',

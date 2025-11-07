@@ -121,19 +121,24 @@ open App.xcworkspace
 8. Download the `.p8` key file (save it securely!)
 9. Note the **Key ID** (you'll need this)
 
-**Configure in App Store Connect:**
-1. Go to [App Store Connect](https://appstoreconnect.apple.com)
-2. Select your app
-3. Go to **App Information**
-4. Under **Apple Push Notification service**, add your APNs key
+**Verify APNs is Enabled on App ID:**
+1. In Apple Developer Portal, go to **Identifiers**
+2. Select your App ID (`com.uypbasketball.app`)
+3. Ensure **Push Notifications** is checked
+4. If not enabled, enable it and save
 
-**Configure in Backend:**
-You'll need to add these to your server environment:
-- APNs Key ID
-- APNs Team ID (found in Apple Developer account)
-- APNs Key file (.p8)
+**Save These Credentials (you'll need them for backend):**
+- **Key ID** - displayed after creating the key
+- **Team ID** - found in Apple Developer account membership section
+- **Key file (.p8)** - downloaded file, keep it secure!
 
-*Note: Push notifications require backend server configuration. Refer to your backend documentation for web-push setup.*
+**Configure in Backend Server:**
+Your backend needs these APNs credentials to send push notifications:
+- Set `APNS_KEY_ID` environment variable
+- Set `APNS_TEAM_ID` environment variable  
+- Upload the `.p8` key file to secure server storage
+
+*Note: The existing web-push implementation will need to be configured with these APNs credentials for iOS push notifications. This is a backend configuration step done separately from Xcode.*
 
 ## Step 7: Configure Server URL (Production)
 

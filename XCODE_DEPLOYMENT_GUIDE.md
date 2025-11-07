@@ -100,6 +100,41 @@ open App.xcworkspace
 2. Set **iOS Deployment Target** to `13.0` or higher
 3. This determines minimum iOS version supported
 
+### E. Enable Push Notifications Capability
+**Required for event alerts and notifications**
+
+1. Go to **Signing & Capabilities** tab
+2. Click **+ Capability** button
+3. Search for and add **Push Notifications**
+4. Ensure it's enabled (checkbox checked)
+
+### F. Configure APNs (Apple Push Notification Service)
+**Required for push notifications to work**
+
+1. Go to [Apple Developer Portal](https://developer.apple.com/account)
+2. Navigate to **Certificates, Identifiers & Profiles**
+3. Select **Keys** from the sidebar
+4. Click **+** to create a new key
+5. Name it "UYP Basketball APNs Key"
+6. Check **Apple Push Notifications service (APNs)**
+7. Click **Continue** → **Register**
+8. Download the `.p8` key file (save it securely!)
+9. Note the **Key ID** (you'll need this)
+
+**Configure in App Store Connect:**
+1. Go to [App Store Connect](https://appstoreconnect.apple.com)
+2. Select your app
+3. Go to **App Information**
+4. Under **Apple Push Notification service**, add your APNs key
+
+**Configure in Backend:**
+You'll need to add these to your server environment:
+- APNs Key ID
+- APNs Team ID (found in Apple Developer account)
+- APNs Key file (.p8)
+
+*Note: Push notifications require backend server configuration. Refer to your backend documentation for web-push setup.*
+
 ## Step 7: Configure Server URL (Production)
 
 The app needs to connect to your backend API. Update `capacitor.config.ts`:

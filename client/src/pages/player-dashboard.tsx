@@ -56,6 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PINDialog } from "@/components/PINDialog";
 
 /* ===== “Wheel” option lists ===== */
 const TEAM_OPTIONS = [
@@ -199,6 +200,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   
   // Check if device is locked to this player
   const [isDeviceLocked, setIsDeviceLocked] = useState(false);
+  
+  // PIN dialog state
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
   
   useEffect(() => {
     const checkLockStatus = () => {
@@ -872,6 +876,25 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     };
   }, [awardsSummary]);
 
+  // Handle unlock with PIN
+  const handleUnlockClick = () => {
+    setPinDialogOpen(true);
+  };
+  
+  const handlePinSuccess = () => {
+    // Remove lock
+    localStorage.removeItem("deviceLockedToPlayer");
+    localStorage.removeItem("deviceLockPIN");
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('deviceLockChanged'));
+    
+    toast({
+      title: "Device Unlocked",
+      description: "You can now access all player dashboards and the account page.",
+    });
+  };
+
   /* =================== UI =================== */
   return (
     <div className="min-h-screen bg-gray-50">
@@ -880,9 +903,16 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             {isDeviceLocked ? (
-              <div className="h-12 w-12 flex items-center justify-center" data-testid="indicator-device-locked">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-12 w-12"
+                onClick={handleUnlockClick}
+                aria-label="Unlock Device"
+                data-testid="button-unlock-device"
+              >
                 <Lock className="h-5 w-5 text-red-600" />
-              </div>
+              </Button>
             ) : (
               <Button
                 variant="ghost"
@@ -1494,6 +1524,16 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* PIN Dialog for unlocking */}
+      <PINDialog
+        open={pinDialogOpen}
+        onOpenChange={setPinDialogOpen}
+        mode="verify"
+        onSuccess={handlePinSuccess}
+        title="Enter PIN to Unlock"
+        description="Enter your 4-digit PIN to unlock the device"
+      />
     </div>
   );
 }

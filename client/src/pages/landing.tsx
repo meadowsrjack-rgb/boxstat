@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import backgroundVideo from "@assets/BoxStat mobile background_1762315879856.mp4";
+import backgroundVideo from "@assets/Laanding page background_1762477206539.mp4";
+import logo from "@assets/logo2_1762477206651.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -19,8 +20,18 @@ export default function Landing() {
       </video>
 
       {/* Content Layer - On top of video */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Spacer to push content to bottom */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-between items-center py-8">
+        {/* Logo at Top */}
+        <div className="flex-shrink-0 pt-8">
+          <img 
+            src={logo} 
+            alt="BoxStat Logo" 
+            className="w-48 h-auto sm:w-64 md:w-80 drop-shadow-2xl"
+            data-testid="img-logo"
+          />
+        </div>
+
+        {/* Spacer */}
         <div className="flex-1"></div>
 
         {/* Bottom Content */}

@@ -289,61 +289,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Email is required" });
       }
       
-      // Check if user already exists
-      let user = await storage.getUserByEmail(email, organizationId);
+      // Check if user already exists (completed registration)
+      const existingUser = await storage.getUserByEmail(email, organizationId);
       
-      if (user) {
-        // User already exists
-        if (user.verified) {
-          return res.status(400).json({ 
-            success: false, 
-            message: "This email is already registered and verified. Please login instead." 
-          });
-        }
-        
-        // User exists but not verified - resend verification email
-        const verificationToken = crypto.randomBytes(32).toString('hex');
-        const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-        
-        await storage.updateUser(user.id, {
-          verificationToken,
-          verificationExpiry,
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "This email is already registered. Please login instead." 
         });
+      }
+      
+      // Check if there's a pending registration
+      let pending = await storage.getPendingRegistration(email, organizationId);
+      
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      
+      if (pending) {
+        // Update existing pending registration
+        await storage.deletePendingRegistration(email, organizationId);
+        pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry);
         
         await emailService.sendVerificationEmail({
-          email: user.email,
-          firstName: user.firstName || 'User',
+          email,
+          firstName: 'User',
           verificationToken,
         });
         
         return res.json({ 
           success: true, 
-          message: "Verification email sent. Please check your inbox.",
+          message: "Verification email re-sent. Please check your inbox.",
           exists: true 
         });
       }
       
-      // Create minimal user record with just email
-      const verificationToken = crypto.randomBytes(32).toString('hex');
-      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      
-      user = await storage.createUser({
-        organizationId,
-        email,
-        role: 'parent', // Default role, will be updated later
-        firstName: '',
-        lastName: '',
-        verified: false,
-        verificationToken,
-        verificationExpiry,
-        isActive: true,
-        awards: [],
-        totalPractices: 0,
-        totalGames: 0,
-        consecutiveCheckins: 0,
-        videosCompleted: 0,
-        yearsActive: 0,
-      });
+      // Create new pending registration
+      pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry);
       
       // Send verification email
       await emailService.sendVerificationEmail({
@@ -355,7 +336,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Verification email sent! Please check your inbox.",
-        userId: user.id,
         exists: false
       });
     } catch (error: any) {
@@ -373,87 +353,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Verification token is required" });
       }
       
-      // Find user by verification token
-      const allUsers = await storage.getUsersByOrganization("default-org");
-      const user = allUsers.find(u => u.verificationToken === token);
+      // Find pending registration by verification token
+      // Since we can't query by token directly, we need to check all pending registrations
+      // This is a simple approach - in production you might want a token-to-email mapping
+      const organizationId = "default-org";
+      const allUsers = await storage.getUsersByOrganization(organizationId);
       
-      if (!user) {
-        return res.status(404).json({ success: false, message: "Invalid verification token" });
-      }
-      
-      // Check if token is expired (24 hours)
-      if (user.verificationExpiry && new Date() > user.verificationExpiry) {
-        return res.status(400).json({ success: false, message: "Verification token has expired" });
-      }
-      
-      // Check Stripe for existing customer data
-      let stripeCustomerData = null;
-      if (stripe && user.email) {
-        try {
-          const customers = await stripe.customers.list({
-            email: user.email,
-            limit: 1,
-          });
-          
-          if (customers.data.length > 0) {
-            const customer = customers.data[0];
-            stripeCustomerData = {
-              id: customer.id,
-              name: customer.name,
-              phone: customer.phone,
-              address: customer.address,
-              metadata: customer.metadata,
-            };
-            
-            // Prefill user data from Stripe if available
-            const updateData: any = {
-              verified: true,
-              verificationToken: null,
-              verificationExpiry: null,
-            };
-            
-            // Extract first and last name from Stripe name if user doesn't have them
-            if (customer.name && (!user.firstName || !user.lastName)) {
-              const nameParts = customer.name.split(' ');
-              if (!user.firstName && nameParts.length > 0) {
-                updateData.firstName = nameParts[0];
-              }
-              if (!user.lastName && nameParts.length > 1) {
-                updateData.lastName = nameParts.slice(1).join(' ');
-              }
-            }
-            
-            // Add phone if available
-            if (customer.phone && !user.phoneNumber) {
-              updateData.phoneNumber = customer.phone;
-            }
-            
-            await storage.updateUser(user.id, updateData);
-            
-            console.log(`Stripe customer found and data prefilled for user ${user.email}`);
-          }
-        } catch (stripeError: any) {
-          console.error("Stripe lookup error (non-fatal):", stripeError.message);
-          // Continue even if Stripe lookup fails
-        }
-      }
-      
-      // Mark user as verified (if not already done above)
-      if (!stripeCustomerData) {
-        await storage.updateUser(user.id, {
-          verified: true,
-          verificationToken: null as any,
-          verificationExpiry: null as any,
+      // First check if there's already a verified user with this token (shouldn't happen but safe check)
+      const existingUser = allUsers.find(u => u.verificationToken === token && u.verified);
+      if (existingUser) {
+        return res.json({ 
+          success: true, 
+          message: "Email already verified! Continue with registration.",
+          email: existingUser.email,
         });
       }
       
+      // Try to find a pending registration - we'll need to iterate since we can't index by token
+      // This is inefficient but acceptable for now since pending registrations are temporary
+      // In production, consider storing a token-to-email mapping
+      let pendingReg: any = null;
+      const testEmails = [req.query.email as string]; // If email provided in query
+      
+      // If we have an email hint, use it
+      if (testEmails[0]) {
+        pendingReg = await storage.getPendingRegistration(testEmails[0], organizationId);
+        if (pendingReg && pendingReg.verificationToken !== token) {
+          pendingReg = null;
+        }
+      }
+      
+      // If not found, this is an invalid token
+      if (!pendingReg) {
+        return res.status(404).json({ success: false, message: "Invalid or expired verification token" });
+      }
+      
+      // Check if token is expired (24 hours)
+      if (new Date() > new Date(pendingReg.verificationExpiry)) {
+        await storage.deletePendingRegistration(pendingReg.email, organizationId);
+        return res.status(400).json({ success: false, message: "Verification token has expired. Please request a new one." });
+      }
+      
+      // Mark pending registration as verified
+      await storage.updatePendingRegistration(pendingReg.email, organizationId, true);
+      
       res.json({ 
         success: true, 
-        message: stripeCustomerData 
-          ? "Email verified successfully! We found your information from previous payments and have prefilled your profile."
-          : "Email verified successfully! Continue with registration.",
-        email: user.email,
-        stripeDataFound: !!stripeCustomerData,
+        message: "Email verified successfully! Continue with registration.",
+        email: pendingReg.email,
       });
     } catch (error: any) {
       console.error("Email verification error:", error);
@@ -1129,7 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post('/api/registration/complete', async (req: any, res) => {
     try {
-      const { registrationType, parentInfo, players, packageId, password, email } = req.body;
+      const { registrationType, parentInfo, players, password, email } = req.body;
       
       const organizationId = "default-org";
       
@@ -1151,43 +1098,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user exists and is verified (should have been created at step 1)
-      const existingUser = await storage.getUserByEmail(primaryEmail, organizationId);
+      // Check for pending registration
+      const pendingReg = await storage.getPendingRegistration(primaryEmail, organizationId);
       
-      if (!existingUser) {
+      if (!pendingReg) {
         return res.status(400).json({ 
           success: false, 
-          message: "No verification found for this email. Please start registration again." 
+          message: "No pending registration found. Please start registration again." 
         });
       }
       
-      if (!existingUser.verified) {
+      if (!pendingReg.verified) {
         return res.status(403).json({ 
           success: false, 
           message: "Please verify your email before completing registration. Check your inbox for the verification link." 
         });
       }
       
-      // Hash the password
-      const hashedPassword = password ? hashPassword(password) : undefined;
+      // Validate all required fields
+      if (!password || password.length < 8) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Password is required and must be at least 8 characters" 
+        });
+      }
       
-      // Update user with full registration details
+      if (registrationType === "my_child") {
+        if (!parentInfo?.firstName || !parentInfo?.lastName) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "Parent/Guardian first and last name are required" 
+          });
+        }
+        if (!players || players.length === 0) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "At least one player is required" 
+          });
+        }
+      } else {
+        if (!players || players.length === 0 || !players[0].firstName || !players[0].lastName) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "First and last name are required" 
+          });
+        }
+      }
+      
+      // Hash the password
+      const hashedPassword = hashPassword(password);
+      
+      // Create user account(s) - this is where the actual account is created
       let accountHolderId: string | undefined;
       let primaryUser: any = null;
       
       if (registrationType === "my_child" && parentInfo) {
-        // Update the existing parent user with full details
-        primaryUser = await storage.updateUser(existingUser.id, {
+        // Create parent user account
+        primaryUser = await storage.createUser({
+          organizationId,
+          email: primaryEmail,
           role: "parent",
           firstName: parentInfo.firstName,
           lastName: parentInfo.lastName,
           phoneNumber: parentInfo.phoneNumber,
           dateOfBirth: sanitizeDate(parentInfo.dateOfBirth),
           password: hashedPassword,
-          packageSelected: packageId,
           hasRegistered: true,
+          verified: true,
+          isActive: true,
+          awards: [],
+          totalPractices: 0,
+          totalGames: 0,
+          consecutiveCheckins: 0,
+          videosCompleted: 0,
+          yearsActive: 0,
         });
-        accountHolderId = existingUser.id;
+        accountHolderId = primaryUser.id;
         
         // Create player profiles for children
         const createdPlayers = [];
@@ -1203,7 +1189,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             dateOfBirth: sanitizeDate(player.dateOfBirth),
             gender: player.gender,
             accountHolderId,
-            packageSelected: packageId,
             teamAssignmentStatus: "pending",
             hasRegistered: true,
             verified: true, // Child profiles are auto-verified through parent
@@ -1218,21 +1203,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdPlayers.push(playerUser);
         }
       } else {
-        // "myself" registration - update existing user with full details
+        // "myself" registration - create player user account
         const player = players[0];
-        primaryUser = await storage.updateUser(existingUser.id, {
+        primaryUser = await storage.createUser({
+          organizationId,
+          email: primaryEmail,
           role: "player",
           firstName: player.firstName,
           lastName: player.lastName,
           dateOfBirth: sanitizeDate(player.dateOfBirth),
           gender: player.gender,
           password: hashedPassword,
-          packageSelected: packageId,
           teamAssignmentStatus: "pending",
           hasRegistered: true,
+          verified: true,
           registrationType: "myself",
+          isActive: true,
+          awards: [],
+          totalPractices: 0,
+          totalGames: 0,
+          consecutiveCheckins: 0,
+          videosCompleted: 0,
+          yearsActive: 0,
         });
       }
+      
+      // Delete the pending registration now that account is created
+      await storage.deletePendingRegistration(primaryEmail, organizationId);
       
       res.json({
         success: true,

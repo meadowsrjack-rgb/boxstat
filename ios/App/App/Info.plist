@@ -5,7 +5,7 @@
         <key>CFBundleDevelopmentRegion</key>
         <string>en</string>
         <key>CFBundleDisplayName</key>
-        <string>BoxStat</string>
+        <string>UYP Basketball</string>
         <key>CFBundleExecutable</key>
         <string>$(EXECUTABLE_NAME)</string>
         <key>CFBundleIdentifier</key>
@@ -45,5 +45,38 @@
         </array>
         <key>UIViewControllerBasedStatusBarAppearance</key>
         <true/>
+        
+        <!-- Permissions for UYP Basketball App Features -->
+        
+        <!-- Location Services - Required for geo-fencing check-ins -->
+        <key>NSLocationWhenInUseUsageDescription</key>
+        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        
+        <!-- Camera - Required for QR code scanning check-ins -->
+        <key>NSCameraUsageDescription</key>
+        <string>UYP Basketball needs camera access to scan QR codes for event check-ins.</string>
+        
+        <!-- Photo Library - Required for profile picture uploads -->
+        <key>NSPhotoLibraryUsageDescription</key>
+        <string>UYP Basketball needs photo access to let you upload profile pictures.</string>
+        <key>NSPhotoLibraryAddUsageDescription</key>
+        <string>UYP Basketball needs photo access to save images to your library.</string>
+        
+        <!-- Background Modes for Push Notifications -->
+        <key>UIBackgroundModes</key>
+        <array>
+                <string>remote-notification</string>
+        </array>
+        
+        <!-- App Transport Security Settings -->
+        <key>NSAppTransportSecurity</key>
+        <dict>
+                <key>NSAllowsArbitraryLoads</key>
+                <false/>
+                <key>NSAllowsLocalNetworking</key>
+                <true/>
+        </dict>
 </dict>
 </plist>

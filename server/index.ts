@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import cors from "cors";
 import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -10,6 +11,20 @@ const app = express();
 
 // Trust proxy - required for secure cookies behind Replit's infrastructure
 app.set('trust proxy', 1);
+
+// CORS configuration for mobile apps
+app.use(cors({
+  origin: [
+    'capacitor://localhost',
+    'ionic://localhost',
+    'http://localhost',
+    'http://localhost:5000',
+    'https://boxstat.replit.app',
+  ],
+  credentials: true, // Allow cookies to be sent
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
@@ -33,10 +48,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Always use secure cookies for HTTPS
     httpOnly: true,
     maxAge: sessionTtl, // 30 days - persistent login
-    sameSite: 'lax'
+    sameSite: 'none' // Required for cross-origin cookies (mobile apps)
   },
   rolling: true, // Reset the cookie maxAge on every request to keep session alive
 }));

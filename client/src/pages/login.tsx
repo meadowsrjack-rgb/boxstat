@@ -24,10 +24,16 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
+      console.log("🔐 Attempting login with email:", email);
+      console.log("🌐 Current window location:", window.location.href);
+      console.log("📡 Sending POST to /api/auth/login");
+      
       const response = await apiRequest("POST", "/api/auth/login", {
         email,
         password,
       });
+      
+      console.log("✅ Login response received:", response);
 
       if (response.success) {
         toast({
@@ -53,6 +59,10 @@ export default function LoginPage() {
         throw new Error(response.message || "Login failed");
       }
     } catch (error: any) {
+      console.error("❌ Login error:", error);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+      
       // Check if it's a verification error
       if (error.message && error.message.includes("verify your email")) {
         toast({

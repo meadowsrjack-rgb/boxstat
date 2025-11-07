@@ -1174,7 +1174,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               >
                 <img
                   src="/foundation-logo.png"
-                  alt="UYP Foundation Program"
+                  alt="BoxStat Foundation Program"
                   className="w-48 h-auto drop-shadow-lg hover:drop-shadow-xl transition-all"
                 />
                 <div className="text-center mt-4">
@@ -1457,7 +1457,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           className="max-w-4xl mx-auto bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto p-0"
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogTitle className="sr-only">UYP Foundation Program</DialogTitle>
+          <DialogTitle className="sr-only">BoxStat Foundation Program</DialogTitle>
           <div className="relative">
             <button
               onClick={() => setShowFoundationProgram(false)}
@@ -1471,7 +1471,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             {/* Header */}
             <header className="px-6 pt-10 pb-6">
               <div className="text-center">
-                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">UYP Foundation Program</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">BoxStat Foundation Program</h1>
                 <p className="mt-2 max-w-2xl mx-auto text-sm leading-6 text-gray-700">
                   Master your fundamentals in 12 weeks. Five Skill drills and Strength & Conditioning exercises each week — plus a Basketball IQ lesson. Quizzes and reflections follow each week of learning.
                 </p>

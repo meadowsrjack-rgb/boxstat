@@ -30,9 +30,9 @@
 
 ### Command Sequence:
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/uyp-basketball-app.git
+git remote add origin https://github.com/YOUR_USERNAME/boxstat-app.git
 git add .
-git commit -m "Initial commit: UYP Basketball League PWA"
+git commit -m "Initial commit: BoxStat - Basketball Management Platform"
 git push -u origin main
 ```
 
@@ -66,4 +66,4 @@ git push -u origin main
 - RESTful API design
 - Comprehensive error handling
 
-Your UYP Basketball League app is production-ready and fully prepared for GitHub publication!
+Your BoxStat app is production-ready and fully prepared for GitHub publication!

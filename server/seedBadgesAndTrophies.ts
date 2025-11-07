@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { badges, trophies } from "@shared/schema";
 
-// Comprehensive badge and trophy seed data based on UYP Basketball achievement system
+// Comprehensive badge and trophy seed data based on BoxStat achievement system
 
 export const seedBadgesAndTrophies = async () => {
   console.log("🏆 Seeding badges and trophies...");
@@ -11,11 +11,11 @@ export const seedBadgesAndTrophies = async () => {
 
     // === TROPHIES ===
     const trophyData = [
-      // UYP Legacy Trophies (Yearly - Org-wide)
+      // BoxStat Legacy Trophies (Yearly - Org-wide)
       {
-        name: "The UYP Heart and Hustle Award",
+        name: "The BoxStat Heart and Hustle Award",
         slug: "uyp-heart-and-hustle",
-        description: "This yearly award recognizes the single player in all of UYP who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game.",
+        description: "This yearly award recognizes the single player in all of BoxStat who most consistently gave their all, demonstrating exceptional effort and determination in every practice and game.",
         icon: "/trophies/uyp-heart-and-hustle.png",
         type: "legacy" as const,
         criteria: { type: "coach_nomination", scope: "org-wide", frequency: "yearly" },
@@ -23,7 +23,7 @@ export const seedBadgesAndTrophies = async () => {
       {
         name: "The Spirit Award",
         slug: "spirit-award",
-        description: "Awarded to the one player across the entire organization who best maintained a positive attitude, lifted team morale, and represented the character of UYP both on and off the court.",
+        description: "Awarded to the one player across the entire organization who best maintained a positive attitude, lifted team morale, and represented the character of BoxStat both on and off the court.",
         icon: "/trophies/spirit-award.png",
         type: "legacy" as const,
         criteria: { type: "coach_nomination", scope: "org-wide", frequency: "yearly" },

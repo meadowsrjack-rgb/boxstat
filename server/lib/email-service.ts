@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 // Email configuration schema
 const emailConfigSchema = z.object({
   provider: z.enum(['console', 'resend', 'sendgrid']).default('console'),
-  from: z.string().default('UYP Support <no-reply@uyp.app>'), // Allow display name format
+  from: z.string().default('BoxStat Support <no-reply@boxstat.app>'), // Allow display name format
   resendApiKey: z.string().optional(),
   sendgridApiKey: z.string().optional(),
   devModeCode: z.string().default('000000'),
@@ -40,7 +40,7 @@ class ConsoleEmailService implements EmailService {
     console.log('');
     console.log(`Hi there!`);
     console.log('');
-    console.log(`Someone is trying to claim ${playerName} in the UYP Basketball app.`);
+    console.log(`Someone is trying to claim ${playerName} in the BoxStat app.`);
     console.log(`If this was you, use this verification code:`);
     console.log('');
     console.log(`  🏀 CODE: ${code}`);
@@ -49,7 +49,7 @@ class ConsoleEmailService implements EmailService {
     console.log(`If you didn't request this, you can safely ignore this email.`);
     console.log('');
     console.log(`Thanks,`);
-    console.log(`UYP Basketball Team`);
+    console.log(`BoxStat Team`);
     console.log('='.repeat(50));
   }
 
@@ -57,9 +57,9 @@ class ConsoleEmailService implements EmailService {
     console.log('📧 [EMAIL SERVICE - CONSOLE]');
     console.log('='.repeat(50));
     console.log(`To: ${to}`);
-    console.log(`Subject: Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - UYP Basketball`);
+    console.log(`Subject: Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - BoxStat`);
     console.log('');
-    console.log(`Welcome to UYP Basketball!`);
+    console.log(`Welcome to BoxStat!`);
     console.log('');
     console.log(`Click the link below to claim your ${accountType} account:`);
     console.log('');
@@ -69,7 +69,7 @@ class ConsoleEmailService implements EmailService {
     console.log(`If you didn't request this, you can safely ignore this email.`);
     console.log('');
     console.log(`Thanks,`);
-    console.log(`UYP Basketball Team`);
+    console.log(`BoxStat Team`);
     console.log('='.repeat(50));
   }
 }
@@ -90,11 +90,11 @@ class ResendEmailService implements EmailService {
         subject: `Verify Player Claim - ${playerName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc2626;">UYP Basketball - Verify Player Claim</h2>
+            <h2 style="color: #dc2626;">BoxStat - Verify Player Claim</h2>
             
             <p>Hi there!</p>
             
-            <p>Someone is trying to claim <strong>${playerName}</strong> in the UYP Basketball app.</p>
+            <p>Someone is trying to claim <strong>${playerName}</strong> in the BoxStat app.</p>
             
             <p>If this was you, use this verification code:</p>
             
@@ -111,16 +111,16 @@ class ResendEmailService implements EmailService {
             
             <p style="color: #6b7280; font-size: 12px;">
               Thanks,<br>
-              UYP Basketball Team
+              BoxStat Team
             </p>
           </div>
         `,
         text: `
-UYP Basketball - Verify Player Claim
+BoxStat - Verify Player Claim
 
 Hi there!
 
-Someone is trying to claim ${playerName} in the UYP Basketball app.
+Someone is trying to claim ${playerName} in the BoxStat app.
 
 If this was you, use this verification code: ${code}
 
@@ -128,7 +128,7 @@ This code will expire in 10 minutes.
 If you didn't request this, you can safely ignore this email.
 
 Thanks,
-UYP Basketball Team
+BoxStat Team
         `.trim(),
       });
 
@@ -149,14 +149,14 @@ UYP Basketball Team
       const { data, error } = await this.resend.emails.send({
         from: emailConfig.from,
         to: [to],
-        subject: `Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - UYP Basketball`,
+        subject: `Claim Your ${accountType === 'coach' ? 'Coach' : 'Parent'} Account - BoxStat`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #dc2626;">UYP Basketball - Claim Your Account</h2>
+            <h2 style="color: #dc2626;">BoxStat - Claim Your Account</h2>
             
-            <p>Welcome to UYP Basketball!</p>
+            <p>Welcome to BoxStat!</p>
             
-            <p>You've been added to the UYP Basketball app as a <strong>${accountType}</strong>. Click the button below to claim your account and get started:</p>
+            <p>You've been added to the BoxStat app as a <strong>${accountType}</strong>. Click the button below to claim your account and get started:</p>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${claimLink}" style="background-color: #dc2626; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Claim My Account</a>
@@ -176,16 +176,16 @@ UYP Basketball Team
             
             <p style="color: #6b7280; font-size: 12px;">
               Thanks,<br>
-              UYP Basketball Team
+              BoxStat Team
             </p>
           </div>
         `,
         text: `
-UYP Basketball - Claim Your Account
+BoxStat - Claim Your Account
 
-Welcome to UYP Basketball!
+Welcome to BoxStat!
 
-You've been added to the UYP Basketball app as a ${accountType}. Click the link below to claim your account and get started:
+You've been added to the BoxStat app as a ${accountType}. Click the link below to claim your account and get started:
 
 ${claimLink}
 
@@ -193,7 +193,7 @@ This link will expire in 30 minutes.
 If you didn't expect this email, you can safely ignore it.
 
 Thanks,
-UYP Basketball Team
+BoxStat Team
         `.trim(),
       });
 
@@ -278,7 +278,7 @@ class ConsoleSmsService implements SmsService {
     console.log('📱 [SMS SERVICE - CONSOLE]');
     console.log('='.repeat(30));
     console.log(`To: ${to}`);
-    console.log(`Message: UYP Basketball verification code for ${playerName}: ${code}`);
+    console.log(`Message: BoxStat verification code for ${playerName}: ${code}`);
     console.log('='.repeat(30));
   }
 }

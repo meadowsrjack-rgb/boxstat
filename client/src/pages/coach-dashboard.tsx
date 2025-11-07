@@ -1219,7 +1219,7 @@ function RosterTab({
 
 /* Removed local dialog components - now using shared dialogs from CoachAwardDialogs */
 
-/* ---------- Badges (UYP‑wide, unchanged) ---------- */
+/* ---------- Badges (BoxStat‑wide, unchanged) ---------- */
 function BadgesTab() {
   const { toast } = useToast();
   const [q, setQ] = useState("");
@@ -1267,7 +1267,7 @@ function BadgesTab() {
 
   return (
     <div className="space-y-5">
-      <h2 className="text-xl font-bold text-gray-900">Badges (UYP‑wide)</h2>
+      <h2 className="text-xl font-bold text-gray-900">Badges (BoxStat‑wide)</h2>
 
       {/* Player search */}
       <Card className="border-0 shadow-sm">

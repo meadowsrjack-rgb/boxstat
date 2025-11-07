@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# UYP Basketball App - Mac Environment Setup & Verification Script
+# BoxStat App - Mac Environment Setup & Verification Script
 # This script checks your Mac environment and fixes common iOS deployment issues
 
 set -e
@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}UYP Basketball App - Mac Setup Checker${NC}"
+echo -e "${BLUE}BoxStat App - Mac Setup Checker${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
 # Track if we need to fix anything

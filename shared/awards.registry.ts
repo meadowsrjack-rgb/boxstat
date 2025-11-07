@@ -1059,7 +1059,7 @@ export const AWARDS: Award[] = [
     name: "Checked In",
     tier: "Prospect",
     category: "Attendance",
-    description: "For checking into any UYP event.",
+    description: "For checking into any BoxStat event.",
     iconName: "badge-checked-in",
     progressKind: "manual",
     triggerSources: ["attendance"],

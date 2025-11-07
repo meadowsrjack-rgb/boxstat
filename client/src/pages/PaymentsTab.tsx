@@ -51,7 +51,7 @@ function LeadConnectorFrame({ src }: { src: string }) {
       )}
       <iframe
         ref={frameRef}
-        title="UYP Payment Form"
+        title="BoxStat Payment Form"
         src={src}
         className={`w-full transition-opacity ${loaded ? "opacity-100" : "opacity-0"}`}
         style={{ minHeight: height, border: 0 }}

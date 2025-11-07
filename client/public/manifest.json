@@ -1,7 +1,7 @@
 {
-  "name": "UYP Basketball League",
-  "short_name": "UYP Basketball",
-  "description": "Official app for UYP Basketball League in Costa Mesa, CA - Manage your player dashboard, schedule, and team activities",
+  "name": "BoxStat",
+  "short_name": "BoxStat",
+  "description": "BoxStat - Basketball statistics and team management platform",
   "start_url": "/?source=pwa",
   "display": "standalone",
   "theme_color": "#d82428",

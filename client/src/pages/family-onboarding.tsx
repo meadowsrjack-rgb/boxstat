@@ -264,7 +264,7 @@ export default function FamilyOnboarding() {
             <>
               {/* Welcome Message */}
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold">Welcome to UYP Basketball!</h2>
+                <h2 className="text-2xl font-bold">Welcome to BoxStat!</h2>
                 <p className="text-white/70 max-w-2xl mx-auto">
                   Let's set up your family profiles. You'll be able to manage all your players, 
                   register for programs, and track their progress from one account.

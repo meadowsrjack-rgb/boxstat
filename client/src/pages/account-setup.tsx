@@ -122,8 +122,8 @@ export default function AccountSetup() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <img src={logoPath} alt="UYP Basketball" className="h-16 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to UYP Basketball</h1>
+          <img src={logoPath} alt="BoxStat" className="h-16 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to BoxStat</h1>
           <p className="text-gray-600">Let's set up your account to get started</p>
           {isTestMode && (
             <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -552,7 +552,7 @@ export default function AccountSetup() {
                             </FormLabel>
                             <p className="text-sm text-muted-foreground">
                               {isPlayer 
-                                ? "I have parental permission to create this account and participate in UYP Basketball activities."
+                                ? "I have parental permission to create this account and participate in BoxStat activities."
                                 : "I agree to the terms and conditions, privacy policy, and understand the requirements for youth basketball participation."
                               }
                             </p>

@@ -98,7 +98,7 @@ export default function MyPlayers() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">No Players Added</h3>
                 <p className="text-gray-600 mt-2 max-w-sm mx-auto">
-                  Search for your child in the UYP roster and claim their profile to get started.
+                  Search for your child in the BoxStat roster and claim their profile to get started.
                 </p>
               </div>
               <Button 

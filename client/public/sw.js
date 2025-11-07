@@ -1,4 +1,4 @@
-const CACHE_NAME = 'uyp-basketball-v4';
+const CACHE_NAME = 'boxstat-v4';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -91,7 +91,7 @@ function doBackgroundSync() {
 // Push notification handling
 self.addEventListener('push', (event) => {
   const options = {
-    body: event.data ? event.data.text() : 'New notification from UYP Basketball',
+    body: event.data ? event.data.text() : 'New notification from BoxStat',
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
     vibrate: [200, 100, 200],
@@ -113,7 +113,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('UYP Basketball', options)
+    self.registration.showNotification('BoxStat', options)
   );
 });
 

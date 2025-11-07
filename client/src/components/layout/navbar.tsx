@@ -20,7 +20,7 @@ export default function Navbar() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <Volleyball className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-xl font-bold text-gray-900">UYP Volleyball</h1>
+              <h1 className="text-xl font-bold text-gray-900">BoxStat</h1>
             </div>
             <div className="animate-pulse">
               <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
@@ -39,7 +39,7 @@ export default function Navbar() {
             <Link href="/">
               <div className="flex items-center cursor-pointer">
                 <Volleyball className="h-8 w-8 text-primary mr-3" />
-                <h1 className="text-xl font-bold text-gray-900">UYP Volleyball</h1>
+                <h1 className="text-xl font-bold text-gray-900">BoxStat</h1>
               </div>
             </Link>
           </div>

@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.uypbasketball.app',
-  appName: 'UYP Basketball',
+  appId: 'com.boxstat.app',
+  appName: 'BoxStat',
   webDir: 'dist/public',
   server: {
     // Use your production URL when deployed
@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#DC2626', // UYP Basketball red theme
+    backgroundColor: '#DC2626', // BoxStat red theme
   },
   plugins: {
     SplashScreen: {

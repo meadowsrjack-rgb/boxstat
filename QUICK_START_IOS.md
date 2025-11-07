@@ -1,6 +1,6 @@
 # Quick Start: iOS Deployment Checklist
 
-This is a condensed, step-by-step checklist for deploying your UYP Basketball app to iOS. If you encounter any errors, refer to [MAC_SETUP_GUIDE.md](./MAC_SETUP_GUIDE.md) for detailed troubleshooting.
+This is a condensed, step-by-step checklist for deploying your BoxStat app to iOS. If you encounter any errors, refer to [MAC_SETUP_GUIDE.md](./MAC_SETUP_GUIDE.md) for detailed troubleshooting.
 
 ---
 

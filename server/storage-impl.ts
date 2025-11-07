@@ -651,8 +651,8 @@ class MemStorage implements IStorage {
       {
         id: "private-training-member",
         organizationId: "default-org",
-        name: "Private Training - UYP Member",
-        description: "One-on-one private training for UYP members",
+        name: "Private Training - BoxStat Member",
+        description: "One-on-one private training for BoxStat members",
         price: 8500, // $85
         pricingModel: "per-session",
         duration: "per hour",
@@ -664,7 +664,7 @@ class MemStorage implements IStorage {
       {
         id: "private-training-nonmember",
         organizationId: "default-org",
-        name: "Private Training - Non-UYP",
+        name: "Private Training - Non-BoxStat",
         description: "One-on-one private training for non-members",
         price: 12000, // $120
         pricingModel: "per-session",

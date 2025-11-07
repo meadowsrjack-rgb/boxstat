@@ -120,7 +120,7 @@ export default function RegistrationStatus() {
             Registration Status
           </h1>
           <p className="text-gray-600">
-            View your registration and payment status for UYP Basketball
+            View your registration and payment status for BoxStat
           </p>
         </div>
 

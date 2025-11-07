@@ -159,10 +159,10 @@ export default function Training() {
             <div className="flex items-center">
               <img 
                 src={logoPath} 
-                alt="UYP Basketball Academy" 
+                alt="BoxStat Academy" 
                 className="h-10 w-10 mr-3 object-contain"
               />
-              <h1 className="text-xl font-bold text-gray-900">UYP Academy</h1>
+              <h1 className="text-xl font-bold text-gray-900">BoxStat Academy</h1>
             </div>
             <Button 
               variant="ghost" 

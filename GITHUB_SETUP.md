@@ -1,6 +1,6 @@
 # GitHub Publication Guide
 
-## Publishing Your UYP Basketball App to GitHub
+## Publishing Your BoxStat App to GitHub
 
 ### Step 1: Prepare Your Repository
 
@@ -16,8 +16,8 @@ The project is already git-initialized and ready for GitHub. Here's what's been 
 1. Go to [GitHub.com](https://github.com) and sign in
 2. Click "New repository" or the "+" icon
 3. Repository settings:
-   - **Name**: `uyp-basketball-app` (or your preferred name)
-   - **Description**: "Progressive Web App for UYP Basketball League - team and family management platform"
+   - **Name**: `boxstat-app` (or your preferred name)
+   - **Description**: "Progressive Web App for BoxStat - team and family management platform"
    - **Visibility**: Private (recommended for proprietary code)
    - **Initialize**: Don't check any boxes (repository already has files)
 
@@ -27,13 +27,13 @@ After creating the GitHub repository, run these commands in your Replit shell:
 
 ```bash
 # Add your GitHub repository as remote origin
-git remote add origin https://github.com/YOUR_USERNAME/uyp-basketball-app.git
+git remote add origin https://github.com/YOUR_USERNAME/boxstat-app.git
 
 # Add all files to staging
 git add .
 
 # Commit your changes
-git commit -m "Initial commit: UYP Basketball League PWA"
+git commit -m "Initial commit: BoxStat League PWA"
 
 # Push to GitHub
 git push -u origin main
@@ -59,7 +59,7 @@ After pushing to GitHub:
 1. **Add Repository Description**
    - Go to your repository on GitHub
    - Click the gear icon next to "About"
-   - Add: "Progressive Web App for UYP Basketball League with real-time chat and multi-profile support"
+   - Add: "Progressive Web App for BoxStat with real-time chat and multi-profile support"
    - Add topics: `basketball`, `pwa`, `react`, `typescript`, `youth-sports`
 
 2. **Set Up GitHub Pages** (optional for documentation)
@@ -118,7 +118,7 @@ For team development:
 
 Your published repository will include:
 ```
-uyp-basketball-app/
+boxstat-app/
 ├── README.md              # Main documentation
 ├── DEPLOYMENT.md          # Development guidelines  
 ├── .env.example          # Environment template
@@ -137,4 +137,4 @@ uyp-basketball-app/
 4. Add comprehensive testing suite
 5. Set up monitoring and analytics
 
-Your UYP Basketball app is now ready for professional GitHub publication! 🏀
+Your BoxStat app is now ready for professional GitHub publication! 🏀

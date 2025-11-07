@@ -1,6 +1,6 @@
-# UYP Basketball - Xcode/Native iOS Deployment Guide
+# BoxStat - Xcode/Native iOS Deployment Guide
 
-This guide will help you export the UYP Basketball app and deploy it to the Apple App Store using Xcode.
+This guide will help you export the BoxStat app and deploy it to the Apple App Store using Xcode.
 
 ---
 
@@ -104,7 +104,7 @@ open App.xcworkspace
 ### A. Update Bundle Identifier
 1. Select the **App** target in the project navigator
 2. Go to **General** tab
-3. Change **Bundle Identifier** to: `com.uypbasketball.app`
+3. Change **Bundle Identifier** to: `com.boxstat.app`
 4. Ensure it matches `appId` in `capacitor.config.ts`
 
 ### B. Set Version and Build Number
@@ -138,7 +138,7 @@ open App.xcworkspace
 2. Navigate to **Certificates, Identifiers & Profiles**
 3. Select **Keys** from the sidebar
 4. Click **+** to create a new key
-5. Name it "UYP Basketball APNs Key"
+5. Name it "BoxStat APNs Key"
 6. Check **Apple Push Notifications service (APNs)**
 7. Click **Continue** → **Register**
 8. Download the `.p8` key file (save it securely!)
@@ -146,7 +146,7 @@ open App.xcworkspace
 
 **Verify APNs is Enabled on App ID:**
 1. In Apple Developer Portal, go to **Identifiers**
-2. Select your App ID (`com.uypbasketball.app`)
+2. Select your App ID (`com.boxstat.app`)
 3. Ensure **Push Notifications** is checked
 4. If not enabled, enable it and save
 
@@ -256,9 +256,9 @@ npx cap sync ios
 1. Go to [App Store Connect](https://appstoreconnect.apple.com)
 2. Click **My Apps** → **+** → **New App**
 3. Fill in app information:
-   - **Name**: UYP Basketball
-   - **Bundle ID**: com.uypbasketball.app
-   - **SKU**: uypbasketball-001
+   - **Name**: BoxStat
+   - **Bundle ID**: com.boxstat.app
+   - **SKU**: boxstat-001
    - **User Access**: Full Access
 
 4. Add screenshots (required sizes):
@@ -362,4 +362,4 @@ For issues specific to:
 
 ---
 
-**UYP Basketball League** - Built with Replit + Capacitor
+**BoxStat** - Built with Replit + Capacitor

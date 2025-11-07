@@ -1118,14 +1118,14 @@ export function PlayerDevicesPage() {
                     <li>Make sure location services are enabled on your device</li>
                     <li>Check your browser's location settings</li>
                     <li>Try refreshing the page and testing again</li>
-                    <li>For mobile: ensure the UYP app has location permission</li>
+                    <li>For mobile: ensure the BoxStat app has location permission</li>
                   </ul>
                 </div>
                 
                 <div>
                   <h4 className="font-medium text-gray-800 dark:text-gray-200">App Installation</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    Install the UYP app for the best experience: look for the "Install" or "Add to Home Screen" option in your browser.
+                    Install the BoxStat app for the best experience: look for the "Install" or "Add to Home Screen" option in your browser.
                   </p>
                 </div>
               </div>
@@ -1277,7 +1277,7 @@ export function PlayerLegalPage() {
               <div className="space-y-2">
                 <DocumentRow
                   title="Terms of Service"
-                  description="Rules and conditions for using the UYP Basketball app"
+                  description="Rules and conditions for using the BoxStat app"
                   accepted={agreementStatus.termsAccepted}
                   onView={() => openDocument('terms')}
                   testId="button-view-terms"

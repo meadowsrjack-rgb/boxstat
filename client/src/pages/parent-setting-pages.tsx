@@ -1540,7 +1540,7 @@ export function ParentConnectionsPage() {
                   </div>
                   <div>
                     <div className="font-medium text-gray-900 dark:text-gray-100">Google Calendar</div>
-                    <div className="text-sm text-gray-500">Export your visible UYP events to your personal Google Calendar</div>
+                    <div className="text-sm text-gray-500">Export your visible BoxStat events to your personal Google Calendar</div>
                   </div>
                 </div>
                 <Switch

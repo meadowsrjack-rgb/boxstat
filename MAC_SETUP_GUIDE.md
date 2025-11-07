@@ -1,6 +1,6 @@
 # Mac Environment Setup for iOS Deployment
 
-This guide will help you set up your Mac from scratch to deploy the UYP Basketball app to iOS. Follow these steps **in order**.
+This guide will help you set up your Mac from scratch to deploy the BoxStat app to iOS. Follow these steps **in order**.
 
 ---
 

@@ -271,7 +271,7 @@ export default function ManageChildren() {
                 Back to Dashboard
               </Button>
               <div className="flex items-center space-x-3">
-                <img src={logoPath} alt="UYP Basketball" className="h-8 w-8" />
+                <img src={logoPath} alt="BoxStat" className="h-8 w-8" />
                 <h1 className="text-xl font-bold text-gray-900">Manage Children</h1>
               </div>
             </div>

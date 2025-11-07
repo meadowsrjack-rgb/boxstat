@@ -43,7 +43,7 @@ export default function Onboarding() {
     },
     onSuccess: () => {
       toast({
-        title: "Welcome to UYP!",
+        title: "Welcome to BoxStat!",
         description: "Your family profiles have been created successfully.",
       });
       // Invalidate queries to refresh user data
@@ -102,7 +102,7 @@ export default function Onboarding() {
   return (
     <div className="mx-auto max-w-3xl p-4 md:p-6 space-y-6">
       <div className="text-center mb-6">
-        <h1 className="text-3xl font-bold text-red-600 mb-2">Welcome to UYP Basketball!</h1>
+        <h1 className="text-3xl font-bold text-red-600 mb-2">Welcome to BoxStat!</h1>
         <p className="text-muted-foreground">Let's set up your family profile to get started</p>
       </div>
 

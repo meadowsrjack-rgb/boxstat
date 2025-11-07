@@ -94,7 +94,7 @@ export function LocationSearch({
         // Nominatim usage policy: add email parameter for identification
         const response = await fetch(
           `https://nominatim.openstreetmap.org/search?` +
-          `format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&email=support@uypbasketball.com`
+          `format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&email=support@boxstat.com`
         );
         
         if (!response.ok) {

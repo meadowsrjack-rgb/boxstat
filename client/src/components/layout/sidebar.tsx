@@ -75,7 +75,7 @@ export default function Sidebar() {
           </div>
           <div>
             <h1 className={`text-lg font-bold ${isPlayer ? 'text-white' : 'text-gray-900'}`}>
-              UYP Volleyball
+              BoxStat
             </h1>
             <p className={`text-sm ${isPlayer ? 'text-white/80' : 'text-gray-500'}`}>
               {isAdmin ? 'Admin Panel' : isPlayer ? 'Player Dashboard' : 'Parent Portal'}

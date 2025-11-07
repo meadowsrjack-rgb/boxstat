@@ -56,7 +56,7 @@ export default function ClaimVerify() {
 
         toast({
           title: "Account claimed successfully!",
-          description: `Welcome to UYP Basketball, ${data.account.email}!`,
+          description: `Welcome to BoxStat, ${data.account.email}!`,
         });
 
         // In development mode with autoLogin, redirect to profile selection
@@ -90,7 +90,7 @@ export default function ClaimVerify() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logoPath} alt="UYP Basketball" className="h-16 w-auto" />
+            <img src={logoPath} alt="BoxStat" className="h-16 w-auto" />
           </div>
           
           {status === "loading" && (
@@ -116,7 +116,7 @@ export default function ClaimVerify() {
                 Account Claimed Successfully!
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Welcome to UYP Basketball Academy
+                Welcome to BoxStat Academy
               </CardDescription>
             </>
           )}

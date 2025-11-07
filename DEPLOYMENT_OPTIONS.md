@@ -1,4 +1,4 @@
-# UYP Basketball - Deployment Options
+# BoxStat - Deployment Options
 
 Your app supports multiple deployment options to reach users on different platforms.
 
@@ -49,7 +49,7 @@ Your app supports multiple deployment options to reach users on different platfo
 - ✅ Capacitor configured
 - ✅ iOS project initialized
 - ✅ All permissions added (location, camera, photos, push)
-- ✅ App branding set to "UYP Basketball"
+- ✅ App branding set to "BoxStat"
 - ✅ Build process tested and working
 
 ---
@@ -135,8 +135,8 @@ Click the "Publish" button in Replit UI
 ## Current Configuration
 
 **App Details**:
-- App ID: `com.uypbasketball.app`
-- App Name: `UYP Basketball`
+- App ID: `com.boxstat.app`
+- App Name: `BoxStat`
 - Theme Color: UYP Red (#DC2626)
 - Platform: iOS 13.0+
 

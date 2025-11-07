@@ -113,7 +113,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             </table>
           </div>
           <div style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #000; background: #f0f0f0;">
-            <img src="${uyplogoUrl}" alt="UYP Logo" style="height: 300px; width: auto; object-fit: contain;" />
+            <img src="${uyplogoUrl}" alt="BoxStat Logo" style="height: 300px; width: auto; object-fit: contain;" />
           </div>
         </div>
         
@@ -176,7 +176,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               <tr>
                 <td style="padding: 12px; border: 1px solid #000; font-size: 12px; line-height: 1.4;">
                   <div style="margin-bottom: 15px;">
-                    UYP coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
+                    BoxStat coaches will reevaluate your player after 30 days to assess their progress. Depending on the growth shown and needed, coaches will determine the next level they will graduate to. Here is an overview of the next levels we graduate our players to:
                   </div>
                   <div style="text-align: center; font-style: italic; color: #dc2626; font-weight: bold;">
                     <em>Rookies >> Skills Academy >> FNH >> Club >> High School</em>

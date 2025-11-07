@@ -189,7 +189,7 @@ export default function SearchClaimPlayer() {
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold text-gray-900">Find Your Player</h2>
         <p className="text-gray-600">
-          Search for your child in the UYP roster and claim their profile
+          Search for your child in the BoxStat roster and claim their profile
         </p>
       </div>
 
@@ -392,7 +392,7 @@ export default function SearchClaimPlayer() {
                   <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
-                      Welcome to UYP Basketball!
+                      Welcome to BoxStat!
                     </h3>
                     <p className="text-gray-600 mt-2">
                       {selectedPlayer.fullName} has been added to your family. You can now view their schedule, progress, and more.

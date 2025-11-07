@@ -5,7 +5,7 @@
         <key>CFBundleDevelopmentRegion</key>
         <string>en</string>
         <key>CFBundleDisplayName</key>
-        <string>UYP Basketball</string>
+        <string>BoxStat</string>
         <key>CFBundleExecutable</key>
         <string>$(EXECUTABLE_NAME)</string>
         <key>CFBundleIdentifier</key>
@@ -46,25 +46,25 @@
         <key>UIViewControllerBasedStatusBarAppearance</key>
         <true/>
         
-        <!-- Permissions for UYP Basketball App Features -->
+        <!-- Permissions for BoxStat App Features -->
         
         <!-- Location Services - Required for geo-fencing check-ins -->
         <key>NSLocationWhenInUseUsageDescription</key>
-        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
         <key>NSLocationAlwaysUsageDescription</key>
-        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
         <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-        <string>UYP Basketball needs your location to verify you're at the event location for check-ins.</string>
+        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
         
         <!-- Camera - Required for QR code scanning check-ins -->
         <key>NSCameraUsageDescription</key>
-        <string>UYP Basketball needs camera access to scan QR codes for event check-ins.</string>
+        <string>BoxStat needs camera access to scan QR codes for event check-ins.</string>
         
         <!-- Photo Library - Required for profile picture uploads -->
         <key>NSPhotoLibraryUsageDescription</key>
-        <string>UYP Basketball needs photo access to let you upload profile pictures.</string>
+        <string>BoxStat needs photo access to let you upload profile pictures.</string>
         <key>NSPhotoLibraryAddUsageDescription</key>
-        <string>UYP Basketball needs photo access to save images to your library.</string>
+        <string>BoxStat needs photo access to save images to your library.</string>
         
         <!-- Background Modes for Push Notifications -->
         <key>UIBackgroundModes</key>

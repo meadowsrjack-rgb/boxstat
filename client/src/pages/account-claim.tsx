@@ -109,7 +109,7 @@ export default function AccountClaim() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logoPath} alt="UYP Basketball" className="h-16 w-auto" />
+            <img src={logoPath} alt="BoxStat" className="h-16 w-auto" />
           </div>
           
           {!isSubmitted ? (
@@ -118,7 +118,7 @@ export default function AccountClaim() {
                 Claim Your Account
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Enter the email address you provided to UYP Basketball Academy to access your account
+                Enter the email address you provided to BoxStat Academy to access your account
               </CardDescription>
             </>
           ) : (
@@ -178,7 +178,7 @@ export default function AccountClaim() {
 
               <div className="text-center text-sm text-gray-500">
                 <p>Don't have an account yet?</p>
-                <p className="mt-1">Contact UYP Basketball Academy to register for programs.</p>
+                <p className="mt-1">Contact BoxStat Academy to register for programs.</p>
               </div>
             </>
           ) : (

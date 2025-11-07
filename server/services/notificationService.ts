@@ -18,7 +18,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViE
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "vXGl7jHHlh7p1v9cYxmVjmGQ6Gxi4l1fEUXwQ1yBUY8";
 
 webpush.setVapidDetails(
-  'mailto:notifications@uyp.app',
+  'mailto:notifications@boxstat.com',
   VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY
 );

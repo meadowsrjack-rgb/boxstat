@@ -1,7 +1,7 @@
-# UYP Basketball League Mobile App
+# BoxStat - Basketball Management Platform
 
 ## Overview
-The UYP Basketball League Mobile App is a cross-platform solution designed to streamline league operations, enhance communication, and manage schedules, player development, and team activities for youth basketball leagues. It aims to improve user experience through PWA features, secure authentication, and robust data management. The long-term vision is to become a leading mobile platform for youth sports leagues, offering unparalleled user experience and operational efficiency with potential for broader market reach.
+BoxStat is a cross-platform solution designed to streamline league operations, enhance communication, and manage schedules, player development, and team activities for basketball leagues. It aims to improve user experience through PWA features, secure authentication, and robust data management. The long-term vision is to become a leading mobile platform for sports management, offering unparalleled user experience and operational efficiency with potential for broader market reach.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -14,7 +14,7 @@ Preferred communication style: Simple, everyday language.
 - **Routing & State**: Wouter for routing, TanStack Query for server state management.
 - **PWA**: Full Progressive Web App capabilities for a native-like experience.
 - **Native iOS Deployment**: Capacitor integration configured for native iOS app deployment via Xcode. Includes iOS-specific configurations, permissions (location, camera, photo library, push notifications), and complete App Store deployment workflow. **Deployment Documentation**: `MAC_SETUP_GUIDE.md` (complete Mac environment setup from scratch), `QUICK_START_IOS.md` (quick reference checklist with troubleshooting), `XCODE_DEPLOYMENT_GUIDE.md` (full App Store submission guide), and `check_mac_environment.sh` (automated environment verification script).
-- **UI/UX Decisions**: Mobile-first responsive design, UYP Basketball red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
+- **UI/UX Decisions**: Mobile-first responsive design, red theme, PWA capabilities. Player dashboard includes skills progress and achievement counters. Coach dashboard features QR scanner for check-ins. Player Mode restricts payment access.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js (TypeScript, ESM modules).

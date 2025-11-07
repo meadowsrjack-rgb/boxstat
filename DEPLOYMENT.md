@@ -1,4 +1,4 @@
-# Contributing to UYP Basketball League App
+# Contributing to BoxStat League App
 
 ## Development Guidelines
 

@@ -1386,7 +1386,7 @@ export function CoachConnectionsPage() {
             <div className="space-y-4">
               <ConnectionCard
                 title="Google Calendar"
-                description="Export your visible UYP events to your personal Google Calendar"
+                description="Export your visible BoxStat events to your personal Google Calendar"
                 icon={<Calendar className="h-5 w-5" />}
                 service="googleCalendar"
                 connected={connections.googleCalendar}

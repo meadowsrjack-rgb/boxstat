@@ -36,7 +36,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2>1. Who We Are</h2>
               <p>
-                BoxStat is operated by UYP Basketball League ("we," "us," or "our"). This privacy policy 
+                BoxStat is operated by BoxStat ("we," "us," or "our"). This privacy policy 
                 explains how we collect, use, and protect your information when you use our mobile application.
               </p>
               <p>

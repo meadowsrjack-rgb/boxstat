@@ -922,7 +922,7 @@ function ConnectionsSection() {
                 <Users className="h-5 w-5" style={{ color: BRAND }} />
               </div>
               <div>
-                <div className="text-sm font-medium">UYP Basketball Account</div>
+                <div className="text-sm font-medium">BoxStat Account</div>
                 <div className="text-xs text-gray-500">
                   {isLinked ? "Linked - Profile data synced" : "Not linked - Link to access your program data"}
                 </div>

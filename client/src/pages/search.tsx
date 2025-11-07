@@ -30,7 +30,7 @@ export default function SearchPage() {
               Player & Team Search
             </h1>
             <p className="text-gray-600 dark:text-gray-300">
-              Search for players and teams across the UYP Basketball league
+              Search for players and teams across the BoxStat league
             </p>
           </div>
 

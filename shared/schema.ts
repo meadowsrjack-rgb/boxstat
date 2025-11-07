@@ -204,6 +204,17 @@ export const users = pgTable("users", {
   unique("users_email_unique").on(table.email),
 ]);
 
+// Pending Registrations table (email verifications not yet completed)
+export const pendingRegistrations = pgTable("pending_registrations", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  email: varchar().notNull().unique(),
+  verificationToken: varchar("verification_token").notNull(),
+  verificationExpiry: timestamp("verification_expiry", { mode: 'string' }).notNull(),
+  verified: boolean().default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
 // Programs table (packages/subscriptions)
 export const programs = pgTable("programs", {
   id: varchar().primaryKey().notNull(),

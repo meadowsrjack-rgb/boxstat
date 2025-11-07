@@ -63,6 +63,12 @@ export interface IStorage {
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   
+  // Pending Registration operations
+  getPendingRegistration(email: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null} | undefined>;
+  createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null}>;
+  updatePendingRegistration(email: string, organizationId: string, verified: boolean): Promise<void>;
+  deletePendingRegistration(email: string, organizationId: string): Promise<void>;
+  
   // Team operations
   getTeam(id: string): Promise<Team | undefined>;
   getTeamsByOrganization(organizationId: string): Promise<Team[]>;
@@ -214,6 +220,8 @@ export interface IStorage {
 class MemStorage implements IStorage {
   private organizations: Map<string, Organization> = new Map();
   private users: Map<string, User> = new Map();
+  private pendingRegistrations: Map<string, {id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null}> = new Map();
+  private nextPendingRegId: number = 1;
   private teams: Map<number, Team> = new Map();
   private events: Map<number, Event> = new Map();
   private attendances: Map<string, Attendance> = new Map();
@@ -806,6 +814,41 @@ class MemStorage implements IStorage {
   
   async deleteUser(id: string): Promise<void> {
     this.users.delete(id);
+  }
+  
+  // Pending Registration operations
+  async getPendingRegistration(email: string, organizationId: string) {
+    const key = `${email}-${organizationId}`;
+    return this.pendingRegistrations.get(key);
+  }
+  
+  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
+    const key = `${email}-${organizationId}`;
+    const pending = {
+      id: this.nextPendingRegId++,
+      email,
+      organizationId,
+      verificationToken,
+      verificationExpiry: verificationExpiry.toISOString(),
+      verified: false,
+      createdAt: new Date().toISOString()
+    };
+    this.pendingRegistrations.set(key, pending);
+    return pending;
+  }
+  
+  async updatePendingRegistration(email: string, organizationId: string, verified: boolean) {
+    const key = `${email}-${organizationId}`;
+    const pending = this.pendingRegistrations.get(key);
+    if (pending) {
+      pending.verified = verified;
+      this.pendingRegistrations.set(key, pending);
+    }
+  }
+  
+  async deletePendingRegistration(email: string, organizationId: string) {
+    const key = `${email}-${organizationId}`;
+    this.pendingRegistrations.delete(key);
   }
   
   // Team operations
@@ -2159,6 +2202,53 @@ class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     await db.delete(schema.users).where(eq(schema.users.id, id));
+  }
+  
+  // Pending Registration operations
+  async getPendingRegistration(email: string, organizationId: string) {
+    const results = await db.select().from(schema.pendingRegistrations)
+      .where(
+        and(
+          eq(schema.pendingRegistrations.email, email),
+          eq(schema.pendingRegistrations.organizationId, organizationId)
+        )
+      );
+    if (results.length === 0) return undefined;
+    return results[0];
+  }
+  
+  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
+    const results = await db.insert(schema.pendingRegistrations)
+      .values({
+        email,
+        organizationId,
+        verificationToken,
+        verificationExpiry: verificationExpiry.toISOString(),
+        verified: false,
+      })
+      .returning();
+    return results[0];
+  }
+  
+  async updatePendingRegistration(email: string, organizationId: string, verified: boolean) {
+    await db.update(schema.pendingRegistrations)
+      .set({ verified })
+      .where(
+        and(
+          eq(schema.pendingRegistrations.email, email),
+          eq(schema.pendingRegistrations.organizationId, organizationId)
+        )
+      );
+  }
+  
+  async deletePendingRegistration(email: string, organizationId: string) {
+    await db.delete(schema.pendingRegistrations)
+      .where(
+        and(
+          eq(schema.pendingRegistrations.email, email),
+          eq(schema.pendingRegistrations.organizationId, organizationId)
+        )
+      );
   }
 
   // Team operations

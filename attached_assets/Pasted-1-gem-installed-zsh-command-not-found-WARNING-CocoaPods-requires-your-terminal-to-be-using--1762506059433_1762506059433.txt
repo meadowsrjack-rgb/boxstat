@@ -1,0 +1,47 @@
+1 gem installed
+zsh: command not found: #
+    WARNING: CocoaPods requires your terminal to be using UTF-8 encoding.
+    Consider adding the following to ~/.profile:
+
+    export LANG=en_US.UTF-8
+    
+1.16.2
+<project/ios/App/\n\n# Install pod dependencies\npod install                                                           
+zsh: command not found: #
+cd: no such file or directory: /path/to/your/cloned/project/ios/App/
+zsh: command not found: #
+    WARNING: CocoaPods requires your terminal to be using UTF-8 encoding.
+    Consider adding the following to ~/.profile:
+
+    export LANG=en_US.UTF-8
+    
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+/Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/3.3.0/unicode_normalize/normalize.rb:141:in `normalize': Unicode Normalization not appropriate for ASCII-8BIT (Encoding::CompatibilityError)
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:167:in `unicode_normalize'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:167:in `installation_root'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:227:in `podfile_path'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/user_interface/error_report.rb:105:in `markdown_podfile'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/user_interface/error_report.rb:30:in `report'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/command.rb:66:in `report_error'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/claide-1.1.0/lib/claide/command.rb:396:in `handle_exception'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/claide-1.1.0/lib/claide/command.rb:337:in `rescue in run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/claide-1.1.0/lib/claide/command.rb:324:in `run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/command.rb:52:in `run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/bin/pod:55:in `<top (required)>'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/site_ruby/3.3.0/rubygems.rb:319:in `load'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/site_ruby/3.3.0/rubygems.rb:319:in `activate_and_load_bin_path'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/bin/pod:25:in `<main>'
+/Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/3.3.0/unicode_normalize/normalize.rb:141:in `normalize': Unicode Normalization not appropriate for ASCII-8BIT (Encoding::CompatibilityError)
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:167:in `unicode_normalize'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:167:in `installation_root'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:227:in `podfile_path'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/config.rb:206:in `podfile'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/command.rb:160:in `verify_podfile_exists!'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/command/install.rb:46:in `run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/claide-1.1.0/lib/claide/command.rb:334:in `run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/lib/cocoapods/command.rb:52:in `run'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/gems/3.3.0/gems/cocoapods-1.16.2/bin/pod:55:in `<top (required)>'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/site_ruby/3.3.0/rubygems.rb:319:in `load'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/lib/ruby/site_ruby/3.3.0/rubygems.rb:319:in `activate_and_load_bin_path'
+	from /Users/jackmeadows/.rbenv/versions/3.3.0/bin/pod:25:in `<main>'
+jackmeadows@Jacks-MacBook-Air ~ %                                                                                      

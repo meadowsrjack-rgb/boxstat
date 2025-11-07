@@ -88,8 +88,8 @@ export default function CheckInButton({
     mutationFn: async (payload: { 
       eventId: string | number; 
       type: 'onsite';
-      lat?: number; 
-      lng?: number;
+      latitude?: number; 
+      longitude?: number;
     }) => {
       const res = await fetch(`/api/attendances`, {
         method: 'POST',
@@ -171,8 +171,8 @@ export default function CheckInButton({
     checkIn({ 
       eventId: event.id, 
       type: 'onsite',
-      lat: pos.lat, 
-      lng: pos.lng 
+      latitude: pos.lat, 
+      longitude: pos.lng 
     });
   };
 

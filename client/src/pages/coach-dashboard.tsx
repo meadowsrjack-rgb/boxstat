@@ -286,7 +286,18 @@ export default function CoachDashboard() {
     },
     onSuccess: () => {
       toast({ title: "Evaluation saved" });
-      queryClient.invalidateQueries({ queryKey: querySaveKey });
+      // Invalidate ALL caches for the evaluated player
+      if (selectedPlayer) {
+        queryClient.invalidateQueries({ queryKey: querySaveKey });
+        // Player dashboard uses this format for latest evaluation
+        queryClient.invalidateQueries({ queryKey: ["/api/players", selectedPlayer.id, "latest-evaluation"] });
+        // Admin dashboard and unified account page
+        queryClient.invalidateQueries({ queryKey: ["/api/coach/evaluations"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/evaluations"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+        // Also invalidate the players list to update evaluation displays
+        queryClient.invalidateQueries({ queryKey: ["/api/coaches", currentUser?.id, "players"] });
+      }
       setEvalOpen(false);
       setScores({});
       setSelectedPlayer(null);

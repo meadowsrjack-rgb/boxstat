@@ -66,10 +66,10 @@ export default function RegistrationFlow() {
   
   // Check if user is coming back from email verification
   const urlParams = new URLSearchParams(window.location.search);
-  const verifiedEmail = urlParams.get('verified');
-  const continueReg = urlParams.get('continue');
+  const verifiedEmail = urlParams.get('email');
+  const isVerified = urlParams.get('verified') === 'true';
   
-  const [currentStep, setCurrentStep] = useState(verifiedEmail && continueReg ? 2 : 1);
+  const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 2 : 1);
   const [emailSent, setEmailSent] = useState(false);
   const [registrationData, setRegistrationData] = useState<{
     email?: string;

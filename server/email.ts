@@ -22,7 +22,7 @@ export async function sendVerificationEmail({
   firstName,
   verificationToken,
 }: SendVerificationEmailParams): Promise<void> {
-  const verificationUrl = `https://${DOMAIN}/verify-email?token=${verificationToken}`;
+  const verificationUrl = `https://${DOMAIN}/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
   const displayName = firstName || 'there';
 
   try {

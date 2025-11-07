@@ -418,26 +418,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ success: false, message: "Email is required" });
         }
         
-        // Find user by email
-        const user = await storage.getUserByEmail(email, "default-org");
+        const organizationId = "default-org";
         
-        if (!user) {
-          return res.status(404).json({ success: false, message: "User not found" });
+        // Check for pending registration first (new flow)
+        const pendingReg = await storage.getPendingRegistration(email, organizationId);
+        
+        if (pendingReg) {
+          // Mark pending registration as verified
+          await storage.updatePendingRegistration(email, organizationId, true);
+          
+          console.log(`[TEST] Pending registration for ${email} marked as verified for testing`);
+          
+          return res.json({ 
+            success: true, 
+            message: "Email verified for testing (pending registration)",
+            email: email,
+          });
         }
         
-        // Mark user as verified
-        await storage.updateUser(user.id, {
-          verified: true,
-          verificationToken: null as any,
-          verificationExpiry: null as any,
-        });
+        // Fallback to checking existing user (for backwards compatibility)
+        const user = await storage.getUserByEmail(email, organizationId);
         
-        console.log(`[TEST] Email ${email} marked as verified for testing`);
+        if (user) {
+          // Mark user as verified
+          await storage.updateUser(user.id, {
+            verified: true,
+            verificationToken: null as any,
+            verificationExpiry: null as any,
+          });
+          
+          console.log(`[TEST] User ${email} marked as verified for testing`);
+          
+          return res.json({ 
+            success: true, 
+            message: "Email verified for testing (existing user)",
+            email: user.email,
+          });
+        }
         
-        res.json({ 
-          success: true, 
-          message: "Email verified for testing",
-          email: user.email,
+        // Not found in either table
+        return res.status(404).json({ 
+          success: false, 
+          message: "No pending registration or user found with this email" 
         });
       } catch (error: any) {
         console.error("Test verification error:", error);

@@ -34,6 +34,7 @@ import {
   Unlock,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { PINDialog } from "@/components/PINDialog";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -372,6 +373,10 @@ export default function UnifiedAccount() {
   const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
   
+  // PIN dialog state
+  const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const [playerToLock, setPlayerToLock] = useState<string | null>(null);
+  
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -447,8 +452,9 @@ export default function UnifiedAccount() {
     const currentLock = localStorage.getItem("deviceLockedToPlayer");
     
     if (currentLock === playerId) {
-      // Unlock the device
+      // Unlock the device (no PIN needed from unified account)
       localStorage.removeItem("deviceLockedToPlayer");
+      localStorage.removeItem("deviceLockPIN");
       
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('deviceLockChanged'));
@@ -458,19 +464,29 @@ export default function UnifiedAccount() {
         description: "You can now access all player dashboards and the account page.",
       });
     } else {
-      // Lock the device to this player
-      localStorage.setItem("deviceLockedToPlayer", playerId);
-      localStorage.setItem("selectedPlayerId", playerId);
-      
-      // Dispatch custom event to notify other components
-      window.dispatchEvent(new Event('deviceLockChanged'));
-      
-      toast({
-        title: "Device Locked",
-        description: `This device is now locked to ${players.find((p: any) => p.id === playerId)?.firstName}'s dashboard.`,
-      });
-      setLocation("/player-dashboard");
+      // Show PIN dialog to lock the device
+      setPlayerToLock(playerId);
+      setPinDialogOpen(true);
     }
+  };
+  
+  const handlePinSuccess = (pin: string) => {
+    if (!playerToLock) return;
+    
+    // Save PIN and lock device
+    localStorage.setItem("deviceLockPIN", pin);
+    localStorage.setItem("deviceLockedToPlayer", playerToLock);
+    localStorage.setItem("selectedPlayerId", playerToLock);
+    
+    // Dispatch custom event to notify other components
+    window.dispatchEvent(new Event('deviceLockChanged'));
+    
+    toast({
+      title: "Device Locked",
+      description: `This device is now locked to ${players.find((p: any) => p.id === playerToLock)?.firstName}'s dashboard.`,
+    });
+    
+    setLocation("/player-dashboard");
   };
 
   const handleSignOut = async () => {
@@ -1038,6 +1054,16 @@ export default function UnifiedAccount() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* PIN Dialog */}
+      <PINDialog
+        open={pinDialogOpen}
+        onOpenChange={setPinDialogOpen}
+        mode="set"
+        onSuccess={handlePinSuccess}
+        title="Set Lock PIN"
+        description={`Create a 4-digit PIN to lock this device to ${players.find((p: any) => p.id === playerToLock)?.firstName}'s dashboard`}
+      />
 
       {/* Event Detail Modal */}
       {selectedChildForModal && (

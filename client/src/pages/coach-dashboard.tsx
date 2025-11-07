@@ -289,7 +289,9 @@ export default function CoachDashboard() {
       // Invalidate ALL caches for the evaluated player
       if (selectedPlayer) {
         queryClient.invalidateQueries({ queryKey: querySaveKey });
-        // Player dashboard uses this format for latest evaluation
+        // Unified account page uses this string template format
+        queryClient.invalidateQueries({ queryKey: [`/api/players/${selectedPlayer.id}/latest-evaluation`] });
+        // Player dashboard uses this array format
         queryClient.invalidateQueries({ queryKey: ["/api/players", selectedPlayer.id, "latest-evaluation"] });
         // Admin dashboard and unified account page
         queryClient.invalidateQueries({ queryKey: ["/api/coach/evaluations"] });

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   X, MapPin, Calendar, Clock, ExternalLink, 
-  CheckCircle2, XCircle, Circle, Shield 
+  CheckCircle2, XCircle, Circle, Shield, Navigation 
 } from 'lucide-react';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
 import { formatDateTime, offsetFromStart } from '@/lib/time';
@@ -59,8 +59,34 @@ export default function EventDetailModal({
 }: EventDetailModalProps) {
   const { toast } = useToast();
   const [selectedTab, setSelectedTab] = useState('overview');
-  const { getOnce } = useGeo(true);
+  const { getOnce, coords } = useGeo(true);
   const [isCheckingLocation, setIsCheckingLocation] = useState(false);
+  const [userDistance, setUserDistance] = useState<number | null>(null);
+  
+  // Calculate distance when modal opens or user location changes
+  useEffect(() => {
+    if (!open || !event || !coords) {
+      setUserDistance(null);
+      return;
+    }
+    
+    if (event.latitude != null && event.longitude != null) {
+      const distance = distanceMeters(
+        coords,
+        { lat: event.latitude, lng: event.longitude }
+      );
+      setUserDistance(distance);
+    }
+  }, [open, event, coords]);
+  
+  // Get location when modal opens
+  useEffect(() => {
+    if (open && event?.latitude != null && event?.longitude != null) {
+      getOnce().catch(() => {
+        // Silent fail - user can manually trigger location check
+      });
+    }
+  }, [open, event, getOnce]);
 
   const { data: windows = [] } = useQuery<EventWindow[]>({
     queryKey: ['/api/event-windows/event', event?.id],
@@ -398,6 +424,73 @@ export default function EventDetailModal({
               locationName={event.location}
               height="h-48"
             />
+          )}
+
+          {/* Distance Indicator */}
+          {event.latitude != null && event.longitude != null && userRole !== 'admin' && userRole !== 'coach' && (
+            <Card 
+              className={`p-4 ${
+                userDistance === null 
+                  ? 'bg-gray-50 dark:bg-gray-900' 
+                  : userDistance <= (event.checkInRadius ?? 200)
+                    ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'
+              }`}
+              data-testid="card-distance-indicator"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                    userDistance === null 
+                      ? 'bg-gray-200 dark:bg-gray-700' 
+                      : userDistance <= (event.checkInRadius ?? 200)
+                        ? 'bg-green-200 dark:bg-green-800'
+                        : 'bg-red-200 dark:bg-red-800'
+                  }`}>
+                    <Navigation className={`h-5 w-5 ${
+                      userDistance === null 
+                        ? 'text-gray-600 dark:text-gray-400' 
+                        : userDistance <= (event.checkInRadius ?? 200)
+                          ? 'text-green-700 dark:text-green-200'
+                          : 'text-red-700 dark:text-red-200'
+                    }`} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">
+                      {userDistance === null ? 'Getting your location...' : 'Distance from Event'}
+                    </div>
+                    {userDistance !== null && (
+                      <div className={`text-2xl font-bold ${
+                        userDistance <= (event.checkInRadius ?? 200)
+                          ? 'text-green-700 dark:text-green-200'
+                          : 'text-red-700 dark:text-red-200'
+                      }`}>
+                        {Math.round(userDistance)}m away
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    Check-in radius
+                  </div>
+                  <div className="text-sm font-medium">
+                    {event.checkInRadius ?? 200}m
+                  </div>
+                </div>
+              </div>
+              {userDistance !== null && userDistance > (event.checkInRadius ?? 200) && (
+                <div className="mt-3 text-sm text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 p-2 rounded">
+                  <strong>Too far:</strong> You must be within {event.checkInRadius ?? 200}m to check in. 
+                  You are currently {Math.round(userDistance - (event.checkInRadius ?? 200))}m outside the check-in radius.
+                </div>
+              )}
+              {userDistance !== null && userDistance <= (event.checkInRadius ?? 200) && (
+                <div className="mt-3 text-sm text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 p-2 rounded">
+                  <strong>In range:</strong> You are within the check-in radius. You can now check in to this event!
+                </div>
+              )}
+            </Card>
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

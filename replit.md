@@ -17,7 +17,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js (TypeScript, ESM modules).
-- **Authentication**: Custom email/password with email verification and magic link login.
+- **Authentication**: Custom email/password with email verification and magic link login. Uses pending registration system to prevent partial account creation.
 - **Session Management**: Persistent Express sessions with PostgreSQL storage (30-day expiration, rolling refresh on each request). Sessions survive server restarts and keep users logged in.
 - **Payment Processing**: Stripe for payments.
 - **Communication**: WebSocket support for real-time features.
@@ -26,16 +26,17 @@ Preferred communication style: Simple, everyday language.
 ### Database Architecture
 - **Database**: PostgreSQL with Neon serverless hosting.
 - **ORM**: Drizzle ORM for type-safe operations.
-- **Schema**: Supports users, teams, events, payments, facilities, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
+- **Schema**: Supports users, teams, events, payments, facilities, pending_registrations, a 5-tier badge/trophy system, UYP Legacy, Team Trophies, Divisions, Skills, and Notifications. Includes a dual-table structure for player data (Profiles for app users, Players for Notion-synced roster data).
 - **Programs**: Supports 10 programs (e.g., Skills Academy, FNHTL, Youth-Club, High-School) with support for ongoing/infinite programs.
 - **Divisions**: Age/level divisions with linked teams (team_ids array) to organize players and associate them with relevant teams.
 - **Teams**: Comprehensive team structure following BoxStat schema.
 - **User Fields**: Comprehensive user data including organization_id, division_id, products, skills_assessments, height_in, position, profile_visibility, bio, notes, guardian_id, emergency_contact_json, and last_login. Includes performance tracking fields.
 - **Payments Table**: Added playerId field to track which specific player a payment covers in per-player billing scenarios. This ensures accurate payment status attribution across siblings with different packages. **Schema Change**: The player_id column has been added to the payments table. For new deployments, run `drizzle-kit push` to sync the schema or manually add the column: `ALTER TABLE payments ADD COLUMN IF NOT EXISTS player_id VARCHAR;`
+- **Pending Registrations**: New table to prevent partial account creation during registration. Email verification creates a pending_registration record; user account is only created after all steps are completed with password set.
 
 ### Key Features & Design Decisions
-- **Authentication Flow**: Email/password with required verification, magic link, non-blocking registration, and automatic coach detection. Users are directed to appropriate dashboards.
-- **Registration Flow**: Streamlined 4-step process for "myself" registration and 5-step process for "my_child" registration. Package/program selection has been removed from registration and is now handled separately via the account page after registration.
+- **Authentication Flow**: Email/password with required verification, magic link, non-blocking registration, and automatic coach detection. Uses pending registration system to prevent partial account creation. Users are directed to appropriate dashboards.
+- **Registration Flow**: Streamlined 4-step process for "myself" registration and 5-step process for "my_child" registration. Package/program selection has been removed from registration and is now handled separately via the account page after registration. **Pending Registration System**: Step 1 creates a pending_registration record (not a user account). Email verification marks the pending_registration as verified. User account is only created at the final step when all data and password are provided. The pending_registration is deleted after successful account creation.
 - **User Management**: Single Parent account with linked child profiles; Dual Mode System (Parent/Player) secured by PIN. Profile deletion option available.
 - **Player Profile Management**: Profiles require verification and completion of all required fields to become public/searchable. Profile photo upload system implemented.
 - **Team Management**: Teams organized into programs with Notion-synced rosters. Coaches can be assigned to teams as head coach (coachId) or assistant coach (assistantCoachIds). Coaches can join existing teams via the coach dashboard.

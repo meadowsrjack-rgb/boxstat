@@ -1,0 +1,80 @@
+Last login: Fri Nov  7 21:11:30 on ttys005
+jackmeadows@Jacks-MacBook-Air ~ % cd ~/Documents/boxstat
+
+# 1. Pull latest changes
+git pull origin main
+
+# 2. Build the frontend
+npm run build
+
+# 3. THIS IS CRITICAL - Sync to iOS with the server URL
+npx cap sync ios
+
+# 4. Verify the config was copied
+cat ios/App/App/capacitor.config.json
+zsh: command not found: #
+From https://github.com/meadowsrjack-rgb/boxstat
+ * branch            main       -> FETCH_HEAD
+Updating a81945f..00445b6
+error: Your local changes to the following files would be overwritten by merge:
+	ios/App/App/Info.plist
+	package-lock.json
+Please commit your changes or stash them before you merge.
+Aborting
+zsh: command not found: #
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (2) ../vite/modulepreload-polyfill.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3536 modules transformed.
+../dist/public/index.html                                                      4.47 kB │ gzip:   1.24 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png                       107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png                            606.43 kB
+../dist/public/assets/Laanding page background_1762477206539-BlEUpXlS.mp4  5,394.65 kB
+../dist/public/assets/index-B3uebQv1.css                                     146.88 kB │ gzip:  26.63 kB
+../dist/public/assets/purify.es-DfngIMfA.js                                   22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-C238xRlO.js                                   150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-DKpvOKWH.js                                    2,307.23 kB │ gzip: 618.04 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.39s
+
+  dist/index.js  299.0kb
+
+⚡ Done in 19ms
+zsh: command not found: #
+✔ Copying web assets from public to ios/App/App/public in 46.96ms
+✔ Creating capacitor.config.json in ios/App/App in 622.25μs
+✔ copy ios in 89.78ms
+✔ Updating iOS plugins in 13.75ms
+✔ Updating iOS native dependencies with pod install in 3.45s
+✔ update ios in 3.52s
+[info] Sync finished in 3.952s
+zsh: command not found: #
+{
+	"appId": "com.boxstat.app",
+	"appName": "BoxStat",
+	"webDir": "dist/public",
+	"server": {},
+	"ios": {
+		"contentInset": "automatic",
+		"backgroundColor": "#DC2626"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 2000,
+			"backgroundColor": "#DC2626",
+			"showSpinner": false
+		},
+		"Geolocation": {}
+	},
+	"packageClassList": []
+}
+jackmeadows@Jacks-MacBook-Air boxstat % 

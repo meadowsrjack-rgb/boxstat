@@ -30,11 +30,14 @@ async function captureScreenshots() {
 
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
+      '--disable-software-rasterizer',
+      '--disable-extensions',
     ],
   });
 
@@ -84,7 +87,7 @@ async function captureScreenshots() {
           });
 
           // Wait a bit for animations and dynamic content
-          await page.waitForTimeout(2000);
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
           // Take screenshot
           const filename = `${pageConfig.name}-${deviceKey}.png`;

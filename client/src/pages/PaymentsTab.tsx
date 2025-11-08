@@ -122,7 +122,7 @@ export default function PaymentsTab() {
           <Button 
             variant="default" 
             className="gap-2" 
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            onClick={() => document.getElementById('root')?.scrollTo({ top: 0, behavior: "smooth" })}
             data-testid="button-checkout"
           >
             <CreditCard className="h-4 w-4" /> Checkout

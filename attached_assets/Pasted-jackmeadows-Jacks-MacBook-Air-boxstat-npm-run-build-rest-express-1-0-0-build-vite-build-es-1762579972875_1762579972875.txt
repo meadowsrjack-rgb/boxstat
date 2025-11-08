@@ -1,0 +1,37 @@
+jackmeadows@Jacks-MacBook-Air boxstat % npm run build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (2) ../vite/modulepreload-polyfill.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3536 modules transformed.
+../dist/public/index.html                                                      4.47 kB │ gzip:   1.24 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png                       107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png                            606.43 kB
+../dist/public/assets/Laanding page background_1762477206539-BlEUpXlS.mp4  5,394.65 kB
+../dist/public/assets/index-0GG63IlM.css                                     146.91 kB │ gzip:  26.64 kB
+../dist/public/assets/purify.es-DfngIMfA.js                                   22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-oEmPyFpY.js                                   150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-ChNfc51b.js                                    2,307.56 kB │ gzip: 618.19 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.08s
+
+  dist/index.js  299.5kb
+
+⚡ Done in 17ms
+jackmeadows@Jacks-MacBook-Air boxstat % npx cap sync ios
+✔ Copying web assets from public to ios/App/App/public in 52.22ms
+✔ Creating capacitor.config.json in ios/App/App in 1.68ms
+✔ copy ios in 99.93ms
+✔ Updating iOS plugins in 10.53ms
+✔ Updating iOS native dependencies with pod install in 3.32s
+✔ update ios in 3.40s
+[info] Sync finished in 3.907s
+jackmeadows@Jacks-MacBook-Air boxstat % 

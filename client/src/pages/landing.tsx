@@ -42,7 +42,7 @@ export default function Landing() {
             <Button 
               size="lg" 
               onClick={() => setLocation('/registration')}
-              className="bg-red-500 hover:bg-red-600 text-white text-lg font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px]"
+              className="bg-red-500 hover:bg-red-600 text-white font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px] text-[14px]"
               data-testid="button-lets-go"
             >
               LET'S GO

@@ -19,7 +19,8 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js (TypeScript, ESM modules).
 - **Authentication**: Custom email/password with email verification and magic link login. Uses pending registration system to prevent partial account creation.
-- **Session Management**: Persistent Express sessions with PostgreSQL storage (30-day expiration, rolling refresh on each request). Sessions survive server restarts and keep users logged in.
+- **Session Management**: Persistent Express sessions with PostgreSQL storage (30-day expiration, rolling refresh on each request). Sessions survive server restarts and keep users logged in. **Cookie Configuration**: Uses `secure: 'auto'` to automatically enable secure cookies for HTTPS, and `sameSite: 'lax'` for browser compatibility. Works in both development (Replit preview) and production (published app). Note: Replit embedded webview has cookie restrictions; use separate browser tab for testing.
+- **CORS Configuration**: Configured for cross-origin requests from mobile apps (capacitor://localhost, ionic://localhost) and web browsers. Credentials enabled for cookie-based authentication.
 - **Payment Processing**: Stripe for payments.
 - **Communication**: WebSocket support for real-time features.
 - **API Design**: RESTful endpoints.

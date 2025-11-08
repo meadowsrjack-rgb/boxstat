@@ -48,10 +48,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // HTTPS in production
+    secure: 'auto', // Automatically use secure for HTTPS connections
     httpOnly: true,
     maxAge: sessionTtl, // 30 days - persistent login
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' // 'none' for mobile apps in prod, 'lax' for dev
+    sameSite: 'lax' // Works for both browser and same-origin requests
   },
   rolling: true, // Reset the cookie maxAge on every request to keep session alive
 }));

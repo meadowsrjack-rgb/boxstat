@@ -3533,7 +3533,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [sortField, setSortField] = useState<string | null>(null);
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useDragScroll();
 
@@ -3685,9 +3685,9 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       // Toggle direction if same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // New field, default to ascending
+      // New field, default to descending
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection('desc');
     }
   };
 
@@ -3701,6 +3701,15 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       "HallOfFame": "bg-yellow-100 text-yellow-700 border-yellow-300",
     };
     return colors[prestige] || colors["Prospect"];
+  };
+
+  // Prestige hierarchy for sorting
+  const prestigeOrder: Record<string, number> = {
+    "HallOfFame": 5,
+    "Superstar": 4,
+    "AllStar": 3,
+    "Starter": 2,
+    "Prospect": 1,
   };
 
   // Filter and sort awards
@@ -3726,6 +3735,13 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       if (aValue == null && bValue == null) return 0;
       if (aValue == null) return 1;
       if (bValue == null) return -1;
+      
+      // Special handling for prestige sorting
+      if (sortField === 'prestige') {
+        const aRank = prestigeOrder[aValue] || 0;
+        const bRank = prestigeOrder[bValue] || 0;
+        return sortDirection === 'asc' ? aRank - bRank : bRank - aRank;
+      }
       
       // Convert to strings for comparison if not numbers
       if (typeof aValue === 'string') aValue = aValue.toLowerCase();
@@ -4242,10 +4258,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                   onClick={() => handleSort('name')}
                   data-testid="header-name"
                 >
-                  <div className="flex items-center gap-2">
-                    Name
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'name' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Name
                 </TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead 
@@ -4253,50 +4266,35 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                   onClick={() => handleSort('tier')}
                   data-testid="header-tier"
                 >
-                  <div className="flex items-center gap-2">
-                    Tier
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'tier' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Tier
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
                   onClick={() => handleSort('prestige')}
                   data-testid="header-prestige"
                 >
-                  <div className="flex items-center gap-2">
-                    Prestige
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'prestige' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Prestige
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
                   onClick={() => handleSort('class')}
                   data-testid="header-class"
                 >
-                  <div className="flex items-center gap-2">
-                    Class
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'class' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Class
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
                   onClick={() => handleSort('triggerField')}
                   data-testid="header-trigger"
                 >
-                  <div className="flex items-center gap-2">
-                    Trigger
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'triggerField' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Trigger
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
                   onClick={() => handleSort('triggerType')}
                   data-testid="header-type"
                 >
-                  <div className="flex items-center gap-2">
-                    Type
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'triggerType' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Type
                 </TableHead>
                 <TableHead>Recipients</TableHead>
                 <TableHead 
@@ -4304,10 +4302,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                   onClick={() => handleSort('active')}
                   data-testid="header-active"
                 >
-                  <div className="flex items-center gap-2">
-                    Active
-                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'active' ? 'text-primary' : 'text-gray-400'}`} />
-                  </div>
+                  Active
                 </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>

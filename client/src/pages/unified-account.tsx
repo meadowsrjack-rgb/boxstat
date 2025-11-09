@@ -463,6 +463,7 @@ function CompactPlayerCard({
   parentId,
   events,
   onViewDashboard,
+  onToggleLock,
 }: { 
   player: any; 
   payments?: Payment[];
@@ -470,11 +471,31 @@ function CompactPlayerCard({
   parentId?: string;
   events?: any[];
   onViewDashboard: (playerId: string) => void;
+  onToggleLock: (playerId: string) => void;
 }) {
+  const [isDeviceLocked, setIsDeviceLocked] = useState(
+    localStorage.getItem("deviceLockedToPlayer") === player.id
+  );
+  
   const { data: teamData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/team`],
     enabled: !!player.id,
   });
+  
+  // Listen for lock changes
+  useEffect(() => {
+    const checkLockStatus = () => {
+      setIsDeviceLocked(localStorage.getItem("deviceLockedToPlayer") === player.id);
+    };
+    
+    window.addEventListener('deviceLockChanged', checkLockStatus);
+    window.addEventListener('storage', checkLockStatus);
+    
+    return () => {
+      window.removeEventListener('deviceLockChanged', checkLockStatus);
+      window.removeEventListener('storage', checkLockStatus);
+    };
+  }, [player.id]);
   
   const { status, plan } = derivePlayerStatus(
     payments, 
@@ -522,6 +543,20 @@ function CompactPlayerCard({
           
           <div className="flex flex-col gap-1">
             <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => onToggleLock(player.id)}
+              data-testid={`button-lock-${player.id}`}
+              title={isDeviceLocked ? "Unlock device from this player" : "Lock device to this player"}
+            >
+              {isDeviceLocked ? (
+                <Lock className="h-3 w-3 text-red-600" />
+              ) : (
+                <Unlock className="h-3 w-3 text-gray-400" />
+              )}
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => onViewDashboard(player.id)}
@@ -544,7 +579,7 @@ function CompactPlayerCard({
 }
 
 // Upcoming Events Preview
-function UpcomingEventsPreview({ events, players }: { events: any[]; players: any[] }) {
+function UpcomingEventsPreview({ events, players, onViewAll }: { events: any[]; players: any[]; onViewAll: () => void }) {
   const upcomingEvents = events
     .filter((e: any) => new Date(e.startTime) > new Date())
     .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
@@ -568,8 +603,13 @@ function UpcomingEventsPreview({ events, players }: { events: any[]; players: an
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Upcoming Events</CardTitle>
-          <Button variant="ghost" size="sm" asChild>
-            <a href="#events-tab" data-testid="link-view-all-events">View All</a>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onViewAll}
+            data-testid="link-view-all-events"
+          >
+            View All
           </Button>
         </div>
       </CardHeader>
@@ -604,7 +644,7 @@ function UpcomingEventsPreview({ events, players }: { events: any[]; players: an
 }
 
 // Announcements Preview
-function AnnouncementsPreview() {
+function AnnouncementsPreview({ onViewAll }: { onViewAll: () => void }) {
   const { data: notifications = [] } = useQuery<any[]>({
     queryKey: ["/api/notifications"],
   });
@@ -613,51 +653,49 @@ function AnnouncementsPreview() {
     .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
   
-  if (recentNotifications.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Announcements</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500 text-center py-4">No announcements yet</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
   return (
     <Card data-testid="announcements-preview">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Announcements</CardTitle>
-          <Button variant="ghost" size="sm" asChild>
-            <a href="#messages-tab" data-testid="link-view-all-announcements">View All</a>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={onViewAll}
+            data-testid="link-view-all-announcements"
+          >
+            View All
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {recentNotifications.map((notification: any) => (
-          <div 
-            key={notification.id} 
-            className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            data-testid={`notification-${notification.id}`}
-          >
-            <div className="flex items-start gap-3">
-              <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sm">{notification.title}</h4>
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
-                <p className="text-xs text-gray-400 mt-1">
-                  {new Date(notification.createdAt).toLocaleDateString()}
-                </p>
+      <CardContent>
+        {recentNotifications.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No announcements yet</p>
+        ) : (
+          <div className="space-y-3">
+            {recentNotifications.map((notification: any) => (
+              <div 
+                key={notification.id} 
+                className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                data-testid={`notification-${notification.id}`}
+              >
+                <div className="flex items-start gap-3">
+                  <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-sm">{notification.title}</h4>
+                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(notification.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {!notification.isRead && (
+                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
+                  )}
+                </div>
               </div>
-              {!notification.isRead && (
-                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-              )}
-            </div>
+            ))}
           </div>
-        ))}
+        )}
       </CardContent>
     </Card>
   );
@@ -706,6 +744,9 @@ export default function UnifiedAccount() {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
+  
+  // Tab state for controlled component
+  const [activeTab, setActiveTab] = useState("home");
   
   // PIN dialog state
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
@@ -888,7 +929,7 @@ export default function UnifiedAccount() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="home">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="home" data-testid="tab-home" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
@@ -914,15 +955,27 @@ export default function UnifiedAccount() {
             </TabsList>
           </div>
 
-          {/* Home Tab */}
+          {/* Home Tab - Comprehensive Dashboard */}
           <TabsContent value="home" className="space-y-6">
-            {/* Player Cards Section */}
+            {/* Action Required Panel */}
+            <ActionRequiredPanel 
+              players={players}
+              payments={payments}
+              programs={programs}
+              parentId={user?.id}
+            />
+
+            {/* Quick Links Section */}
+            <QuickLinksSection setLocation={setLocation} />
+
+            {/* My Players Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">My Players</h2>
+                <h2 className="text-xl font-bold">My Players</h2>
                 <Button
                   onClick={() => setLocation("/add-player")}
                   variant="outline"
+                  size="sm"
                   data-testid="button-add-player"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
@@ -948,18 +1001,31 @@ export default function UnifiedAccount() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {players.map((player: any) => (
-                    <EnhancedPlayerCard
+                    <CompactPlayerCard
                       key={player.id}
                       player={player}
                       payments={payments}
                       programs={programs}
                       parentId={user?.id}
+                      events={events}
                       onViewDashboard={handleViewDashboard}
                       onToggleLock={handleToggleLock}
                     />
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Events and Announcements Preview - Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <UpcomingEventsPreview 
+                events={events} 
+                players={players}
+                onViewAll={() => setActiveTab("events")}
+              />
+              <AnnouncementsPreview 
+                onViewAll={() => setActiveTab("messages")}
+              />
             </div>
 
           </TabsContent>

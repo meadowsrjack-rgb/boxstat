@@ -1,0 +1,123 @@
+Redesign the unified account page (parent dashboard) to be more intuitive, compact, and useful.
+
+The Home tab should be upgraded to include:
+
+Action Required Panel (registration due, payments due, pending waivers, inactive status, etc.)
+
+My Players section with compact player cards, status bars, and quick actions
+
+Upcoming Events preview (with link to full calendar)
+
+Announcements / Team Messages preview section (must use existing announcement + notification architecture)
+
+Quick links (Add Player, Register, Payments, etc.)
+
+Do NOT hardcode announcements or events — use the existing live data the app already pulls from admin-created items.
+
+✅ Requirements for layout changes
+1. Action Required Panel
+
+Add a horizontal alert panel at the top that shows:
+
+registration needed
+
+payment due
+
+inactive players
+
+missing documents/waivers
+
+Make this render only if data exists.
+
+2. Player Cards (compact redesign)
+
+Each player tile should become smaller and include:
+
+player name and team
+
+status (Active/Inactive/Payment Due)
+
+next event
+
+skills % and awards
+
+quick buttons (“View”, “Register”, “Pay Now”, etc.)
+
+Must NOT break existing player routing or components.
+
+3. Upcoming Events Section
+
+A short list (3–5 items):
+
+practice / game
+
+date/time/location
+
+supports multiple players
+
+Must use existing event data logic.
+
+4. Announcements / Messages Preview
+
+Use the current admin-created announcements and messages system.
+Display the latest 3–5 announcements with a “View All” link.
+
+5. Quick Links
+
+Small button row:
+
+Add Player
+
+Payments
+
+Registration
+
+Calendar
+
+Hook to existing routes.
+
+✅ Tabs Structure (do not break routing)
+
+Keep the existing tabs, but ensure “Home” becomes a true dashboard:
+
+Home (overview)
+
+Players
+
+Payments
+
+Messages
+
+Settings
+
+Events (if already exists)
+
+✅ Styling Guidelines
+
+Keep design consistent with your existing components (Tailwind, icons, etc.)
+
+Keep mobile responsiveness
+
+Maintain your theme and spacing scale
+
+Avoid introducing new dependencies unless necessary
+
+✅ Implementation Notes
+
+Only rewrite the unified account page component and any small subcomponents you introduce (e.g., PlayerCardCompact, ActionRequiredBar).
+
+Do NOT refactor unrelated code.
+
+Do NOT change backend API endpoints.
+
+All existing features must continue functioning with no regressions.
+
+Place new components in the same structure you’re currently using unless clearly beneficial.
+
+Deliverables:
+
+Updated unified account page code
+
+Any new small components used (cards, alert bar, event preview, announcement preview)
+
+Notes on which files you touched (no unexplained changes)

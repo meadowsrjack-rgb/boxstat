@@ -364,378 +364,6 @@ function EnhancedPlayerCard({
   );
 }
 
-// Action Required Panel - shows alerts for registration, payments, inactive players
-function ActionRequiredPanel({ players, payments, programs, parentId }: {
-  players: any[];
-  payments?: Payment[];
-  programs?: Program[];
-  parentId?: string;
-}) {
-  const alerts = [];
-  
-  // Check for inactive players
-  const inactivePlayers = players.filter(p => !p.isActive);
-  if (inactivePlayers.length > 0) {
-    alerts.push({
-      type: "warning",
-      icon: User,
-      title: "Inactive Players",
-      message: `${inactivePlayers.length} player(s) need activation`,
-      action: "Review profiles to activate",
-    });
-  }
-  
-  // Check for pending payments
-  const pendingPayments = payments?.filter(p => p.status === "pending") || [];
-  if (pendingPayments.length > 0) {
-    const totalDue = pendingPayments.reduce((sum, p) => sum + p.amount, 0) / 100;
-    alerts.push({
-      type: "error",
-      icon: DollarSign,
-      title: "Payment Due",
-      message: `$${totalDue.toFixed(2)} in pending payments`,
-      action: "Go to Payments tab",
-    });
-  }
-  
-  // Check for players without registration
-  const unregisteredPlayers = players.filter(p => !p.hasRegistered);
-  if (unregisteredPlayers.length > 0) {
-    alerts.push({
-      type: "info",
-      icon: UserPlus,
-      title: "Registration Needed",
-      message: `${unregisteredPlayers.length} player(s) need registration`,
-      action: "Complete registration",
-    });
-  }
-  
-  // Check for incomplete profiles
-  const incompleteProfiles = players.filter(p => !p.profileCompleted);
-  if (incompleteProfiles.length > 0) {
-    alerts.push({
-      type: "warning",
-      icon: Settings,
-      title: "Profile Incomplete",
-      message: `${incompleteProfiles.length} player(s) need profile completion`,
-      action: "Update player profiles",
-    });
-  }
-  
-  if (alerts.length === 0) return null;
-  
-  const getAlertColor = (type: string) => {
-    switch (type) {
-      case "error": return "border-red-200 bg-red-50 text-red-800";
-      case "warning": return "border-yellow-200 bg-yellow-50 text-yellow-800";
-      case "info": return "border-blue-200 bg-blue-50 text-blue-800";
-      default: return "border-gray-200 bg-gray-50 text-gray-800";
-    }
-  };
-  
-  return (
-    <div className="space-y-3" data-testid="action-required-panel">
-      {alerts.map((alert, index) => (
-        <div 
-          key={index}
-          className={`border rounded-lg p-4 ${getAlertColor(alert.type)}`}
-          data-testid={`alert-${alert.type}-${index}`}
-        >
-          <div className="flex items-center gap-3">
-            <alert.icon className="w-5 h-5 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-semibold">{alert.title}</h4>
-              <p className="text-sm opacity-90">{alert.message}</p>
-            </div>
-            <div className="text-xs opacity-75">{alert.action}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Compact Player Card for Dashboard
-function CompactPlayerCard({ 
-  player, 
-  payments,
-  programs,
-  parentId,
-  events,
-  onViewDashboard,
-  onToggleLock,
-}: { 
-  player: any; 
-  payments?: Payment[];
-  programs?: Program[];
-  parentId?: string;
-  events?: any[];
-  onViewDashboard: (playerId: string) => void;
-  onToggleLock: (playerId: string) => void;
-}) {
-  const [isDeviceLocked, setIsDeviceLocked] = useState(
-    localStorage.getItem("deviceLockedToPlayer") === player.id
-  );
-  
-  const { data: teamData } = useQuery<any>({
-    queryKey: [`/api/users/${player.id}/team`],
-    enabled: !!player.id,
-  });
-  
-  // Listen for lock changes
-  useEffect(() => {
-    const checkLockStatus = () => {
-      setIsDeviceLocked(localStorage.getItem("deviceLockedToPlayer") === player.id);
-    };
-    
-    window.addEventListener('deviceLockChanged', checkLockStatus);
-    window.addEventListener('storage', checkLockStatus);
-    
-    return () => {
-      window.removeEventListener('deviceLockChanged', checkLockStatus);
-      window.removeEventListener('storage', checkLockStatus);
-    };
-  }, [player.id]);
-  
-  const { status, plan } = derivePlayerStatus(
-    payments, 
-    programs, 
-    player.id, 
-    parentId,
-    player.packageSelected
-  );
-  const statusColor = getStatusColor(status);
-  const statusLabel = getStatusLabel(status);
-  
-  // Find next event for this player
-  const nextEvent = events?.find(e => 
-    new Date(e.startTime) > new Date() &&
-    (e.targetUserIds?.includes(player.id) || e.targetTeamIds?.includes(player.teamId))
-  );
-  
-  return (
-    <Card className="hover:shadow-md transition-shadow" data-testid={`compact-player-card-${player.id}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Avatar className="w-12 h-12">
-            <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold">
-              {player.firstName?.[0]}{player.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold truncate">{player.firstName} {player.lastName}</h4>
-            {teamData?.name && (
-              <p className="text-xs text-gray-500 truncate">{teamData.name}</p>
-            )}
-            <div className="flex items-center gap-2 mt-1">
-              <span className={`h-2 w-2 rounded-full ${statusColor}`}></span>
-              <span className="text-xs font-medium">{statusLabel}</span>
-            </div>
-            {nextEvent && (
-              <p className="text-xs text-gray-500 mt-1 truncate">
-                <Clock className="w-3 h-3 inline mr-1" />
-                {new Date(nextEvent.startTime).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-          
-          <div className="flex flex-col gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              onClick={() => onToggleLock(player.id)}
-              data-testid={`button-lock-${player.id}`}
-              title={isDeviceLocked ? "Unlock device from this player" : "Lock device to this player"}
-            >
-              {isDeviceLocked ? (
-                <Lock className="h-3 w-3 text-red-600" />
-              ) : (
-                <Unlock className="h-3 w-3 text-gray-400" />
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewDashboard(player.id)}
-              data-testid={`button-view-${player.id}`}
-              className="text-xs h-7"
-            >
-              <Eye className="w-3 h-3 mr-1" />
-              View
-            </Button>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t">
-          <CompactAwardsIndicator playerId={player.id} />
-          <SkillsIndicator playerId={player.id} />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Upcoming Events Preview
-function UpcomingEventsPreview({ events, players, onViewAll }: { events: any[]; players: any[]; onViewAll: () => void }) {
-  const upcomingEvents = events
-    .filter((e: any) => new Date(e.startTime) > new Date())
-    .sort((a: any, b: any) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    .slice(0, 5);
-  
-  if (upcomingEvents.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Upcoming Events</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-gray-500 text-center py-4">No upcoming events</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  return (
-    <Card data-testid="upcoming-events-preview">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Upcoming Events</CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={onViewAll}
-            data-testid="link-view-all-events"
-          >
-            View All
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {upcomingEvents.map((event: any) => (
-          <div 
-            key={event.id} 
-            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            data-testid={`event-preview-${event.id}`}
-          >
-            <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm truncate">{event.title}</h4>
-              <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
-                <Clock className="w-3 h-3" />
-                <span>{new Date(event.startTime).toLocaleDateString()} at {new Date(event.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-              {event.location && (
-                <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">{event.location}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Announcements Preview
-function AnnouncementsPreview({ onViewAll }: { onViewAll: () => void }) {
-  const { data: notifications = [] } = useQuery<any[]>({
-    queryKey: ["/api/notifications"],
-  });
-  
-  const recentNotifications = notifications
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
-  
-  return (
-    <Card data-testid="announcements-preview">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Announcements</CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={onViewAll}
-            data-testid="link-view-all-announcements"
-          >
-            View All
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {recentNotifications.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">No announcements yet</p>
-        ) : (
-          <div className="space-y-3">
-            {recentNotifications.map((notification: any) => (
-              <div 
-                key={notification.id} 
-                className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                data-testid={`notification-${notification.id}`}
-              >
-                <div className="flex items-start gap-3">
-                  <MessageSquare className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm">{notification.title}</h4>
-                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(notification.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  {!notification.isRead && (
-                    <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Quick Links Section
-function QuickLinksSection({ setLocation }: { setLocation: (path: string) => void }) {
-  const links = [
-    { label: "Add Player", icon: UserPlus, path: "/add-player", color: "text-blue-600 bg-blue-50 hover:bg-blue-100" },
-    { label: "Payments", icon: DollarSign, path: "#payments-tab", color: "text-green-600 bg-green-50 hover:bg-green-100" },
-    { label: "Calendar", icon: Calendar, path: "#events-tab", color: "text-purple-600 bg-purple-50 hover:bg-purple-100" },
-    { label: "Messages", icon: MessageSquare, path: "#messages-tab", color: "text-orange-600 bg-orange-50 hover:bg-orange-100" },
-  ];
-  
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="quick-links-section">
-      {links.map((link) => (
-        <Button
-          key={link.label}
-          variant="outline"
-          className={`h-auto flex-col gap-2 py-4 ${link.color} border-0`}
-          onClick={() => {
-            if (link.path.startsWith("#")) {
-              const tabValue = link.path.replace("#", "").replace("-tab", "");
-              const tabTrigger = document.querySelector(`[data-testid="tab-${tabValue}"]`) as HTMLElement;
-              tabTrigger?.click();
-            } else {
-              setLocation(link.path);
-            }
-          }}
-          data-testid={`quick-link-${link.label.toLowerCase().replace(" ", "-")}`}
-        >
-          <link.icon className="w-6 h-6" />
-          <span className="text-sm font-semibold">{link.label}</span>
-        </Button>
-      ))}
-    </div>
-  );
-}
-
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -744,9 +372,6 @@ export default function UnifiedAccount() {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
-  
-  // Tab state for controlled component
-  const [activeTab, setActiveTab] = useState("home");
   
   // PIN dialog state
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
@@ -929,7 +554,7 @@ export default function UnifiedAccount() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="home">
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">
               <TabsTrigger value="home" data-testid="tab-home" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
@@ -955,27 +580,15 @@ export default function UnifiedAccount() {
             </TabsList>
           </div>
 
-          {/* Home Tab - Comprehensive Dashboard */}
+          {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
-            {/* Action Required Panel */}
-            <ActionRequiredPanel 
-              players={players}
-              payments={payments}
-              programs={programs}
-              parentId={user?.id}
-            />
-
-            {/* Quick Links Section */}
-            <QuickLinksSection setLocation={setLocation} />
-
-            {/* My Players Section */}
+            {/* Player Cards Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">My Players</h2>
+                <h2 className="text-2xl font-bold">My Players</h2>
                 <Button
                   onClick={() => setLocation("/add-player")}
                   variant="outline"
-                  size="sm"
                   data-testid="button-add-player"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
@@ -1001,31 +614,18 @@ export default function UnifiedAccount() {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {players.map((player: any) => (
-                    <CompactPlayerCard
+                    <EnhancedPlayerCard
                       key={player.id}
                       player={player}
                       payments={payments}
                       programs={programs}
                       parentId={user?.id}
-                      events={events}
                       onViewDashboard={handleViewDashboard}
                       onToggleLock={handleToggleLock}
                     />
                   ))}
                 </div>
               )}
-            </div>
-
-            {/* Events and Announcements Preview - Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <UpcomingEventsPreview 
-                events={events} 
-                players={players}
-                onViewAll={() => setActiveTab("events")}
-              />
-              <AnnouncementsPreview 
-                onViewAll={() => setActiveTab("messages")}
-              />
             </div>
 
           </TabsContent>

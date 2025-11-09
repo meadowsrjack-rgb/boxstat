@@ -3532,6 +3532,8 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useDragScroll();
 
@@ -3677,6 +3679,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     });
   };
 
+  // Handle column sorting
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
   // Get prestige badge color
   const getPrestigeBadgeColor = (prestige: string) => {
     const colors: Record<string, string> = {
@@ -3689,18 +3703,38 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     return colors[prestige] || colors["Prospect"];
   };
 
-  // Filter awards
-  const filteredAwards = awardDefinitions.filter((award: any) => {
-    const matchesSearch = award.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTier = filterTier === "all" || award.tier === filterTier;
-    const matchesPrestige = filterPrestige === "all" || award.prestige === filterPrestige;
-    const matchesClass = filterClass === "all" || award.class === filterClass;
-    const matchesActive = filterActive === "all" || 
-      (filterActive === "active" && award.active) || 
-      (filterActive === "inactive" && !award.active);
-    
-    return matchesSearch && matchesTier && matchesPrestige && matchesClass && matchesActive;
-  });
+  // Filter and sort awards
+  const filteredAwards = awardDefinitions
+    .filter((award: any) => {
+      const matchesSearch = award.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTier = filterTier === "all" || award.tier === filterTier;
+      const matchesPrestige = filterPrestige === "all" || award.prestige === filterPrestige;
+      const matchesClass = filterClass === "all" || award.class === filterClass;
+      const matchesActive = filterActive === "all" || 
+        (filterActive === "active" && award.active) || 
+        (filterActive === "inactive" && !award.active);
+      
+      return matchesSearch && matchesTier && matchesPrestige && matchesClass && matchesActive;
+    })
+    .sort((a: any, b: any) => {
+      if (!sortField) return 0;
+      
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+      
+      // Handle null/undefined values
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      
+      // Convert to strings for comparison if not numbers
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+      
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   // Get recipient count for an award
   const getRecipientCount = (awardId: number) => {
@@ -4203,15 +4237,78 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('name')}
+                  data-testid="header-name"
+                >
+                  <div className="flex items-center gap-2">
+                    Name
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'name' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
                 <TableHead>Image</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Prestige</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Trigger</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('tier')}
+                  data-testid="header-tier"
+                >
+                  <div className="flex items-center gap-2">
+                    Tier
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'tier' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('prestige')}
+                  data-testid="header-prestige"
+                >
+                  <div className="flex items-center gap-2">
+                    Prestige
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'prestige' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('class')}
+                  data-testid="header-class"
+                >
+                  <div className="flex items-center gap-2">
+                    Class
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'class' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('triggerField')}
+                  data-testid="header-trigger"
+                >
+                  <div className="flex items-center gap-2">
+                    Trigger
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'triggerField' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('triggerType')}
+                  data-testid="header-type"
+                >
+                  <div className="flex items-center gap-2">
+                    Type
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'triggerType' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
                 <TableHead>Recipients</TableHead>
-                <TableHead>Active</TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100" 
+                  onClick={() => handleSort('active')}
+                  data-testid="header-active"
+                >
+                  <div className="flex items-center gap-2">
+                    Active
+                    <ArrowUpDown className={`w-4 h-4 ${sortField === 'active' ? 'text-primary' : 'text-gray-400'}`} />
+                  </div>
+                </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>

@@ -114,33 +114,6 @@ export default function PlayerSettingsPage() {
 
         {/* Vertical Settings List */}
         <div className="p-6 space-y-3">
-          {/* Device Lock Status Card */}
-          {isDeviceLocked && (
-            <Card className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl flex items-center justify-center bg-red-100 dark:bg-red-900/30">
-                    <Lock className="h-6 w-6 text-red-600 dark:text-red-400" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-semibold text-red-900 dark:text-red-100">Device Locked</h3>
-                    <p className="text-sm text-red-700 dark:text-red-300">This device is locked to this player's dashboard</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleUnlockDevice}
-                    className="border-red-300 text-red-700 hover:bg-red-100 dark:border-red-700 dark:text-red-300 dark:hover:bg-red-900/20"
-                    data-testid="button-unlock-device"
-                  >
-                    <Unlock className="h-4 w-4 mr-2" />
-                    Unlock
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-          
           {settingsItems.map((item) => (
             <Card 
               key={item.key}

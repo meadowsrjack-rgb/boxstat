@@ -1,0 +1,20 @@
+
+Showing All Errors Only
+
+Build target App of project App with configuration Debug
+warning: Run script build phase '[CP] Embed Pods Frameworks' will be run during every build because it does not specify any outputs. To address this issue, either add output dependencies to the script phase, or configure it to run in every build by unchecking "Based on dependency analysis" in the script phase. (in target 'App' from project 'App')
+
+
+CompileAssetCatalogVariant thinned /Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Products/Debug-iphoneos/App.app /Users/jackmeadows/Documents/boxstat/ios/App/App/Assets.xcassets (in target 'App' from project 'App')
+    cd /Users/jackmeadows/Documents/boxstat/ios/App
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/jackmeadows/Documents/boxstat/ios/App/App/Assets.xcassets --compile /Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone16,1 --filter-for-device-os-version 18.6.2 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 14.0 --platform iphoneos
+
+/* com.apple.actool.errors */
+/Users/jackmeadows/Documents/boxstat/ios/App/App/Assets.xcassets: error: None of the input catalogs contained a matching stickers icon set, app icon set, or icon stack named  "AppIcon".
+/* com.apple.actool.compilation-results */
+/Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/assetcatalog_generated_info.plist_thinned
+/Users/jackmeadows/Library/Developer/Xcode/DerivedData/App-fngzoukgwxdcrifkcnvycyiywrlb/Build/Intermediates.noindex/App.build/Debug-iphoneos/App.build/assetcatalog_output/thinned/Assets.car
+
+
+/Users/jackmeadows/Documents/boxstat/ios/App/App/Assets.xcassets:: None of the input catalogs contained a matching stickers icon set, app icon set, or icon stack named  "AppIcon".
+

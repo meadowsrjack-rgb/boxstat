@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, Building2, Edit3 } from 'lucide-react';
+import { MapPin, Loader2, Edit3 } from 'lucide-react';
 
 interface LocationResult {
   place_id: string;
@@ -16,15 +15,6 @@ interface LocationResult {
     postcode?: string;
     country?: string;
   };
-}
-
-interface Facility {
-  id: number;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  isActive: boolean;
 }
 
 interface LocationSearchProps {
@@ -49,11 +39,6 @@ export function LocationSearch({
   const [manualAddress, setManualAddress] = useState('');
   const debounceRef = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
-  // Fetch saved facilities
-  const { data: facilities = [], isLoading: facilitiesLoading } = useQuery<Facility[]>({
-    queryKey: ['/api/facilities'],
-  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -66,21 +51,11 @@ export function LocationSearch({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-  
-  // Show dropdown when facilities load and input is focused
-  useEffect(() => {
-    if (isFocused && !facilitiesLoading && facilities.length > 0 && query.length < 3) {
-      setShowResults(true);
-    }
-  }, [isFocused, facilitiesLoading, facilities.length, query.length]);
 
   useEffect(() => {
     if (query.length < 3) {
       setResults([]);
-      // Keep showResults true if there are facilities to show
-      if (facilities.length === 0) {
-        setShowResults(false);
-      }
+      setShowResults(false);
       return;
     }
 
@@ -107,12 +82,12 @@ export function LocationSearch({
       } catch (error) {
         console.error('Error searching location:', error);
         setResults([]);
-        setShowResults(facilities.length > 0); // Keep open if facilities exist
+        setShowResults(false);
       } finally {
         setIsLoading(false);
       }
     }, 500);
-  }, [query, facilities.length]);
+  }, [query]);
 
   const handleSelect = (result: LocationResult) => {
     setQuery(result.display_name);
@@ -122,17 +97,6 @@ export function LocationSearch({
       name: result.display_name,
       lat: parseFloat(result.lat),
       lng: parseFloat(result.lon),
-    });
-  };
-  
-  const handleFacilitySelect = (facility: Facility) => {
-    setQuery(facility.address);
-    setShowResults(false);
-    setResults([]);
-    onLocationSelect({
-      name: facility.address,
-      lat: facility.latitude,
-      lng: facility.longitude,
     });
   };
   
@@ -160,7 +124,7 @@ export function LocationSearch({
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => {
                 setIsFocused(true);
-                if (facilities.length > 0 || results.length > 0) {
+                if (results.length > 0) {
                   setShowResults(true);
                 }
               }}
@@ -231,61 +195,23 @@ export function LocationSearch({
       
       {!manualMode && showResults && (
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border rounded-md shadow-lg max-h-80 overflow-y-auto">
-          {/* Saved Facilities Section */}
-          {facilities.length > 0 && query.length < 3 && (
-            <div>
-              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b">
-                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                  Saved Facilities
-                </p>
-              </div>
-              <ul>
-                {facilities.filter(f => f.isActive).map((facility) => (
-                  <li
-                    key={facility.id}
-                    className="px-4 py-2.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 border-b last:border-b-0"
-                    onClick={() => handleFacilitySelect(facility)}
-                    data-testid={`facility-option-${facility.id}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <Building2 className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{facility.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{facility.address}</p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {/* Search Results Section */}
+          {/* Search Results */}
           {results.length > 0 && (
-            <div>
-              {facilities.length > 0 && query.length >= 3 && (
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900 border-b">
-                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                    Search Results
-                  </p>
-                </div>
-              )}
-              <ul>
-                {results.map((result) => (
-                  <li
-                    key={result.place_id}
-                    className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
-                    onClick={() => handleSelect(result)}
-                    data-testid={`option-location-${result.place_id}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{result.display_name}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul>
+              {results.map((result) => (
+                <li
+                  key={result.place_id}
+                  className="px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
+                  onClick={() => handleSelect(result)}
+                  data-testid={`option-location-${result.place_id}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{result.display_name}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
           
           {/* No Results Message */}

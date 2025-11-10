@@ -58,12 +58,8 @@ export class AdminNotificationService {
             
             validUsers.forEach(u => userIds.add(u.id));
             
-            // Track users that were rejected due to wrong organization
-            const validUserIds = validUsers.map(u => u.id);
-            const invalidUserIds = options.recipientUserIds.filter(id => !validUserIds.includes(id));
-            invalidUserIds.forEach(userId => {
-              skippedUsers.push({ userId, reason: 'User not in organization' });
-            });
+            // Security: Don't report rejected user IDs or counts to prevent cross-tenant enumeration
+            // Invalid users are silently filtered - no metadata leakage
           }
           break;
         }

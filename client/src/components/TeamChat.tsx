@@ -152,7 +152,9 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
   };
 
   const getSenderName = (sender: TeamMessageWithSender['sender']) => {
-    return `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'Unknown User';
+    const name = `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'Unknown User';
+    const shortId = sender.id.slice(-8); // Last 8 characters of ID for brevity
+    return `${name} (${shortId})`;
   };
 
   const isCoach = (userType: string) => {

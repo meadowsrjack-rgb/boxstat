@@ -2757,9 +2757,17 @@ class DatabaseStorage implements IStorage {
   // Message operations
   async getMessagesByTeam(teamId: string): Promise<Message[]> {
     const teamIdNum = parseInt(teamId);
-    const results = await db.select().from(schema.messages)
-      .where(eq(schema.messages.teamId, teamIdNum));
-    return results.map(msg => this.mapDbMessageToMessage(msg));
+    const results = await db
+      .select({
+        message: schema.messages,
+        user: schema.users,
+      })
+      .from(schema.messages)
+      .leftJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
+      .where(eq(schema.messages.teamId, teamIdNum))
+      .orderBy(schema.messages.createdAt);
+    
+    return results.map(row => this.mapDbMessageWithSenderToMessage(row));
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {
@@ -2772,8 +2780,23 @@ class DatabaseStorage implements IStorage {
       createdAt: new Date().toISOString(),
     };
 
-    const results = await db.insert(schema.messages).values(dbMessage).returning();
-    return this.mapDbMessageToMessage(results[0]);
+    const insertResults = await db.insert(schema.messages).values(dbMessage).returning();
+    const newMessage = insertResults[0];
+    
+    const enrichedResults = await db
+      .select({
+        message: schema.messages,
+        user: schema.users,
+      })
+      .from(schema.messages)
+      .leftJoin(schema.users, eq(schema.messages.senderId, schema.users.id))
+      .where(eq(schema.messages.id, newMessage.id));
+    
+    if (enrichedResults.length === 0) {
+      return this.mapDbMessageToMessage(newMessage);
+    }
+    
+    return this.mapDbMessageWithSenderToMessage(enrichedResults[0]);
   }
 
   // Payment operations
@@ -3584,6 +3607,32 @@ class DatabaseStorage implements IStorage {
       messageType: (dbMessage.messageType || 'text') as "text" | "system",
       createdAt: new Date(dbMessage.createdAt),
     };
+  }
+
+  private mapDbMessageWithSenderToMessage(row: any): Message {
+    const message = row.message;
+    const user = row.user;
+    
+    const baseMessage: any = {
+      id: message.id.toString(),
+      teamId: message.teamId.toString(),
+      senderId: message.senderId,
+      content: message.content,
+      messageType: (message.messageType || 'text') as "text" | "system",
+      createdAt: new Date(message.createdAt),
+    };
+    
+    if (user) {
+      baseMessage.sender = {
+        id: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        profileImageUrl: user.profileImageUrl || '',
+        userType: user.role || user.userType || 'player',
+      };
+    }
+    
+    return baseMessage as Message;
   }
 
   private mapDbPaymentToPayment(dbPayment: any): Payment {

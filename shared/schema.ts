@@ -984,6 +984,13 @@ export interface Message {
   content: string;
   messageType: "text" | "system";
   createdAt: Date;
+  sender?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string;
+    userType: string;
+  };
 }
 
 export const insertMessageSchema = z.object({

@@ -371,7 +371,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [viewingUser, setViewingUser] = useState<any>(null);
-  const [selectedProgram, setSelectedProgram] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
@@ -450,7 +449,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       if (Object.keys(variables).length > 2 || !('isActive' in variables)) {
         toast({ title: "User updated successfully" });
         setEditingUser(null);
-        setSelectedProgram("");
       }
     },
     onError: (_error, _variables) => {
@@ -757,7 +755,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           <Dialog open={!!editingUser} onOpenChange={(open) => {
             if (!open) {
               setEditingUser(null);
-              setSelectedProgram("");
               setSelectedDivision("");
             }
           }}>
@@ -838,63 +835,47 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="edit-program" data-testid="label-edit-program">Program</Label>
-                    <Select 
-                      value={selectedProgram || editingUser.programId || "none"}
-                      onValueChange={(value) => {
-                        const actualValue = value === "none" ? "" : value;
-                        const selectedProgramObj = programs?.find((p: any) => p.id === actualValue);
-                        const programName = selectedProgramObj?.name || "";
-                        setSelectedProgram(actualValue);
-                        setEditingUser({ 
-                          ...editingUser, 
-                          program: programName,
-                          programId: actualValue,
-                          team: "",
-                          teamId: "",
-                          division: "",
-                          divisionId: ""
-                        });
-                        setSelectedDivision("");
-                      }}
-                    >
-                      <SelectTrigger id="edit-program" data-testid="select-edit-program">
-                        <SelectValue placeholder="Select a program" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {programs?.map((program: any) => (
-                          <SelectItem key={program.id} value={program.id}>
-                            {program.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-team" data-testid="label-edit-team">Team</Label>
-                    <Select 
-                      value={editingUser.teamId ? String(editingUser.teamId) : "none"}
-                      onValueChange={(value) => {
-                        const actualValue = value === "none" ? null : parseInt(value);
-                        setEditingUser({...editingUser, teamId: actualValue});
-                      }}
-                    >
-                      <SelectTrigger id="edit-team" data-testid="select-edit-team">
-                        <SelectValue placeholder="Select a team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {teams
-                          ?.filter((team: any) => !selectedProgram || team.program === programs?.find((p: any) => p.id === selectedProgram)?.name)
-                          .map((team: any) => (
-                            <SelectItem key={team.id} value={String(team.id)}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="edit-team" data-testid="label-edit-team">Teams (Multiple Selection)</Label>
+                    <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multiselect-edit-team">
+                      {teams?.length > 0 ? (
+                        teams.map((team: any) => {
+                          const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
+                                         editingUser.teamId ? [editingUser.teamId] : [];
+                          const isChecked = teamIds.includes(team.id);
+                          
+                          return (
+                            <div key={team.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`team-${team.id}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  let newTeamIds;
+                                  if (checked) {
+                                    newTeamIds = [...teamIds, team.id];
+                                  } else {
+                                    newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                  }
+                                  setEditingUser({
+                                    ...editingUser,
+                                    teamIds: newTeamIds,
+                                    teamId: newTeamIds[0] || null
+                                  });
+                                }}
+                                data-testid={`checkbox-team-${team.id}`}
+                              />
+                              <label
+                                htmlFor={`team-${team.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                              >
+                                {team.name} {team.program ? `(${team.program})` : ''}
+                              </label>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-gray-500">No teams available</p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -1017,28 +998,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       onChange={(e) => setEditingUser({...editingUser, heightIn: parseInt(e.target.value) || null})}
                       data-testid="input-edit-height-in"
                       placeholder="e.g., 72 for 6'0&quot;"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-skill" data-testid="label-edit-skill">Skill Level</Label>
-                    <Input 
-                      id="edit-skill"
-                      value={editingUser.skill || ""}
-                      onChange={(e) => setEditingUser({...editingUser, skill: e.target.value})}
-                      data-testid="input-edit-skill"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-bio" data-testid="label-edit-bio">Bio</Label>
-                    <Textarea 
-                      id="edit-bio"
-                      value={editingUser.bio || ""}
-                      onChange={(e) => setEditingUser({...editingUser, bio: e.target.value})}
-                      data-testid="input-edit-bio"
-                      placeholder="Short player bio..."
-                      rows={3}
                     />
                   </div>
                   
@@ -1202,8 +1161,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                           size="sm" 
                           onClick={() => {
                             setEditingUser(user);
-                            const programId = user.programId || programs.find((p: any) => p.name === user.program)?.id || "";
-                            setSelectedProgram(programId);
                           }}
                           data-testid={`button-edit-user-${user.id}`}
                           title="Edit User"

@@ -202,21 +202,12 @@ export class AdminNotificationService {
             case 'push':
               // Use existing push notification service
               try {
-                await notificationService.sendPushNotification({
-                  id: notification.id,
+                await notificationService.sendPushNotification(
+                  notification.id,
                   userId,
-                  type: notification.type,
-                  title: notification.title,
-                  message: notification.message,
-                  priority: 'normal',
-                  actionUrl: '/messages',
-                  data: {},
-                  isRead: false,
-                  isPushSent: false,
-                  organizationId: notification.organizationId,
-                  createdAt: new Date(),
-                  profileId: null
-                } as any);
+                  notification.title,
+                  notification.message
+                );
                 deliveryStatus.push = 'sent';
               } catch (error) {
                 console.error(`Failed to send push to ${userId}:`, error);

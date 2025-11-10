@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Bell, BellOff, Smartphone, X } from 'lucide-react';
 import { useState } from 'react';
+import { needsIOSInstallPrompt, canUsePushNotifications } from '@/lib/iosDetection';
+import { IOSInstallPrompt } from './IOSInstallPrompt';
 
 interface PushNotificationSetupProps {
   onDismiss?: () => void;
@@ -66,13 +68,31 @@ export default function PushNotificationSetup({ onDismiss, compact = false }: Pu
     onDismiss?.();
   };
 
-  // Don't show if not supported, already subscribed, or dismissed
-  if (!isSupported || isSubscribed || isDismissed) {
+  // Check if iOS needs install first
+  const showIOSInstall = needsIOSInstallPrompt();
+
+  // Don't show if already subscribed or dismissed
+  if (isSubscribed || isDismissed) {
     return null;
   }
 
   // Don't show if permission was explicitly denied
   if (permission === 'denied') {
+    return null;
+  }
+
+  // Don't show if not supported and not iOS (iOS case handled by showIOSInstall)
+  if (!isSupported && !showIOSInstall) {
+    return null;
+  }
+
+  // Show iOS install prompt if on iOS Safari and not installed
+  if (showIOSInstall) {
+    return <IOSInstallPrompt />;
+  }
+
+  // Don't show enable button if push notifications aren't actually available
+  if (!canUsePushNotifications()) {
     return null;
   }
 

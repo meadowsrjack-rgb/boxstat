@@ -90,30 +90,46 @@ function doBackgroundSync() {
 
 // Push notification handling
 self.addEventListener('push', (event) => {
+  let notificationData = {
+    title: 'BoxStat',
+    body: 'New notification',
+    url: '/'
+  };
+
+  if (event.data) {
+    try {
+      notificationData = event.data.json();
+    } catch (e) {
+      notificationData.body = event.data.text();
+    }
+  }
+
   const options = {
-    body: event.data ? event.data.text() : 'New notification from BoxStat',
+    body: notificationData.body || notificationData.message || 'New notification from BoxStat',
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
     vibrate: [200, 100, 200],
+    tag: notificationData.type || 'default',
+    requireInteraction: notificationData.type === 'announcement',
     data: {
-      url: '/'
+      url: notificationData.url || '/',
+      notificationId: notificationData.id,
+      type: notificationData.type
     },
     actions: [
       {
         action: 'view',
-        title: 'View',
-        icon: '/icon-view.png'
+        title: 'View'
       },
       {
         action: 'dismiss',
-        title: 'Dismiss',
-        icon: '/icon-dismiss.png'
+        title: 'Dismiss'
       }
     ]
   };
 
   event.waitUntil(
-    self.registration.showNotification('BoxStat', options)
+    self.registration.showNotification(notificationData.title || 'BoxStat', options)
   );
 });
 
@@ -121,11 +137,28 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  if (event.action === 'view') {
-    event.waitUntil(
-      clients.openWindow(event.notification.data.url)
-    );
+  if (event.action === 'dismiss') {
+    return;
   }
+
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        // Try to focus existing window
+        for (const client of clientList) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(urlToOpen);
+            return client.focus();
+          }
+        }
+        // Open new window if no existing window found
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
 });
 
 // Share target handling

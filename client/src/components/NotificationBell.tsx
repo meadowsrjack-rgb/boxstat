@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Bell } from "lucide-react";
@@ -11,6 +12,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { useLocation } from "wouter";
+import NotificationDetailDialog from "@/components/NotificationDetailDialog";
 
 interface NotificationItem {
   id: number;
@@ -25,6 +27,9 @@ interface NotificationItem {
 
 export function NotificationBell() {
   const [, setLocation] = useLocation();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
 
   const { data: feed = [] } = useQuery<NotificationItem[]>({
     queryKey: ["/api/notifications/feed"],
@@ -43,20 +48,31 @@ export function NotificationBell() {
   });
 
   const handleNotificationClick = async (notification: NotificationItem) => {
+    // Convert NotificationItem to match NotificationDetailDialog interface
+    const detailNotification = {
+      id: notification.id,
+      types: [notification.type],
+      title: notification.title,
+      message: notification.message,
+      priority: 'normal' as const,
+      isRead: notification.isRead,
+      actionUrl: notification.relatedEventId ? `/events/${notification.relatedEventId}` : undefined,
+      createdAt: notification.createdAt,
+    };
+    
+    setSelectedNotification(detailNotification);
+    setDialogOpen(true);
+    setPopoverOpen(false);
+    
     if (!notification.isRead) {
       await markAsRead.mutateAsync(notification.recipientId);
-    }
-
-    if (notification.relatedEventId) {
-      setLocation(`/events/${notification.relatedEventId}`);
-    } else {
-      setLocation("/notifications");
     }
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
         <Button 
           variant="ghost" 
           size="icon" 
@@ -138,5 +154,16 @@ export function NotificationBell() {
         </div>
       </PopoverContent>
     </Popover>
+    
+    {/* Notification Detail Dialog */}
+    <NotificationDetailDialog
+      notification={selectedNotification}
+      open={dialogOpen}
+      onOpenChange={setDialogOpen}
+      onMarkAsRead={(id) => {
+        // Already marked as read in handleNotificationClick
+      }}
+    />
+    </>
   );
 }

@@ -2,28 +2,7 @@ import type { Express } from "express";
 import { adminNotificationService } from "../services/adminNotificationService";
 import { z } from "zod";
 import { insertNotificationSchema } from "../../shared/schema";
-
-// Simple auth middleware for development
-const isAuthenticated = (req: any, res: any, next: any) => {
-  if (req.session && req.session.userId) {
-    req.user = { 
-      id: req.session.userId, 
-      organizationId: req.session.organizationId || "default-org", 
-      role: req.session.role || "user" 
-    };
-    next();
-  } else {
-    res.status(401).json({ error: "Not authenticated" });
-  }
-};
-
-// Middleware to check if user is admin
-const isAdmin = (req: any, res: any, next: any) => {
-  if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
-  }
-  next();
-};
+import { isAuthenticated, isAdmin } from "../auth";
 
 export function setupAdminNotificationRoutes(app: Express) {
   

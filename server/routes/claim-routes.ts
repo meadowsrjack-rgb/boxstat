@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 import { claimRepo } from "../lib/claim-repository";
 import { emailService, smsService, generateVerificationCode, getDevModeCode } from "../lib/email-service";
 import { fetchNotionData } from "../lib/notion-adapter";

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { notionService } from "../notion";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 
 const router = Router();
 

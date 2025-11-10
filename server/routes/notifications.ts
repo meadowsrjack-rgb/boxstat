@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { notificationService } from "../services/notificationService";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 import { z } from "zod";
 
 const subscriptionSchema = z.object({

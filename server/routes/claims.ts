@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { isAuthenticated } from "../replitAuth";
+import { isAuthenticated } from "../auth";
 
 const router = Router();
 

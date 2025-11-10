@@ -16,15 +16,23 @@ import {
 import { eq, and, desc, sql } from "drizzle-orm";
 import webpush from "web-push";
 
-// Configure web push with VAPID keys (should be in environment variables)
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViEuiBIa40HEgfcQgdmUt_D4REvBPzq-RrftKUOvvhp_yOvMZkgUJGHk5Jb6s7j6vBpY";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "vXGl7jHHlh7p1v9cYxmVjmGQ6Gxi4l1fEUXwQ1yBUY8";
+// Configure web push with VAPID keys from environment variables
+// SECURITY: VAPID keys MUST be set in environment variables for production
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 
-webpush.setVapidDetails(
-  'mailto:notifications@boxstat.com',
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
-);
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  console.warn('⚠️  VAPID keys not configured - push notifications will not work');
+  console.warn('   Run: node scripts/generate-vapid-keys.js to generate production keys');
+  console.warn('   Then add them to Replit Secrets or environment variables');
+} else {
+  webpush.setVapidDetails(
+    'mailto:notifications@boxstat.com',
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  console.log('✅ Push notifications configured with VAPID keys');
+}
 
 export class NotificationService {
   

@@ -34,7 +34,13 @@ export function setupNotificationRoutes(app: Express) {
   
   // Get VAPID public key for client-side push subscription
   app.get('/api/notifications/vapid-public-key', (req, res) => {
-    const publicKey = process.env.VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViEuiBIa40HEgfcQgdmUt_D4REvBPzq-RrftKUOvvhp_yOvMZkgUJGHk5Jb6s7j6vBpY";
+    const publicKey = process.env.VAPID_PUBLIC_KEY;
+    if (!publicKey) {
+      return res.status(503).json({ 
+        error: 'Push notifications not configured',
+        message: 'VAPID keys are not set. Contact administrator.'
+      });
+    }
     res.json({ publicKey });
   });
 
@@ -86,13 +92,11 @@ export function setupNotificationRoutes(app: Express) {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const unreadOnly = req.query.unreadOnly === 'true';
-      const profileId = req.query.profileId as string | undefined;
 
       const notifications = await notificationService.getUserNotifications(userId, {
         limit,
         offset,
-        unreadOnly,
-        profileId
+        unreadOnly
       });
 
       res.json(notifications);
@@ -106,8 +110,7 @@ export function setupNotificationRoutes(app: Express) {
   app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const profileId = req.query.profileId as string | undefined;
-      const count = await notificationService.getUnreadCount(userId, profileId);
+      const count = await notificationService.getUnreadCount(userId);
       res.json({ count });
     } catch (error) {
       console.error('Error getting unread count:', error);
@@ -289,28 +292,4 @@ export function setupNotificationRoutes(app: Express) {
     }
   });
 
-  // Test notification endpoint (for development)
-  if (process.env.NODE_ENV === 'development') {
-    app.post('/api/notifications/test', isAuthenticated, async (req: any, res) => {
-      try {
-        const userId = req.user.id;
-        const { type = 'badge_earned', title = 'Test Notification', message = 'This is a test notification' } = req.body;
-
-        await notificationService.createNotification({
-          userId,
-          type,
-          title,
-          message,
-          priority: 'normal',
-          actionUrl: '/test',
-          data: { test: true }
-        });
-
-        res.json({ success: true, message: 'Test notification sent' });
-      } catch (error) {
-        console.error('Error sending test notification:', error);
-        res.status(500).json({ error: 'Failed to send test notification' });
-      }
-    });
-  }
 }

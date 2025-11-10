@@ -106,8 +106,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: notificationData.body || notificationData.message || 'New notification from BoxStat',
-    icon: '/icon-192x192.png',
-    badge: '/badge-72x72.png',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
     vibrate: [200, 100, 200],
     tag: notificationData.type || 'default',
     requireInteraction: notificationData.type === 'announcement',

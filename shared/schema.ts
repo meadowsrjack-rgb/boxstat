@@ -495,19 +495,40 @@ export const evaluations = pgTable("evaluations", {
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
-// Notifications table
+// Notifications table (renamed to Messages in UI)
 export const notifications = pgTable("notifications", {
   id: serial().primaryKey().notNull(),
   organizationId: varchar("organization_id").notNull(),
-  type: varchar().notNull(), // push, email, in-app
   title: varchar().notNull(),
   message: text().notNull(),
-  recipientIds: text("recipient_ids").array(), // array of user IDs
+  
+  // Targeting configuration
+  recipientTarget: varchar("recipient_target").notNull(), // "everyone", "users", "roles", "teams", "divisions"
+  recipientUserIds: text("recipient_user_ids").array(), // specific user IDs
+  recipientRoles: text("recipient_roles").array(), // specific roles
+  recipientTeamIds: text("recipient_team_ids").array(), // specific team IDs
+  recipientDivisionIds: text("recipient_division_ids").array(), // specific division IDs
+  
+  // Delivery channels
+  deliveryChannels: text("delivery_channels").array().notNull(), // ["in_app", "email", "push", "sms"]
+  
+  // Metadata
   sentBy: varchar("sent_by").notNull(),
-  sentAt: timestamp("sent_at", { mode: 'string' }).defaultNow(),
-  readBy: text("read_by").array(), // array of user IDs who have read it
+  sentAt: timestamp("sent_at", { mode: 'string' }),
   relatedEventId: integer("related_event_id"), // optional link to event
   status: varchar().default('pending'), // pending, sent, failed
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// Join table for notification recipients (resolved at creation time)
+export const notificationRecipients = pgTable("notification_recipients", {
+  id: serial().primaryKey().notNull(),
+  notificationId: integer("notification_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at", { mode: 'string' }),
+  deliveryStatus: jsonb("delivery_status"), // { in_app: "sent", email: "failed", push: "sent", sms: "skipped" }
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
@@ -1103,33 +1124,61 @@ export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 // =============================================
 
 export interface Notification {
-  id: string;
+  id: number;
   organizationId: string;
-  type: string; // push, email, in-app
   title: string;
   message: string;
-  recipientIds: string[];
+  recipientTarget: "everyone" | "users" | "roles" | "teams" | "divisions";
+  recipientUserIds?: string[];
+  recipientRoles?: string[];
+  recipientTeamIds?: string[];
+  recipientDivisionIds?: string[];
+  deliveryChannels: ("in_app" | "email" | "push" | "sms")[];
   sentBy: string;
-  sentAt: Date;
-  readBy?: string[];
+  sentAt?: Date;
   relatedEventId?: number;
-  status: string; // pending, sent, failed
+  status: "pending" | "sent" | "failed";
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export const insertNotificationSchema = z.object({
   organizationId: z.string(),
-  type: z.string().min(1),
   title: z.string().min(1),
   message: z.string().min(1),
-  recipientIds: z.array(z.string()).default([]),
+  recipientTarget: z.enum(["everyone", "users", "roles", "teams", "divisions"]),
+  recipientUserIds: z.array(z.string()).optional(),
+  recipientRoles: z.array(z.string()).optional(),
+  recipientTeamIds: z.array(z.string()).optional(),
+  recipientDivisionIds: z.array(z.string()).optional(),
+  deliveryChannels: z.array(z.enum(["in_app", "email", "push", "sms"])).min(1),
   sentBy: z.string(),
-  readBy: z.array(z.string()).default([]),
   relatedEventId: z.number().optional(),
-  status: z.string().default('pending'),
+  status: z.enum(["pending", "sent", "failed"]).default('pending'),
 });
 
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type SelectNotification = typeof notifications.$inferSelect;
+
+export interface NotificationRecipient {
+  id: number;
+  notificationId: number;
+  userId: string;
+  isRead: boolean;
+  readAt?: Date;
+  deliveryStatus?: Record<string, string>;
+  createdAt: Date;
+}
+
+export const insertNotificationRecipientSchema = z.object({
+  notificationId: z.number(),
+  userId: z.string(),
+  isRead: z.boolean().default(false),
+  deliveryStatus: z.record(z.string()).optional(),
+});
+
+export type InsertNotificationRecipient = z.infer<typeof insertNotificationRecipientSchema>;
+export type SelectNotificationRecipient = typeof notificationRecipients.$inferSelect;
 
 // =============================================
 // Event Windows Schema (RSVP & Check-In Timing)

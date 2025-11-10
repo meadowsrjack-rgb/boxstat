@@ -270,10 +270,6 @@ export default function AdminDashboard() {
                 <Layers className="w-4 h-4 mr-2" />
                 Divisions
               </TabsTrigger>
-              <TabsTrigger value="skills" data-testid="tab-skills" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Star className="w-4 h-4 mr-2" />
-                Skills
-              </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
@@ -334,10 +330,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="divisions">
             <DivisionsTab divisions={divisions} teams={teams} organization={organization} />
-          </TabsContent>
-
-          <TabsContent value="skills">
-            <SkillsTab evaluations={evaluations} users={users} organization={organization} />
           </TabsContent>
 
           <TabsContent value="notifications">
@@ -5495,61 +5487,8 @@ function DivisionsTab({ divisions, teams, organization }: any) {
   );
 }
 
-// Skills Tab Component - Displays Quarterly Evaluations
-function SkillsTab({ evaluations, users, organization }: any) {
-  const { toast } = useToast();
-  const [filterPlayerId, setFilterPlayerId] = useState<string>("all");
-  const [filterQuarter, setFilterQuarter] = useState<string>("all");
-  const [filterYear, setFilterYear] = useState<string>("all");
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-
-  const players = users.filter((u: any) => u.role === "player");
-
-  const deleteEvaluation = useMutation({
-    mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/evaluations/${id}`, {});
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/evaluations"] });
-      toast({ title: "Evaluation deleted successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete evaluation", variant: "destructive" });
-    },
-  });
-
-  const toggleRow = (id: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedRows(newExpanded);
-  };
-
-  // Calculate category average
-  const calculateCategoryAverage = (scores: EvalScores, categoryName: SkillCategoryName) => {
-    const categoryScores = scores[categoryName];
-    if (!categoryScores) return 0;
-    const values = Object.values(categoryScores);
-    if (values.length === 0) return 0;
-    return +(values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1);
-  };
-
-  // Calculate overall average
-  const calculateOverallAverage = (scores: EvalScores) => {
-    const allAverages: number[] = [];
-    SKILL_CATEGORIES.forEach((cat) => {
-      const avg = calculateCategoryAverage(scores, cat.name);
-      if (avg > 0) allAverages.push(avg);
-    });
-    if (allAverages.length === 0) return 0;
-    return +(allAverages.reduce((sum, val) => sum + val, 0) / allAverages.length).toFixed(1);
-  };
-
-  // Filter evaluations
-  const filteredEvaluations = evaluations.filter((evaluation: any) => {
+// Notifications Tab Component
+function NotificationsTab({ notifications, users, organization }: any) {
     if (filterPlayerId !== "all" && evaluation.playerId !== filterPlayerId) return false;
     if (filterQuarter !== "all" && evaluation.quarter !== filterQuarter) return false;
     if (filterYear !== "all" && evaluation.year.toString() !== filterYear) return false;

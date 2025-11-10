@@ -3023,8 +3023,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         validatedSenderId = profileId;
       } else {
         // Check if profileId is a child profile of the authenticated user
-        const childProfiles = await storage.getChildProfiles(req.user.id);
-        const isValidProfile = childProfiles.some((profile: any) => profile.id === profileId);
+        const accountProfiles = await storage.getAccountProfiles(req.user.id) || [];
+        const isValidProfile = accountProfiles.some((profile: any) => profile.id === profileId);
         if (isValidProfile) {
           validatedSenderId = profileId;
         }

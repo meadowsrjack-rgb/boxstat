@@ -47,9 +47,23 @@ export class AdminNotificationService {
         }
 
         case 'users': {
-          // Specific users
+          // Specific users - must validate they belong to the organization
           if (options.recipientUserIds && options.recipientUserIds.length > 0) {
-            options.recipientUserIds.forEach(id => userIds.add(id));
+            const validUsers = await db.select({ id: users.id })
+              .from(users)
+              .where(and(
+                eq(users.organizationId, organizationId),
+                inArray(users.id, options.recipientUserIds)
+              ));
+            
+            validUsers.forEach(u => userIds.add(u.id));
+            
+            // Track users that were rejected due to wrong organization
+            const validUserIds = validUsers.map(u => u.id);
+            const invalidUserIds = options.recipientUserIds.filter(id => !validUserIds.includes(id));
+            invalidUserIds.forEach(userId => {
+              skippedUsers.push({ userId, reason: 'User not in organization' });
+            });
           }
           break;
         }

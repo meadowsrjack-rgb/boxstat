@@ -499,6 +499,7 @@ export const evaluations = pgTable("evaluations", {
 export const notifications = pgTable("notifications", {
   id: serial().primaryKey().notNull(),
   organizationId: varchar("organization_id").notNull(),
+  type: varchar().notNull().default('message'), // "message", "announcement", "alert", "push"
   title: varchar().notNull(),
   message: text().notNull(),
   
@@ -1176,6 +1177,7 @@ export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 export interface Notification {
   id: number;
   organizationId: string;
+  type: string;
   title: string;
   message: string;
   recipientTarget: "everyone" | "users" | "roles" | "teams" | "divisions";
@@ -1194,6 +1196,7 @@ export interface Notification {
 
 export const insertNotificationSchema = z.object({
   organizationId: z.string(),
+  type: z.string().default('message'),
   title: z.string().min(1),
   message: z.string().min(1),
   recipientTarget: z.enum(["everyone", "users", "roles", "teams", "divisions"]),

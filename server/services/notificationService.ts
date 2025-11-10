@@ -106,7 +106,6 @@ export class NotificationService {
       // Delivery methods
       if (updates.pushNotifications !== undefined) setFields.pushNotifications = updates.pushNotifications;
       if (updates.emailNotifications !== undefined) setFields.emailNotifications = updates.emailNotifications;
-      if (updates.smsNotifications !== undefined) setFields.smsNotifications = updates.smsNotifications;
       if (updates.quietHoursStart !== undefined) setFields.quietHoursStart = updates.quietHoursStart;
       if (updates.quietHoursEnd !== undefined) setFields.quietHoursEnd = updates.quietHoursEnd;
 

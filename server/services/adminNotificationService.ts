@@ -115,22 +115,6 @@ export class AdminNotificationService {
         }
       }
 
-      // Validate users have necessary contact info for selected channels
-      if (deliveryChannels.includes('sms')) {
-        const resolvedUserIds = Array.from(userIds);
-        const usersWithPhones = await db.select({ id: users.id, phoneNumber: users.phoneNumber })
-          .from(users)
-          .where(inArray(users.id, resolvedUserIds));
-
-        const usersWithoutPhone = usersWithPhones
-          .filter(u => !u.phoneNumber || u.phoneNumber.trim() === '')
-          .map(u => u.id);
-
-        usersWithoutPhone.forEach(userId => {
-          skippedUsers.push({ userId, reason: 'No phone number for SMS' });
-        });
-      }
-
       return {
         userIds: Array.from(userIds),
         skippedUsers
@@ -238,12 +222,6 @@ export class AdminNotificationService {
                 console.error(`Failed to send push to ${userId}:`, error);
                 deliveryStatus.push = 'failed';
               }
-              break;
-
-            case 'sms':
-              // SMS delivery would be handled here with Twilio
-              // For now, mark as pending until Twilio is configured
-              deliveryStatus.sms = 'pending_credentials';
               break;
           }
         } catch (error) {

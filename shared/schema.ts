@@ -499,7 +499,7 @@ export const evaluations = pgTable("evaluations", {
 export const notifications = pgTable("notifications", {
   id: serial().primaryKey().notNull(),
   organizationId: varchar("organization_id").notNull(),
-  type: varchar().notNull().default('message'), // "message", "announcement", "alert", "push"
+  type: varchar().notNull().default('message'), // "announcement", "notification", "message"
   title: varchar().notNull(),
   message: text().notNull(),
   
@@ -510,8 +510,8 @@ export const notifications = pgTable("notifications", {
   recipientTeamIds: text("recipient_team_ids").array(), // specific team IDs
   recipientDivisionIds: text("recipient_division_ids").array(), // specific division IDs
   
-  // Delivery channels
-  deliveryChannels: text("delivery_channels").array().notNull(), // ["in_app", "email", "push", "sms"]
+  // Delivery channels (SMS removed)
+  deliveryChannels: text("delivery_channels").array().notNull(), // ["in_app", "email", "push"]
   
   // Metadata
   sentBy: varchar("sent_by").notNull(),
@@ -559,10 +559,9 @@ export const notificationPreferences = pgTable("notification_preferences", {
   playerRsvp: boolean("player_rsvp").default(true),
   playerAwards: boolean("player_awards").default(true),
   playerProgress: boolean("player_progress").default(true),
-  // Delivery preferences
+  // Delivery preferences (SMS removed)
   pushNotifications: boolean("push_notifications").default(true),
   emailNotifications: boolean("email_notifications").default(true),
-  smsNotifications: boolean("sms_notifications").default(false),
   quietHoursStart: varchar("quiet_hours_start").default("22:00"),
   quietHoursEnd: varchar("quiet_hours_end").default("07:00"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -581,6 +580,41 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   isActive: boolean("is_active").default(true),
   lastUsed: timestamp("last_used", { mode: 'string' }).defaultNow(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Chat Rooms table (team chats and parent chats)
+export const chatRooms = pgTable("chat_rooms", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  type: varchar().notNull(), // "team" or "parent"
+  teamId: integer("team_id"), // linked team for team/parent chats
+  name: varchar().notNull(),
+  description: text(),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// Chat Members table (users in each chat room)
+export const chatMembers = pgTable("chat_members", {
+  id: serial().primaryKey().notNull(),
+  chatRoomId: integer("chat_room_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: varchar().default('member'), // "admin", "moderator", "member"
+  lastReadAt: timestamp("last_read_at", { mode: 'string' }),
+  joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow(),
+});
+
+// Chat Messages table
+export const chatMessages = pgTable("chat_messages", {
+  id: serial().primaryKey().notNull(),
+  chatRoomId: integer("chat_room_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  message: text().notNull(),
+  attachments: jsonb(), // optional file attachments
+  isEdited: boolean("is_edited").default(false),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
 export const insertUserSchema = z.object({
@@ -1196,7 +1230,7 @@ export interface Notification {
 
 export const insertNotificationSchema = z.object({
   organizationId: z.string(),
-  type: z.string().default('message'),
+  type: z.enum(["announcement", "notification", "message"]).default('message'),
   title: z.string().min(1),
   message: z.string().min(1),
   recipientTarget: z.enum(["everyone", "users", "roles", "teams", "divisions"]),
@@ -1204,7 +1238,7 @@ export const insertNotificationSchema = z.object({
   recipientRoles: z.array(z.string()).optional(),
   recipientTeamIds: z.array(z.string()).optional(),
   recipientDivisionIds: z.array(z.string()).optional(),
-  deliveryChannels: z.array(z.enum(["in_app", "email", "push", "sms"])).min(1),
+  deliveryChannels: z.array(z.enum(["in_app", "email", "push"])).min(1),
   sentBy: z.string(),
   relatedEventId: z.number().optional(),
   status: z.enum(["pending", "sent", "failed"]).default('pending'),

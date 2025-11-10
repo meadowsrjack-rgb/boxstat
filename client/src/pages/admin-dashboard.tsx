@@ -5500,6 +5500,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     resolver: zodResolver(insertNotificationSchema),
     defaultValues: {
       organizationId: organization?.id || "",
+      type: "message" as const,
       title: "",
       message: "",
       recipientTarget: "everyone" as const,
@@ -5616,6 +5617,29 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                       <FormControl>
                         <Textarea {...field} placeholder="Message content..." rows={4} data-testid="input-notification-message" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message Type</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-message-type">
+                            <SelectValue placeholder="Select message type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="announcement">Announcement</SelectItem>
+                          <SelectItem value="notification">Notification</SelectItem>
+                          <SelectItem value="message">Message</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -5831,21 +5855,6 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                             data-testid="checkbox-channel-push"
                           />
                           <span className="text-sm">Push</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={field.value?.includes("sms")}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, "sms"]);
-                              } else {
-                                field.onChange(current.filter((ch: string) => ch !== "sms"));
-                              }
-                            }}
-                            data-testid="checkbox-channel-sms"
-                          />
-                          <span className="text-sm">SMS {deliveryChannels.includes("sms") && <span className="text-xs text-gray-500">(Twilio credentials required)</span>}</span>
                         </div>
                       </div>
                       <p className="text-sm text-gray-500 mt-1">

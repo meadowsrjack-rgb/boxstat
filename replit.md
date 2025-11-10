@@ -24,7 +24,7 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
 - **Event & Scheduling**: In-app CRUD for events, color-coded UI, and player RSVP with GPS-based check-in (200m geofencing) using OpenStreetMap and Leaflet. Events support multi-select targeting and display real-time distance indicators for participants. Event filtering is dynamic based on user mode (Parent/Player).
 - **Payment & Awards**: Integrates Stripe for secure payments and a robust payment status system that handles various billing models. A comprehensive 100-trophy/badge system supports automatic and manual awards.
 - **Admin Panel**: Provides comprehensive CRUD for system entities, detailed user views, and a calendar for event management.
-- **Notifications**: A multi-channel notification system (in-app, email, push) with advanced recipient targeting (users, roles, teams, divisions) and multi-type selections. Includes a complete web push notification system with VAPID authentication and iOS PWA support.
+- **Notifications**: A multi-channel notification system (in-app, email, push) with advanced recipient targeting (users, roles, teams, divisions) and multi-type selections. Includes a complete web push notification system with VAPID authentication and iOS PWA support. Notifications are automatically marked as read when clicked, providing a seamless user experience without manual mark-as-read actions. The system properly uses the `types` field (array) in the notifications schema for flexible categorization.
 
 ## External Dependencies
 

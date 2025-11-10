@@ -42,7 +42,7 @@ export function setupNotificationRoutes(app: Express) {
   app.post('/api/notifications/subscribe', isAuthenticated, async (req: any, res) => {
     try {
       const subscription = subscriptionSchema.parse(req.body);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       await notificationService.subscribeToPush(userId, {
         endpoint: subscription.endpoint,
@@ -65,7 +65,7 @@ export function setupNotificationRoutes(app: Express) {
   app.post('/api/notifications/unsubscribe', isAuthenticated, async (req: any, res) => {
     try {
       const { endpoint } = req.body;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       if (!endpoint) {
         return res.status(400).json({ error: 'Endpoint required' });
@@ -82,7 +82,7 @@ export function setupNotificationRoutes(app: Express) {
   // Get user notifications
   app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const unreadOnly = req.query.unreadOnly === 'true';
@@ -105,7 +105,7 @@ export function setupNotificationRoutes(app: Express) {
   // Get unread notification count
   app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const profileId = req.query.profileId as string | undefined;
       const count = await notificationService.getUnreadCount(userId, profileId);
       res.json({ count });
@@ -119,7 +119,7 @@ export function setupNotificationRoutes(app: Express) {
   app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
     try {
       const notificationId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       if (isNaN(notificationId)) {
         return res.status(400).json({ error: 'Invalid notification ID' });
@@ -136,7 +136,7 @@ export function setupNotificationRoutes(app: Express) {
   // Mark all notifications as read
   app.post('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       await notificationService.markAllNotificationsAsRead(userId);
       res.json({ success: true });
     } catch (error) {
@@ -148,7 +148,7 @@ export function setupNotificationRoutes(app: Express) {
   // Get notification preferences
   app.get('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const preferences = await notificationService.getNotificationPreferences(userId);
       
       // Return default preferences if none exist
@@ -170,7 +170,7 @@ export function setupNotificationRoutes(app: Express) {
   // Update notification preferences
   app.post('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const updates = preferencesSchema.parse(req.body);
 
       await notificationService.updateNotificationPreferences(userId, updates);
@@ -186,7 +186,7 @@ export function setupNotificationRoutes(app: Express) {
   // Get notification feed (last 5 unread notifications from notification_recipients)
   app.get('/api/notifications/feed', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const { db } = await import("../db");
       const { notifications, notificationRecipients } = await import("../../shared/schema");
@@ -221,7 +221,7 @@ export function setupNotificationRoutes(app: Express) {
   // Get announcements (type='announcement' from notification_recipients)
   app.get('/api/notifications/announcements', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       const { db } = await import("../db");
       const { notifications, notificationRecipients } = await import("../../shared/schema");
@@ -257,7 +257,7 @@ export function setupNotificationRoutes(app: Express) {
   app.post('/api/notifications/:id/mark-read', isAuthenticated, async (req: any, res) => {
     try {
       const recipientId = parseInt(req.params.id);
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
       if (isNaN(recipientId)) {
         return res.status(400).json({ error: 'Invalid notification ID' });
@@ -293,7 +293,7 @@ export function setupNotificationRoutes(app: Express) {
   if (process.env.NODE_ENV === 'development') {
     app.post('/api/notifications/test', isAuthenticated, async (req: any, res) => {
       try {
-        const userId = req.user.claims.sub;
+        const userId = req.user.id;
         const { type = 'badge_earned', title = 'Test Notification', message = 'This is a test notification' } = req.body;
 
         await notificationService.createNotification({

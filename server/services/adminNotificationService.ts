@@ -205,7 +205,7 @@ export class AdminNotificationService {
                 await notificationService.sendPushNotification({
                   id: notification.id,
                   userId,
-                  type: 'admin_message',
+                  type: notification.type,
                   title: notification.title,
                   message: notification.message,
                   priority: 'normal',

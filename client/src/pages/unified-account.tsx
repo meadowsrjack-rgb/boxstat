@@ -35,6 +35,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
+import { NotificationBell } from "@/components/NotificationBell";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -524,6 +526,7 @@ export default function UnifiedAccount() {
               <p className="text-gray-600 mt-1">Manage your account and players</p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <NotificationBell />
               {user?.role === "admin" && (
                 <Button
                   onClick={() => setLocation("/admin-dashboard")}
@@ -554,6 +557,8 @@ export default function UnifiedAccount() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Announcement Banner */}
+        <AnnouncementBanner />
         <Tabs defaultValue="home">
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">

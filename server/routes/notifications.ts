@@ -183,6 +183,112 @@ export function setupNotificationRoutes(app: Express) {
     }
   });
 
+  // Get notification feed (last 5 unread notifications from notification_recipients)
+  app.get('/api/notifications/feed', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { db } = await import("../db");
+      const { notifications, notificationRecipients } = await import("../../shared/schema");
+      const { eq, and, desc } = await import("drizzle-orm");
+      
+      const feed = await db.select({
+        id: notifications.id,
+        type: notifications.type,
+        title: notifications.title,
+        message: notifications.message,
+        createdAt: notifications.createdAt,
+        relatedEventId: notifications.relatedEventId,
+        recipientId: notificationRecipients.id,
+        isRead: notificationRecipients.isRead,
+      })
+        .from(notificationRecipients)
+        .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
+        .where(and(
+          eq(notificationRecipients.userId, userId),
+          eq(notificationRecipients.isRead, false)
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(5);
+
+      res.json(feed);
+    } catch (error) {
+      console.error('Error fetching notification feed:', error);
+      res.status(500).json({ error: 'Failed to fetch notification feed' });
+    }
+  });
+
+  // Get announcements (type='announcement' from notification_recipients)
+  app.get('/api/notifications/announcements', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      const { db } = await import("../db");
+      const { notifications, notificationRecipients } = await import("../../shared/schema");
+      const { eq, and, desc } = await import("drizzle-orm");
+      
+      const announcements = await db.select({
+        id: notifications.id,
+        type: notifications.type,
+        title: notifications.title,
+        message: notifications.message,
+        createdAt: notifications.createdAt,
+        recipientId: notificationRecipients.id,
+        isRead: notificationRecipients.isRead,
+      })
+        .from(notificationRecipients)
+        .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
+        .where(and(
+          eq(notificationRecipients.userId, userId),
+          eq(notifications.type, 'announcement'),
+          eq(notificationRecipients.isRead, false)
+        ))
+        .orderBy(desc(notifications.createdAt))
+        .limit(3);
+
+      res.json(announcements);
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      res.status(500).json({ error: 'Failed to fetch announcements' });
+    }
+  });
+
+  // Mark notification as read (update notification_recipients)
+  app.post('/api/notifications/:id/mark-read', isAuthenticated, async (req: any, res) => {
+    try {
+      const recipientId = parseInt(req.params.id);
+      const userId = req.user.claims.sub;
+
+      if (isNaN(recipientId)) {
+        return res.status(400).json({ error: 'Invalid notification ID' });
+      }
+
+      const { db } = await import("../db");
+      const { notificationRecipients } = await import("../../shared/schema");
+      const { eq, and, sql } = await import("drizzle-orm");
+
+      const result = await db.update(notificationRecipients)
+        .set({ 
+          isRead: true,
+          readAt: sql`CURRENT_TIMESTAMP`
+        })
+        .where(and(
+          eq(notificationRecipients.id, recipientId),
+          eq(notificationRecipients.userId, userId)
+        ))
+        .returning({ id: notificationRecipients.id });
+
+      if (result.length === 0) {
+        return res.status(404).json({ error: 'Notification not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ error: 'Failed to mark notification as read' });
+    }
+  });
+
   // Test notification endpoint (for development)
   if (process.env.NODE_ENV === 'development') {
     app.post('/api/notifications/test', isAuthenticated, async (req: any, res) => {

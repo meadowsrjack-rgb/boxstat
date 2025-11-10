@@ -52,6 +52,8 @@ import PlayerCard from "@/components/PlayerCard";
 import TeamChat from "@/components/TeamChat";
 import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, TEAM_TROPHIES, COACH_AWARDS, type PlayerLite, type EvalScores, type Quarter, type SkillCategoryName } from "@/components/CoachAwardDialogs";
+import { NotificationBell } from "@/components/NotificationBell";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 /* =================== Types =================== */
 
@@ -405,39 +407,7 @@ export default function CoachDashboard() {
               <ChevronLeft className="h-6 w-6" />
             </Button>
             <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100 relative" aria-label="Notifications" data-testid="button-notifications">
-                  <Bell className="h-6 w-6" />
-                  {unreadNotifications.length > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs" data-testid="notification-badge">
-                      {unreadNotifications.length}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80">
-                {unreadNotifications.length > 0 ? (
-                  <div className="max-h-96 overflow-y-auto">
-                    {unreadNotifications.map((notification: any) => (
-                      <DropdownMenuItem
-                        key={notification.id}
-                        className="flex flex-col items-start p-3 cursor-pointer"
-                        onClick={() => {
-                          markAsReadMutation.mutate(notification.id);
-                        }}
-                        data-testid={`notification-${notification.id}`}
-                      >
-                        <div className="font-medium text-sm">{notification.title}</div>
-                        <div className="text-xs text-gray-500 mt-1">{notification.message}</div>
-                      </DropdownMenuItem>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-sm text-gray-500 text-center">No new notifications</div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"
@@ -455,6 +425,10 @@ export default function CoachDashboard() {
 
       {/* Main */}
       <main className="max-w-md mx-auto">
+        {/* Announcement Banner */}
+        <div className="px-6 pt-4">
+          <AnnouncementBanner />
+        </div>
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
@@ -585,7 +559,7 @@ export default function CoachDashboard() {
               onEvaluate={(p) => {
                 // Transform roster player to PlayerLite format
                 const playerLite: PlayerLite = {
-                  id: p.appAccountId || p.id,
+                  id: String(p.id),
                   firstName: p.firstName,
                   lastName: p.lastName,
                   teamName: p.teamName,
@@ -602,7 +576,7 @@ export default function CoachDashboard() {
               onReward={(p) => {
                 // Transform roster player to PlayerLite format
                 const playerLite: PlayerLite = {
-                  id: p.appAccountId || p.id,
+                  id: String(p.id),
                   firstName: p.firstName,
                   lastName: p.lastName,
                   teamName: p.teamName,
@@ -913,7 +887,7 @@ function RosterTab({
                   <div>
                     <div className="font-semibold text-gray-900">{team.name}</div>
                     <div className="text-sm text-gray-500">
-                      {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                      {team.ageGroup}
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />
@@ -952,7 +926,7 @@ function RosterTab({
                     <div className="flex items-center justify-between w-full">
                       <span className="font-medium">{team.name}</span>
                       <span className="text-sm text-gray-500 ml-2">
-                        {team.program === 'Youth-Club' ? 'Youth Club' : team.ageGroup}
+                        {team.ageGroup}
                       </span>
                     </div>
                   </SelectItem>

@@ -61,6 +61,8 @@ import type { SkillCategoryName, EvalScores, Quarter } from "@/components/CoachA
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ChevronDown } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -229,6 +231,7 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex gap-3">
+              <NotificationBell />
               <Button onClick={() => setActiveTab("settings")} variant="outline" data-testid="button-settings">
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
@@ -239,6 +242,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Announcement Banner */}
+        <AnnouncementBanner />
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div ref={tabsRef} className="overflow-x-auto hide-scrollbar drag-scroll mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <TabsList className="inline-flex w-auto min-w-full sm:w-auto bg-transparent border-b border-gray-200 rounded-none p-0 h-auto gap-0">

@@ -44,6 +44,8 @@ import {
   Copy,
 } from "lucide-react";
 import NotificationCenter from "@/components/NotificationCenter";
+import { NotificationBell } from "@/components/NotificationBell";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isToday as isDateToday } from "date-fns";
@@ -926,7 +928,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </Button>
             )}
             <div className="flex items-center gap-2">
-            <NotificationCenter />
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"
@@ -941,6 +943,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
       </header>
       {/* Main */}
       <main className="max-w-md mx-auto">
+        {/* Announcement Banner */}
+        <div className="px-6 pt-4">
+          <AnnouncementBanner />
+        </div>
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">
@@ -1771,8 +1777,8 @@ function TeamBlock() {
   
   // Fetch coach information
   const { data: coachInfo } = useQuery<any>({
-    queryKey: ["/api/users", userTeam?.coachIds?.[0]],
-    enabled: !!userTeam?.coachIds?.[0],
+    queryKey: ["/api/users", userTeam?.coachId],
+    enabled: !!userTeam?.coachId,
   });
 
   return (
@@ -1789,7 +1795,7 @@ function TeamBlock() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{userTeam.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{userTeam.ageGroup}</p>
+                  {userTeam.programType && <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{userTeam.programType}</p>}
                   {coachInfo && (
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <UserCheck className="h-4 w-4" />

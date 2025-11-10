@@ -1211,7 +1211,7 @@ export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 export interface Notification {
   id: number;
   organizationId: string;
-  type: string;
+  type: "announcement" | "notification" | "message";
   title: string;
   message: string;
   recipientTarget: "everyone" | "users" | "roles" | "teams" | "divisions";
@@ -1219,7 +1219,7 @@ export interface Notification {
   recipientRoles?: string[];
   recipientTeamIds?: string[];
   recipientDivisionIds?: string[];
-  deliveryChannels: ("in_app" | "email" | "push" | "sms")[];
+  deliveryChannels: ("in_app" | "email" | "push")[];
   sentBy: string;
   sentAt?: Date;
   relatedEventId?: number;

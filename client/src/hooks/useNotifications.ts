@@ -30,7 +30,7 @@ export function useNotifications() {
   };
 
   // Get VAPID public key
-  const { data: vapidKey } = useQuery({
+  const { data: vapidKey }: { data: { publicKey: string } | undefined } = useQuery({
     queryKey: ['/api/notifications/vapid-public-key'],
     enabled: isSupported,
   });
@@ -91,10 +91,7 @@ export function useNotifications() {
         console.log('Sending subscription to server...');
         await apiRequest('/api/notifications/subscribe', {
           method: 'POST',
-          body: JSON.stringify(subscriptionData),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          data: subscriptionData,
         });
         console.log('Subscription saved to server');
 
@@ -120,10 +117,7 @@ export function useNotifications() {
         // Notify server
         await apiRequest('/api/notifications/unsubscribe', {
           method: 'POST',
-          body: JSON.stringify({ endpoint: subscription.endpoint }),
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          data: { endpoint: subscription.endpoint },
         });
       }
 
@@ -147,7 +141,7 @@ export function useNotifications() {
 // Helper functions
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  const binary = String.fromCharCode(...bytes);
+  const binary = String.fromCharCode.apply(null, Array.from(bytes));
   return btoa(binary);
 }
 

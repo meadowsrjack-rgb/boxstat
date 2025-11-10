@@ -532,6 +532,56 @@ export const notificationRecipients = pgTable("notification_recipients", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
+// Notification Preferences table
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull().unique(),
+  // Event notifications
+  eventRsvp: boolean("event_rsvp").default(true),
+  eventCheckin: boolean("event_checkin").default(true),
+  eventReminders: boolean("event_reminders").default(true),
+  // Achievement notifications
+  trophyProgress: boolean("trophy_progress").default(true),
+  badgeEarned: boolean("badge_earned").default(true),
+  // Training notifications
+  trainingReminders: boolean("training_reminders").default(true),
+  skillsEvaluation: boolean("skills_evaluation").default(true),
+  improvementRecommendation: boolean("improvement_recommendation").default(true),
+  // Payment notifications
+  paymentDue: boolean("payment_due").default(true),
+  // Team notifications
+  teamMessages: boolean("team_messages").default(true),
+  // Coach-specific notifications
+  teamUpdates: boolean("team_updates").default(true),
+  eventChanges: boolean("event_changes").default(true),
+  playerCheckIn: boolean("player_check_in").default(true),
+  playerRsvp: boolean("player_rsvp").default(true),
+  playerAwards: boolean("player_awards").default(true),
+  playerProgress: boolean("player_progress").default(true),
+  // Delivery preferences
+  pushNotifications: boolean("push_notifications").default(true),
+  emailNotifications: boolean("email_notifications").default(true),
+  smsNotifications: boolean("sms_notifications").default(false),
+  quietHoursStart: varchar("quiet_hours_start").default("22:00"),
+  quietHoursEnd: varchar("quiet_hours_end").default("07:00"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// Push Subscriptions table
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial().primaryKey().notNull(),
+  userId: varchar("user_id").notNull(),
+  endpoint: text().notNull(),
+  p256dhKey: text("p256dh_key").notNull(),
+  authKey: text("auth_key").notNull(),
+  userAgent: text("user_agent"),
+  deviceType: varchar("device_type"), // "desktop", "mobile", "tablet"
+  isActive: boolean("is_active").default(true),
+  lastUsed: timestamp("last_used", { mode: 'string' }).defaultNow(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
 export const insertUserSchema = z.object({
   organizationId: z.string(),
   email: z.string().email(),
@@ -1179,6 +1229,87 @@ export const insertNotificationRecipientSchema = z.object({
 
 export type InsertNotificationRecipient = z.infer<typeof insertNotificationRecipientSchema>;
 export type SelectNotificationRecipient = typeof notificationRecipients.$inferSelect;
+
+export interface NotificationPreferences {
+  id: number;
+  userId: string;
+  eventRsvp?: boolean;
+  eventCheckin?: boolean;
+  eventReminders?: boolean;
+  trophyProgress?: boolean;
+  badgeEarned?: boolean;
+  trainingReminders?: boolean;
+  skillsEvaluation?: boolean;
+  improvementRecommendation?: boolean;
+  paymentDue?: boolean;
+  teamMessages?: boolean;
+  teamUpdates?: boolean;
+  eventChanges?: boolean;
+  playerCheckIn?: boolean;
+  playerRsvp?: boolean;
+  playerAwards?: boolean;
+  playerProgress?: boolean;
+  pushNotifications?: boolean;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
+  quietHoursStart?: string;
+  quietHoursEnd?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertNotificationPreferencesSchema = z.object({
+  userId: z.string(),
+  eventRsvp: z.boolean().optional(),
+  eventCheckin: z.boolean().optional(),
+  eventReminders: z.boolean().optional(),
+  trophyProgress: z.boolean().optional(),
+  badgeEarned: z.boolean().optional(),
+  trainingReminders: z.boolean().optional(),
+  skillsEvaluation: z.boolean().optional(),
+  improvementRecommendation: z.boolean().optional(),
+  paymentDue: z.boolean().optional(),
+  teamMessages: z.boolean().optional(),
+  teamUpdates: z.boolean().optional(),
+  eventChanges: z.boolean().optional(),
+  playerCheckIn: z.boolean().optional(),
+  playerRsvp: z.boolean().optional(),
+  playerAwards: z.boolean().optional(),
+  playerProgress: z.boolean().optional(),
+  pushNotifications: z.boolean().optional(),
+  emailNotifications: z.boolean().optional(),
+  smsNotifications: z.boolean().optional(),
+  quietHoursStart: z.string().optional(),
+  quietHoursEnd: z.string().optional(),
+});
+
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type SelectNotificationPreferences = typeof notificationPreferences.$inferSelect;
+
+export interface PushSubscription {
+  id: number;
+  userId: string;
+  endpoint: string;
+  p256dhKey: string;
+  authKey: string;
+  userAgent?: string;
+  deviceType?: string;
+  isActive: boolean;
+  lastUsed: Date;
+  createdAt: Date;
+}
+
+export const insertPushSubscriptionSchema = z.object({
+  userId: z.string(),
+  endpoint: z.string(),
+  p256dhKey: z.string(),
+  authKey: z.string(),
+  userAgent: z.string().optional(),
+  deviceType: z.string().optional(),
+});
+
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
+export type SelectPushSubscription = typeof pushSubscriptions.$inferSelect;
 
 // =============================================
 // Event Windows Schema (RSVP & Check-In Timing)

@@ -72,14 +72,19 @@ export class AdminNotificationService {
         case 'teams': {
           // Users in specific teams
           if (options.recipientTeamIds && options.recipientTeamIds.length > 0) {
-            const teamUsers = await db.select({ id: users.id })
-              .from(users)
-              .where(and(
-                eq(users.organizationId, organizationId),
-                inArray(users.teamId, options.recipientTeamIds as any[])
-              ));
+            // Parse team IDs to integers since users.teamId is an integer column
+            const teamIdInts = options.recipientTeamIds.map(id => parseInt(id)).filter(id => !isNaN(id));
             
-            teamUsers.forEach(u => userIds.add(u.id));
+            if (teamIdInts.length > 0) {
+              const teamUsers = await db.select({ id: users.id })
+                .from(users)
+                .where(and(
+                  eq(users.organizationId, organizationId),
+                  inArray(users.teamId, teamIdInts)
+                ));
+              
+              teamUsers.forEach(u => userIds.add(u.id));
+            }
           }
           break;
         }

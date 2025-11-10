@@ -181,7 +181,7 @@ export default function AdminDashboard() {
 
   // Fetch notifications
   const { data: notifications = [], isLoading: notificationsLoading } = useQuery<any[]>({
-    queryKey: ["/api/notifications"],
+    queryKey: ["/api/admin/notifications"],
   });
 
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || skillsLoading || evaluationsLoading || notificationsLoading;
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
-                Notifications
+                Messages
               </TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Settings className="w-4 h-4 mr-2" />
@@ -333,7 +333,7 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="notifications">
-            <NotificationsTab notifications={notifications} users={users} organization={organization} />
+            <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
           </TabsContent>
 
           <TabsContent value="settings">
@@ -5487,12 +5487,10 @@ function DivisionsTab({ divisions, teams, organization }: any) {
   );
 }
 
-// Notifications Tab Component
-function NotificationsTab({ notifications, users, organization }: any) {
+// Messages Tab Component (formerly Notifications)
+function NotificationsTab({ notifications, users, teams, divisions, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingNotification, setEditingNotification] = useState<any>(null);
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -5502,100 +5500,100 @@ function NotificationsTab({ notifications, users, organization }: any) {
     resolver: zodResolver(insertNotificationSchema),
     defaultValues: {
       organizationId: organization?.id || "",
-      type: "in-app",
       title: "",
       message: "",
-      recipientIds: [],
+      recipientTarget: "everyone" as const,
+      recipientUserIds: [],
+      recipientRoles: [],
+      recipientTeamIds: [],
+      recipientDivisionIds: [],
+      deliveryChannels: ["in_app"] as const,
       sentBy: currentUser?.id || "",
-      readBy: [],
-      status: "pending",
+      status: "pending" as const,
     },
   });
 
-  const createNotification = useMutation({
+  const recipientTarget = form.watch("recipientTarget");
+  const deliveryChannels = form.watch("deliveryChannels") || [];
+
+  const createMessage = useMutation({
     mutationFn: async (data: any) => {
-      if (editingNotification) {
-        return await apiRequest("PATCH", `/api/notifications/${editingNotification.id}`, data);
-      }
-      return await apiRequest("POST", "/api/notifications", { ...data, recipientIds: selectedRecipients });
+      return await apiRequest("POST", "/api/admin/notifications", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      toast({ title: editingNotification ? "Notification updated successfully" : "Notification created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
+      toast({ title: "Message sent successfully" });
       setIsDialogOpen(false);
-      setEditingNotification(null);
-      setSelectedRecipients([]);
       form.reset();
     },
     onError: () => {
-      toast({ title: "Failed to save notification", variant: "destructive" });
+      toast({ title: "Failed to send message", variant: "destructive" });
     },
   });
 
-  const deleteNotification = useMutation({
+  const deleteMessage = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("DELETE", `/api/notifications/${id}`, {});
+      return await apiRequest("DELETE", `/api/admin/notifications/${id}`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      toast({ title: "Notification deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
+      toast({ title: "Message deleted successfully" });
     },
     onError: () => {
-      toast({ title: "Failed to delete notification", variant: "destructive" });
+      toast({ title: "Failed to delete message", variant: "destructive" });
     },
   });
-
-  const handleEdit = (notification: any) => {
-    setEditingNotification(notification);
-    setSelectedRecipients(notification.recipientIds || []);
-    form.reset({
-      organizationId: notification.organizationId,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      recipientIds: notification.recipientIds || [],
-      sentBy: notification.sentBy,
-      readBy: notification.readBy || [],
-      status: notification.status,
-    });
-    setIsDialogOpen(true);
-  };
 
   const handleDialogClose = (open: boolean) => {
     setIsDialogOpen(open);
     if (!open) {
-      setEditingNotification(null);
-      setSelectedRecipients([]);
       form.reset();
     }
   };
 
-  const toggleRecipient = (userId: string) => {
-    setSelectedRecipients((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
+  const getRecipientDisplay = (notification: any) => {
+    if (notification.recipientTarget === "everyone") {
+      return "Everyone";
+    }
+    if (notification.recipientTarget === "users" && notification.recipientUserIds) {
+      const count = notification.recipientUserIds.length;
+      return `${count} user${count !== 1 ? 's' : ''}`;
+    }
+    if (notification.recipientTarget === "roles" && notification.recipientRoles) {
+      const count = notification.recipientRoles.length;
+      return `${count} role${count !== 1 ? 's' : ''}`;
+    }
+    if (notification.recipientTarget === "teams" && notification.recipientTeamIds) {
+      const count = notification.recipientTeamIds.length;
+      return `${count} team${count !== 1 ? 's' : ''}`;
+    }
+    if (notification.recipientTarget === "divisions" && notification.recipientDivisionIds) {
+      const count = notification.recipientDivisionIds.length;
+      return `${count} division${count !== 1 ? 's' : ''}`;
+    }
+    return "-";
   };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Manage Notifications</CardTitle>
-          <CardDescription>Send and manage notifications to users</CardDescription>
+          <CardTitle>Manage Messages</CardTitle>
+          <CardDescription>Send and manage messages to users</CardDescription>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-notification">
               <Plus className="w-4 h-4 mr-2" />
-              Create Notification
+              Create Message
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingNotification ? "Edit Notification" : "Create New Notification"}</DialogTitle>
+              <DialogTitle>Create New Message</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => createNotification.mutate(data))} className="space-y-4">
+              <form onSubmit={form.handleSubmit((data) => createMessage.mutate(data))} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="title"
@@ -5603,7 +5601,7 @@ function NotificationsTab({ notifications, users, organization }: any) {
                     <FormItem>
                       <FormLabel>Title</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Notification title" data-testid="input-notification-title" />
+                        <Input {...field} placeholder="Message title" data-testid="input-notification-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -5616,54 +5614,250 @@ function NotificationsTab({ notifications, users, organization }: any) {
                     <FormItem>
                       <FormLabel>Message</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Notification message..." rows={4} data-testid="input-notification-message" />
+                        <Textarea {...field} placeholder="Message content..." rows={4} data-testid="input-notification-message" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
-                  name="type"
+                  name="recipientTarget"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notification Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormLabel>Send To</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger data-testid="select-notification-type">
-                            <SelectValue />
+                          <SelectTrigger data-testid="select-recipient-target">
+                            <SelectValue placeholder="Select recipients" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="in-app">In-App</SelectItem>
-                          <SelectItem value="email">Email</SelectItem>
-                          <SelectItem value="push">Push Notification</SelectItem>
+                          <SelectItem value="everyone">Everyone</SelectItem>
+                          <SelectItem value="users">Specific Users</SelectItem>
+                          <SelectItem value="roles">Roles</SelectItem>
+                          <SelectItem value="teams">Teams</SelectItem>
+                          <SelectItem value="divisions">Divisions</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <div>
-                  <Label>Recipients</Label>
-                  <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                    {users.map((user: any) => (
-                      <div key={user.id} className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedRecipients.includes(user.id)}
-                          onCheckedChange={() => toggleRecipient(user.id)}
-                          data-testid={`checkbox-recipient-${user.id}`}
-                        />
-                        <span className="text-sm">
-                          {user.firstName} {user.lastName} ({user.role})
-                        </span>
+
+                {recipientTarget === "users" && (
+                  <FormField
+                    control={form.control}
+                    name="recipientUserIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Users</FormLabel>
+                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                          {users.map((user: any) => (
+                            <div key={user.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={field.value?.includes(user.id)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, user.id]);
+                                  } else {
+                                    field.onChange(current.filter((id: string) => id !== user.id));
+                                  }
+                                }}
+                                data-testid={`checkbox-recipient-${user.id}`}
+                              />
+                              <span className="text-sm">
+                                {user.firstName} {user.lastName} ({user.role})
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} user(s)</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recipientTarget === "roles" && (
+                  <FormField
+                    control={form.control}
+                    name="recipientRoles"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Roles</FormLabel>
+                        <div className="border rounded-md p-4 space-y-2">
+                          {["admin", "coach", "player", "parent"].map((role) => (
+                            <div key={role} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={field.value?.includes(role)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, role]);
+                                  } else {
+                                    field.onChange(current.filter((r: string) => r !== role));
+                                  }
+                                }}
+                                data-testid={`checkbox-role-${role}`}
+                              />
+                              <span className="text-sm capitalize">{role}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} role(s)</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recipientTarget === "teams" && (
+                  <FormField
+                    control={form.control}
+                    name="recipientTeamIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Teams</FormLabel>
+                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                          {teams.map((team: any) => (
+                            <div key={team.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={field.value?.includes(String(team.id))}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, String(team.id)]);
+                                  } else {
+                                    field.onChange(current.filter((id: string) => id !== String(team.id)));
+                                  }
+                                }}
+                                data-testid={`checkbox-team-${team.id}`}
+                              />
+                              <span className="text-sm">{team.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} team(s)</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {recipientTarget === "divisions" && (
+                  <FormField
+                    control={form.control}
+                    name="recipientDivisionIds"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Divisions</FormLabel>
+                        <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                          {divisions.map((division: any) => (
+                            <div key={division.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={field.value?.includes(String(division.id))}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, String(division.id)]);
+                                  } else {
+                                    field.onChange(current.filter((id: string) => id !== String(division.id)));
+                                  }
+                                }}
+                                data-testid={`checkbox-division-${division.id}`}
+                              />
+                              <span className="text-sm">{division.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} division(s)</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="deliveryChannels"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery Channels</FormLabel>
+                      <div className="border rounded-md p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value?.includes("in_app")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "in_app"]);
+                              } else {
+                                field.onChange(current.filter((ch: string) => ch !== "in_app"));
+                              }
+                            }}
+                            data-testid="checkbox-channel-in-app"
+                          />
+                          <span className="text-sm">In-App</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value?.includes("email")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "email"]);
+                              } else {
+                                field.onChange(current.filter((ch: string) => ch !== "email"));
+                              }
+                            }}
+                            data-testid="checkbox-channel-email"
+                          />
+                          <span className="text-sm">Email</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value?.includes("push")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "push"]);
+                              } else {
+                                field.onChange(current.filter((ch: string) => ch !== "push"));
+                              }
+                            }}
+                            data-testid="checkbox-channel-push"
+                          />
+                          <span className="text-sm">Push</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.value?.includes("sms")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "sms"]);
+                              } else {
+                                field.onChange(current.filter((ch: string) => ch !== "sms"));
+                              }
+                            }}
+                            data-testid="checkbox-channel-sms"
+                          />
+                          <span className="text-sm">SMS {deliveryChannels.includes("sms") && <span className="text-xs text-gray-500">(Twilio credentials required)</span>}</span>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">Selected: {selectedRecipients.length} user(s)</p>
-                </div>
-                <Button type="submit" className="w-full" disabled={createNotification.isPending} data-testid="button-submit-notification">
-                  {createNotification.isPending ? "Sending..." : editingNotification ? "Update Notification" : "Send Notification"}
+                      <p className="text-sm text-gray-500 mt-1">
+                        Selected: {field.value?.length || 0} channel(s)
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="submit" className="w-full" disabled={createMessage.isPending} data-testid="button-submit-notification">
+                  {createMessage.isPending ? "Sending..." : "Send Message"}
                 </Button>
               </form>
             </Form>
@@ -5676,10 +5870,10 @@ function NotificationsTab({ notifications, users, organization }: any) {
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Message</TableHead>
-              <TableHead>Type</TableHead>
               <TableHead>Recipients</TableHead>
+              <TableHead>Delivery Channels</TableHead>
               <TableHead>Sent Date</TableHead>
-              <TableHead>Read Status</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -5690,39 +5884,35 @@ function NotificationsTab({ notifications, users, organization }: any) {
                   {notification.title}
                 </TableCell>
                 <TableCell className="max-w-xs truncate">{notification.message}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{notification.type}</Badge>
-                </TableCell>
                 <TableCell data-testid={`text-notification-recipients-${notification.id}`}>
-                  {notification.recipientIds?.length || 0} user(s)
+                  {getRecipientDisplay(notification)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {notification.deliveryChannels?.map((channel: string) => (
+                      <Badge key={channel} variant="outline" className="text-xs">
+                        {channel.replace('_', '-')}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {notification.sentAt ? new Date(notification.sentAt).toLocaleDateString() : "-"}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={notification.readBy?.length > 0 ? "default" : "secondary"}>
-                    {notification.readBy?.length || 0} / {notification.recipientIds?.length || 0} read
+                  <Badge variant={notification.status === "sent" ? "default" : notification.status === "failed" ? "destructive" : "secondary"}>
+                    {notification.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEdit(notification)}
-                      data-testid={`button-edit-notification-${notification.id}`}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteNotification.mutate(notification.id)}
-                      data-testid={`button-delete-notification-${notification.id}`}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteMessage.mutate(notification.id)}
+                    data-testid={`button-delete-notification-${notification.id}`}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}

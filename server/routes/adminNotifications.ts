@@ -1,12 +1,25 @@
 import type { Express } from "express";
 import { adminNotificationService } from "../services/adminNotificationService";
-import { isAuthenticated } from "../replitAuth";
 import { z } from "zod";
 import { insertNotificationSchema } from "../../shared/schema";
 
+// Simple auth middleware for development
+const isAuthenticated = (req: any, res: any, next: any) => {
+  if (req.session && req.session.userId) {
+    req.user = { 
+      id: req.session.userId, 
+      organizationId: req.session.organizationId || "default-org", 
+      role: req.session.role || "user" 
+    };
+    next();
+  } else {
+    res.status(401).json({ error: "Not authenticated" });
+  }
+};
+
 // Middleware to check if user is admin
 const isAdmin = (req: any, res: any, next: any) => {
-  if (!req.user || req.user.claims.role !== 'admin') {
+  if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Access denied. Admin privileges required.' });
   }
   next();
@@ -17,7 +30,7 @@ export function setupAdminNotificationRoutes(app: Express) {
   // Get all notifications (admin view)
   app.get('/api/admin/notifications', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const organizationId = req.user.claims.organizationId || 'boxstat-default';
+      const organizationId = req.user.organizationId || 'default-org';
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
       const status = req.query.status as string | undefined;
@@ -55,8 +68,8 @@ export function setupAdminNotificationRoutes(app: Express) {
   // Create a new notification
   app.post('/api/admin/notifications', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const organizationId = req.user.claims.organizationId || 'boxstat-default';
-      const userId = req.user.claims.sub;
+      const organizationId = req.user.organizationId || 'default-org';
+      const userId = req.user.id;
 
       // Validate request body
       const notificationData = insertNotificationSchema.parse({
@@ -92,7 +105,7 @@ export function setupAdminNotificationRoutes(app: Express) {
   // Delete a notification
   app.delete('/api/admin/notifications/:id', isAuthenticated, isAdmin, async (req: any, res) => {
     try {
-      const organizationId = req.user.claims.organizationId || 'boxstat-default';
+      const organizationId = req.user.organizationId || 'default-org';
       const notificationId = parseInt(req.params.id);
 
       if (isNaN(notificationId)) {
@@ -112,8 +125,8 @@ export function setupAdminNotificationRoutes(app: Express) {
   if (process.env.NODE_ENV === 'development') {
     app.post('/api/admin/notifications/test', isAuthenticated, isAdmin, async (req: any, res) => {
       try {
-        const organizationId = req.user.claims.organizationId || 'boxstat-default';
-        const userId = req.user.claims.sub;
+        const organizationId = req.user.organizationId || 'default-org';
+        const userId = req.user.id;
 
         const testNotification = {
           organizationId,

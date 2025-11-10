@@ -235,19 +235,17 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
                     )}
                     
                     <div className={`flex flex-col gap-1 max-w-xs ${isOwn ? 'items-end' : 'items-start'}`}>
-                      {(!isOwn && showAvatar) && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            {getSenderName(message.sender)}
-                          </span>
-                          {isCoach(message.sender.userType) && (
-                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
-                              <Crown className="h-3 w-3 mr-1" />
-                              Coach
-                            </Badge>
-                          )}
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${isOwn ? 'text-blue-600' : 'text-gray-700'}`}>
+                          {getSenderName(message.sender)}
+                        </span>
+                        {!isOwn && isCoach(message.sender.userType) && (
+                          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                            <Crown className="h-3 w-3 mr-1" />
+                            Coach
+                          </Badge>
+                        )}
+                      </div>
                       
                       <div
                         className={`px-3 py-2 rounded-lg text-sm ${

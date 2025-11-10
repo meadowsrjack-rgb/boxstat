@@ -1760,6 +1760,9 @@ function TeamBlock() {
     enabled: !!activeProfileId,
   });
   
+  // Use active profile if available (for parents), otherwise use currentUser (for players)
+  const displayProfile = activeProfile || currentUser;
+  
   // Use child profile ID if viewing as child, otherwise use current user ID
   // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
   const userIdForTeam = activeProfile?.id || currentChildProfile?.id || currentUser.id;

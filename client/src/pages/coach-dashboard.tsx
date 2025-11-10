@@ -1157,7 +1157,7 @@ function RosterTab({
       {/* Team Chat */}
       <div>
         <h4 className="font-semibold text-gray-900 mb-2">Team Chat</h4>
-        <TeamChat teamId={selectedTeamId} />
+        <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} />
       </div>
 
       {/* Remove Player Confirmation Dialog */}

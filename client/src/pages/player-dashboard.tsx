@@ -1916,6 +1916,7 @@ function TeamBlock() {
           <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-chat">Team Chat</h3>
           <TeamChat 
             teamId={Number(userTeam.id)}
+            currentProfileId={displayProfile?.id}
           />
         </div>
       )}

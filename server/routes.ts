@@ -3013,10 +3013,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post('/api/teams/:teamId/messages', isAuthenticated, async (req: any, res) => {
-    const { message, messageType = 'text' } = req.body;
+    const { message, messageType = 'text', profileId } = req.body;
+    
+    // Security: Validate that profileId belongs to authenticated user or is the user themselves
+    let validatedSenderId = req.user.id;
+    if (profileId) {
+      // Check if profileId is the authenticated user
+      if (profileId === req.user.id) {
+        validatedSenderId = profileId;
+      } else {
+        // Check if profileId is a child profile of the authenticated user
+        const childProfiles = await storage.getChildProfiles(req.user.id);
+        const isValidProfile = childProfiles.some((profile: any) => profile.id === profileId);
+        if (isValidProfile) {
+          validatedSenderId = profileId;
+        }
+        // If not valid, fall back to req.user.id (don't allow spoofing)
+      }
+    }
+    
     const messageData = {
       teamId: parseInt(req.params.teamId),
-      senderId: req.user.id,
+      senderId: validatedSenderId,
       content: message, // Database field is 'content'
       messageType,
     };

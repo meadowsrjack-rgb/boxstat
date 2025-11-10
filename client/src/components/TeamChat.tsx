@@ -23,6 +23,7 @@ interface TeamChatProps {
   teamId: number;
   teamName?: string;
   className?: string;
+  currentProfileId?: string;
 }
 
 // Using shared schema types
@@ -30,7 +31,7 @@ interface TeamMessageWithSender extends Message {
   sender: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl' | 'userType'>;
 }
 
-export default function TeamChat({ teamId, teamName, className }: TeamChatProps) {
+export default function TeamChat({ teamId, teamName, className, currentProfileId }: TeamChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const { user } = useAuth();
@@ -48,7 +49,7 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (messageData: { message: string; messageType?: string }) => {
+    mutationFn: async (messageData: { message: string; messageType?: string; profileId?: string }) => {
       const result = await apiRequest(`/api/teams/${teamId}/messages`, {
         method: "POST",
         data: messageData
@@ -136,7 +137,8 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
 
     sendMessageMutation.mutate({
       message: trimmedMessage,
-      messageType: 'text'
+      messageType: 'text',
+      profileId: currentProfileId
     });
   };
 
@@ -174,7 +176,8 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
   };
 
   const isOwnMessage = (senderId: string) => {
-    return user?.id === senderId;
+    // Message is "own" if it matches either the authenticated user ID or the current profile ID
+    return user?.id === senderId || currentProfileId === senderId;
   };
 
   return (

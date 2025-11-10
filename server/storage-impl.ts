@@ -3195,7 +3195,7 @@ class DatabaseStorage implements IStorage {
   async createNotification(notification: InsertNotification): Promise<Notification> {
     const dbNotification = {
       organizationId: notification.organizationId,
-      type: notification.type,
+      types: notification.types,
       title: notification.title,
       message: notification.message,
       recipientIds: notification.recipientIds,
@@ -3213,7 +3213,7 @@ class DatabaseStorage implements IStorage {
 
   async updateNotification(id: number, updates: Partial<Notification>): Promise<Notification | undefined> {
     const dbUpdates: any = {
-      type: updates.type,
+      types: updates.types,
       title: updates.title,
       message: updates.message,
       recipientIds: updates.recipientIds,
@@ -3649,7 +3649,7 @@ class DatabaseStorage implements IStorage {
     return {
       id: dbNotification.id.toString(),
       organizationId: dbNotification.organizationId,
-      type: dbNotification.type,
+      types: dbNotification.types,
       title: dbNotification.title,
       message: dbNotification.message,
       recipientIds: dbNotification.recipientIds || [],

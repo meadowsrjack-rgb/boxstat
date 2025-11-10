@@ -277,7 +277,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
-                Messages
+                Notifications
               </TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Settings className="w-4 h-4 mr-2" />
@@ -5505,7 +5505,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     resolver: zodResolver(insertNotificationSchema),
     defaultValues: {
       organizationId: organization?.id || "",
-      type: "message" as const,
+      types: ["message"] as const,
       title: "",
       message: "",
       recipientTarget: "everyone" as const,
@@ -5629,22 +5629,79 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 
                 <FormField
                   control={form.control}
-                  name="type"
+                  name="types"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Message Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-message-type">
-                            <SelectValue placeholder="Select message type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="announcement">Announcement</SelectItem>
-                          <SelectItem value="notification">Notification</SelectItem>
-                          <SelectItem value="message">Message</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Message Types</FormLabel>
+                      <FormDescription>
+                        Select one or more types for this message
+                      </FormDescription>
+                      <div className="border rounded-md p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="type-announcement"
+                            checked={field.value?.includes("announcement")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "announcement"]);
+                              } else {
+                                field.onChange(current.filter((t: string) => t !== "announcement"));
+                              }
+                            }}
+                            data-testid="checkbox-type-announcement"
+                          />
+                          <label
+                            htmlFor="type-announcement"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Announcement
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="type-notification"
+                            checked={field.value?.includes("notification")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "notification"]);
+                              } else {
+                                field.onChange(current.filter((t: string) => t !== "notification"));
+                              }
+                            }}
+                            data-testid="checkbox-type-notification"
+                          />
+                          <label
+                            htmlFor="type-notification"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Notification
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="type-message"
+                            checked={field.value?.includes("message")}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || [];
+                              if (checked) {
+                                field.onChange([...current, "message"]);
+                              } else {
+                                field.onChange(current.filter((t: string) => t !== "message"));
+                              }
+                            }}
+                            data-testid="checkbox-type-message"
+                          />
+                          <label
+                            htmlFor="type-message"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            Message
+                          </label>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">Selected: {field.value?.length || 0} type(s)</p>
                       <FormMessage />
                     </FormItem>
                   )}

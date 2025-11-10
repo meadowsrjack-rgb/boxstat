@@ -197,7 +197,7 @@ export function setupNotificationRoutes(app: Express) {
       
       const feed = await db.select({
         id: notifications.id,
-        type: notifications.type,
+        types: notifications.types,
         title: notifications.title,
         message: notifications.message,
         createdAt: notifications.createdAt,
@@ -228,11 +228,11 @@ export function setupNotificationRoutes(app: Express) {
       
       const { db } = await import("../db");
       const { notifications, notificationRecipients } = await import("../../shared/schema");
-      const { eq, and, desc } = await import("drizzle-orm");
+      const { eq, and, desc, sql } = await import("drizzle-orm");
       
       const announcements = await db.select({
         id: notifications.id,
-        type: notifications.type,
+        types: notifications.types,
         title: notifications.title,
         message: notifications.message,
         createdAt: notifications.createdAt,
@@ -243,7 +243,7 @@ export function setupNotificationRoutes(app: Express) {
         .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
         .where(and(
           eq(notificationRecipients.userId, userId),
-          eq(notifications.type, 'announcement'),
+          sql`'announcement' = ANY(${notifications.types})`,
           eq(notificationRecipients.isRead, false)
         ))
         .orderBy(desc(notifications.createdAt))

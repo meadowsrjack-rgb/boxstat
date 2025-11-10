@@ -499,7 +499,7 @@ export const evaluations = pgTable("evaluations", {
 export const notifications = pgTable("notifications", {
   id: serial().primaryKey().notNull(),
   organizationId: varchar("organization_id").notNull(),
-  type: varchar().notNull().default('message'), // "announcement", "notification", "message"
+  types: text("types").array().notNull().default(sql`ARRAY['message']::text[]`), // ["announcement", "notification", "message"]
   title: varchar().notNull(),
   message: text().notNull(),
   
@@ -1211,7 +1211,7 @@ export type InsertEvaluation = z.infer<typeof insertEvaluationSchema>;
 export interface Notification {
   id: number;
   organizationId: string;
-  type: "announcement" | "notification" | "message";
+  types: ("announcement" | "notification" | "message")[];
   title: string;
   message: string;
   recipientTarget: "everyone" | "users" | "roles" | "teams" | "divisions";
@@ -1230,7 +1230,7 @@ export interface Notification {
 
 export const insertNotificationSchema = z.object({
   organizationId: z.string(),
-  type: z.enum(["announcement", "notification", "message"]).default('message'),
+  types: z.array(z.enum(["announcement", "notification", "message"])).min(1, "At least one notification type must be selected").default(['message']),
   title: z.string().min(1),
   message: z.string().min(1),
   recipientTarget: z.enum(["everyone", "users", "roles", "teams", "divisions"]),

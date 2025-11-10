@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 
 interface Announcement {
   id: number;
-  type: string;
+  types: string[];
   title: string;
   message: string;
   createdAt: string;

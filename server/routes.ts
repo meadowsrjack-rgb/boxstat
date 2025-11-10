@@ -7,6 +7,8 @@ import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
 import searchRoutes from "./routes/search";
+import { setupNotificationRoutes } from "./routes/notifications";
+import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -153,6 +155,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   app.use('/api/search', searchRoutes);
+  
+  // =============================================
+  // NOTIFICATION ROUTES
+  // =============================================
+  
+  setupNotificationRoutes(app);
+  setupAdminNotificationRoutes(app);
   
   // =============================================
   // AUTH ROUTES

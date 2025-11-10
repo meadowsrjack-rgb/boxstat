@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import NotificationDetailDialog from "@/components/NotificationDetailDialog";
+import { useLocation } from "wouter";
 import {
   Bell,
   BellRing,
@@ -79,6 +81,9 @@ function getPriorityColor(priority: string): string {
 
 export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -156,16 +161,16 @@ export default function NotificationCenter() {
   });
 
   const handleNotificationClick = (notification: Notification) => {
+    // Open detail dialog
+    setSelectedNotification(notification);
+    setDialogOpen(true);
+    
     // Mark as read if unread
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
 
-    // Navigate to action URL if provided
-    if (notification.actionUrl) {
-      window.location.href = notification.actionUrl;
-    }
-
+    // Close popover
     setIsOpen(false);
   };
 
@@ -300,7 +305,7 @@ export default function NotificationCenter() {
               size="sm"
               className="w-full text-xs"
               onClick={() => {
-                // Could navigate to full notifications page
+                setLocation('/notifications');
                 setIsOpen(false);
               }}
               data-testid="button-view-all"
@@ -310,6 +315,14 @@ export default function NotificationCenter() {
           </div>
         )}
       </PopoverContent>
+      
+      {/* Notification Detail Dialog */}
+      <NotificationDetailDialog
+        notification={selectedNotification}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onMarkAsRead={(id) => markAsReadMutation.mutate(id)}
+      />
     </Popover>
   );
 }

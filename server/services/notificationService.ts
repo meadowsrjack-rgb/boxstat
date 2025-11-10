@@ -13,7 +13,7 @@ import {
   type InsertNotificationPreferences,
   type InsertPushSubscription
 } from "../../shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, or, desc, sql } from "drizzle-orm";
 import webpush from "web-push";
 
 // Configure web push with VAPID keys from environment variables
@@ -285,15 +285,23 @@ export class NotificationService {
     limit?: number;
     offset?: number;
     unreadOnly?: boolean;
+    hideReadAfterHours?: number;
   } = {}): Promise<Array<SelectNotification & { isRead: boolean; readAt: string | null }>> {
     try {
-      const { limit = 20, offset = 0, unreadOnly = false } = options;
+      const { limit = 20, offset = 0, unreadOnly = false, hideReadAfterHours } = options;
       
       // Build where conditions
       const conditions = [eq(notificationRecipients.userId, userId)];
       
       if (unreadOnly) {
         conditions.push(eq(notificationRecipients.isRead, false));
+      } else if (hideReadAfterHours !== undefined) {
+        conditions.push(
+          or(
+            eq(notificationRecipients.isRead, false),
+            sql`${notificationRecipients.readAt} >= NOW() - INTERVAL '${sql.raw(hideReadAfterHours.toString())} hours'`
+          )!
+        );
       }
       
       // Join notification_recipients with notifications

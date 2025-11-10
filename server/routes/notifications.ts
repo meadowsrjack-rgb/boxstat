@@ -92,11 +92,19 @@ export function setupNotificationRoutes(app: Express) {
       const limit = parseInt(req.query.limit as string) || 20;
       const offset = parseInt(req.query.offset as string) || 0;
       const unreadOnly = req.query.unreadOnly === 'true';
+      
+      // Validate hideReadAfterHours to prevent NaN from reaching SQL
+      let hideReadAfterHours: number | undefined;
+      if (req.query.hideReadAfterHours) {
+        const parsed = parseInt(req.query.hideReadAfterHours as string);
+        hideReadAfterHours = (!isNaN(parsed) && parsed > 0) ? parsed : undefined;
+      }
 
       const notifications = await notificationService.getUserNotifications(userId, {
         limit,
         offset,
-        unreadOnly
+        unreadOnly,
+        hideReadAfterHours
       });
 
       res.json(notifications);

@@ -61,6 +61,7 @@ type Profile = {
 };
 import PhotoUpload from "@/pages/photo-upload";
 import SupportPage from "@/pages/support";
+import NotificationsPage from "@/pages/notifications-page";
 
 // Individual Setting Pages
 import { 
@@ -187,6 +188,7 @@ function AppRouter() {
       <Route path="/privacy" component={PrivacySettingsPage} />
       <Route path="/privacy-policy" component={PrivacyPolicy} />
       <Route path="/support" component={SupportPage} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={NotificationsPage} />} />
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />

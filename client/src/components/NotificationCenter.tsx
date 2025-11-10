@@ -28,7 +28,7 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Notification {
   id: number;
-  type: string;
+  types: string[];
   title: string;
   message: string;
   priority: 'low' | 'normal' | 'high';
@@ -254,7 +254,7 @@ export default function NotificationCenter() {
                 >
                   <div className="flex gap-3">
                     <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.types?.[0] || 'notification')}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">

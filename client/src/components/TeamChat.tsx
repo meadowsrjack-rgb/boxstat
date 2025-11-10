@@ -180,10 +180,8 @@ export default function TeamChat({ teamId, teamName, className }: TeamChatProps)
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-blue-500" />
-            Team Chat
             {teamName && (
-              <span className="text-sm font-normal text-gray-600">- {teamName}</span>
+              <span className="text-sm font-normal text-gray-600">{teamName}</span>
             )}
           </div>
           <div className="flex items-center gap-2">

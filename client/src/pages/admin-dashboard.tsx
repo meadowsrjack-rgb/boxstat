@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import {
   Settings,
@@ -41,6 +42,7 @@ import {
   XCircle,
   Circle,
   Shield,
+  AlertCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -377,6 +379,20 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [detailTab, setDetailTab] = useState("team");
   const tableRef = useDragScroll();
+
+  // Fetch user evaluations - only when viewing user in performance tab
+  const { data: userEvaluations = [], isLoading: evaluationsLoading, error: evaluationsError } = useQuery<any[]>({
+    queryKey: ['/api/evaluations', viewingUser?.id],
+    queryFn: () => apiRequest(`/api/evaluations?playerId=${viewingUser!.id}`),
+    enabled: !!viewingUser && detailTab === 'performance',
+  });
+
+  // Fetch user awards - only when viewing user in performance tab
+  const { data: userAwards, isLoading: awardsLoading, error: awardsError } = useQuery<any>({
+    queryKey: ['/api/users', viewingUser?.id, 'awards'],
+    queryFn: () => apiRequest(`/api/users/${viewingUser!.id}/awards`),
+    enabled: !!viewingUser && detailTab === 'performance',
+  });
 
   const createUserSchema = z.object({
     email: z.string().email(),
@@ -1372,7 +1388,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 
               {/* Performance Tab */}
               {detailTab === "performance" && (
-                <div role="tabpanel" id="performance-panel" aria-labelledby="performance-tab" className="space-y-4">
+                <div role="tabpanel" id="performance-panel" aria-labelledby="performance-tab" className="space-y-6">
+                {/* Stats Cards Grid */}
                 <div className="grid grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="pt-6">
@@ -1435,6 +1452,211 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Skills Assessment Section */}
+                <Card data-testid="section-skills-assessment">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="w-5 h-5" />
+                      Skills Assessment
+                    </CardTitle>
+                    <CardDescription>Player evaluations and skill ratings by coaches</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {evaluationsLoading ? (
+                      <div className="space-y-3">
+                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    ) : evaluationsError ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error loading evaluations</AlertTitle>
+                        <AlertDescription>Failed to load skill assessments. Please try again.</AlertDescription>
+                      </Alert>
+                    ) : userEvaluations.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Star className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p>No skill assessments recorded</p>
+                      </div>
+                    ) : (
+                      <Accordion type="single" collapsible className="w-full">
+                        {userEvaluations.map((evaluation: any, index: number) => {
+                          const coach = users.find((u: any) => u.id === evaluation.coachId);
+                          const evaluationDate = evaluation.createdAt ? new Date(evaluation.createdAt) : null;
+                          
+                          return (
+                            <AccordionItem key={evaluation.id || index} value={`evaluation-${index}`} data-testid={`evaluation-${index}`}>
+                              <AccordionTrigger className="hover:no-underline">
+                                <div className="flex items-center justify-between w-full pr-4">
+                                  <div className="flex items-center gap-3">
+                                    <Badge variant="outline">
+                                      {evaluation.quarter || 'Q1'}
+                                    </Badge>
+                                    <div className="text-left">
+                                      <p className="font-semibold">
+                                        {coach ? `${coach.firstName} ${coach.lastName}` : 'Unknown Coach'}
+                                      </p>
+                                      <p className="text-sm text-gray-500">
+                                        {evaluationDate ? format(evaluationDate, 'MMM d, yyyy') : 'Date unknown'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {evaluation.scores && (
+                                    <div className="text-sm text-gray-600">
+                                      {Object.keys(evaluation.scores).length} categories
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <div className="pt-4">
+                                  {evaluation.scores && Object.keys(evaluation.scores).length > 0 ? (
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Skill Category</TableHead>
+                                          <TableHead className="text-right">Score</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {Object.entries(evaluation.scores).map(([category, score]: [string, any]) => (
+                                          <TableRow key={category}>
+                                            <TableCell className="font-medium capitalize">
+                                              {category.replace(/([A-Z])/g, ' $1').trim()}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              <Badge variant={score >= 4 ? "default" : score >= 3 ? "secondary" : "outline"}>
+                                                {score}/5
+                                              </Badge>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  ) : (
+                                    <p className="text-sm text-gray-500 text-center py-4">No scores available</p>
+                                  )}
+                                  {evaluation.notes && (
+                                    <div className="mt-4 p-3 bg-gray-50 rounded">
+                                      <p className="text-sm font-semibold text-gray-700 mb-1">Coach Notes:</p>
+                                      <p className="text-sm text-gray-600">{evaluation.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Awards Section */}
+                <Card data-testid="section-user-awards">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5" />
+                      Awards & Achievements
+                    </CardTitle>
+                    <CardDescription>Badges and trophies earned by this player</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {awardsLoading ? (
+                      <div className="space-y-4">
+                        <div className="h-32 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-32 bg-gray-200 rounded animate-pulse" />
+                      </div>
+                    ) : awardsError ? (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Error loading awards</AlertTitle>
+                        <AlertDescription>Failed to load awards and achievements. Please try again.</AlertDescription>
+                      </Alert>
+                    ) : !userAwards || ((!userAwards.badges || userAwards.badges.length === 0) && (!userAwards.trophies || userAwards.trophies.length === 0)) ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                        <p>No awards earned yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Badges Section */}
+                        {userAwards.badges && userAwards.badges.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                              <Award className="w-5 h-5" />
+                              Badges
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {userAwards.badges.map((badge: any) => (
+                                <Card key={badge.id} className="p-4 hover:shadow-lg transition-shadow" data-testid={`award-${badge.id}`}>
+                                  <div className="text-center space-y-2">
+                                    {badge.imageUrl && (
+                                      <img 
+                                        src={badge.imageUrl} 
+                                        alt={badge.name}
+                                        className="w-16 h-16 mx-auto object-contain"
+                                      />
+                                    )}
+                                    <p className="font-semibold text-sm">{badge.name}</p>
+                                    {badge.tier && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {badge.tier}
+                                      </Badge>
+                                    )}
+                                    {badge.earnedAt && (
+                                      <p className="text-xs text-gray-500">
+                                        {format(new Date(badge.earnedAt), 'MMM d, yyyy')}
+                                      </p>
+                                    )}
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Trophies Section */}
+                        {userAwards.trophies && userAwards.trophies.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                              <Trophy className="w-5 h-5" />
+                              Trophies
+                            </h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {userAwards.trophies.map((trophy: any) => (
+                                <Card key={trophy.id} className="p-4 hover:shadow-lg transition-shadow" data-testid={`award-${trophy.id}`}>
+                                  <div className="text-center space-y-2">
+                                    {trophy.imageUrl && (
+                                      <img 
+                                        src={trophy.imageUrl} 
+                                        alt={trophy.name}
+                                        className="w-16 h-16 mx-auto object-contain"
+                                      />
+                                    )}
+                                    <p className="font-semibold text-sm">{trophy.name}</p>
+                                    {trophy.tier && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {trophy.tier}
+                                      </Badge>
+                                    )}
+                                    {trophy.earnedAt && (
+                                      <p className="text-xs text-gray-500">
+                                        {format(new Date(trophy.earnedAt), 'MMM d, yyyy')}
+                                      </p>
+                                    )}
+                                  </div>
+                                </Card>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
                 </div>
               )}
 

@@ -180,17 +180,8 @@ export default function NotificationDetailDialog({
                 Take Action
               </Button>
             )}
-            {!notification.isRead && (
-              <Button
-                variant="outline"
-                onClick={handleMarkAsRead}
-                data-testid="button-mark-read"
-              >
-                Mark as Read
-              </Button>
-            )}
             <Button
-              variant="ghost"
+              variant={notification.actionUrl ? "ghost" : "default"}
               onClick={() => onOpenChange(false)}
               data-testid="button-close-dialog"
             >

@@ -308,7 +308,7 @@ export class NotificationService {
       const results = await db.select({
         id: notifications.id,
         organizationId: notifications.organizationId,
-        type: notifications.type,
+        types: notifications.types,
         title: notifications.title,
         message: notifications.message,
         recipientTarget: notifications.recipientTarget,

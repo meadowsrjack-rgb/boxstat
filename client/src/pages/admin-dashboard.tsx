@@ -49,7 +49,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
 import PlayerDashboard from "./player-dashboard";
-import { insertDivisionSchema, insertSkillSchema, insertNotificationSchema, insertTeamSchema } from "@shared/schema";
+import { insertDivisionSchema, insertNotificationSchema, insertTeamSchema } from "@shared/schema";
 import { LocationSearch } from "@/components/LocationSearch";
 import AttendanceList from "@/components/AttendanceList";
 import { format } from "date-fns";
@@ -171,10 +171,6 @@ export default function AdminDashboard() {
     queryKey: ["/api/divisions"],
   });
 
-  // Fetch skills
-  const { data: skills = [], isLoading: skillsLoading } = useQuery<any[]>({
-    queryKey: ["/api/skills"],
-  });
 
   // Fetch evaluations
   const { data: evaluations = [], isLoading: evaluationsLoading } = useQuery<any[]>({
@@ -186,7 +182,7 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/notifications"],
   });
 
-  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || skillsLoading || evaluationsLoading || notificationsLoading;
+  const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
   const stats = {
@@ -1291,20 +1287,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   </button>
                   <button
                     role="tab"
-                    aria-selected={detailTab === "skills"}
-                    aria-controls="skills-panel"
-                    onClick={() => setDetailTab("skills")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "skills"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-skills"
-                  >
-                    🧠 <span className="hidden md:inline">Skills & Awards</span>
-                  </button>
-                  <button
-                    role="tab"
                     aria-selected={detailTab === "notes"}
                     aria-controls="notes-panel"
                     onClick={() => setDetailTab("notes")}
@@ -1495,47 +1477,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-                </div>
-              )}
-
-              {/* Skills & Awards Tab */}
-              {detailTab === "skills" && (
-                <div role="tabpanel" id="skills-panel" aria-labelledby="skills-tab" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Awards & Trophies</Label>
-                    {viewingUser.awards && viewingUser.awards.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-3">
-                        {viewingUser.awards.map((award: any, index: number) => (
-                          <Card key={index} className="p-4 text-center" data-testid={`award-${index}`}>
-                            <Trophy className="w-8 h-8 mx-auto mb-2 text-yellow-600" />
-                            <p className="text-sm font-medium">{award.name || award}</p>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No awards yet</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Skills Assessments</Label>
-                    {viewingUser.skillsAssessments && Object.keys(viewingUser.skillsAssessments).length > 0 ? (
-                      <div className="space-y-2">
-                        {Object.entries(viewingUser.skillsAssessments).map(([year, assessment]: [string, any]) => (
-                          <Card key={year} className="p-4" data-testid={`assessment-${year}`}>
-                            <p className="font-semibold mb-2">Year: {year}</p>
-                            <pre className="text-xs bg-gray-50 p-2 rounded overflow-auto">
-                              {JSON.stringify(assessment, null, 2)}
-                            </pre>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500">No assessments recorded</p>
-                    )}
-                  </div>
                 </div>
                 </div>
               )}

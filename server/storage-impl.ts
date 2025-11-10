@@ -59,6 +59,7 @@ export interface IStorage {
   getUsersByOrganization(organizationId: string): Promise<User[]>;
   getUsersByTeam(teamId: string): Promise<User[]>;
   getUsersByRole(organizationId: string, role: string): Promise<User[]>;
+  getAccountProfiles(accountId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
@@ -784,6 +785,14 @@ class MemStorage implements IStorage {
     return Array.from(this.users.values()).filter(
       user => user.organizationId === organizationId && user.role === role
     );
+  }
+  
+  async getAccountProfiles(accountId: string): Promise<User[]> {
+    const parent = this.users.get(accountId);
+    const children = Array.from(this.users.values()).filter(
+      user => user.accountHolderId === accountId
+    );
+    return parent ? [parent, ...children] : children;
   }
   
   async createUser(user: InsertUser): Promise<User> {
@@ -2105,6 +2114,29 @@ class DatabaseStorage implements IStorage {
       )
     );
     return results.map(user => this.mapDbUserToUser(user));
+  }
+
+  async getAccountProfiles(accountId: string): Promise<User[]> {
+    // Get the parent account
+    const parentResults = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.id, accountId),
+        eq(schema.users.isActive, true)
+      )
+    );
+    
+    // Get all child profiles where parentId (accountHolderId) matches
+    const childResults = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.parentId, accountId),
+        eq(schema.users.isActive, true)
+      )
+    );
+    
+    const parent = parentResults.length > 0 ? this.mapDbUserToUser(parentResults[0]) : null;
+    const children = childResults.map(user => this.mapDbUserToUser(user));
+    
+    return parent ? [parent, ...children] : children;
   }
 
   async createUser(user: InsertUser): Promise<User> {

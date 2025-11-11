@@ -572,15 +572,20 @@ export const notificationPreferences = pgTable("notification_preferences", {
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: serial().primaryKey().notNull(),
   userId: varchar("user_id").notNull(),
-  endpoint: text().notNull(),
-  p256dhKey: text("p256dh_key").notNull(),
-  authKey: text("auth_key").notNull(),
+  endpoint: text(),
+  p256dhKey: text("p256dh_key"),
+  authKey: text("auth_key"),
+  fcmToken: text("fcm_token"),
+  platform: text("platform").notNull(),
   userAgent: text("user_agent"),
   deviceType: varchar("device_type"), // "desktop", "mobile", "tablet"
   isActive: boolean("is_active").default(true),
   lastUsed: timestamp("last_used", { mode: 'string' }).defaultNow(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
+}, (table) => [
+  unique("push_subscriptions_user_endpoint").on(table.userId, table.endpoint),
+  unique("push_subscriptions_user_fcm").on(table.userId, table.fcmToken),
+]);
 
 // Chat Rooms table (team chats and parent chats)
 export const chatRooms = pgTable("chat_rooms", {
@@ -1333,9 +1338,11 @@ export type SelectNotificationPreferences = typeof notificationPreferences.$infe
 export interface PushSubscription {
   id: number;
   userId: string;
-  endpoint: string;
-  p256dhKey: string;
-  authKey: string;
+  endpoint?: string;
+  p256dhKey?: string;
+  authKey?: string;
+  fcmToken?: string;
+  platform?: string;
   userAgent?: string;
   deviceType?: string;
   isActive: boolean;
@@ -1345,12 +1352,27 @@ export interface PushSubscription {
 
 export const insertPushSubscriptionSchema = z.object({
   userId: z.string(),
-  endpoint: z.string(),
-  p256dhKey: z.string(),
-  authKey: z.string(),
+  endpoint: z.string().optional(),
+  p256dhKey: z.string().optional(),
+  authKey: z.string().optional(),
+  fcmToken: z.string().optional(),
+  platform: z.enum(["web", "ios", "android"]),
   userAgent: z.string().optional(),
   deviceType: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    if (data.platform === "web") {
+      return !!data.endpoint && !!data.p256dhKey && !!data.authKey;
+    }
+    if (data.platform === "ios" || data.platform === "android") {
+      return !!data.fcmToken;
+    }
+    return false;
+  },
+  {
+    message: "Web subscriptions require endpoint, p256dhKey, and authKey. Native subscriptions require fcmToken and platform (ios/android).",
+  }
+);
 
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 export type SelectPushSubscription = typeof pushSubscriptions.$inferSelect;

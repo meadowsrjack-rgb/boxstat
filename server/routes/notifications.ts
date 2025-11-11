@@ -54,6 +54,7 @@ export function setupNotificationRoutes(app: Express) {
         endpoint: subscription.endpoint,
         p256dhKey: subscription.keys.p256dh,
         authKey: subscription.keys.auth,
+        platform: 'web',
         userAgent: subscription.userAgent,
         deviceType: subscription.deviceType
       });
@@ -82,6 +83,36 @@ export function setupNotificationRoutes(app: Express) {
     } catch (error) {
       console.error('Error unsubscribing from push notifications:', error);
       res.status(500).json({ error: 'Failed to unsubscribe' });
+    }
+  });
+
+  // Register FCM token for native push notifications (iOS/Android)
+  app.post('/api/push/register', isAuthenticated, async (req: any, res) => {
+    try {
+      const { token } = req.body;
+      
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ error: 'Token is required' });
+      }
+
+      const userId = req.user.id;
+      const userAgent = req.headers['user-agent'] || '';
+      
+      // Detect platform from user agent
+      const platform = userAgent.includes('iPhone') || userAgent.includes('iPad') ? 'ios' : 'android';
+      const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
+      
+      await notificationService.subscribeToPush(userId, {
+        fcmToken: token,
+        platform,
+        userAgent,
+        deviceType,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error registering push token:', error);
+      res.status(500).json({ error: 'Failed to register push token' });
     }
   });
 

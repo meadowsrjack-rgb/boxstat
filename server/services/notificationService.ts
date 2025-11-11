@@ -15,6 +15,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, or, desc, sql } from "drizzle-orm";
 import webpush from "web-push";
+import admin from 'firebase-admin';
 
 // Configure web push with VAPID keys from environment variables
 // SECURITY: VAPID keys MUST be set in environment variables for production
@@ -34,24 +35,51 @@ if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
   console.log('✅ Push notifications configured with VAPID keys');
 }
 
+const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+if (!firebaseServiceAccount) {
+  console.warn('⚠️  Firebase Admin not configured - native push notifications will not work');
+  console.warn('   Add FIREBASE_SERVICE_ACCOUNT_KEY to environment variables');
+} else {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(firebaseServiceAccount))
+    });
+    console.log('✅ Firebase Admin initialized for FCM push notifications');
+  } catch (error) {
+    console.error('❌ Failed to initialize Firebase Admin:', error);
+  }
+}
+
 export class NotificationService {
   
   // ===== Push Subscription Management =====
   
   async subscribeToPush(userId: string, subscription: Omit<InsertPushSubscription, 'userId'>): Promise<void> {
     try {
+      const isWebPush = !!subscription.endpoint;
+      const isFCM = !!subscription.fcmToken;
+      
       await db.insert(pushSubscriptions).values({
         userId,
         ...subscription
       }).onConflictDoUpdate({
-        target: [pushSubscriptions.userId, pushSubscriptions.endpoint],
+        target: isWebPush 
+          ? [pushSubscriptions.userId, pushSubscriptions.endpoint]
+          : [pushSubscriptions.userId, pushSubscriptions.fcmToken],
         set: {
-          p256dhKey: subscription.p256dhKey,
-          authKey: subscription.authKey,
+          ...(isWebPush && {
+            p256dhKey: subscription.p256dhKey,
+            authKey: subscription.authKey,
+          }),
+          ...(isFCM && {
+            fcmToken: subscription.fcmToken,
+          }),
+          platform: subscription.platform,
           userAgent: subscription.userAgent,
           deviceType: subscription.deviceType,
           isActive: true,
-          lastUsed: new Date()
+          lastUsed: sql`CURRENT_TIMESTAMP`
         }
       });
     } catch (error) {
@@ -82,7 +110,7 @@ export class NotificationService {
         .from(notificationPreferences)
         .where(eq(notificationPreferences.userId, userId))
         .limit(1);
-      return preferences || null;
+      return preferences ? (preferences as unknown as NotificationPreferences) : null;
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
       return null;
@@ -165,7 +193,7 @@ export class NotificationService {
         return;
       }
 
-      // Get user's push subscriptions
+      // Get all active subscriptions for the user
       const subscriptions = await db.select()
         .from(pushSubscriptions)
         .where(and(
@@ -173,7 +201,17 @@ export class NotificationService {
           eq(pushSubscriptions.isActive, true)
         ));
 
-      if (subscriptions.length === 0) {
+      // Split into web push and FCM subscriptions
+      const webPushSubscriptions = subscriptions.filter(
+        sub => sub.endpoint && sub.p256dhKey && sub.authKey
+      );
+
+      const fcmSubscriptions = subscriptions.filter((sub: any) => 
+        sub.fcmToken && (sub.platform === 'ios' || sub.platform === 'android')
+      );
+
+      // Only skip if BOTH groups are empty
+      if (webPushSubscriptions.length === 0 && fcmSubscriptions.length === 0) {
         await db.update(notificationRecipients)
           .set({ 
             deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '"skipped_no_subscription"')` 
@@ -201,38 +239,58 @@ export class NotificationService {
         ]
       });
 
-      // Send to all user's devices
+      // Track overall success
       let sentSuccessfully = false;
-      const promises = subscriptions.map(async (subscription) => {
-        try {
-          await webpush.sendNotification({
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: subscription.p256dhKey,
-              auth: subscription.authKey
-            }
-          }, payload);
 
-          sentSuccessfully = true;
-          
-          // Update last used timestamp
-          await db.update(pushSubscriptions)
-            .set({ lastUsed: sql`CURRENT_TIMESTAMP` })
-            .where(eq(pushSubscriptions.id, subscription.id));
+      // Send to web push devices if any exist
+      if (webPushSubscriptions.length > 0) {
+        const promises = webPushSubscriptions.map(async (subscription) => {
+          try {
+            await webpush.sendNotification({
+              endpoint: subscription.endpoint!,
+              keys: {
+                p256dh: subscription.p256dhKey!,
+                auth: subscription.authKey!
+              }
+            }, payload);
 
-        } catch (error) {
-          console.error(`Failed to send push to ${subscription.endpoint}:`, error);
-          
-          // If subscription is no longer valid, mark as inactive
-          if ((error as any).statusCode === 410 || (error as any).statusCode === 404) {
+            sentSuccessfully = true;
+            
+            // Update last used timestamp
             await db.update(pushSubscriptions)
-              .set({ isActive: false })
+              .set({ lastUsed: sql`CURRENT_TIMESTAMP` })
               .where(eq(pushSubscriptions.id, subscription.id));
+
+          } catch (error) {
+            console.error(`Failed to send push to ${subscription.endpoint}:`, error);
+            
+            // If subscription is no longer valid, mark as inactive
+            if ((error as any).statusCode === 410 || (error as any).statusCode === 404) {
+              await db.update(pushSubscriptions)
+                .set({ isActive: false })
+                .where(eq(pushSubscriptions.id, subscription.id));
+            }
+          }
+        });
+
+        await Promise.allSettled(promises);
+      }
+
+      // Send to FCM devices if any exist
+      if (fcmSubscriptions.length > 0) {
+        const fcmTokens = fcmSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
+        if (fcmTokens.length > 0) {
+          try {
+            await this.sendNativePush(fcmTokens, {
+              title: title,
+              body: message,
+            });
+            sentSuccessfully = true;
+          } catch (error) {
+            console.error('Failed to send FCM notifications:', error);
           }
         }
-      });
-
-      await Promise.allSettled(promises);
+      }
 
       // Update delivery status in notification_recipients
       await db.update(notificationRecipients)
@@ -255,6 +313,37 @@ export class NotificationService {
           eq(notificationRecipients.notificationId, notificationId),
           eq(notificationRecipients.userId, userId)
         ));
+    }
+  }
+
+  private async sendNativePush(fcmTokens: string[], notification: { title: string; body: string }): Promise<void> {
+    if (!firebaseServiceAccount) {
+      console.warn('Skipping FCM send - Firebase not configured');
+      return;
+    }
+
+    try {
+      const message = {
+        notification: {
+          title: notification.title,
+          body: notification.body,
+        },
+        tokens: fcmTokens,
+      };
+
+      const response = await admin.messaging().sendEachForMulticast(message);
+      console.log(`✅ Sent FCM notifications: ${response.successCount} successful, ${response.failureCount} failed`);
+      
+      if (response.failureCount > 0) {
+        response.responses.forEach((resp: any, idx: number) => {
+          if (!resp.success) {
+            console.error(`FCM send failed for token ${fcmTokens[idx]}:`, resp.error);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending FCM notifications:', error);
+      throw new Error('Failed to send native push notifications');
     }
   }
 
@@ -333,7 +422,7 @@ export class NotificationService {
         .limit(limit)
         .offset(offset);
           
-      return results;
+      return results as Array<SelectNotification & { isRead: boolean; readAt: string | null }>;
     } catch (error) {
       console.error('Error fetching user notifications:', error);
       return [];

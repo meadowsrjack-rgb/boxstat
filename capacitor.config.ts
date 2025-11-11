@@ -22,6 +22,9 @@ const config: CapacitorConfig = {
     Geolocation: {
       // Permissions for geo-fencing check-ins
     },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
 };
 

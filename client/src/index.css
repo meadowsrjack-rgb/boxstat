@@ -67,11 +67,16 @@
     overscroll-behavior: none;
     position: fixed;
     width: 100%;
+    background-color: hsl(0, 0%, 100%);
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Inter', system-ui, sans-serif;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   /* Root container must fill viewport and handle scroll */
@@ -81,6 +86,7 @@
     overflow-x: hidden;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    background-color: hsl(0, 0%, 100%);
   }
 
   /* Custom scrollbar */

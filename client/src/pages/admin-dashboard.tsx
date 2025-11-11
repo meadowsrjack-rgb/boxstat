@@ -1204,17 +1204,17 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
             <DialogTitle>
               User Details: {viewingUser?.firstName} {viewingUser?.lastName}
             </DialogTitle>
           </DialogHeader>
           
           {viewingUser && (
-            <div className="flex flex-col md:flex-row h-full">
+            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
               {/* Sidebar Navigation */}
-              <div className="w-full md:w-48 border-b md:border-b-0 md:border-r bg-gray-50">
+              <div className="w-full md:w-48 border-b md:border-b-0 md:border-r bg-gray-50 flex-shrink-0 md:overflow-y-auto">
                 <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible" role="tablist">
                   <button
                     role="tab"

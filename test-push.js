@@ -35,8 +35,9 @@ async function sendTestNotification() {
         message: 'This is a test from the BoxStat push notification system! If you see this on your iPhone, push notifications are working! 🎉',
         type: 'announcement',
         deliveryChannels: ['in_app', 'push'],
-        recipientType: 'all_users',
-        recipientTarget: 'everyone'
+        recipientType: 'users',
+        recipientTarget: 'users',
+        recipientUserIds: ['test-user-1761336712.772908']
       })
     });
 

@@ -120,9 +120,7 @@ export class NotificationService {
   async updateNotificationPreferences(userId: string, updates: Partial<InsertNotificationPreferences>): Promise<void> {
     try {
       // Build a set object that only includes fields that were actually provided
-      const setFields: any = {
-        updatedAt: sql`CURRENT_TIMESTAMP`
-      };
+      const setFields: any = {};
       
       // Only update fields that are explicitly provided in the updates object
       if (updates.eventRsvp !== undefined) setFields.eventRsvp = updates.eventRsvp;

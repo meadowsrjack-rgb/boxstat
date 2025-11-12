@@ -565,7 +565,6 @@ export const notificationPreferences = pgTable("notification_preferences", {
   quietHoursStart: varchar("quiet_hours_start").default("22:00"),
   quietHoursEnd: varchar("quiet_hours_end").default("07:00"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
 // Push Subscriptions table

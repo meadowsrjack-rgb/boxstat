@@ -26,15 +26,51 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
 - **Admin Panel**: Provides comprehensive CRUD for system entities, detailed user views with integrated skill assessments and awards tracking, and a calendar for event management. User detail views display performance stats, skill evaluation history with category-based scoring, and earned badges/trophies for comprehensive player progress monitoring.
 - **Notifications**: A multi-channel notification system (in-app, email, push) with advanced recipient targeting (users, roles, teams, divisions) and multi-type selections. Includes a complete web push notification system with VAPID authentication and iOS PWA support. Notifications are automatically marked as read when clicked, providing a seamless user experience without manual mark-as-read actions. The system properly uses the `types` field (array) in the notifications schema for flexible categorization.
 
+## Deployment Workflow
+
+### Simplified iOS Deployment (One Command!)
+
+When you make code changes and want to deploy to your iPhone:
+
+**Step 1 - On Replit:**
+```bash
+./scripts/deploy-ios.sh
+```
+This builds production files and commits changes to git.
+
+**Step 2 - On your Mac:**
+```bash
+cd ~/Documents/boxstat && ./deploy-to-mac.sh
+```
+This pulls latest code, builds, syncs to iOS, and opens Xcode automatically.
+
+**Step 3 - In Xcode:**
+- Select your iPhone as target
+- Click Run (▶️) to install
+
+**For major updates** (like new push notification features):
+- Press Shift+Cmd+K to clean build in Xcode
+- Delete the app from your iPhone first
+- Then click Run for a fresh install
+
+### Quick Fixes Without Full Deploy
+
+For small backend-only changes (no iOS code changes):
+- Just edit files on Replit
+- Development server auto-reloads
+- Changes appear immediately on web app
+
 ## External Dependencies
 
-- **Resend**: Email service for authentication flows.
-- **Stripe**: Payment processing, customer management, and transaction handling.
-- **Neon Database**: Serverless PostgreSQL hosting.
-- **Drizzle ORM**: Database operations and migrations.
-- **Multer**: Handling multipart/form-data for file uploads.
-- **WebSocket**: Native support for real-time communication.
-- **Radix UI**: Accessible component primitives.
-- **Tailwind CSS**: Utility-first CSS framework.
-- **TanStack Query**: Server state management and caching.
-- **Leaflet & OpenStreetMap**: Mapping solution with Nominatim geocoding for location services and geo-fencing.
+- **Firebase Cloud Messaging**: Push notifications for iOS/Android via Firebase Admin SDK
+- **Resend**: Email service for authentication flows
+- **Stripe**: Payment processing, customer management, and transaction handling
+- **Neon Database**: Serverless PostgreSQL hosting
+- **Drizzle ORM**: Database operations and migrations
+- **Multer**: Handling multipart/form-data for file uploads
+- **WebSocket**: Native support for real-time communication
+- **Radix UI**: Accessible component primitives
+- **Tailwind CSS**: Utility-first CSS framework
+- **TanStack Query**: Server state management and caching
+- **Leaflet & OpenStreetMap**: Mapping solution with Nominatim geocoding for location services and geo-fencing
+- **Capacitor**: Native iOS deployment and native feature access

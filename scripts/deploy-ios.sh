@@ -16,26 +16,22 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Step 1: Build on Replit
-echo -e "${BLUE}Step 1: Building production files...${NC}"
+echo -e "${BLUE}Building production files...${NC}"
 npm run build
-
-# Step 2: Commit and push changes
-echo ""
-echo -e "${BLUE}Step 2: Committing changes to git...${NC}"
-git add -A
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
-git commit -m "Deploy: $TIMESTAMP" || echo "No changes to commit"
-git push origin main || echo "Push failed - continuing anyway"
 
 echo ""
 echo -e "${GREEN}✅ Replit build complete!${NC}"
 echo ""
-echo -e "${YELLOW}📱 Next Steps (on your Mac):${NC}"
-echo "   1. Open Terminal and run:"
-echo "      cd ~/Documents/boxstat && ./deploy-to-mac.sh"
+echo -e "${YELLOW}📱 Next Step (on your Mac):${NC}"
 echo ""
-echo "   2. In Xcode:"
-echo "      - Delete BoxStat app from iPhone (if major changes)"
-echo "      - Click Run (▶️) to install fresh build"
+echo "   Run this command:"
+echo "   ${GREEN}cd ~/Documents/boxstat && ./deploy-to-mac.sh${NC}"
+echo ""
+echo "   Then in Xcode, click Run (▶️)"
+echo ""
+echo -e "${YELLOW}💡 For this first-time push notification deploy:${NC}"
+echo "   - Press Shift+Cmd+K in Xcode (clean build)"
+echo "   - Delete BoxStat from iPhone"
+echo "   - Then Run for fresh install"
 echo ""
 echo -e "${GREEN}That's it! 🎉${NC}"

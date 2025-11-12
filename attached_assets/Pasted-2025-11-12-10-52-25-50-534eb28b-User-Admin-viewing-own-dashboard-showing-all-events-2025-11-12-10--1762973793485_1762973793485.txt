@@ -1,0 +1,100 @@
+2025-11-12 10:52:25.50
+534eb28b
+User
+Admin viewing own dashboard - showing all events
+2025-11-12 10:52:25.57
+534eb28b
+User
+6:52:25 PM [express] GET /api/events 200 in 111ms :: [{"id":"203","organizationId":"default-org","ti…
+2025-11-12 10:52:25.57
+534eb28b
+User
+6:52:25 PM [express] GET /api/evaluations 200 in 107ms :: [{"id":1,"organizationId":"default-org","p…
+2025-11-12 10:52:25.57
+534eb28b
+User
+6:52:25 PM [express] GET /api/award-definitions 200 in 91ms :: [{"id":314,"name":"Superstar (10× MVP…
+2025-11-12 10:52:25.58
+534eb28b
+User
+6:52:25 PM [express] GET /api/teams 200 in 124ms :: [{"id":4,"organizationId":"default-org","name":"…
+2025-11-12 10:52:25.58
+534eb28b
+User
+6:52:25 PM [express] GET /api/organization 200 in 27ms :: {"id":"default-org","name":"My Sports Orga…
+2025-11-12 10:52:25.59
+534eb28b
+User
+6:52:25 PM [express] GET /api/auth/user 304 in 53ms :: {"id":"test-user-1761336712.772908","organiza…
+2025-11-12 10:52:25.60
+534eb28b
+User
+6:52:25 PM [express] GET /api/programs 200 in 52ms :: [{"id":"1762292243048-p52g6jki5","organization…
+2025-11-12 10:52:25.61
+534eb28b
+User
+6:52:25 PM [express] GET /api/payments 200 in 53ms :: []
+2025-11-12 10:52:25.61
+534eb28b
+User
+6:52:25 PM [express] GET /api/divisions 200 in 54ms :: [{"id":"1","organizationId":"default-org","na…
+2025-11-12 10:52:25.61
+534eb28b
+User
+6:52:25 PM [express] GET /api/users 200 in 66ms :: [{"id":"1762128136491-4tklbcuv8","organizationId"…
+2025-11-12 10:52:25.62
+534eb28b
+User
+6:52:25 PM [express] GET /api/admin/notifications 200 in 61ms :: [{"id":32,"organizationId":"default…
+2025-11-12 10:52:25.80
+534eb28b
+User
+6:52:25 PM [express] GET /api/notifications/announcements 200 in 59ms :: []
+2025-11-12 10:52:25.80
+534eb28b
+User
+6:52:25 PM [express] GET /api/notifications/feed 200 in 59ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:52:56.07
+534eb28b
+User
+6:52:56 PM [express] GET /api/notifications/feed 304 in 50ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:53:26.09
+534eb28b
+User
+6:53:26 PM [express] GET /api/notifications/announcements 304 in 50ms :: []
+2025-11-12 10:53:26.25
+534eb28b
+User
+6:53:26 PM [express] GET /api/notifications/feed 304 in 46ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:53:56.54
+534eb28b
+User
+6:53:56 PM [express] GET /api/notifications/feed 304 in 52ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:54:26.39
+534eb28b
+User
+6:54:26 PM [express] GET /api/notifications/announcements 304 in 50ms :: []
+2025-11-12 10:54:26.77
+534eb28b
+User
+6:54:26 PM [express] GET /api/notifications/feed 304 in 45ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:54:57.06
+534eb28b
+User
+6:54:57 PM [express] GET /api/notifications/feed 304 in 51ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:55:26.69
+534eb28b
+User
+6:55:26 PM [express] GET /api/notifications/announcements 304 in 52ms :: []
+2025-11-12 10:55:27.32
+534eb28b
+User
+6:55:27 PM [express] GET /api/notifications/feed 304 in 63ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:55:57.60
+534eb28b
+User
+6:55:57 PM [express] GET /api/notifications/feed 304 in 62ms :: [{"id":32,"types":["notification"],"…
+2025-11-12 10:56:27.01
+534eb28b
+User
+6:56:27 PM [express] GET /api/notifications/announcements 304 in 51ms :: []

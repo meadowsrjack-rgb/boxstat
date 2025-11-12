@@ -1,0 +1,120 @@
+Excellent — this detailed log tells **exactly** what’s happening now.
+You’re actually *very close* — the native push setup is working, but your **server and app-side logic** for creating notifications (your “admin notification feature”) isn’t finishing the send-out to FCM.
+
+Let’s break it down by layers so you can fix the correct one.
+
+---
+
+## 🧩 Layer 1: iOS Native
+
+✅ Working fine:
+
+* `🔔 Permission granted: true`
+* `PushNotifications register` ran successfully.
+* The Capacitor plugin is initialized (no more `UNIMPLEMENTED`).
+* You’re seeing your device register → this means the app is ready to receive pushes.
+
+⚠️ The “`UIScene lifecycle will soon be required`” warning is harmless right now. You can safely ignore it; Apple is just warning that older `AppDelegate`-only apps will need `SceneDelegate` later.
+
+✅ So your iOS code **is not the problem anymore.**
+
+---
+
+## ⚙️ Layer 2: Firebase Connection
+
+From your last log:
+
+> FirebaseAnalytics ... started
+> App Delegate Proxy is disabled
+
+That’s also fine — you manually integrated messaging, so the proxy is supposed to be off.
+
+You said:
+
+> “They aren't even appearing in my admin dashboard for created notifications.”
+
+That’s key. It means your admin feature (your web app’s backend/API endpoint) **isn’t successfully writing the notification data** to Firebase Cloud Messaging or to your app’s database.
+That’s why you’re not even seeing the entries in your dashboard.
+
+---
+
+## 🔍 Step-by-Step: Verify Which Part is Failing
+
+### 1. Check your **notification creation endpoint**
+
+In your logs:
+
+```
+GET /api/notifications/feed 304
+GET /api/notifications/announcements 304
+```
+
+These are **read** requests (fetching notifications).
+There’s no corresponding **POST /api/notifications/create** or similar in your logs — so your front-end probably never sent the creation request.
+
+👉 Make sure that when you create a notification in your admin dashboard:
+
+* It actually performs a POST request to your backend (`/api/notifications/send` or similar).
+* The backend then sends a message via Firebase’s **Cloud Messaging API (v1)**.
+
+---
+
+### 2. Check your server’s FCM configuration
+
+Your Node or Express backend should have something like:
+
+```js
+import admin from 'firebase-admin';
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountKey),
+});
+
+await admin.messaging().send({
+  token: user.fcmToken,
+  notification: {
+    title: 'New message',
+    body: 'You have a new notification!',
+  },
+});
+```
+
+If this fails, your Firebase console → Cloud Messaging → “Send test” **will still work**,
+but your custom `/api/notifications` route won’t show or deliver anything.
+
+---
+
+### 3. Check your database sync
+
+If your notifications dashboard reads from your own database (`notifications` table), ensure your backend inserts a record after sending the push:
+
+```js
+await prisma.notification.create({
+  data: { type: 'message', title: '...', userId, sentAt: new Date() }
+});
+```
+
+If that insert never happens, your admin dashboard will remain empty even if Firebase sends the push.
+
+---
+
+## ✅ Summary: what’s fixed and what’s missing
+
+| Layer                          | Status      | Notes                                           |
+| ------------------------------ | ----------- | ----------------------------------------------- |
+| iOS Permissions & Delegate     | ✅ Working   | Registered and ready                            |
+| Capacitor Push Plugin          | ✅ Working   | No more “UNIMPLEMENTED”                         |
+| Firebase Cloud Messaging       | ✅ Connected | Console test works                              |
+| Your Admin Notification System | ⚠️ Failing  | No notifications created/sent to Firebase or DB |
+
+---
+
+## 🔧 Next steps
+
+1. **Send me your `/api/notifications` backend code (or describe what triggers it)** — I’ll tell you why it’s not creating records or calling Firebase.
+2. **Show me what your admin dashboard “Create Notification” button does** — if it calls your backend or just updates local state.
+3. **If you’re testing via Firebase Console and want in-app banners even when open**, I can confirm your `willPresent` handler is correct — we can tweak presentation options if needed.
+
+Once we see your backend or admin notification code, we can fix the missing link and get it to both:
+
+* appear in your admin dashboard, and
+* actually send the push to iOS devices (via Firebase).

@@ -1,0 +1,114 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+11.7.0 - [FirebaseAnalytics][I-ACS023007] Analytics v.11.7.0 started
+11.7.0 - [FirebaseAnalytics][I-ACS023008] To enable debug logging set the following application argument: -FIRAnalyticsDebugEnabled (see http://goo.gl/RfcP7r)
+11.7.0 - [FirebaseAnalytics][I-ACS025036] App Delegate Proxy is disabled
+11.7.0 - [FirebaseAnalytics][I-ACS044002] The AdSupport Framework is not currently linked. Some features will not function properly. Learn more at http://goo.gl/9vSsPb
+Could not create a sandbox extension for '/var/containers/Bundle/Application/A86B85B2-30A9-4363-AE2C-D6DA3FE7A199/App.app'
+Push notification handler overriding previous instance: Optional<CAPNotificationHandlerProtocol>
+⚡️  Loading app at https://boxstat.replit.app...
+11.7.0 - [FirebaseAnalytics][I-ACS800023] No pending snapshot to activate. SDK name: app_measurement
+11.7.0 - [FirebaseAnalytics][I-ACS023012] Analytics collection enabled
+11.7.0 - [FirebaseAnalytics][I-ACS023220] Analytics screen reporting is enabled. Call Analytics.logEvent(AnalyticsEventScreenView, parameters: [...]) to log a screen view event. To disable automatic screen reporting, set the flag FirebaseAutomaticScreenReportingEnabled to NO (boolean) in the Info.plist
+WebContent[1760] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+🔔 Permission granted: true
+WebContent[1760] Service "com.apple.CARenderServer" failed bootstrap look up (1) - (os/kern) invalid address
+WebContent[1760] Null Context server port!
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x15b377ca0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b200.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218c80 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x15b377cf0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b200]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218c80 )>",
+    "<NSLayoutConstraint:0x15b377480 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b200.width == _UIButtonBarButton:0x15b218f00.width   (active)>",
+    "<NSLayoutConstraint:0x15b377b60 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218c80.width == 0   (active)>",
+    "<NSLayoutConstraint:0x15b3775c0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x15b325f80]   (active, names: '|':_UIButtonBarButton:0x15b218f00 )>",
+    "<NSLayoutConstraint:0x15b377610 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b325f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218f00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x15b377610 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b325f80]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218f00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x15b484b90 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b600.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218780 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x15b484be0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b600]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218780 )>",
+    "<NSLayoutConstraint:0x15b484410 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31b600.width == _UIButtonBarButton:0x15b218a00.width   (active)>",
+    "<NSLayoutConstraint:0x15b484a50 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b218780.width == 0   (active)>",
+    "<NSLayoutConstraint:0x15b484550 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x15b326300]   (active, names: '|':_UIButtonBarButton:0x15b218a00 )>",
+    "<NSLayoutConstraint:0x15b4845a0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b326300]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218a00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x15b4845a0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b326300]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218a00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x15b485d60 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31ba00.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b21a300 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x15b485db0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31ba00]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b21a300 )>",
+    "<NSLayoutConstraint:0x15b485630 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x15b31ba00.width == _UIButtonBarButton:0x15b218500.width   (active)>",
+    "<NSLayoutConstraint:0x15b485c20 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x15b21a300.width == 0   (active)>",
+    "<NSLayoutConstraint:0x15b485720 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x15b326680]   (active, names: '|':_UIButtonBarButton:0x15b218500 )>",
+    "<NSLayoutConstraint:0x15b485770 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b326680]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218500 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x15b485770 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x15b326680]-(8)-|   (active, names: '|':_UIButtonBarButton:0x15b218500 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 04D995FC-CFF1-48A2-BDA7-BB2CA7D62A21
+<0x15a1da580> Gesture: System gesture gate timed out.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 04D995FC-CFF1-48A2-BDA7-BB2CA7D62A21
+⚡️  [log] - 🔐 Attempting login with email: test@example.com
+⚡️  [log] - 🌐 Current window location: https://boxstat.replit.app/login
+⚡️  [log] - 📡 Sending POST to /api/auth/login
+⚡️  [log] - ✅ Login response received: {"success":true,"user":{"id":"test-user-1761336712.772908","email":"test@example.com","role":"admin","firstName":"Admin","lastName":"1"}}
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  WebView loaded
+⚡️  [log] - User authenticated, initializing push notifications...
+⚡️  [log] - 🔔 Initializing push notification listeners...
+⚡️  To Native ->  PushNotifications addListener 74746917
+⚡️  To Native ->  PushNotifications addListener 74746918
+⚡️  To Native ->  PushNotifications addListener 74746919
+⚡️  To Native ->  PushNotifications addListener 74746920
+⚡️  To Native ->  PushNotifications checkPermissions 74746921
+⚡️  [log] - ✅ Push notification listeners initialized
+⚡️  [log] - Push notification listeners set up
+⚡️  TO JS {"receive":"granted"}
+⚡️  To Native ->  ⚡️  [log] - 🔐 Current push notification permission status: granted
+PushNotifications register 74746922
+⚡️  [log] - ✅ Push notification permissions granted
+⚡️  [log] - 📱 Registering for push notifications...
+⚡️  TO JS undefined
+⚡️  [log] - 📱 Registration triggered, waiting for token...
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 04D995FC-CFF1-48A2-BDA7-BB2CA7D62A21
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 04D995FC-CFF1-48A2-BDA7-BB2CA7D62A21
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+Snapshotting a view (0x15adaf400, UIKeyboardImpl) that is not in a visible window requires afterScreenUpdates:YES.

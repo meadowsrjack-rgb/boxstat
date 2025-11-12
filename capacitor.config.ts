@@ -11,12 +11,12 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#DC2626', // BoxStat red theme
+    backgroundColor: '#FFFFFF', // White background to prevent red bleed
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#DC2626',
+      backgroundColor: '#FFFFFF', // White splash screen
       showSpinner: false,
     },
     Geolocation: {

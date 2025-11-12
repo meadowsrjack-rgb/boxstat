@@ -52,6 +52,7 @@ import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
 import { useQuery } from "@tanstack/react-query";
+import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
 
 type Profile = {
   id: string;
@@ -173,6 +174,17 @@ function AppRouter() {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
     };
   }, []);
+
+  // Initialize push notifications when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('User authenticated, initializing push notifications...');
+      initPushNotifications().then(() => {
+        console.log('Push notification listeners set up');
+        registerPushNotifications();
+      });
+    }
+  }, [isAuthenticated, user]);
 
   if (isLoading) {
     return (

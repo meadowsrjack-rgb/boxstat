@@ -48,10 +48,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: 'auto', // Automatically use secure for HTTPS connections
     httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (required for Capacitor)
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for Capacitor in production, 'lax' for local dev
     maxAge: sessionTtl, // 30 days - persistent login
-    sameSite: 'lax' // Works for both browser and same-origin requests
   },
   rolling: true, // Reset the cookie maxAge on every request to keep session alive
 }));

@@ -1,0 +1,833 @@
+✔ Please choose a target device: › Jack’s iPhone (00008130-001E1D11187A8D3A)
+✖ Running xcodebuild - failed!
+[error] Command line invocation:
+        /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -workspace App.xcworkspace -scheme App
+        -configuration Debug -destination id=00008130-001E1D11187A8D3A -derivedDataPath
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A
+        
+        2025-11-12 11:40:15.808 xcodebuild[73077:2466043] [MT] IDERunDestination: Supported platforms for the buildables
+        in the current scheme is empty.
+        ComputePackagePrebuildTargetDependencyGraph
+        
+        Prepare packages
+        
+        CreateBuildRequest
+        
+        SendProjectDescription
+        
+        CreateBuildOperation
+        
+        ComputeTargetDependencyGraph
+        note: Building targets in dependency order
+        note: Target dependency graph (25 targets)
+        Target 'App' in project 'App'
+        ➜ Implicit dependency on target 'Pods-App' in project 'Pods' via file 'Pods_App.framework' in build phase 'Link
+        Binary'
+        ➜ Implicit dependency on target 'Capacitor' in project 'Pods' via options '-framework Capacitor' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'CapacitorFirebaseMessaging' in project 'Pods' via options '-framework
+        CapacitorFirebaseMessaging' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'CapacitorPushNotifications' in project 'Pods' via options '-framework
+        CapacitorPushNotifications' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'CapacitorCordova' in project 'Pods' via options '-framework Cordova' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'PromisesObjC' in project 'Pods' via options '-framework FBLPromises' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseCore' in project 'Pods' via options '-framework FirebaseCore' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseCoreInternal' in project 'Pods' via options '-framework
+        FirebaseCoreInternal' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseInstallations' in project 'Pods' via options '-framework
+        FirebaseInstallations' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseMessaging' in project 'Pods' via options '-framework FirebaseMessaging'
+        in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleDataTransport' in project 'Pods' via options '-framework
+        GoogleDataTransport' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleUtilities' in project 'Pods' via options '-framework GoogleUtilities' in
+        build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'nanopb' in project 'Pods' via options '-framework nanopb' in build setting
+        'OTHER_LDFLAGS'
+        Target 'Pods-App' in project 'Pods'
+        ➜ Explicit dependency on target 'Capacitor' in project 'Pods'
+        ➜ Explicit dependency on target 'CapacitorCordova' in project 'Pods'
+        ➜ Explicit dependency on target 'CapacitorFirebaseMessaging' in project 'Pods'
+        ➜ Explicit dependency on target 'CapacitorPushNotifications' in project 'Pods'
+        ➜ Explicit dependency on target 'Firebase' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseAnalytics' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCoreInternal' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseInstallations' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseMessaging' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleAppMeasurement' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleDataTransport' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'PromisesObjC' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb' in project 'Pods'
+        Target 'Firebase' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseAnalytics' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore' in project 'Pods'
+        Target 'FirebaseAnalytics' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseInstallations' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleAppMeasurement' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb' in project 'Pods'
+        Target 'GoogleAppMeasurement' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb' in project 'Pods'
+        Target 'CapacitorPushNotifications' in project 'Pods'
+        ➜ Explicit dependency on target 'Capacitor' in project 'Pods'
+        Target 'CapacitorFirebaseMessaging' in project 'Pods'
+        ➜ Explicit dependency on target 'Capacitor' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseMessaging' in project 'Pods'
+        Target 'FirebaseMessaging' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseInstallations' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseMessaging-FirebaseMessaging_Privacy' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleDataTransport' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb' in project 'Pods'
+        Target 'FirebaseMessaging-FirebaseMessaging_Privacy' in project 'Pods'
+        ➜ Implicit dependency on target 'FirebaseCore' in project 'Pods' via options '-framework FirebaseCore' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseInstallations' in project 'Pods' via options '-framework
+        FirebaseInstallations' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleDataTransport' in project 'Pods' via options '-framework
+        GoogleDataTransport' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleUtilities' in project 'Pods' via options '-framework GoogleUtilities' in
+        build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'nanopb' in project 'Pods' via options '-framework nanopb' in build setting
+        'OTHER_LDFLAGS'
+        Target 'GoogleDataTransport' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleDataTransport-GoogleDataTransport_Privacy' in project 'Pods'
+        ➜ Explicit dependency on target 'PromisesObjC' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb' in project 'Pods'
+        Target 'GoogleDataTransport-GoogleDataTransport_Privacy' in project 'Pods'
+        ➜ Implicit dependency on target 'PromisesObjC' in project 'Pods' via options '-framework FBLPromises' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'nanopb' in project 'Pods' via options '-framework nanopb' in build setting
+        'OTHER_LDFLAGS'
+        Target 'nanopb' in project 'Pods'
+        ➜ Explicit dependency on target 'nanopb-nanopb_Privacy' in project 'Pods'
+        Target 'nanopb-nanopb_Privacy' in project 'Pods' (no dependencies)
+        Target 'FirebaseInstallations' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseInstallations-FirebaseInstallations_Privacy' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'PromisesObjC' in project 'Pods'
+        Target 'FirebaseInstallations-FirebaseInstallations_Privacy' in project 'Pods'
+        ➜ Implicit dependency on target 'PromisesObjC' in project 'Pods' via options '-framework FBLPromises' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'FirebaseCore' in project 'Pods' via options '-framework FirebaseCore' in build
+        setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleUtilities' in project 'Pods' via options '-framework GoogleUtilities' in
+        build setting 'OTHER_LDFLAGS'
+        Target 'PromisesObjC' in project 'Pods'
+        ➜ Explicit dependency on target 'PromisesObjC-FBLPromises_Privacy' in project 'Pods'
+        Target 'PromisesObjC-FBLPromises_Privacy' in project 'Pods' (no dependencies)
+        Target 'FirebaseCore' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCore-FirebaseCore_Privacy' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCoreInternal' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        Target 'FirebaseCore-FirebaseCore_Privacy' in project 'Pods'
+        ➜ Implicit dependency on target 'FirebaseCoreInternal' in project 'Pods' via options '-framework
+        FirebaseCoreInternal' in build setting 'OTHER_LDFLAGS'
+        ➜ Implicit dependency on target 'GoogleUtilities' in project 'Pods' via options '-framework GoogleUtilities' in
+        build setting 'OTHER_LDFLAGS'
+        Target 'FirebaseCoreInternal' in project 'Pods'
+        ➜ Explicit dependency on target 'FirebaseCoreInternal-FirebaseCoreInternal_Privacy' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities' in project 'Pods'
+        Target 'FirebaseCoreInternal-FirebaseCoreInternal_Privacy' in project 'Pods'
+        ➜ Implicit dependency on target 'GoogleUtilities' in project 'Pods' via options '-framework GoogleUtilities' in
+        build setting 'OTHER_LDFLAGS'
+        Target 'GoogleUtilities' in project 'Pods'
+        ➜ Explicit dependency on target 'GoogleUtilities-GoogleUtilities_Privacy' in project 'Pods'
+        Target 'GoogleUtilities-GoogleUtilities_Privacy' in project 'Pods' (no dependencies)
+        Target 'Capacitor' in project 'Pods'
+        ➜ Explicit dependency on target 'CapacitorCordova' in project 'Pods'
+        Target 'CapacitorCordova' in project 'Pods' (no dependencies)
+        
+        GatherProvisioningInputs
+        
+        CreateBuildDescription
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+        -v -E -dM -arch arm64 -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -x c -c
+        /dev/null
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+        -v -E -dM -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -x c -c
+        /dev/null
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations
+        --output-format xml1 /Users/jackmeadows/Documents/boxstat/ios/App/App/Assets.xcassets
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
+        -v -E -dM -arch arm64 -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -x
+        objective-c -c /dev/null
+        
+        ExecuteExternalTool
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+        
+        ExecuteExternalTool
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/libtool -V
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld
+        -version_details
+        
+        ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+        
+        Build description signature: 9c189fe6794c6fa2c0c21bdb0d3a76b6
+        Build description path:
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/XCBuildData/9c189fe6794c6fa2c0c21bdb0d3a76b6.xcbuilddata
+        ClangStatCache
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/SDKStatCaches.noindex/iphoneos26.1-23B77-69b33fc7382b27d9b5d46e82a00f8e78.sdkstatcache
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -o
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/SDKStatCaches.noindex/iphoneos26.1-23B77-69b33fc7382b27d9b5d46e82a00f8e78.sdkstatcache
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/ExplicitPrecompiledModules
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/ExplicitPrecompiledModules
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphoneos
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphoneos
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/App.build/Debug-iphoneos/App-0ca3007d900a678c2b4d53418799ee3d-VFS-iphoneos/all-product-headers.yaml
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/App.build/Debug-iphoneos/App-0ca3007d900a678c2b4d53418799ee3d-VFS-iphoneos/all-product-headers.yaml
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/FirebaseAnalytics.build/Script-B99D2412BDEE23A2DA7C6C2F17AAC30B.sh
+        (in target 'FirebaseAnalytics' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/FirebaseAnalytics.build/Script-B99D2412BDEE23A2DA7C6C2F17AAC30B.sh
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleAppMeasurement.build/Script-0CCAD9295279C1A6C80BCE90775BD07F.sh
+        (in target 'GoogleAppMeasurement' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleAppMeasurement.build/Script-0CCAD9295279C1A6C80BCE90775BD07F.sh
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleAppMeasurement
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleAppMeasurement
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseAnalytics
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseAnalytics
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Firebase
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Firebase
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova
+        
+        CreateBuildDirectory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor
+        cd /Users/jackmeadows/Documents/boxstat/ios/App
+        builtin-create-build-directory
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.DependencyStaticMetadataFileList
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.DependencyStaticMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.DependencyStaticMetadataFileList
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.DependencyStaticMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-project-headers.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-project-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.DependencyMetadataFileList
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.DependencyMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-own-target-headers.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-own-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-generated-files.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-generated-files.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-all-target-headers.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-all-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-all-non-framework-target-headers.hmap
+        (in target 'nanopb-nanopb_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb-nanopb_Privacy.build/nanopb_Privacy-all-non-framework-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.DependencyStaticMetadataFileList
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.DependencyStaticMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.DependencyMetadataFileList
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb.DependencyMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-project-headers.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-project-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-own-target-headers.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-own-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-generated-files.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-generated-files.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-target-headers.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-non-framework-target-headers.hmap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-non-framework-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/nanopb.LinkFileList
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/nanopb.LinkFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/e6072d4f65d7061329687fe24e3d63a7-common-args.resp
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/e6072d4f65d7061329687fe24e3d63a7-common-args.resp
+        -target arm64-apple-ios14.0 '-std=gnu11' -fobjc-arc -fmodules -gmodules
+        '-fmodules-cache-path=/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/ModuleCache.noindex'
+        '-fmodule-name=nanopb' -fpascal-strings -O0 -fno-common '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1'
+        '-DCOCOAPODS=1' '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1' '-DPB_FIELD_32BIT=1' '-DPB_NO_PACKED_STRUCTS=1'
+        '-DPB_ENABLE_MALLOC=1' '-DOBJC_OLD_DISPATCH_PROTOTYPES=0' -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -g
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-generated-files.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-own-target-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-non-framework-target-headers.hmap
+        -ivfsoverlay
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-project-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/include
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources-normal/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+        -target arm64-apple-ios14.0 '-std=gnu11' -fmodules -gmodules
+        '-fmodules-cache-path=/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/ModuleCache.noindex'
+        '-fmodule-name=nanopb' -fpascal-strings -O0 -fno-common '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1'
+        '-DCOCOAPODS=1' '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1' '-DPB_FIELD_32BIT=1' '-DPB_NO_PACKED_STRUCTS=1'
+        '-DPB_ENABLE_MALLOC=1' -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -g
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-generated-files.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-own-target-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-all-non-framework-target-headers.hmap
+        -ivfsoverlay
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/nanopb-project-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/include
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources-normal/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources/nanopb_vers.c
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/DerivedSources/nanopb_vers.c
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers/pb_encode.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_encode.h (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_encode.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers/pb_decode.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_decode.h (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_decode.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers/pb_common.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_common.h (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb_common.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers/pb.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb.h (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/nanopb/pb.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers/nanopb-umbrella.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/nanopb/nanopb-umbrella.h (in target
+        'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/nanopb/nanopb-umbrella.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        
+        Copy
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/module.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/nanopb/nanopb.modulemap (in target
+        'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        -rename /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/nanopb/nanopb.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/module.modulemap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.DependencyMetadataFileList
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App.DependencyMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-project-headers.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-project-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-own-target-headers.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-own-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-generated-files.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-generated-files.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-target-headers.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-non-framework-target-headers.hmap
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-non-framework-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/e6072d4f65d7061329687fe24e3d63a7-common-args.resp
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/e6072d4f65d7061329687fe24e3d63a7-common-args.resp
+        -target arm64-apple-ios14.0 '-std=gnu11' -fobjc-arc -fmodules -gmodules
+        '-fmodules-cache-path=/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/ModuleCache.noindex'
+        '-fmodule-name=Pods_App' -fpascal-strings -O0 -fno-common '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1'
+        '-DCOCOAPODS=1' '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1' '-DPB_FIELD_32BIT=1' '-DPB_NO_PACKED_STRUCTS=1'
+        '-DPB_ENABLE_MALLOC=1' '-DOBJC_OLD_DISPATCH_PROTOTYPES=0' -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -g
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-generated-files.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-own-target-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-non-framework-target-headers.hmap
+        -ivfsoverlay
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-project-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/include
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor/Capacitor.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova/Cordova.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging/CapacitorFirebaseMessaging.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications/CapacitorPushNotifications.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore/FirebaseCore.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal/FirebaseCoreInternal.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations/FirebaseInstallations.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging/FirebaseMessaging.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport/GoogleDataTransport.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities/GoogleUtilities.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC/FBLPromises.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Headers/Public
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Headers/Public/Firebase
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Firebase/CoreOnly/Sources
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources-normal/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        -F/Users/jackmeadows/Documents/boxstat/ios/App/Pods/FirebaseAnalytics/Frameworks
+        -F/Users/jackmeadows/Documents/boxstat/ios/App/Pods/GoogleAppMeasurement/Frameworks
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/FirebaseAnalytics/AdIdSupport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/GoogleAppMeasurement/AdIdSupport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/GoogleAppMeasurement/WithoutAdIdSupport
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/Pods_App.LinkFileList
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/Pods_App.LinkFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Objects-normal/arm64/7187679823f38a2a940e0043cdf9d637-common-args.resp
+        -target arm64-apple-ios14.0 '-std=gnu11' -fmodules -gmodules
+        '-fmodules-cache-path=/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/ModuleCache.noindex'
+        '-fmodule-name=Pods_App' -fpascal-strings -O0 -fno-common '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1'
+        '-DCOCOAPODS=1' '-DPOD_CONFIGURATION_DEBUG=1' '-DDEBUG=1' '-DPB_FIELD_32BIT=1' '-DPB_NO_PACKED_STRUCTS=1'
+        '-DPB_ENABLE_MALLOC=1' -isysroot
+        /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.1.sdk -g
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-generated-files.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-own-target-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-all-non-framework-target-headers.hmap
+        -ivfsoverlay
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-8699adb1dd336b26511df848a716bd42-VFS-iphoneos/all-product-headers.yaml
+        -iquote
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/Pods_App-project-headers.hmap
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/include
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor/Capacitor.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova/Cordova.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging/CapacitorFirebaseMessaging.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications/CapacitorPushNotifications.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore/FirebaseCore.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal/FirebaseCoreInternal.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations/FirebaseInstallations.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging/FirebaseMessaging.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport/GoogleDataTransport.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities/GoogleUtilities.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC/FBLPromises.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Headers
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Headers/Public
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Headers/Public/Firebase
+        -I/Users/jackmeadows/Documents/boxstat/ios/App/Pods/Firebase/CoreOnly/Sources
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources-normal/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources/arm64
+        -I/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Capacitor
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorCordova
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorFirebaseMessaging
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/CapacitorPushNotifications
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCore
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseCoreInternal
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseInstallations
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/FirebaseMessaging
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleDataTransport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/GoogleUtilities
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/PromisesObjC
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb
+        -F/Users/jackmeadows/Documents/boxstat/ios/App/Pods/FirebaseAnalytics/Frameworks
+        -F/Users/jackmeadows/Documents/boxstat/ios/App/Pods/GoogleAppMeasurement/Frameworks
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/FirebaseAnalytics/AdIdSupport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/GoogleAppMeasurement/AdIdSupport
+        -F/Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/XCFrameworkIntermediates/GoogleAppMeasurement/WithoutAdIdSupport
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources/Pods_App_vers.c
+        (in target 'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/DerivedSources/Pods_App_vers.c
+        
+        Copy
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/module.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/Pods-App/Pods-App.modulemap (in target
+        'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        -rename /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/Pods-App/Pods-App.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/Pods-App.build/module.modulemap
+        
+        CpHeader
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Pods_App.framework/Headers/Pods-App-umbrella.h
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/Pods-App/Pods-App-umbrella.h (in target
+        'Pods-App' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/App/Pods/Target\ Support\ Files/Pods-App/Pods-App-umbrella.h
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/Pods_App.framework/Headers
+        
+        Copy
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Modules/module.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/module.modulemap
+        (in target 'nanopb' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/nanopb.build/module.modulemap
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Products/Debug-iphoneos/nanopb/nanopb.framework/Modules
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.hmap
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.DependencyStaticMetadataFileList
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.DependencyStaticMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.DependencyMetadataFileList
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy.DependencyMetadataFileList
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-project-headers.hmap
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-project-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-own-target-headers.hmap
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-own-target-headers.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-generated-files.hmap
+        (in target 'GoogleUtilities-GoogleUtilities_Privacy' from project 'Pods')
+        cd /Users/jackmeadows/Documents/boxstat/ios/App/Pods
+        write-file
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/GoogleUtilities_Privacy-generated-files.hmap
+        
+        WriteAuxiliaryFile
+        /Users/jackmeadows/Documents/boxstat/ios/DerivedData/00008130-001E1D11187A8D3A/Build/Intermediates.noindex/Pods.build/Debug-iphoneos/GoogleUtilities-GoogleUtilities_Privacy.build/Google

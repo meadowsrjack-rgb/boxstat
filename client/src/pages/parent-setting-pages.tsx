@@ -199,7 +199,7 @@ export function ParentProfilePage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -434,7 +434,7 @@ export function ParentFamilyPage() {
   const typedLinkedPlayers = (linkedPlayers as any[]) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -652,7 +652,7 @@ export function ParentPrivacyPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -888,7 +888,7 @@ export function ParentNotificationsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1288,7 +1288,7 @@ export function ParentSecurityPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1496,7 +1496,7 @@ export function ParentConnectionsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1698,7 +1698,7 @@ export function ParentBillingPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1999,7 +1999,7 @@ export function ParentLegalPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -2267,7 +2267,7 @@ export function ParentDevicesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -2553,7 +2553,7 @@ export function ParentDangerPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">

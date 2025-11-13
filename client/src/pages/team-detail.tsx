@@ -16,7 +16,7 @@ export default function TeamDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-300">Loading team details...</p>
@@ -27,7 +27,7 @@ export default function TeamDetailPage() {
 
   if (error || !team) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Team Not Found</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
@@ -46,7 +46,7 @@ export default function TeamDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Navigation */}

@@ -5,7 +5,7 @@ import { Separator } from '@/components/ui/separator';
 
 export default function SupportPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+    <div className="min-h-screen-safe bg-gradient-to-b from-orange-50 to-white">
       {/* Header */}
       <div className="bg-[#FF6B35] text-white py-12">
         <div className="max-w-4xl mx-auto px-4">

@@ -34,7 +34,7 @@ export default function RegistrationStatus() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center" data-testid="loading-registration">
+      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center" data-testid="loading-registration">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading registration status...</p>
@@ -45,7 +45,7 @@ export default function RegistrationStatus() {
 
   if (!account) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
             <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
@@ -113,7 +113,7 @@ export default function RegistrationStatus() {
   const playerProfiles = profiles.filter(p => p.profileType === 'player');
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen-safe bg-gray-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="title-registration">

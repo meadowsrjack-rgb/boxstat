@@ -296,7 +296,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   
   // Early return if no user
   if (!currentUser) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen-safe">Loading...</div>;
   }
   
   // Fetch active profile if parent has activeProfileId OR if selectedPlayerId is in localStorage
@@ -899,7 +899,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   /* =================== UI =================== */
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen-safe bg-gray-50">
       {/* Top Bar (QR removed) */}
       <header className="bg-white shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
@@ -1196,7 +1196,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
           {/* Profile */}
           {activeTab === "profile" && (
-            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white -mx-6 px-6 pb-10">
+            <div className="min-h-screen-safe bg-gradient-to-b from-gray-50 to-white -mx-6 px-6 pb-10">
               {/* Futuristic Bio Section */}
               <div className="relative px-0 pt-6">
                 <motion.section

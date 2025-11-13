@@ -1,6 +1,18 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 
+// API base URL - use production backend when running in Capacitor native app
+const API_BASE_URL = Capacitor.isNativePlatform() 
+  ? 'https://boxstat.replit.app' 
+  : '';
+
+function getFullUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  return `${API_BASE_URL}${path}`;
+}
+
 export const isNativePlatform = () => {
   return Capacitor.isNativePlatform();
 };
@@ -18,7 +30,7 @@ export const initPushNotifications = async () => {
     console.log('✅ Push registration success, token:', token.value);
     
     try {
-      const response = await fetch('/api/push/register', {
+      const response = await fetch(getFullUrl('/api/push/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

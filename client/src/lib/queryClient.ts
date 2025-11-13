@@ -1,4 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { Capacitor } from '@capacitor/core';
+
+// API base URL - use production backend when running in Capacitor native app
+const API_BASE_URL = Capacitor.isNativePlatform() 
+  ? 'https://boxstat.replit.app' 
+  : '';
+
+function getFullUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  return `${API_BASE_URL}${path}`;
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -32,7 +45,7 @@ export async function apiRequest(
     requestData = options.data;
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(getFullUrl(url), {
     method,
     headers: requestData ? { "Content-Type": "application/json" } : {},
     body: requestData ? JSON.stringify(requestData) : undefined,
@@ -55,7 +68,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    const res = await fetch(getFullUrl(queryKey.join("/") as string), {
       credentials: "include",
     });
 

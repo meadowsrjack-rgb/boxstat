@@ -1,0 +1,218 @@
+Here’s **exactly why you’re getting the red bleed + scroll gap**, and **what you must fix across the entire app**—not just this page.
+
+---
+
+# ✅ **WHY YOU SEE RED GAP / BLEED AT TOP & BOTTOM**
+
+This is caused by **iOS Safari and React Native WebView safe area issues**:
+
+### 1. The main parent div uses:
+
+```tsx
+min-h-screen
+```
+
+On iOS, `min-h-screen` = **100vh**, which **does not equal the real visible height** because iOS Safari adds dynamic bars.
+
+This creates:
+
+* extra pixel space → **scroll bounce**
+* red gap (background showing through) at top/bottom because `100vh !== actual viewport height`
+
+### 2. Your `<video>` is `absolute` with:
+
+```tsx
+inset-0 w-full h-full object-cover
+```
+
+If the parent height is wrong → video height is wrong → **bleed**.
+
+### 3. Your content wrapper ALSO uses `min-h-screen`
+
+→ double-stacking height + padding → forces scroll.
+
+---
+
+# ✅ **THE FIX (APPLY THESE 3 CHANGES)**
+
+## **Fix 1: Replace `min-h-screen` with iOS-safe full height**
+
+Add this class to your Tailwind config:
+
+### **tailwind.config.js**
+
+```js
+extend: {
+  height: {
+    'screen-safe': '100dvh'
+  },
+  minHeight: {
+    'screen-safe': '100dvh'
+  }
+}
+```
+
+Then update your component:
+
+```tsx
+<div className="relative min-h-screen-safe overflow-hidden">
+```
+
+### Why?
+
+`100dvh` = **dynamic viewport height**, the correct height on iOS.
+
+---
+
+## **Fix 2: Force the body/html to remove ALL scroll bleed**
+
+### Add global CSS (globals.css)
+
+```css
+html, body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  overflow: hidden; /* prevent micro-scroll */
+  background: #000; /* fallback to avoid red edges */
+}
+
+#root, .app {
+  height: 100%;
+}
+```
+
+This eliminates the 1–2px scroll area.
+
+---
+
+## **Fix 3: Ensure the video actually covers safe area**
+
+Modify your video class:
+
+```tsx
+<video
+  autoPlay
+  loop
+  muted
+  playsInline
+  className="absolute top-0 left-0 w-full h-[100dvh] object-cover z-0"
+>
+```
+
+---
+
+# 🔧 **HERE IS YOUR FIXED LANDING PAGE CODE**
+
+Copy/paste this exactly:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
+import backgroundVideo from "@assets/Laanding page background_1762477206539.mp4";
+import logo from "@assets/logo2_1762477206651.png";
+
+export default function Landing() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <div className="relative min-h-screen-safe overflow-hidden bg-black">
+      {/* Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute top-0 left-0 w-full h-[100dvh] object-cover z-0"
+      >
+        <source src={backgroundVideo} type="video/mp4" />
+      </video>
+
+      {/* Foreground Content */}
+      <div className="relative z-10 h-[100dvh] flex flex-col justify-between items-center py-8">
+        
+        {/* Logo */}
+        <div className="flex-shrink-0 pt-8">
+          <img 
+            src={logo} 
+            alt="BoxStat Logo" 
+            className="w-48 h-auto sm:w-64 md:w-80 drop-shadow-2xl"
+            data-testid="img-logo"
+          />
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Buttons */}
+        <div className="px-4 text-center pb-6">
+          <div className="space-y-4">
+            <Button 
+              size="lg"
+              onClick={() => setLocation('/registration')}
+              className="bg-red-500 hover:bg-red-600 text-white font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px] text-[14px]"
+              data-testid="button-lets-go"
+            >
+              LET'S GO
+            </Button>
+
+            <div className="text-white text-sm">
+              <span>HAVE AN ACCOUNT? </span>
+              <button 
+                onClick={() => setLocation('/login')}
+                className="text-white font-semibold underline hover:text-gray-200 transition-colors"
+                data-testid="button-sign-in"
+              >
+                SIGN IN
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+# 🧪 **If the gap still appears, I need these 2 things to finish the fix:**
+
+### **1. Your global CSS file (globals.css or index.css)**
+
+I need to see:
+
+* html/body styles
+* whether you have `overflow-y-auto` anywhere
+* Tailwind base imports
+
+### **2. ONE screenshot of the bleed area inside TestFlight**
+
+Just to confirm whether:
+
+* it’s a WebView padding issue
+* Safe-area inset top/bottom
+* Expo/React Native wrapper bleed
+
+---
+
+# 🔥 After this fix ALL pages must use:
+
+```
+h-[100dvh] or min-h-screen-safe
+```
+
+NOT:
+
+```
+min-h-screen
+h-screen
+100vh
+```
+
+Those cause iOS bleed.
+
+---
+
+Send me **your global CSS** and I will patch the remaining issues.

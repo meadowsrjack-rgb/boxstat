@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { BrowserPushNotificationButton } from "@/components/BrowserPushNotificationButton";
 
 import {
   ArrowLeft,
@@ -727,6 +728,15 @@ function NotificationsSection() {
 
       <Card className="bg-transparent border-0 shadow-none">
         <CardContent className="p-6 space-y-4">
+          <Group title="Browser Push Notifications">
+            <div className="flex items-center justify-between py-2">
+              <p className="text-sm text-muted-foreground">Enable push notifications in your browser to receive real-time updates</p>
+              <BrowserPushNotificationButton />
+            </div>
+          </Group>
+
+          <Separator />
+
           <Group title="Push Notifications">
             <ToggleRow label="Team messages" checked={prefs.pushTeamMessages} onChange={(v) => setPrefs((p) => ({ ...p, pushTeamMessages: v }))} />
             <ToggleRow label="Event reminders" checked={prefs.pushEventReminders} onChange={(v) => setPrefs((p) => ({ ...p, pushEventReminders: v }))} />

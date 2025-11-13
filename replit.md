@@ -11,6 +11,8 @@ Preferred communication style: Simple, everyday language.
 ### Frontend
 The frontend uses React 18 with TypeScript and Vite, styled with Radix UI, shadcn/ui, and Tailwind CSS. Wouter handles routing, and TanStack Query manages server state. It features full PWA capabilities and is configured for native iOS deployment via Capacitor, including comprehensive App Store deployment workflows. The design is mobile-first, responsive, and uses a red theme. Key UI elements include player dashboards with skill tracking, coach dashboards with QR scanners for check-ins, and a Player Mode that restricts payment access.
 
+**iOS Safari Compatibility**: The app uses `100dvh` (dynamic viewport height) throughout to prevent red bleed and scroll gaps caused by iOS Safari's dynamic browser bars. Custom Tailwind utilities (`min-h-screen-safe`, `h-screen-safe`) ensure consistent viewport behavior across all pages. Global CSS pins the scroll container to `#root` with proper background color fallbacks.
+
 ### Backend
 The backend is built with Node.js and Express.js (TypeScript, ESM). It includes a custom email/password authentication system with verification and magic links, utilizing a pending registration system. Session management uses persistent Express sessions with PostgreSQL storage. CORS is configured for mobile apps and web browsers. Stripe handles payment processing, and WebSockets provide real-time features. APIs are RESTful.
 

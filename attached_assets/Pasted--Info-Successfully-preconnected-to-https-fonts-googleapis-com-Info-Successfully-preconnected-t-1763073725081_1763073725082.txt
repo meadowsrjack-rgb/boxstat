@@ -1,0 +1,41 @@
+[Info] Successfully preconnected to https://fonts.googleapis.com/
+[Info] Successfully preconnected to https://fonts.gstatic.com/
+[Debug] [vite] connecting... (client, line 495)
+[Debug] [vite] connected. (client, line 618)
+[Log] SW registered:  – ServiceWorkerRegistration (main.tsx, line 9)
+ServiceWorkerRegistration
+[Log] SW registered:  – ServiceWorkerRegistration (App.tsx, line 147)
+ServiceWorkerRegistration
+[Error] Warning: Cannot update a component (`AppRouter`) while rendering a different component (`component`). To locate the bad setState() call inside `component`, follow the stack trace as described in https://reactjs.org/link/setstate-in-render
+component
+Route@https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js:323:14
+Switch@https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js:380:27
+AppRouter@https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/src/App.tsx:141:55
+Router@https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js:291:15
+QueryClientProvider@https://d46b7393-caba-4efd-9d61-5fc30f617148-00-2s7j2l715e34a.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js:2805:9
+App
+	printWarning (chunk-RPCDYKBN.js:521)
+	error (chunk-RPCDYKBN.js:505)
+	warnAboutRenderPhaseUpdatesInDEV (chunk-RPCDYKBN.js:19793)
+	scheduleUpdateOnFiber (chunk-RPCDYKBN.js:18546)
+	forceStoreRerender (chunk-RPCDYKBN.js:11999)
+	handleStoreChange (chunk-RPCDYKBN.js:11981)
+	dispatchEvent
+	(anonymous function) (wouter.js:224)
+	component (App.tsx:282)
+	renderWithHooks (chunk-RPCDYKBN.js:11548)
+	mountIndeterminateComponent (chunk-RPCDYKBN.js:14926)
+	beginWork$1 (chunk-RPCDYKBN.js:19753)
+	performUnitOfWork (chunk-RPCDYKBN.js:19198)
+	workLoopSync (chunk-RPCDYKBN.js:19137)
+	renderRootSync (chunk-RPCDYKBN.js:19116)
+	performSyncWorkOnRoot (chunk-RPCDYKBN.js:18874)
+	flushSyncCallbacks (chunk-RPCDYKBN.js:9119)
+	(anonymous function) (chunk-RPCDYKBN.js:18627)
+[Log] User authenticated, initializing push notifications... (App.tsx, line 163)
+[Log] Not running on native platform, skipping push notification setup (pushNotificationService.ts, line 15)
+[Log] Push notification listeners set up (App.tsx, line 165)
+[Log] Not on native platform, skipping push notification registration (pushNotificationService.ts, line 56)
+[Warning] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. (chunk-NTKLJU7Q.js, line 339)
+> Selected Element
+< <div data-replit-metadata="client/src/pages/unified-account.tsx:592:14" data-component-name="div" class="flex items-center justify-between mb-4">…</div>

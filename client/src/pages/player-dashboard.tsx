@@ -901,7 +901,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   return (
     <div className="min-h-screen-safe bg-gray-50">
       {/* Top Bar (QR removed) */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm safe-top">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             {isDeviceLocked ? (

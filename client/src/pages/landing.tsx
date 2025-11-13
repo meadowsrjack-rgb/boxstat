@@ -7,20 +7,30 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative min-h-screen-safe overflow-hidden bg-black">
-      {/* Video Background - Behind everything */}
+    <div className="relative h-full overflow-hidden bg-black" style={{
+      paddingTop: 'var(--safe-area-top)',
+      paddingBottom: 'var(--safe-area-bottom)',
+    }}>
+      {/* Video Background - Extends through safe areas */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute top-0 left-0 w-full h-[100dvh] object-cover z-0"
+        className="absolute w-full object-cover z-0"
+        style={{
+          top: 'calc(var(--safe-area-top) * -1)',
+          bottom: 'calc(var(--safe-area-bottom) * -1)',
+          left: 0,
+          right: 0,
+          height: 'calc(100% + var(--safe-area-top) + var(--safe-area-bottom))',
+        }}
       >
         <source src={backgroundVideo} type="video/mp4" />
       </video>
 
-      {/* Content Layer - On top of video */}
-      <div className="relative z-10 h-[100dvh] flex flex-col justify-between items-center py-8">
+      {/* Content Layer - Safe area aware */}
+      <div className="relative z-10 h-full flex flex-col justify-between items-center py-8">
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 

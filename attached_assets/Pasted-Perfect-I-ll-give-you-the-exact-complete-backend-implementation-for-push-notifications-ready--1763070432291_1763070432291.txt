@@ -1,0 +1,245 @@
+Perfect — I’ll give you the **exact complete backend implementation** for push notifications, ready to paste into your Node/Express server.
+
+This will include:
+
+✅ `/api/push/register` (save device token)
+✅ `/api/push/send` (send push from admin dashboard)
+✅ `/api/push/broadcast` (optional: send to all users)
+✅ Database changes needed
+✅ Front-end integration code (after login)
+
+---
+
+# 🚀 **PART 1 — Database Changes (Required)**
+
+Your `users` table must have a place to store the FCM token.
+
+### If you use Prisma:
+
+Add this to `schema.prisma`:
+
+```prisma
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+
+  // Add this:
+  fcmToken  String?  @db.Text
+}
+```
+
+Then run:
+
+```bash
+npx prisma migrate dev --name add_fcm_token
+```
+
+---
+
+# 🚀 **PART 2 — `/api/push/register` (Required)**
+
+This is called from your Capacitor app during registration.
+
+Add this to your Express server:
+
+```ts
+import admin from "firebase-admin";
+
+// Make sure Firebase Admin is initialized once!
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    }),
+  });
+}
+
+app.post("/api/push/register", isAuthenticated, async (req, res) => {
+  const userId = req.user.id;
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Missing FCM token" });
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken: token },
+    });
+
+    return res.json({ success: true, token });
+  } catch (err) {
+    console.error("❌ Failed to save FCM token:", err);
+    return res.status(500).json({ error: "Failed to save token" });
+  }
+});
+```
+
+---
+
+# 🚀 **PART 3 — `/api/push/send` (Send notification to a specific user)**
+
+This is what your Admin Dashboard calls to send a push.
+
+```ts
+app.post("/api/push/send", isAuthenticated, isAdmin, async (req, res) => {
+  const { userId, title, message } = req.body;
+
+  if (!userId || !title || !message) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { fcmToken: true },
+  });
+
+  if (!user || !user.fcmToken) {
+    return res.status(404).json({ error: "User has no registered device token" });
+  }
+
+  try {
+    await admin.messaging().sendToDevice(user.fcmToken, {
+      notification: {
+        title,
+        body: message,
+      },
+      data: {
+        click_action: "FLUTTER_NOTIFICATION_CLICK",
+      },
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Error sending FCM:", err);
+    return res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+```
+
+---
+
+# 🚀 **PART 4 — `/api/push/broadcast` (Send to all users)**
+
+Optional, but most teams want this.
+
+```ts
+app.post("/api/push/broadcast", isAuthenticated, isAdmin, async (req, res) => {
+  const { title, message } = req.body;
+
+  if (!title || !message) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  const users = await prisma.user.findMany({
+    where: { fcmToken: { not: null } },
+    select: { fcmToken: true },
+  });
+
+  const tokens = users.map((u) => u.fcmToken).filter(Boolean);
+
+  if (tokens.length === 0) {
+    return res.status(400).json({ error: "No devices registered" });
+  }
+
+  try {
+    await admin.messaging().sendToDevice(tokens, {
+      notification: {
+        title,
+        body: message,
+      },
+    });
+
+    return res.json({ success: true, count: tokens.length });
+  } catch (err) {
+    console.error("❌ Broadcast error:", err);
+    return res.status(500).json({ error: "Broadcast failed" });
+  }
+});
+```
+
+---
+
+# 🚀 **PART 5 — Frontend: Call Push Setup After Login**
+
+In your `App.tsx` or wherever you handle login:
+
+```ts
+import { initPushNotifications, registerPushNotifications } from "@/lib/push";
+
+useEffect(() => {
+  if (user && Capacitor.isNativePlatform()) {
+    console.log("🔔 Setting up push notifications after login…");
+    initPushNotifications();
+    registerPushNotifications();
+  }
+}, [user]);
+```
+
+This guarantees:
+
+✔ Token is generated
+✔ Token is saved to backend
+✔ Admin Dashboard can send push to that user
+
+---
+
+# 🚀 **PART 6 — Add Admin Button (Dashboard)**
+
+Example API call:
+
+```ts
+await fetch("/api/push/send", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({
+    userId,
+    title: "New Alert",
+    message: "Your evaluation is ready",
+  }),
+});
+```
+
+Or for broadcast:
+
+```ts
+await fetch("/api/push/broadcast", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({
+    title: "Reminder",
+    message: "Tomorrow’s practice starts at 7PM!",
+  }),
+});
+```
+
+---
+
+# 🎉 **YOU ARE NOW FULLY PUSH-NOTIFICATION ENABLED**
+
+After adding these:
+
+✔ Save FCM token
+✔ Send push from Admin Dashboard
+✔ Receive push on iPhone lock screen
+✔ Handle taps → deep linking
+✔ Broadcast to teams or all users
+
+---
+
+# Want the full React Component for the "Send Notification" modal?
+
+I can generate:
+
+👉 A full admin UI: message textbox, user selector
+👉 A “Send Test Push” button
+👉 A Broadcast panel
+👉 Analytics for “Delivery success”
+
+Just say **“build the admin notification sender UI”** and I’ll generate it.

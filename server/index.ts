@@ -42,7 +42,9 @@ const sessionStore = new PgSession({
 });
 
 // Setup session middleware with persistent PostgreSQL storage
-// Note: Cookies must be secure (HTTPS) for Replit deployment, even in dev mode
+// Dynamic cookie settings based on environment
+const isProduction = process.env.REPL_DEPLOYMENT === '1' || process.env.NODE_ENV === 'production';
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'sports-management-dev-secret-change-in-production',
   store: sessionStore,
@@ -50,8 +52,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    secure: true, // Always use secure cookies for Replit HTTPS deployment
-    sameSite: 'none', // Allow cross-origin cookies for Capacitor mobile apps
+    secure: isProduction, // Secure only in production/deployment
+    sameSite: isProduction ? 'none' : 'lax', // 'none' for Capacitor in production, 'lax' for dev
     maxAge: sessionTtl, // 30 days - persistent login
   },
   rolling: true, // Reset the cookie maxAge on every request to keep session alive

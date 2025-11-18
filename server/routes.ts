@@ -257,16 +257,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
-      res.json({ 
-        success: true, 
-        user: { 
-          id: user.id, 
-          email: user.email, 
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          defaultDashboardView: user.defaultDashboardView
-        } 
+      // Save session
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ success: false, message: "Session error" });
+        }
+        
+        // Intercept and rewrite the Set-Cookie header to use SameSite=None
+        // express-session sets it to Lax due to Replit's infrastructure
+        const originalEnd = res.end.bind(res);
+        res.end = function(...args: any[]) {
+          const setCookie = res.getHeader('Set-Cookie');
+          if (setCookie) {
+            const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
+            const updatedCookies = cookies.map((cookie: string | number) => {
+              const cookieStr = String(cookie);
+              if (cookieStr.includes('connect.sid') && cookieStr.includes('SameSite=Lax')) {
+                return cookieStr.replace('SameSite=Lax', 'SameSite=None');
+              }
+              return cookieStr;
+            });
+            res.setHeader('Set-Cookie', updatedCookies);
+          }
+          return originalEnd(...args);
+        };
+        
+        res.json({ 
+          success: true, 
+          user: { 
+            id: user.id, 
+            email: user.email, 
+            role: user.role,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            defaultDashboardView: user.defaultDashboardView
+          } 
+        });
       });
     } catch (error: any) {
       console.error("Login error:", error);

@@ -12,6 +12,15 @@ const app = express();
 // Trust proxy - required for secure cookies behind Replit's infrastructure
 app.set('trust proxy', 1);
 
+// Force HTTPS detection for Replit's infrastructure
+// Replit terminates TLS upstream and forwards as HTTP, causing express-session
+// to think requests are insecure and downgrade SameSite=None to SameSite=Lax.
+// Setting req.socket.encrypted=true forces req.secure=true for session cookies.
+app.use((req, res, next) => {
+  (req.socket as any).encrypted = true;
+  next();
+});
+
 // CORS configuration for mobile apps
 app.use(cors({
   origin: [
@@ -44,14 +53,16 @@ const sessionStore = new PgSession({
 // Setup session middleware with persistent PostgreSQL storage
 // Replit always serves over HTTPS, so we always need secure cookies
 app.use(session({
+  name: 'connect.sid',
   secret: process.env.SESSION_SECRET || 'sports-management-dev-secret-change-in-production',
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
+  proxy: true, // Trust the reverse proxy
   cookie: {
     httpOnly: true,
     secure: true, // Replit always uses HTTPS
-    sameSite: 'none', // Allow cross-origin for Capacitor
+    sameSite: 'none', // Allow cross-origin for Capacitor  
     maxAge: sessionTtl, // 30 days - persistent login
   },
   rolling: true, // Reset the cookie maxAge on every request to keep session alive

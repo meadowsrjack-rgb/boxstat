@@ -16,7 +16,13 @@ The frontend uses React 18 with TypeScript and Vite, styled with Radix UI, shadc
 ### Backend
 The backend is built with Node.js and Express.js (TypeScript, ESM). It includes a custom email/password authentication system with verification and magic links, utilizing a pending registration system. Session management uses persistent Express sessions with PostgreSQL storage. CORS is configured for mobile apps and web browsers. Stripe handles payment processing, and WebSockets provide real-time features. APIs are RESTful.
 
-**Session Cookie Challenge**: Replit's infrastructure presents requests as HTTP to Node (despite external HTTPS), causing express-session to downgrade `SameSite=None` to `SameSite=Lax` during cookie serialization. An on-headers middleware intercepts and rewrites cookies (server/index.ts lines 66-86), but effectiveness needs iOS testing. Same-site requests (web browser) work correctly. Cross-origin Capacitor requests may encounter authentication persistence issues requiring investigation.
+**Session Authentication Status**: Web browser authentication works correctly using express-session with persistent PostgreSQL storage (tested and confirmed working). Session cookies are set with `SameSite=Lax` due to Replit's infrastructure (which terminates TLS upstream), preventing `SameSite=None` from being set. Same-origin requests (web browser) authenticate successfully. 
+
+**Capacitor iOS Authentication**: Cross-origin authentication is currently untested. If iOS testing reveals that cookies don't persist across requests:
+- **Short-term**: Implement JWT bearer tokens as an alternative authentication method for Capacitor
+- **Long-term**: Consider migrating to a hosting platform that properly forwards HTTPS metadata
+
+Multiple approaches to override `SameSite=Lax` were attempted (on-headers middleware, res.end override, req.socket.encrypted modification) but all failed due to express-session's internal cookie serialization occurring after middleware execution.
 
 ### Database
 PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe operations. The schema supports users, teams, events, payments, facilities, and a 5-tier badge/trophy system. It includes structures for various programs, age/level divisions, and comprehensive user data fields. A dual-table structure manages player data, distinguishing between app users and Notion-synced roster data. A `playerId` field in the payments table ensures accurate per-player billing. A `pending_registrations` table prevents partial account creation during the multi-step registration process.

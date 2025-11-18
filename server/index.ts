@@ -12,15 +12,6 @@ const app = express();
 // Trust proxy - required for secure cookies behind Replit's infrastructure
 app.set('trust proxy', 1);
 
-// Force HTTPS detection for Replit's infrastructure
-// Replit terminates TLS upstream and forwards as HTTP, causing express-session
-// to think requests are insecure and downgrade SameSite=None to SameSite=Lax.
-// Setting req.socket.encrypted=true forces req.secure=true for session cookies.
-app.use((req, res, next) => {
-  (req.socket as any).encrypted = true;
-  next();
-});
-
 // CORS configuration for mobile apps
 app.use(cors({
   origin: [

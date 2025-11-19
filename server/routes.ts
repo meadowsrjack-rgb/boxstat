@@ -252,13 +252,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Set session
+      // Set session (for web app compatibility)
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
+      // Generate JWT token (for mobile app)
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          organizationId: user.organizationId,
+          role: user.role
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+      
       res.json({ 
-        success: true, 
+        success: true,
+        token,
         user: { 
           id: user.id, 
           email: user.email, 

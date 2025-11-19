@@ -1,7 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { logout } from "@/utils/logout";
 import { 
   Volleyball, 
   Bell, 
@@ -81,7 +80,7 @@ export default function Navbar() {
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={logout}
+                onClick={() => window.location.href = '/api/logout'}
               >
                 <LogOut className="h-5 w-5" />
               </Button>

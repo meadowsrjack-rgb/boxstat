@@ -3,8 +3,6 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { setAuthToken } from "@/lib/queryClient";
-import { Capacitor } from '@capacitor/core';
 
 export default function MagicLinkLogin() {
   const [, setLocation] = useLocation();
@@ -24,20 +22,10 @@ export default function MagicLinkLogin() {
       }
 
       try {
-        // Use correct API base URL for Capacitor apps
-        const apiBaseUrl = Capacitor.isNativePlatform() 
-          ? 'https://boxstat.replit.app' 
-          : '';
-        
-        const response = await fetch(`${apiBaseUrl}/api/auth/magic-link-login?token=${token}`);
+        const response = await fetch(`/api/auth/magic-link-login?token=${token}`);
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Store JWT token if provided (for Capacitor apps)
-          if (data.token) {
-            setAuthToken(data.token);
-          }
-          
           setStatus("success");
           setMessage(data.message);
           

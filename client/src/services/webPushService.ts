@@ -130,19 +130,11 @@ export const getWebPushSubscription = async (): Promise<PushSubscription | null>
 async function sendSubscriptionToBackend(subscription: PushSubscription): Promise<void> {
   const subscriptionJson = subscription.toJSON();
   
-  // Build headers with JWT token if available
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  
-  const authToken = localStorage.getItem('authToken');
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-  
   const response = await fetch(getFullUrl('/api/notifications/subscribe'), {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+    },
     credentials: 'include',
     body: JSON.stringify({
       endpoint: subscriptionJson.endpoint,
@@ -167,19 +159,11 @@ async function sendSubscriptionToBackend(subscription: PushSubscription): Promis
 async function removeSubscriptionFromBackend(subscription: PushSubscription): Promise<void> {
   const subscriptionJson = subscription.toJSON();
   
-  // Build headers with JWT token if available
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  
-  const authToken = localStorage.getItem('authToken');
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-  
   const response = await fetch(getFullUrl('/api/notifications/unsubscribe'), {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+    },
     credentials: 'include',
     body: JSON.stringify({
       endpoint: subscriptionJson.endpoint

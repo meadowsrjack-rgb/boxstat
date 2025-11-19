@@ -13,14 +13,9 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/favicon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
     },
     {
       "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iI2Q4MjQyOCIvPgo8cGF0aCBkPSJNMTIgNmMtMC41IDAtMSAwLjUtMSAxdjJjMCAwLjUgMC41IDEgMSAxczEtMC41IDEtMVY3YzAtMC41LTAuNS0xLTEtMXoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik04IDEwYzAgMS4xIDAuOSAyIDIgMnMyLTAuOSAyLTItMC45LTItMi0yLTIgMC45LTIgMnoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xNCAxMGMwIDEuMSAwLjkgMiAyIDJzMi0wLjkgMi0yLTAuOS0yLTItMi0yIDAuOS0yIDJ6IiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTIgMTRjLTIgMC0zLjUgMS0zLjUgMnYyaDd2LTJjMC0xLTEuNS0yLTMuNS0yeiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+",

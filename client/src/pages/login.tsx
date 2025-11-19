@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LogIn, ArrowLeft, Mail } from "lucide-react";
-import { apiRequest, setAuthToken } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
@@ -36,11 +36,6 @@ export default function LoginPage() {
       console.log("✅ Login response received:", response);
 
       if (response.success) {
-        // Store JWT token if provided (for Capacitor apps)
-        if (response.token) {
-          setAuthToken(response.token);
-        }
-        
         toast({
           title: "Login Successful",
           description: "Welcome back!",

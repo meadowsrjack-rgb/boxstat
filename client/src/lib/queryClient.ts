@@ -13,26 +13,6 @@ function getFullUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
-// JWT token management for Capacitor apps
-function getAuthToken(): string | null {
-  if (Capacitor.isNativePlatform()) {
-    return localStorage.getItem('authToken');
-  }
-  return null;
-}
-
-export function setAuthToken(token: string) {
-  if (Capacitor.isNativePlatform()) {
-    localStorage.setItem('authToken', token);
-  }
-}
-
-export function clearAuthToken() {
-  if (Capacitor.isNativePlatform()) {
-    localStorage.removeItem('authToken');
-  }
-}
-
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -65,18 +45,9 @@ export async function apiRequest(
     requestData = options.data;
   }
 
-  // Build headers
-  const headers: HeadersInit = requestData ? { "Content-Type": "application/json" } : {};
-  
-  // Add JWT auth token for Capacitor apps
-  const token = getAuthToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const res = await fetch(getFullUrl(url), {
     method,
-    headers,
+    headers: requestData ? { "Content-Type": "application/json" } : {},
     body: requestData ? JSON.stringify(requestData) : undefined,
     credentials: "include",
   });
@@ -97,16 +68,8 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Build headers with JWT token if available
-    const headers: HeadersInit = {};
-    const token = getAuthToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
     const res = await fetch(getFullUrl(queryKey.join("/") as string), {
       credentials: "include",
-      headers,
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

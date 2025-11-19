@@ -16,33 +16,22 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Step 1: Build on Replit
-echo -e "${BLUE}Step 1: Building production files...${NC}"
+echo -e "${BLUE}Building production files...${NC}"
 npm run build
 
 echo ""
 echo -e "${GREEN}✅ Replit build complete!${NC}"
 echo ""
-
-# Step 2: Commit and push
-echo -e "${BLUE}Step 2: Pushing changes to git...${NC}"
-git add -A
-git commit -m "Deploy to iOS $(date +'%Y-%m-%d %H:%M')" || echo "No changes to commit"
-git push origin main
-
+echo -e "${YELLOW}📱 Next Step (on your Mac):${NC}"
 echo ""
-echo -e "${GREEN}✅ Changes pushed to repository!${NC}"
+echo "   Run this command:"
+echo "   ${GREEN}cd ~/Documents/boxstat && ./deploy-to-mac.sh${NC}"
 echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${YELLOW}📱 Next Step: Run this on your Mac Terminal${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "   Then in Xcode, click Run (▶️)"
 echo ""
-echo "cd ~/Documents/boxstat && git fetch origin && git reset --hard origin/main && git clean -fd && npm run build && npx cap sync ios && npx cap open ios"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo -e "${YELLOW}💡 For Firebase push notification updates:${NC}"
-echo "   1. In Xcode: Shift+Cmd+K (clean build)"
-echo "   2. Delete BoxStat app from iPhone"
-echo "   3. Click Run (▶️) for fresh install"
+echo -e "${YELLOW}💡 For this first-time push notification deploy:${NC}"
+echo "   - Press Shift+Cmd+K in Xcode (clean build)"
+echo "   - Delete BoxStat from iPhone"
+echo "   - Then Run for fresh install"
 echo ""
 echo -e "${GREEN}That's it! 🎉${NC}"

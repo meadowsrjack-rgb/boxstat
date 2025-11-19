@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,10 @@ import {
 ──────────────────────────────────────────────────────────────────────────────── */
 export default function PlayerSettingsPage() {
   const [, setLocation] = useLocation();
-  const [isDeviceLocked, setIsDeviceLocked] = useState(false);
+  const [isDeviceLocked, setIsDeviceLocked] = React.useState(false);
 
   // Check device lock status on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const checkLockStatus = () => {
       const lockedPlayerId = localStorage.getItem("deviceLockedToPlayer");
       const currentPlayerId = localStorage.getItem("selectedPlayerId");

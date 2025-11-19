@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { notionService } from "../notion";
-import { requireJwt } from "../auth";
+import { requireAuth } from "../auth";
 
 const router = Router();
 
-router.get("/players", requireJwt, async (req: any, res) => {
+router.get("/players", requireAuth, async (req: any, res) => {
   const q = (req.query.q as string || "").trim();
 
   const params: any[] = [];
@@ -68,7 +68,7 @@ router.get("/players", requireJwt, async (req: any, res) => {
   res.json({ ok: true, players: rows });
 });
 
-router.get("/teams", requireJwt, async (req: any, res) => {
+router.get("/teams", requireAuth, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
     
@@ -126,7 +126,7 @@ router.get("/teams", requireJwt, async (req: any, res) => {
   }
 });
 
-router.get("/teams/:teamId", requireJwt, async (req: any, res) => {
+router.get("/teams/:teamId", requireAuth, async (req: any, res) => {
   try {
     const teamId = parseInt(req.params.teamId, 10);
     
@@ -173,7 +173,7 @@ router.get("/teams/:teamId", requireJwt, async (req: any, res) => {
   }
 });
 
-router.post("/teams/:teamId/request-join", requireJwt, async (req: any, res) => {
+router.post("/teams/:teamId/request-join", requireAuth, async (req: any, res) => {
   const userId = req.user?.id as string;
   const teamId = parseInt(req.params.teamId, 10);
 
@@ -195,7 +195,7 @@ router.post("/teams/:teamId/request-join", requireJwt, async (req: any, res) => 
 });
 
 // Search Notion players with rich data (name, team, program)
-router.get("/notion-players", requireJwt, async (req: any, res) => {
+router.get("/notion-players", requireAuth, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
     const team = (req.query.team as string || "").trim();

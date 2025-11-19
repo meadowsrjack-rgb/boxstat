@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { requireJwt } from "../auth";
+import { requireAuth } from "../auth";
 
 const router = Router();
 
-router.post('/claim', requireJwt, async (req: any, res) => {
+router.post('/claim', requireAuth, async (req: any, res) => {
   try {
     const accountId = req.user?.claims?.sub as string;
     const { claimCode, dob } = req.body || {};

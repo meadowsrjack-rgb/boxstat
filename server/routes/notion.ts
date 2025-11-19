@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { notionService } from "../notion";
-import { requireJwt } from "../auth";
+import { requireAuth } from "../auth";
 
 const router = Router();
 
-router.post("/sync", requireJwt, async (_req, res) => {
+router.post("/sync", requireAuth, async (_req, res) => {
   try {
     if (!process.env.NOTION_API_KEY || !process.env.NOTION_DB_ID) {
       return res.status(400).json({ ok: false, error: "NOTION env not set" });

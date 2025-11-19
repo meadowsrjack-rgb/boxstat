@@ -1,0 +1,128 @@
+Last login: Wed Nov 19 00:47:11 on ttys000
+jackmeadows@Jacks-MacBook-Air ~ % cd ~/Documents/boxstat
+git pull origin main
+open ios/App/App.xcworkspace
+error: cannot pull with rebase: You have unstaged changes.
+error: additionally, your index contains uncommitted changes.
+error: Please commit or stash them.
+jackmeadows@Jacks-MacBook-Air boxstat % git stash
+git pull origin main
+npm install
+npm run build
+npx cap sync ios
+open ios/App/App.xcworkspace
+Saved working directory and index state WIP on main: 7177ced Saved progress at the end of the loop
+From https://github.com/meadowsrjack-rgb/boxstat
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+
+up to date, audited 1117 packages in 2s
+
+129 packages are looking for funding
+  run `npm fund` for details
+
+10 vulnerabilities (1 low, 8 moderate, 1 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (2) ../vite/modulepreload-polyfill.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3544 modules transformed.
+../dist/public/index.html                                                      1.90 kB │ gzip:   0.79 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png                       107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png                            606.43 kB
+../dist/public/assets/Laanding page background_1762477206539-BlEUpXlS.mp4  5,394.65 kB
+../dist/public/assets/index-BA4JEaJD.css                                     147.85 kB │ gzip:  26.85 kB
+../dist/public/assets/purify.es-DfngIMfA.js                                   22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-BfJ93T8E.js                                   150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-q4CwkyM3.js                                    2,320.20 kB │ gzip: 622.06 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.88s
+
+  dist/index.js  352.8kb
+
+⚡ Done in 20ms
+✔ Copying web assets from public to ios/App/App/public in 28.87ms
+✔ Creating capacitor.config.json in ios/App/App in 1.59ms
+✔ copy ios in 75.34ms
+✔ Updating iOS plugins in 8.58ms
+✔ Updating iOS native dependencies with pod install in 3.94s
+[info] Found 1 Capacitor plugin for ios:
+       @capacitor/push-notifications@7.0.3
+✔ update ios in 4.00s
+[info] Sync finished in 4.468s
+jackmeadows@Jacks-MacBook-Air boxstat % cd ~/Documents/boxstat
+git pull origin main
+npm install
+npm run build
+npx cap sync ios
+open ios/App/App.xcworkspace
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+
+up to date, audited 1117 packages in 2s
+
+129 packages are looking for funding
+  run `npm fund` for details
+
+10 vulnerabilities (1 low, 8 moderate, 1 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (2) ../vite/modulepreload-polyfill.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3544 modules transformed.
+../dist/public/index.html                                                      1.90 kB │ gzip:   0.79 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png                       107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png                            606.43 kB
+../dist/public/assets/Laanding page background_1762477206539-BlEUpXlS.mp4  5,394.65 kB
+../dist/public/assets/index-BA4JEaJD.css                                     147.85 kB │ gzip:  26.85 kB
+../dist/public/assets/purify.es-DfngIMfA.js                                   22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-BfJ93T8E.js                                   150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-q4CwkyM3.js                                    2,320.20 kB │ gzip: 622.06 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.98s
+
+  dist/index.js  352.8kb
+
+⚡ Done in 19ms
+✔ Copying web assets from public to ios/App/App/public in 87.55ms
+✔ Creating capacitor.config.json in ios/App/App in 606.58μs
+✔ copy ios in 130.67ms
+✔ Updating iOS plugins in 8.34ms
+✔ Updating iOS native dependencies with pod install in 3.97s
+[info] Found 1 Capacitor plugin for ios:
+       @capacitor/push-notifications@7.0.3
+✔ update ios in 4.04s
+[info] Sync finished in 4.505s
+jackmeadows@Jacks-MacBook-Air boxstat % 

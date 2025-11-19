@@ -5644,7 +5644,14 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 
   const createMessage = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/notifications", data);
+      // Ensure sentBy is set with current user ID
+      const notificationData = {
+        ...data,
+        sentBy: currentUser?.id || data.sentBy,
+        organizationId: organization?.id || data.organizationId,
+      };
+      console.log('[Notification Form] Submitting notification:', notificationData);
+      return await apiRequest("POST", "/api/admin/notifications", notificationData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
@@ -5652,8 +5659,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
       setIsDialogOpen(false);
       form.reset();
     },
-    onError: () => {
-      toast({ title: "Failed to send message", variant: "destructive" });
+    onError: (error: any) => {
+      console.error('[Notification Form] Failed to send notification:', error);
+      toast({ title: "Failed to send message", description: error.message || "Please try again", variant: "destructive" });
     },
   });
 

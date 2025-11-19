@@ -12,24 +12,38 @@ export function useAuth() {
     queryFn: async () => {
       // Get JWT token from localStorage (for mobile/JWT auth)
       const token = localStorage.getItem('authToken');
+      console.log("🔑 useAuth: Token from localStorage:", token ? token.substring(0, 20) + "..." : "NULL");
       
       // Build headers
       const headers: Record<string, string> = {};
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
+        console.log("✅ useAuth: Added Authorization header");
+      } else {
+        console.log("⚠️ useAuth: No token, using cookies only");
       }
       
-      const res = await fetch(`${API_BASE_URL}/api/auth/user`, {
+      const url = `${API_BASE_URL}/api/auth/user`;
+      console.log("📡 useAuth: Fetching from:", url);
+      
+      const res = await fetch(url, {
         headers,
         credentials: "include",
       });
+      
+      console.log("📥 useAuth: Response status:", res.status);
+      
       if (res.status === 401) {
+        console.log("🚫 useAuth: Not authenticated (401)");
         return null;
       }
       if (!res.ok) {
+        console.error("❌ useAuth: Fetch failed with status:", res.status);
         throw new Error("Failed to fetch user");
       }
-      return await res.json();
+      const userData = await res.json();
+      console.log("👤 useAuth: User data received:", userData?.email);
+      return userData;
     },
     retry: false,
     refetchOnWindowFocus: false,

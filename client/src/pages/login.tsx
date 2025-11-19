@@ -36,10 +36,17 @@ export default function LoginPage() {
       console.log("✅ Login response received:", response);
 
       if (response.success) {
+        console.log("🎯 Login success branch - token present?", !!response.token);
+        
         // Store JWT token for mobile authentication
         if (response.token) {
-          console.log("💾 Storing JWT token in localStorage");
+          console.log("💾 About to store JWT token...");
           localStorage.setItem('authToken', response.token);
+          console.log("✅ Token stored! Verifying...");
+          const storedToken = localStorage.getItem('authToken');
+          console.log("🔍 Token retrieved from storage:", storedToken ? storedToken.substring(0, 20) + "..." : "NULL");
+        } else {
+          console.warn("⚠️ No token in response!");
         }
         
         toast({
@@ -58,6 +65,11 @@ export default function LoginPage() {
             redirectPath = "/player-dashboard";
           }
         }
+        
+        console.log("🚀 Redirecting to:", redirectPath);
+        
+        // Small delay to ensure localStorage write completes
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Force a page reload to ensure auth state is updated
         window.location.href = redirectPath;

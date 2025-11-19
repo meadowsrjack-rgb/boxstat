@@ -1,6 +1,30 @@
 import type { RequestHandler } from "express";
+import jwt from "jsonwebtoken";
 
-// Session-based authentication middleware
+// JWT-based authentication middleware (for mobile app)
+export const requireJwt: RequestHandler = (req: any, res, next) => {
+  const auth = req.headers.authorization;
+  
+  if (!auth) {
+    return res.status(401).json({ error: "Missing token" });
+  }
+
+  const token = auth.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    req.user = {
+      id: decoded.userId,
+      organizationId: decoded.organizationId || "default-org",
+      role: decoded.role || "user"
+    };
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+};
+
+// Session-based authentication middleware (for web app - deprecated)
 export const isAuthenticated: RequestHandler = (req: any, res, next) => {
   if (req.session && req.session.userId) {
     req.user = { 

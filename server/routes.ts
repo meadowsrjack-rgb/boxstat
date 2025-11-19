@@ -9,7 +9,7 @@ import crypto from "crypto";
 import searchRoutes from "./routes/search";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
-import { requireAuth, requireJwt, isAdmin, isCoachOrAdmin } from "./auth";
+import { requireAuth, isAdmin, isCoachOrAdmin } from "./auth";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -157,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AUTH ROUTES
   // =============================================
   
-  app.get('/api/auth/user', requireJwt, async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     const user = await storage.getUser(req.user.id);
     
     // If parent, set activeProfileId to first child
@@ -173,7 +173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update user's default dashboard preference
-  app.patch('/api/auth/user/preferences', requireJwt, async (req: any, res) => {
+  app.patch('/api/auth/user/preferences', requireAuth, async (req: any, res) => {
     try {
       const { defaultDashboardView } = req.body;
       
@@ -621,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/payments/checkout-session", requireJwt, async (req: any, res) => {
+  app.post("/api/payments/checkout-session", requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
@@ -707,7 +707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create checkout session for a specific package and player
-  app.post("/api/payments/create-checkout", requireJwt, async (req: any, res) => {
+  app.post("/api/payments/create-checkout", requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
@@ -1280,7 +1280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get users by account holder (for unified account page)
-  app.get('/api/account/players', requireJwt, async (req: any, res) => {
+  app.get('/api/account/players', requireAuth, async (req: any, res) => {
     const { id } = req.user;
     const user = await storage.getUser(id);
     
@@ -1298,7 +1298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Add player to account (for parents and admins adding players)
-  app.post('/api/account/players', requireJwt, async (req: any, res) => {
+  app.post('/api/account/players', requireAuth, async (req: any, res) => {
     try {
       const { id } = req.user;
       const user = await storage.getUser(id);
@@ -1441,7 +1441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get profile by ID
-  app.get('/api/profile/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {
       const profileId = req.params.id;
       const profile = await storage.getUser(profileId);
@@ -1457,7 +1457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload profile photo
-  app.post('/api/upload-profile-photo', requireJwt, upload.single('photo'), async (req: any, res) => {
+  app.post('/api/upload-profile-photo', requireAuth, upload.single('photo'), async (req: any, res) => {
     const uploadedFilePath = req.file ? path.join(uploadDir, req.file.filename) : null;
     
     try {
@@ -1517,7 +1517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload award image
-  app.post('/api/upload/award-image', requireJwt, uploadAwardImage.single('image'), async (req: any, res) => {
+  app.post('/api/upload/award-image', requireAuth, uploadAwardImage.single('image'), async (req: any, res) => {
     const uploadedFilePath = req.file ? path.join(awardImageDir, req.file.filename) : null;
     
     try {
@@ -1557,7 +1557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update player profile (for parents updating child profiles or players updating self)
-  app.patch('/api/profile/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {
       const profileId = req.params.id;
       const userId = req.user.id;
@@ -1592,12 +1592,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ORGANIZATION ROUTES
   // =============================================
   
-  app.get('/api/organization', requireJwt, async (req: any, res) => {
+  app.get('/api/organization', requireAuth, async (req: any, res) => {
     const org = await storage.getOrganization(req.user.organizationId);
     res.json(org);
   });
   
-  app.patch('/api/organization', requireJwt, async (req: any, res) => {
+  app.patch('/api/organization', requireAuth, async (req: any, res) => {
     const { role, organizationId } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update organization settings' });
@@ -1611,20 +1611,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // USER MANAGEMENT ROUTES (Admin only)
   // =============================================
   
-  app.get('/api/users', requireJwt, async (req: any, res) => {
+  app.get('/api/users', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const users = await storage.getUsersByOrganization(organizationId);
     res.json(users);
   });
   
-  app.get('/api/users/role/:role', requireJwt, async (req: any, res) => {
+  app.get('/api/users/role/:role', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const { role } = req.params;
     const users = await storage.getUsersByRole(organizationId, role);
     res.json(users);
   });
   
-  app.post('/api/users', requireJwt, async (req: any, res) => {
+  app.post('/api/users', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can create users' });
@@ -1637,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(user);
   });
   
-  app.patch('/api/users/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/users/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update users' });
@@ -1647,7 +1647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
-  app.delete('/api/users/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/users/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete users' });
@@ -1666,7 +1666,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get user's team information
-  app.get('/api/users/:userId/team', requireJwt, async (req: any, res) => {
+  app.get('/api/users/:userId/team', requireAuth, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const { id: requesterId, organizationId: requesterOrgId, role: requesterRole } = req.user;
@@ -1718,7 +1718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // TEAM ROUTES
   // =============================================
   
-  app.get('/api/teams', requireJwt, async (req: any, res) => {
+  app.get('/api/teams', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const teams = await storage.getTeamsByOrganization(organizationId);
@@ -1741,12 +1741,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/teams/coach/:coachId', requireJwt, async (req: any, res) => {
+  app.get('/api/teams/coach/:coachId', requireAuth, async (req: any, res) => {
     const teams = await storage.getTeamsByCoach(req.params.coachId);
     res.json(teams);
   });
   
-  app.post('/api/teams', requireJwt, async (req: any, res) => {
+  app.post('/api/teams', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can create teams' });
@@ -1757,7 +1757,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(team);
   });
   
-  app.patch('/api/teams/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/teams/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can update teams' });
@@ -1767,7 +1767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
-  app.delete('/api/teams/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/teams/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete teams' });
@@ -1778,7 +1778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get team roster including Notion-synced players
-  app.get('/api/teams/:teamId/roster-with-notion', requireJwt, async (req: any, res) => {
+  app.get('/api/teams/:teamId/roster-with-notion', requireAuth, async (req: any, res) => {
     try {
       const teamId = req.params.teamId;
       
@@ -1852,7 +1852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Assign a player to a team
-  app.post('/api/teams/:teamId/assign-player', requireJwt, async (req: any, res) => {
+  app.post('/api/teams/:teamId/assign-player', requireAuth, async (req: any, res) => {
     try {
       const { teamId } = req.params;
       const { playerId } = req.body;
@@ -1897,7 +1897,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove a player from a team
-  app.post('/api/teams/:teamId/remove-player', requireJwt, async (req: any, res) => {
+  app.post('/api/teams/:teamId/remove-player', requireAuth, async (req: any, res) => {
     try {
       const { teamId } = req.params;
       const { playerId } = req.body;
@@ -1944,7 +1944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get teams for a specific coach
-  app.get('/api/coaches/:coachId/teams', requireJwt, async (req: any, res) => {
+  app.get('/api/coaches/:coachId/teams', requireAuth, async (req: any, res) => {
     try {
       const teams = await storage.getTeamsByCoach(req.params.coachId);
       res.json(teams);
@@ -1955,7 +1955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get all players from a coach's teams
-  app.get('/api/coaches/:coachId/players', requireJwt, async (req: any, res) => {
+  app.get('/api/coaches/:coachId/players', requireAuth, async (req: any, res) => {
     try {
       const teams = await storage.getTeamsByCoach(req.params.coachId);
       const allPlayers: any[] = [];
@@ -1978,7 +1978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Join a team (add coach to assistantCoachIds)
-  app.post('/api/coaches/:coachId/teams/:teamId/join', requireJwt, async (req: any, res) => {
+  app.post('/api/coaches/:coachId/teams/:teamId/join', requireAuth, async (req: any, res) => {
     try {
       const { coachId, teamId } = req.params;
       const { id: userId, role } = req.user;
@@ -2132,7 +2132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
-  app.get('/api/events', requireJwt, async (req: any, res) => {
+  app.get('/api/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     const { childProfileId } = req.query;
     const allEvents = await storage.getEventsByOrganization(organizationId);
@@ -2176,7 +2176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(filteredEvents);
   });
   
-  app.get('/api/events/upcoming', requireJwt, async (req: any, res) => {
+  app.get('/api/events/upcoming', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     const { childProfileId } = req.query;
     const allEvents = await storage.getUpcomingEvents(organizationId);
@@ -2201,7 +2201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Coach-specific events endpoint (delegates to shared filtering logic)
-  app.get('/api/coach/events', requireJwt, async (req: any, res) => {
+  app.get('/api/coach/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     
     // Only coaches can access this endpoint
@@ -2224,12 +2224,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(filteredEvents);
   });
   
-  app.get('/api/events/team/:teamId', requireJwt, async (req: any, res) => {
+  app.get('/api/events/team/:teamId', requireAuth, async (req: any, res) => {
     const events = await storage.getEventsByTeam(req.params.teamId);
     res.json(events);
   });
   
-  app.get('/api/events/:eventId/participants', requireJwt, async (req: any, res) => {
+  app.get('/api/events/:eventId/participants', requireAuth, async (req: any, res) => {
     const { role, organizationId } = req.user;
     const { eventId } = req.params;
     
@@ -2285,7 +2285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(invitedUsers);
   });
   
-  app.post('/api/events', requireJwt, async (req: any, res) => {
+  app.post('/api/events', requireAuth, async (req: any, res) => {
     try {
       const { role, id: userId } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -2348,7 +2348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/events/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/events/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -2372,7 +2372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/events/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/events/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can delete events' });
@@ -2387,7 +2387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Get all attendances for a specific event
-  app.get('/api/attendances/:eventId', requireJwt, async (req: any, res) => {
+  app.get('/api/attendances/:eventId', requireAuth, async (req: any, res) => {
     try {
       const attendances = await storage.getAttendancesByEvent(req.params.eventId);
       res.json(attendances);
@@ -2398,7 +2398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new attendance/check-in
-  app.post('/api/attendances', requireJwt, async (req: any, res) => {
+  app.post('/api/attendances', requireAuth, async (req: any, res) => {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);
       
@@ -2496,17 +2496,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Legacy routes (kept for backward compatibility)
-  app.get('/api/attendance/event/:eventId', requireJwt, async (req: any, res) => {
+  app.get('/api/attendance/event/:eventId', requireAuth, async (req: any, res) => {
     const attendances = await storage.getAttendancesByEvent(req.params.eventId);
     res.json(attendances);
   });
   
-  app.get('/api/attendance/user/:userId', requireJwt, async (req: any, res) => {
+  app.get('/api/attendance/user/:userId', requireAuth, async (req: any, res) => {
     const attendances = await storage.getAttendancesByUser(req.params.userId);
     res.json(attendances);
   });
   
-  app.post('/api/attendance', requireJwt, async (req: any, res) => {
+  app.post('/api/attendance', requireAuth, async (req: any, res) => {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);
       const attendance = await storage.createAttendance(attendanceData);
@@ -2567,7 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EVENT WINDOW ROUTES
   // =============================================
   
-  app.get('/api/event-windows/event/:eventId', requireJwt, async (req: any, res) => {
+  app.get('/api/event-windows/event/:eventId', requireAuth, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
       const windows = await storage.getEventWindowsByEvent(eventId);
@@ -2578,7 +2578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/event-windows', requireJwt, async (req: any, res) => {
+  app.post('/api/event-windows', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can create event windows' });
@@ -2600,7 +2600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/event-windows/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/event-windows/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can update event windows' });
@@ -2616,7 +2616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/event-windows/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/event-windows/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
@@ -2632,7 +2632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/event-windows/event/:eventId', requireJwt, async (req: any, res) => {
+  app.delete('/api/event-windows/event/:eventId', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can delete event windows' });
@@ -2652,7 +2652,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // RSVP RESPONSE ROUTES
   // =============================================
   
-  app.get('/api/rsvp/event/:eventId', requireJwt, async (req: any, res) => {
+  app.get('/api/rsvp/event/:eventId', requireAuth, async (req: any, res) => {
     try {
       const eventId = parseInt(req.params.eventId);
       const responses = await storage.getRsvpResponsesByEvent(eventId);
@@ -2663,7 +2663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/rsvp/user/:userId/event/:eventId', requireJwt, async (req: any, res) => {
+  app.get('/api/rsvp/user/:userId/event/:eventId', requireAuth, async (req: any, res) => {
     try {
       const { userId, eventId } = req.params;
       const response = await storage.getRsvpResponseByUserAndEvent(userId, parseInt(eventId));
@@ -2674,7 +2674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/rsvp', requireJwt, async (req: any, res) => {
+  app.post('/api/rsvp', requireAuth, async (req: any, res) => {
     try {
       const rsvpData = insertRsvpResponseSchema.parse(req.body);
       
@@ -2725,7 +2725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/rsvp/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/rsvp/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const updated = await storage.updateRsvpResponse(id, req.body);
@@ -2736,7 +2736,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/rsvp/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/rsvp/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteRsvpResponse(id);
@@ -2751,13 +2751,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AWARD ROUTES
   // =============================================
   
-  app.get('/api/awards', requireJwt, async (req: any, res) => {
+  app.get('/api/awards', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const awards = await storage.getAwardsByOrganization(organizationId);
     res.json(awards);
   });
   
-  app.post('/api/awards', requireJwt, async (req: any, res) => {
+  app.post('/api/awards', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can create awards' });
@@ -2768,7 +2768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(award);
   });
   
-  app.patch('/api/awards/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/awards/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update awards' });
@@ -2778,7 +2778,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
-  app.delete('/api/awards/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/awards/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete awards' });
@@ -2790,7 +2790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // User Awards (legacy endpoint - kept for backwards compatibility)
   // Alias endpoint for frontend compatibility: /api/users/:userId/awards
-  app.get('/api/users/:userId/awards', requireJwt, async (req: any, res) => {
+  app.get('/api/users/:userId/awards', requireAuth, async (req: any, res) => {
     // Disable HTTP caching to ensure React Query refetches get fresh data
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
@@ -2852,7 +2852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Badges endpoint
-  app.get('/api/users/:userId/badges', requireJwt, async (req: any, res) => {
+  app.get('/api/users/:userId/badges', requireAuth, async (req: any, res) => {
     // Disable HTTP caching
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
@@ -2900,7 +2900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trophies endpoint
-  app.get('/api/users/:userId/trophies', requireJwt, async (req: any, res) => {
+  app.get('/api/users/:userId/trophies', requireAuth, async (req: any, res) => {
     // Disable HTTP caching
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
@@ -2947,7 +2947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/user-awards/:userId', requireJwt, async (req: any, res) => {
+  app.get('/api/user-awards/:userId', requireAuth, async (req: any, res) => {
     const userAwards = await storage.getUserAwards(req.params.userId);
     res.json(userAwards);
   });
@@ -2956,18 +2956,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ANNOUNCEMENT ROUTES
   // =============================================
   
-  app.get('/api/announcements', requireJwt, async (req: any, res) => {
+  app.get('/api/announcements', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const announcements = await storage.getAnnouncementsByOrganization(organizationId);
     res.json(announcements);
   });
   
-  app.get('/api/announcements/team/:teamId', requireJwt, async (req: any, res) => {
+  app.get('/api/announcements/team/:teamId', requireAuth, async (req: any, res) => {
     const announcements = await storage.getAnnouncementsByTeam(req.params.teamId);
     res.json(announcements);
   });
   
-  app.post('/api/announcements', requireJwt, async (req: any, res) => {
+  app.post('/api/announcements', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can create announcements' });
@@ -2978,7 +2978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(announcement);
   });
   
-  app.patch('/api/announcements/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/announcements/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can update announcements' });
@@ -2988,7 +2988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
-  app.delete('/api/announcements/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/announcements/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {
       return res.status(403).json({ message: 'Only admins and coaches can delete announcements' });
@@ -3003,18 +3003,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Legacy route (kept for backwards compatibility)
-  app.get('/api/messages/team/:teamId', requireJwt, async (req: any, res) => {
+  app.get('/api/messages/team/:teamId', requireAuth, async (req: any, res) => {
     const messages = await storage.getMessagesByTeam(req.params.teamId);
     res.json(messages);
   });
   
   // Team-scoped message routes (used by TeamChat component)
-  app.get('/api/teams/:teamId/messages', requireJwt, async (req: any, res) => {
+  app.get('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
     const messages = await storage.getMessagesByTeam(req.params.teamId);
     res.json(messages);
   });
   
-  app.post('/api/teams/:teamId/messages', requireJwt, async (req: any, res) => {
+  app.post('/api/teams/:teamId/messages', requireAuth, async (req: any, res) => {
     const { message, messageType = 'text', profileId } = req.body;
     
     // Security: Validate that profileId belongs to authenticated user or is the user themselves
@@ -3060,7 +3060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Legacy route (kept for backwards compatibility)
-  app.post('/api/messages', requireJwt, async (req: any, res) => {
+  app.post('/api/messages', requireAuth, async (req: any, res) => {
     const messageData = insertMessageSchema.parse(req.body);
     const message = await storage.createMessage(messageData);
     
@@ -3081,7 +3081,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Stripe Products endpoint
-  app.get('/api/stripe/products', requireJwt, async (req: any, res) => {
+  app.get('/api/stripe/products', requireAuth, async (req: any, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
@@ -3134,18 +3134,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/payments', requireJwt, async (req: any, res) => {
+  app.get('/api/payments', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const payments = await storage.getPaymentsByOrganization(organizationId);
     res.json(payments);
   });
   
-  app.get('/api/payments/user/:userId', requireJwt, async (req: any, res) => {
+  app.get('/api/payments/user/:userId', requireAuth, async (req: any, res) => {
     const payments = await storage.getPaymentsByUser(req.params.userId);
     res.json(payments);
   });
   
-  app.post('/api/payments', requireJwt, async (req: any, res) => {
+  app.post('/api/payments', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can create payments' });
@@ -3189,7 +3189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(payment);
   });
   
-  app.patch('/api/payments/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/payments/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update payments' });
@@ -3210,7 +3210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(programs);
   });
   
-  app.post('/api/programs', requireJwt, async (req: any, res) => {
+  app.post('/api/programs', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can create programs' });
@@ -3221,7 +3221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(program);
   });
   
-  app.patch('/api/programs/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/programs/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update programs' });
@@ -3231,7 +3231,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
-  app.delete('/api/programs/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/programs/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete programs' });
@@ -3245,7 +3245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DIVISION ROUTES
   // =============================================
   
-  app.get('/api/divisions', requireJwt, async (req: any, res) => {
+  app.get('/api/divisions', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const divisions = await storage.getDivisionsByOrganization(organizationId);
@@ -3256,7 +3256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/divisions/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/divisions/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -3275,7 +3275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/divisions', requireJwt, async (req: any, res) => {
+  app.post('/api/divisions', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3291,7 +3291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/divisions/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/divisions/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3315,7 +3315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/divisions/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/divisions/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin') {
@@ -3339,7 +3339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // SKILL ROUTES
   // =============================================
   
-  app.get('/api/skills', requireJwt, async (req: any, res) => {
+  app.get('/api/skills', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const { playerId } = req.query;
@@ -3358,7 +3358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/skills/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/skills/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -3377,7 +3377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/skills', requireJwt, async (req: any, res) => {
+  app.post('/api/skills', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3393,7 +3393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/skills/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/skills/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3417,7 +3417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/skills/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/skills/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3441,7 +3441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EVALUATION ROUTES (Coach Dashboard)
   // =============================================
   
-  app.get('/api/coach/evaluations', requireJwt, async (req: any, res) => {
+  app.get('/api/coach/evaluations', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const { playerId, quarter, year } = req.query;
@@ -3467,7 +3467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/coach/evaluations', requireJwt, async (req: any, res) => {
+  app.post('/api/coach/evaluations', requireAuth, async (req: any, res) => {
     try {
       const { role, id: coachId, organizationId } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3488,7 +3488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/evaluations', requireJwt, async (req: any, res) => {
+  app.get('/api/evaluations', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const { playerId } = req.query;
@@ -3506,7 +3506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/evaluations/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/evaluations/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3530,7 +3530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // NOTIFICATION ROUTES
   // =============================================
   
-  app.get('/api/notifications', requireJwt, async (req: any, res) => {
+  app.get('/api/notifications', requireAuth, async (req: any, res) => {
     try {
       const { id: userId, organizationId } = req.user;
       const allNotifications = await storage.getNotificationsByOrganization(organizationId);
@@ -3547,7 +3547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/notifications/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/notifications/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -3566,7 +3566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/notifications', requireJwt, async (req: any, res) => {
+  app.post('/api/notifications', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3582,7 +3582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/notifications/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/notifications/:id', requireAuth, async (req: any, res) => {
     try {
       const { role, id: userId } = req.user;
       const id = parseInt(req.params.id, 10);
@@ -3610,7 +3610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/notifications/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/notifications/:id', requireAuth, async (req: any, res) => {
     try {
       const { role, id: userId } = req.user;
       const id = parseInt(req.params.id, 10);
@@ -3639,7 +3639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/notifications/:id/read', requireJwt, async (req: any, res) => {
+  app.patch('/api/notifications/:id/read', requireAuth, async (req: any, res) => {
     try {
       const { id: userId } = req.user;
       const id = parseInt(req.params.id, 10);
@@ -3672,7 +3672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PACKAGE SELECTION ROUTES (Family Registration)
   // =============================================
   
-  app.get('/api/family/package-selections', requireJwt, async (req: any, res) => {
+  app.get('/api/family/package-selections', requireAuth, async (req: any, res) => {
     try {
       const { id: userId } = req.user;
       const selections = await storage.getPackageSelectionsByParent(userId);
@@ -3683,7 +3683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/family/package-selections', requireJwt, async (req: any, res) => {
+  app.post('/api/family/package-selections', requireAuth, async (req: any, res) => {
     try {
       const { id: parentUserId, organizationId } = req.user;
       const { selections } = req.body;
@@ -3718,7 +3718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FACILITY ROUTES
   // =============================================
   
-  app.get('/api/facilities', requireJwt, async (req: any, res) => {
+  app.get('/api/facilities', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const facilities = await storage.getFacilitiesByOrganization(organizationId);
@@ -3729,7 +3729,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/facilities/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/facilities/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -3748,7 +3748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/facilities', requireJwt, async (req: any, res) => {
+  app.post('/api/facilities', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id } = req.user;
       if (role !== 'admin') {
@@ -3768,7 +3768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch('/api/facilities/:id', requireJwt, async (req: any, res) => {
+  app.patch('/api/facilities/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin') {
@@ -3792,7 +3792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete('/api/facilities/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/facilities/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin') {
@@ -3817,7 +3817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Get all award definitions for organization
-  app.get('/api/award-definitions', requireJwt, async (req: any, res) => {
+  app.get('/api/award-definitions', requireAuth, async (req: any, res) => {
     try {
       const { organizationId } = req.user;
       const awardDefinitions = await storage.getAwardDefinitions(organizationId);
@@ -3829,7 +3829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get badges from registry (for coaches to award)
-  app.get('/api/admin/badges', requireJwt, async (req: any, res) => {
+  app.get('/api/admin/badges', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -3854,7 +3854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get single award definition
-  app.get('/api/award-definitions/:id', requireJwt, async (req: any, res) => {
+  app.get('/api/award-definitions/:id', requireAuth, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) {
@@ -3874,7 +3874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create new award definition (admin only)
-  app.post('/api/award-definitions', requireJwt, async (req: any, res) => {
+  app.post('/api/award-definitions', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
       if (role !== 'admin') {
@@ -3900,7 +3900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update award definition (admin only)
-  app.put('/api/award-definitions/:id', requireJwt, async (req: any, res) => {
+  app.put('/api/award-definitions/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin') {
@@ -3934,7 +3934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete award definition (admin only)
-  app.delete('/api/award-definitions/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/award-definitions/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin') {
@@ -3959,7 +3959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Get user awards (for specific user or current user)
-  app.get('/api/user-awards', requireJwt, async (req: any, res) => {
+  app.get('/api/user-awards', requireAuth, async (req: any, res) => {
     // Disable HTTP caching
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
@@ -4014,7 +4014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get all user awards for organization (admin/coach only)
-  app.get('/api/user-awards/organization', requireJwt, async (req: any, res) => {
+  app.get('/api/user-awards/organization', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -4030,7 +4030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Coach award endpoint (alias for /api/user-awards with different parameter naming)
-  app.post('/api/coach/award', requireJwt, async (req: any, res) => {
+  app.post('/api/coach/award', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id: awardedById } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -4107,7 +4107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manually award to user (admin/coach only)
-  app.post('/api/user-awards', requireJwt, async (req: any, res) => {
+  app.post('/api/user-awards', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId, id: awardedById } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -4166,7 +4166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete user award (admin/coach only)
-  app.delete('/api/user-awards/:id', requireJwt, async (req: any, res) => {
+  app.delete('/api/user-awards/:id', requireAuth, async (req: any, res) => {
     try {
       const { role } = req.user;
       if (role !== 'admin' && role !== 'coach') {
@@ -4191,7 +4191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   // Manually trigger award evaluation for a user (admin/coach only)
-  app.post('/api/awards/sync/:userId', requireJwt, async (req: any, res) => {
+  app.post('/api/awards/sync/:userId', requireAuth, async (req: any, res) => {
     try {
       const { role, organizationId } = req.user;
       if (role !== 'admin' && role !== 'coach') {

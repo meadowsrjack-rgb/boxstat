@@ -1,0 +1,170 @@
+Last login: Tue Nov 18 16:36:43 on ttys000
+jackmeadows@Jacks-MacBook-Air ~ % # Update the Podfile to require iOS 15.0
+sed -i '' 's/platform :ios, .14.0./platform :ios, '\''15.0'\''/' ios/App/Podfile
+
+# Verify the change
+grep "platform :ios" ios/App/Podfile
+
+# Now run the deployment script again
+./deploy-to-mac.sh
+zsh: command not found: #
+sed: ios/App/Podfile: No such file or directory
+zsh: command not found: #
+grep: ios/App/Podfile: No such file or directory
+zsh: command not found: #
+zsh: no such file or directory: ./deploy-to-mac.sh
+jackmeadows@Jacks-MacBook-Air ~ % cd ~/Documents/boxstat
+jackmeadows@Jacks-MacBook-Air boxstat % sed -i '' 's/platform :ios, .14.0./platform :ios, '\''15.0'\''/' ios/App/Podfile 
+jackmeadows@Jacks-MacBook-Air boxstat % grep "platform :ios" ios/App/Podfile
+platform :ios, '15.0'
+jackmeadows@Jacks-MacBook-Air boxstat % ./deploy-to-mac.sh
+🏀 BoxStat Mac Deployment
+=========================
+
+Step 1: Pulling latest code from Replit...
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+jackmeadows@Jacks-MacBook-Air boxstat % git stash
+Saved working directory and index state WIP on main: 7177ced Saved progress at the end of the loop
+jackmeadows@Jacks-MacBook-Air boxstat % ./deploy-to-mac.sh
+🏀 BoxStat Mac Deployment
+=========================
+
+Step 1: Pulling latest code from Replit...
+From https://github.com/meadowsrjack-rgb/boxstat
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+
+Step 2: Checking dependencies...
+
+Step 3: Building production files...
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (2) ../vite/modulepreload-polyfill.jsBrowserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3544 modules transformed.
+../dist/public/index.html                                                      1.90 kB │ gzip:   0.79 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png                       107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png                            606.43 kB
+../dist/public/assets/Laanding page background_1762477206539-BlEUpXlS.mp4  5,394.65 kB
+../dist/public/assets/index-BA4JEaJD.css                                     147.85 kB │ gzip:  26.85 kB
+../dist/public/assets/purify.es-DfngIMfA.js                                   22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-BfJ93T8E.js                                   150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-q4CwkyM3.js                                    2,320.20 kB │ gzip: 622.06 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.37s
+
+  dist/index.js  352.8kb
+
+⚡ Done in 19ms
+
+Step 4: Syncing to iOS with Capacitor...
+✔ Copying web assets from public to ios/App/App/public in 29.86ms
+✔ Creating capacitor.config.json in ios/App/App in 1.20ms
+✔ copy ios in 75.57ms
+✔ Updating iOS plugins in 9.09ms
+✖ Updating iOS native dependencies with pod install - failed!
+✖ update ios - failed!
+[error] Analyzing dependencies
+        [!] CocoaPods could not find compatible versions for pod "FirebaseCore":
+        In Podfile:
+        FirebaseMessaging was resolved to 12.6.0, which depends on
+        FirebaseCore (~> 12.6.0)
+        
+        Specs satisfying the `FirebaseCore (~> 12.6.0)` dependency were found, but they required a higher minimum
+        deployment target.
+        
+jackmeadows@Jacks-MacBook-Air boxstat % cd ~/Documents/boxstat
+git stash pop
+cat ios/App/Podfile | grep "platform :ios"
+error: Your local changes to the following files would be overwritten by merge:
+	package-lock.json
+Please commit your changes or stash them before you merge.
+Aborting
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   package-lock.json
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	Info.plist
+	ios/App/App.xcworkspace/contents.xcworkspacedata
+	ios/App/App/Info_backup_before_scene.plist
+	ios/App/App/PrivacyInfo.xcprivacy
+	ios/App/App/SceneDelegate.swift
+	ios/App/App/config 2.xml
+	ios/App/App/config 3.xml
+	ios/App/App/config 4.xml
+	ios/App/App/config 5.xml
+	ios/App/Podfile 2.lock
+	ios/App/Podfile.lock
+	ios/App/Podfile.save
+
+no changes added to commit (use "git add" and/or "git commit -a")
+The stash entry is kept in case you need it again.
+platform :ios, '14.0'
+jackmeadows@Jacks-MacBook-Air boxstat % cat ios/App/Podfile.lock | grep -A 5 "FirebaseCore"
+    - FirebaseCore (~> 12.6.0)
+  - FirebaseAnalytics (12.6.0):
+    - FirebaseAnalytics/Default (= 12.6.0)
+    - FirebaseCore (~> 12.6.0)
+    - FirebaseInstallations (~> 12.6.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/MethodSwizzler (~> 8.1)
+    - GoogleUtilities/Network (~> 8.1)
+    - "GoogleUtilities/NSData+zlib (~> 8.1)"
+--
+    - FirebaseCore (~> 12.6.0)
+    - FirebaseInstallations (~> 12.6.0)
+    - GoogleAppMeasurement/Default (= 12.6.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/MethodSwizzler (~> 8.1)
+    - GoogleUtilities/Network (~> 8.1)
+--
+  - FirebaseCore (12.6.0):
+    - FirebaseCoreInternal (~> 12.6.0)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/Logger (~> 8.1)
+  - FirebaseCoreInternal (12.6.0):
+    - "GoogleUtilities/NSData+zlib (~> 8.1)"
+  - FirebaseInstallations (12.6.0):
+    - FirebaseCore (~> 12.6.0)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/UserDefaults (~> 8.1)
+    - PromisesObjC (~> 2.4)
+  - FirebaseMessaging (12.6.0):
+    - FirebaseCore (~> 12.6.0)
+    - FirebaseInstallations (~> 12.6.0)
+    - GoogleDataTransport (~> 10.1)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GoogleUtilities/Reachability (~> 8.1)
+--
+    - FirebaseCore
+    - FirebaseCoreInternal
+    - FirebaseInstallations
+    - FirebaseMessaging
+    - GoogleAdsOnDeviceConversion
+    - GoogleAppMeasurement
+    - GoogleDataTransport
+--
+  FirebaseCore: 0e38ad5d62d980a47a64b8e9301ffa311457be04
+  FirebaseCoreInternal: 69bf1306a05b8ac43004f6cc1f804bb7b05b229e
+  FirebaseInstallations: 631b38da2e11a83daa4bfb482f79d286a5dfa7ad
+  FirebaseMessaging: a61bc42dcab3f7a346d94bbb54dab2c9435b18b2
+  GoogleAdsOnDeviceConversion: d68c69dd9581a0f5da02617b6f377e5be483970f
+  GoogleAppMeasurement: 3bf40aff49a601af5da1c3345702fcb4991d35ee
+  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+jackmeadows@Jacks-MacBook-Air boxstat % 

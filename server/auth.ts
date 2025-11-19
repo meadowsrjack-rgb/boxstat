@@ -6,20 +6,38 @@ export const requireJwt: RequestHandler = (req: any, res, next) => {
   const auth = req.headers.authorization;
   
   if (!auth) {
-    return res.status(401).json({ error: "Missing token" });
+    return res.status(401).json({ error: "Missing authorization header" });
   }
 
-  const token = auth.split(" ")[1];
+  // Enforce Bearer token format
+  if (!auth.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Invalid authorization format. Use: Bearer <token>" });
+  }
+
+  const token = auth.substring(7); // Remove "Bearer " prefix
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    
+    // Validate required claims
+    if (!decoded.userId || !decoded.organizationId || !decoded.role) {
+      return res.status(401).json({ error: "Invalid token: missing required claims" });
+    }
+    
+    // Set user with complete structure expected by routes
     req.user = {
       id: decoded.userId,
-      organizationId: decoded.organizationId || "default-org",
-      role: decoded.role || "user"
+      organizationId: decoded.organizationId,
+      role: decoded.role,
+      claims: {
+        sub: decoded.userId // For routes expecting req.user.claims.sub
+      }
     };
     next();
-  } catch (err) {
+  } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: "Token expired" });
+    }
     return res.status(401).json({ error: "Invalid token" });
   }
 };

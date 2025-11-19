@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { z } from "zod";
-import { isAuthenticated } from "../auth";
+import { requireJwt } from "../auth";
 import { claimRepo } from "../lib/claim-repository";
 import { emailService, smsService, generateVerificationCode, getDevModeCode } from "../lib/email-service";
 import { fetchNotionData } from "../lib/notion-adapter";
@@ -287,7 +287,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== ADMIN: GENERATE CLAIM LINK (BYPASS EMAIL) ==========
-  app.post('/api/admin/generate-claim-link', isAuthenticated, async (req: any, res) => {
+  app.post('/api/admin/generate-claim-link', requireJwt, async (req: any, res) => {
     try {
       // TODO: Add admin role check - for now, requires authentication
       // In production, should check if req.user has admin privileges
@@ -362,7 +362,7 @@ export function registerClaimRoutes(app: Express): void {
   });
   
   // ========== SEARCH PLAYERS ==========
-  app.get('/api/players/search', isAuthenticated, async (req: any, res) => {
+  app.get('/api/players/search', requireJwt, async (req: any, res) => {
     try {
       const { search, limit } = searchPlayerSchema.parse(req.query);
       
@@ -390,7 +390,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== REQUEST CLAIM CODE ==========
-  app.post('/api/players/claim/request', isAuthenticated, async (req: any, res) => {
+  app.post('/api/players/claim/request', requireJwt, async (req: any, res) => {
     try {
       const { playerId, contact } = claimRequestSchema.parse(req.body);
       const accountId = req.user.claims.sub;
@@ -476,7 +476,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== VERIFY CLAIM CODE ==========
-  app.post('/api/players/claim/verify', isAuthenticated, async (req: any, res) => {
+  app.post('/api/players/claim/verify', requireJwt, async (req: any, res) => {
     try {
       const { playerId, contact, code } = verifyClaimSchema.parse(req.body);
       const accountId = req.user.claims.sub;
@@ -533,7 +533,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== GET USER'S CLAIMED PLAYERS ==========
-  app.get('/api/users/:userId/players', isAuthenticated, async (req: any, res) => {
+  app.get('/api/users/:userId/players', requireJwt, async (req: any, res) => {
     try {
       const userId = req.params.userId;
       const currentUserId = req.user.claims.sub;
@@ -552,7 +552,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== GET TEAM DETAILS WITH ROSTER ==========
-  app.get('/api/teams/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/teams/:id', requireJwt, async (req: any, res) => {
     try {
       const teamId = parseInt(req.params.id);
       
@@ -580,7 +580,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== GET ALL TEAMS ==========
-  app.get('/api/teams', isAuthenticated, async (req: any, res) => {
+  app.get('/api/teams', requireJwt, async (req: any, res) => {
     try {
       const teams = await claimRepo.getAllTeams();
       res.json(teams);
@@ -591,7 +591,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== ADMIN: GET PENDING APPROVALS ==========
-  app.get('/api/admin/approvals/pending', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/approvals/pending', requireJwt, async (req: any, res) => {
     try {
       // TODO: Add admin role check
       const approvals = await claimRepo.getPendingApprovals();
@@ -603,7 +603,7 @@ export function registerClaimRoutes(app: Express): void {
   });
 
   // ========== SYNC NOTION DATA ==========
-  app.post('/api/sync/notion', isAuthenticated, async (req: any, res) => {
+  app.post('/api/sync/notion', requireJwt, async (req: any, res) => {
     try {
       // TODO: Add admin role check
       console.log('Starting Notion sync...');

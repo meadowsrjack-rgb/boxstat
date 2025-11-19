@@ -1,24 +1,11 @@
 import { Router } from "express";
 import { pool } from "../db";
 import { notionService } from "../notion";
+import { requireJwt } from "../auth";
 
 const router = Router();
 
-// Simple auth middleware - same as in routes.ts
-const isAuthenticated = (req: any, res: any, next: any) => {
-  if (req.session && req.session.userId) {
-    req.user = { 
-      id: req.session.userId, 
-      organizationId: req.session.organizationId || "default-org", 
-      role: req.session.role || "user" 
-    };
-    next();
-  } else {
-    res.status(401).json({ error: "Not authenticated" });
-  }
-};
-
-router.get("/players", isAuthenticated, async (req: any, res) => {
+router.get("/players", requireJwt, async (req: any, res) => {
   const q = (req.query.q as string || "").trim();
 
   const params: any[] = [];
@@ -81,7 +68,7 @@ router.get("/players", isAuthenticated, async (req: any, res) => {
   res.json({ ok: true, players: rows });
 });
 
-router.get("/teams", isAuthenticated, async (req: any, res) => {
+router.get("/teams", requireJwt, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
     
@@ -139,7 +126,7 @@ router.get("/teams", isAuthenticated, async (req: any, res) => {
   }
 });
 
-router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
+router.get("/teams/:teamId", requireJwt, async (req: any, res) => {
   try {
     const teamId = parseInt(req.params.teamId, 10);
     
@@ -186,7 +173,7 @@ router.get("/teams/:teamId", isAuthenticated, async (req: any, res) => {
   }
 });
 
-router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res) => {
+router.post("/teams/:teamId/request-join", requireJwt, async (req: any, res) => {
   const userId = req.user?.id as string;
   const teamId = parseInt(req.params.teamId, 10);
 
@@ -208,7 +195,7 @@ router.post("/teams/:teamId/request-join", isAuthenticated, async (req: any, res
 });
 
 // Search Notion players with rich data (name, team, program)
-router.get("/notion-players", isAuthenticated, async (req: any, res) => {
+router.get("/notion-players", requireJwt, async (req: any, res) => {
   try {
     const q = (req.query.q as string || "").trim();
     const team = (req.query.team as string || "").trim();

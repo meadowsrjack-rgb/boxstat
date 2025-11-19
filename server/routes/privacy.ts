@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { pool } from "../db";
-import { isAuthenticated } from "../auth";
+import { requireJwt } from "../auth";
 
 const router = Router();
 
-router.get("/", isAuthenticated, async (req: any, res) => {
+router.get("/", requireJwt, async (req: any, res) => {
   const accountId = req.user?.claims?.sub as string | undefined;
   if (!accountId) return res.status(401).json({ ok: false });
   
@@ -19,7 +19,7 @@ router.get("/", isAuthenticated, async (req: any, res) => {
   res.json({ ok: true, settings: r.rows[0]?.settings || {}, searchable: (r.rows[0]?.settings?.searchable ?? true) });
 });
 
-router.post("/", isAuthenticated, async (req: any, res) => {
+router.post("/", requireJwt, async (req: any, res) => {
   const accountId = req.user?.claims?.sub as string | undefined;
   if (!accountId) return res.status(401).json({ ok: false });
   

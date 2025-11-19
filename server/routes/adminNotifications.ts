@@ -2,12 +2,12 @@ import type { Express } from "express";
 import { adminNotificationService } from "../services/adminNotificationService";
 import { z } from "zod";
 import { insertNotificationSchema } from "../../shared/schema";
-import { isAuthenticated, isAdmin } from "../auth";
+import { requireJwt, isAdmin } from "../auth";
 
 export function setupAdminNotificationRoutes(app: Express) {
   
   // Get all notifications (admin view)
-  app.get('/api/admin/notifications', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/notifications', requireJwt, isAdmin, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId || 'default-org';
       const limit = parseInt(req.query.limit as string) || 50;
@@ -28,7 +28,7 @@ export function setupAdminNotificationRoutes(app: Express) {
   });
 
   // Get notification statistics
-  app.get('/api/admin/notifications/:id/stats', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/notifications/:id/stats', requireJwt, isAdmin, async (req: any, res) => {
     try {
       const notificationId = parseInt(req.params.id);
 
@@ -45,7 +45,7 @@ export function setupAdminNotificationRoutes(app: Express) {
   });
 
   // Create a new notification
-  app.post('/api/admin/notifications', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.post('/api/admin/notifications', requireJwt, isAdmin, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId || 'default-org';
       const userId = req.user.id;
@@ -82,7 +82,7 @@ export function setupAdminNotificationRoutes(app: Express) {
   });
 
   // Delete a notification
-  app.delete('/api/admin/notifications/:id', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.delete('/api/admin/notifications/:id', requireJwt, isAdmin, async (req: any, res) => {
     try {
       const organizationId = req.user.organizationId || 'default-org';
       const notificationId = parseInt(req.params.id);
@@ -102,7 +102,7 @@ export function setupAdminNotificationRoutes(app: Express) {
 
   // Test notification endpoint (development only)
   if (process.env.NODE_ENV === 'development') {
-    app.post('/api/admin/notifications/test', isAuthenticated, isAdmin, async (req: any, res) => {
+    app.post('/api/admin/notifications/test', requireJwt, isAdmin, async (req: any, res) => {
       try {
         const organizationId = req.user.organizationId || 'default-org';
         const userId = req.user.id;

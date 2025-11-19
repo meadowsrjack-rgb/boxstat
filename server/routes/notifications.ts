@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { notificationService } from "../services/notificationService";
-import { isAuthenticated } from "../auth";
+import { requireJwt } from "../auth";
 import { z } from "zod";
 
 const subscriptionSchema = z.object({
@@ -45,7 +45,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Subscribe to push notifications
-  app.post('/api/notifications/subscribe', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/subscribe', requireJwt, async (req: any, res) => {
     try {
       const subscription = subscriptionSchema.parse(req.body);
       const userId = req.user.id;
@@ -69,7 +69,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Unsubscribe from push notifications
-  app.post('/api/notifications/unsubscribe', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/unsubscribe', requireJwt, async (req: any, res) => {
     try {
       const { endpoint } = req.body;
       const userId = req.user.id;
@@ -87,7 +87,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Register FCM token for native push notifications (iOS/Android)
-  app.post('/api/push/register', isAuthenticated, async (req: any, res) => {
+  app.post('/api/push/register', requireJwt, async (req: any, res) => {
     try {
       const { token } = req.body;
       
@@ -117,7 +117,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get user notifications
-  app.get('/api/notifications', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const limit = parseInt(req.query.limit as string) || 20;
@@ -146,7 +146,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get unread notification count
-  app.get('/api/notifications/unread-count', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications/unread-count', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const count = await notificationService.getUnreadCount(userId);
@@ -158,7 +158,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Mark notification as read
-  app.post('/api/notifications/:id/read', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/:id/read', requireJwt, async (req: any, res) => {
     try {
       const notificationId = parseInt(req.params.id);
       const userId = req.user.id;
@@ -176,7 +176,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Mark all notifications as read
-  app.post('/api/notifications/read-all', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/read-all', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       await notificationService.markAllNotificationsAsRead(userId);
@@ -188,7 +188,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get notification preferences
-  app.get('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications/preferences', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const preferences = await notificationService.getNotificationPreferences(userId);
@@ -210,7 +210,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Update notification preferences
-  app.post('/api/notifications/preferences', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/preferences', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const updates = preferencesSchema.parse(req.body);
@@ -226,7 +226,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get notification feed (last 5 unread notifications from notification_recipients)
-  app.get('/api/notifications/feed', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications/feed', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       
@@ -261,7 +261,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get announcements (type='announcement' from notification_recipients)
-  app.get('/api/notifications/announcements', isAuthenticated, async (req: any, res) => {
+  app.get('/api/notifications/announcements', requireJwt, async (req: any, res) => {
     try {
       const userId = req.user.id;
       
@@ -296,7 +296,7 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Mark notification as read (update notification_recipients)
-  app.post('/api/notifications/:id/mark-read', isAuthenticated, async (req: any, res) => {
+  app.post('/api/notifications/:id/mark-read', requireJwt, async (req: any, res) => {
     try {
       const recipientId = parseInt(req.params.id);
       const userId = req.user.id;

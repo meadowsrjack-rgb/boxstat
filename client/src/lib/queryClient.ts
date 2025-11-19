@@ -45,9 +45,21 @@ export async function apiRequest(
     requestData = options.data;
   }
 
+  // Get JWT token from localStorage (for mobile/JWT auth)
+  const token = localStorage.getItem('authToken');
+  
+  // Build headers
+  const headers: Record<string, string> = {};
+  if (requestData) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const res = await fetch(getFullUrl(url), {
     method,
-    headers: requestData ? { "Content-Type": "application/json" } : {},
+    headers,
     body: requestData ? JSON.stringify(requestData) : undefined,
     credentials: "include",
   });
@@ -68,7 +80,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Get JWT token from localStorage (for mobile/JWT auth)
+    const token = localStorage.getItem('authToken');
+    
+    // Build headers
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(getFullUrl(queryKey.join("/") as string), {
+      headers,
       credentials: "include",
     });
 

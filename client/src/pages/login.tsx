@@ -36,6 +36,12 @@ export default function LoginPage() {
       console.log("✅ Login response received:", response);
 
       if (response.success) {
+        // Store JWT token for mobile authentication
+        if (response.token) {
+          console.log("💾 Storing JWT token in localStorage");
+          localStorage.setItem('authToken', response.token);
+        }
+        
         toast({
           title: "Login Successful",
           description: "Welcome back!",

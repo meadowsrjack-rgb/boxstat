@@ -1,0 +1,82 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/1D922A8D-9912-445E-9209-5205CE636DA3/App.app'
+⚡️  Loading app at capacitor://localhost...
+Networking process (0x115070190) took 1.444479 seconds to launch
+WebContent process (0x1150e8100) took 1.001631 seconds to launch
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+WebContent[25620] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11d9820d0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92ac00.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a5180 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11d982120 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92ac00]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a5180 )>",
+    "<NSLayoutConstraint:0x11d9818b0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92ac00.width == _UIButtonBarButton:0x11d8a5400.width   (active)>",
+    "<NSLayoutConstraint:0x11d981f90 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a5180.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11d9819f0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11d9e8e00]   (active, names: '|':_UIButtonBarButton:0x11d8a5400 )>",
+    "<NSLayoutConstraint:0x11d981a40 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e8e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a5400 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11d981a40 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e8e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a5400 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11d9833e0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b000.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a4c80 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11d983430 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b000]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a4c80 )>",
+    "<NSLayoutConstraint:0x11d982c60 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b000.width == _UIButtonBarButton:0x11d8a4f00.width   (active)>",
+    "<NSLayoutConstraint:0x11d9832a0 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a4c80.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11d982da0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11d9e9180]   (active, names: '|':_UIButtonBarButton:0x11d8a4f00 )>",
+    "<NSLayoutConstraint:0x11d982df0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a4f00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11d982df0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a4f00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11dabc0a0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b400.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a6800 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11dabc0f0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b400]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a6800 )>",
+    "<NSLayoutConstraint:0x11d983e80 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11d92b400.width == _UIButtonBarButton:0x11d8a4a00.width   (active)>",
+    "<NSLayoutConstraint:0x11b12a990 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11d8a6800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11d983f70 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11d9e9500]   (active, names: '|':_UIButtonBarButton:0x11d8a4a00 )>",
+    "<NSLayoutConstraint:0x11b3a2170 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a4a00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11b3a2170 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11d9e9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11d8a4a00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 300CC9D3-DB37-4C48-83F4-E35E601BCB83
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 300CC9D3-DB37-4C48-83F4-E35E601BCB83
+⚡️  [log] - 🔐 Attempting login with email: test@example.com
+⚡️  [log] - 🌐 Current window location: capacitor://localhost/login
+⚡️  [log] - 📡 Sending POST to /api/auth/login
+⚡️  [log] - ✅ Login response received: {"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTc2MTMzNjcxMi43NzI5MDgiLCJvcmdhbml6YXRpb25JZCI6ImRlZmF1bHQtb3JnIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYzNTkwODQxLCJleHAiOjE3NjYxODI4NDF9.wWrr_mX54awmgK7BAzdz5_4IS7HoIiOjcCxttiB8W6o","user":{"id":"test-user-1761336712.772908","email":"test@example.com","role":"admin","firstName":"Admin","lastName":"1"}}
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  WebView loaded

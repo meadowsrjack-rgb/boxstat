@@ -234,10 +234,21 @@ function AppRouter() {
       
       {/* Protected routes */}
       <Route path="/account" component={() => {
+        // Show loading spinner while auth is being checked
+        if (isLoading) {
+          return (
+            <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+              <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+            </div>
+          );
+        }
+        
+        // Redirect to login if not authenticated
         if (!user) {
           setLocation("/login");
           return null;
         }
+        
         // Redirect to appropriate dashboard based on user role
         if ((user as any)?.role === "admin") {
           setLocation("/admin-dashboard");

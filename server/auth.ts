@@ -1,60 +1,55 @@
 import type { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 
-// JWT-based authentication middleware (for mobile app)
-export const requireJwt: RequestHandler = (req: any, res, next) => {
+// Hybrid authentication middleware - accepts EITHER session OR JWT token
+export const requireAuth: RequestHandler = (req: any, res, next) => {
+  // First, try JWT authentication (for mobile apps)
   const auth = req.headers.authorization;
-  
-  if (!auth) {
-    return res.status(401).json({ error: "Missing authorization header" });
-  }
-
-  // Enforce Bearer token format
-  if (!auth.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Invalid authorization format. Use: Bearer <token>" });
-  }
-
-  const token = auth.substring(7); // Remove "Bearer " prefix
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+  if (auth && auth.startsWith("Bearer ")) {
+    const token = auth.substring(7);
     
-    // Validate required claims
-    if (!decoded.userId || !decoded.organizationId || !decoded.role) {
-      return res.status(401).json({ error: "Invalid token: missing required claims" });
-    }
-    
-    // Set user with complete structure expected by routes
-    req.user = {
-      id: decoded.userId,
-      organizationId: decoded.organizationId,
-      role: decoded.role,
-      claims: {
-        sub: decoded.userId // For routes expecting req.user.claims.sub
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      
+      // Validate required claims
+      if (decoded.userId && decoded.organizationId && decoded.role) {
+        req.user = {
+          id: decoded.userId,
+          organizationId: decoded.organizationId,
+          role: decoded.role,
+          claims: {
+            sub: decoded.userId
+          }
+        };
+        return next();
       }
-    };
-    next();
-  } catch (err: any) {
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: "Token expired" });
+    } catch (err: any) {
+      // JWT invalid, fall through to session check
     }
-    return res.status(401).json({ error: "Invalid token" });
   }
-};
-
-// Session-based authentication middleware (for web app - deprecated)
-export const isAuthenticated: RequestHandler = (req: any, res, next) => {
+  
+  // Fall back to session authentication (for web app)
   if (req.session && req.session.userId) {
     req.user = { 
       id: req.session.userId, 
       organizationId: req.session.organizationId || "default-org", 
-      role: req.session.role || "user" 
+      role: req.session.role || "user",
+      claims: {
+        sub: req.session.userId
+      }
     };
-    next();
-  } else {
-    res.status(401).json({ error: "Not authenticated" });
+    return next();
   }
+  
+  // Neither JWT nor session found
+  return res.status(401).json({ error: "Not authenticated" });
 };
+
+// Legacy JWT-only middleware (deprecated - use requireAuth instead)
+export const requireJwt: RequestHandler = requireAuth;
+
+// Legacy session-only middleware (deprecated - use requireAuth instead)
+export const isAuthenticated: RequestHandler = requireAuth;
 
 // Middleware to check if user is admin
 export const isAdmin: RequestHandler = (req: any, res, next) => {

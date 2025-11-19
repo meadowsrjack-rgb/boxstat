@@ -76,7 +76,7 @@ For small backend-only changes (no iOS code changes):
 
 ## External Dependencies
 
-- **Firebase Cloud Messaging**: Push notifications for iOS/Android via Firebase Admin SDK
+- **Firebase Cloud Messaging**: Push notifications for iOS/Android via Firebase Admin SDK. **Critical iOS Configuration**: The `ios/App/App/AppDelegate.swift` file MUST import Firebase and call `FirebaseApp.configure()` in `didFinishLaunchingWithOptions` for push notifications to work. The AppDelegate also includes required methods to forward remote notification registration to Capacitor.
 - **Resend**: Email service for authentication flows
 - **Stripe**: Payment processing, customer management, and transaction handling
 - **Neon Database**: Serverless PostgreSQL hosting

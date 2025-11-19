@@ -9,7 +9,7 @@ import crypto from "crypto";
 import searchRoutes from "./routes/search";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
-import { requireJwt } from "./auth";
+import { requireAuth, requireJwt, isAdmin, isCoachOrAdmin } from "./auth";
 import multer from "multer";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -115,20 +115,8 @@ function hashPassword(password: string): string {
   return Buffer.from(password).toString('base64');
 }
 
-// Simple auth middleware for development
-const isAuthenticated = (req: any, res: any, next: any) => {
-  if (req.session && req.session.userId) {
-    req.user = { 
-      id: req.session.userId, 
-      organizationId: req.session.organizationId || "default-org", 
-      role: req.session.role || "user" 
-    };
-    next();
-  } else {
-    // Return 401 for unauthenticated requests
-    res.status(401).json({ error: "Not authenticated" });
-  }
-};
+// Auth middleware now imported from ./auth.ts - supports both session AND JWT tokens
+const isAuthenticated = requireAuth;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   

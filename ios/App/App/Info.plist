@@ -2,96 +2,83 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-        <key>CFBundleDevelopmentRegion</key>
-        <string>en</string>
-        <key>CFBundleDisplayName</key>
-        <string>BoxStat</string>
-        <key>CFBundleExecutable</key>
-        <string>$(EXECUTABLE_NAME)</string>
-        <key>CFBundleIdentifier</key>
-        <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-        <key>CFBundleInfoDictionaryVersion</key>
-        <string>6.0</string>
-        <key>CFBundleName</key>
-        <string>$(PRODUCT_NAME)</string>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-        <key>CFBundleShortVersionString</key>
-        <string>$(MARKETING_VERSION)</string>
-        <key>CFBundleVersion</key>
-        <string>$(CURRENT_PROJECT_VERSION)</string>
-        <key>LSRequiresIPhoneOS</key>
-        <true/>
-        <key>UILaunchStoryboardName</key>
-        <string>LaunchScreen</string>
-        <key>UIMainStoryboardFile</key>
-        <string>Main</string>
-        <key>UIRequiredDeviceCapabilities</key>
-        <array>
-                <string>armv7</string>
-        </array>
-        <key>UISupportedInterfaceOrientations</key>
-        <array>
-                <string>UIInterfaceOrientationPortrait</string>
-                <string>UIInterfaceOrientationLandscapeLeft</string>
-                <string>UIInterfaceOrientationLandscapeRight</string>
-        </array>
-        <key>UISupportedInterfaceOrientations~ipad</key>
-        <array>
-                <string>UIInterfaceOrientationPortrait</string>
-                <string>UIInterfaceOrientationPortraitUpsideDown</string>
-                <string>UIInterfaceOrientationLandscapeLeft</string>
-                <string>UIInterfaceOrientationLandscapeRight</string>
-        </array>
-        <key>UIViewControllerBasedStatusBarAppearance</key>
-        <true/>
-        
-        <!-- Permissions for BoxStat App Features -->
-        
-        <!-- Location Services - Required for geo-fencing check-ins -->
-        <key>NSLocationWhenInUseUsageDescription</key>
-        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
-        <key>NSLocationAlwaysUsageDescription</key>
-        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
-        <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-        <string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
-        
-        <!-- Camera - Required for QR code scanning check-ins -->
-        <key>NSCameraUsageDescription</key>
-        <string>BoxStat needs camera access to scan QR codes for event check-ins.</string>
-        
-        <!-- Photo Library - Required for profile picture uploads -->
-        <key>NSPhotoLibraryUsageDescription</key>
-        <string>BoxStat needs photo access to let you upload profile pictures.</string>
-        <key>NSPhotoLibraryAddUsageDescription</key>
-        <string>BoxStat needs photo access to save images to your library.</string>
-        
-        <!-- Background Modes for Push Notifications -->
-        <key>UIBackgroundModes</key>
-        <array>
-                <string>remote-notification</string>
-        </array>
-        
-        <!-- App Transport Security Settings -->
-        <key>NSAppTransportSecurity</key>
-        <dict>
-                <key>NSAllowsArbitraryLoads</key>
-                <false/>
-                <key>NSAllowsLocalNetworking</key>
-                <true/>
-                <!-- Allow connections to Replit production backend -->
-                <key>NSExceptionDomains</key>
-                <dict>
-                        <key>boxstat.replit.app</key>
-                        <dict>
-                                <key>NSExceptionAllowsInsecureHTTPLoads</key>
-                                <false/>
-                                <key>NSIncludesSubdomains</key>
-                                <true/>
-                                <key>NSExceptionRequiresForwardSecrecy</key>
-                                <true/>
-                        </dict>
-                </dict>
-        </dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>BoxStat</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>boxstat.replit.app</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<false/>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>BoxStat needs camera access to scan QR codes for event check-ins.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BoxStat needs your location to verify you're at the event location for check-ins.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>BoxStat needs photo access to save images to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BoxStat needs photo access to let you upload profile pictures.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
 </dict>
 </plist>

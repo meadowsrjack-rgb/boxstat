@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.boxstat.app',
+  appId: 'boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
   ios: {

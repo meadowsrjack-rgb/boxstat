@@ -11,6 +11,7 @@ import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { requireJwt } from "./auth";
 import multer from "multer";
+import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
 import {
@@ -259,7 +260,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.role = user.role;
       
       // Generate JWT token (for mobile app)
-      const jwt = require('jsonwebtoken');
       const token = jwt.sign(
         {
           userId: user.id,

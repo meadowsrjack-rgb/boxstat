@@ -108,7 +108,7 @@ export default function CoachTeamMessages() {
 
   if (!user || user.userType !== "admin") {
     return (
-      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to access this page.</p>
@@ -118,7 +118,7 @@ export default function CoachTeamMessages() {
   }
 
   return (
-    <div className="min-h-screen-safe bg-gray-50">
+    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white shadow-sm border-b safe-top">
         <div className="max-w-4xl mx-auto px-6 py-4">

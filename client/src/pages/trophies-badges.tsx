@@ -201,7 +201,7 @@ export default function TrophiesBadgesPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-b from-red-950 via-gray-900 to-black text-white">
+    <div className="min-h-screen-safe bg-gradient-to-b from-red-950 via-gray-900 to-black text-white safe-bottom">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">

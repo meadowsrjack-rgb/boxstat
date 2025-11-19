@@ -55,7 +55,7 @@ export default function SkillsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen-safe bg-background">
+    <div className="min-h-screen-safe bg-background safe-bottom">
       {/* Header */}
       <div className="bg-card border-b sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">

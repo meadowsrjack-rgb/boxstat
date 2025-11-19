@@ -215,7 +215,7 @@ export function CoachProfilePage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -515,7 +515,7 @@ export function CoachCoachingPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -687,7 +687,7 @@ export function CoachPrivacyPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -845,7 +845,7 @@ export function CoachNotificationsPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1050,7 +1050,7 @@ export function CoachSecurityPage() {
   const isPasswordFormValid = passwordForm.currentPassword && passwordForm.newPassword && passwordForm.newPassword === passwordForm.confirmPassword && passwordForm.newPassword.length >= 8;
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1352,7 +1352,7 @@ export function CoachConnectionsPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1511,7 +1511,7 @@ export function CoachBillingPage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1818,7 +1818,7 @@ export function CoachLegalPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -2022,7 +2022,7 @@ export function CoachDangerPage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">

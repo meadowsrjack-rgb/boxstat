@@ -147,7 +147,7 @@ export default function CoachDashboard() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -391,7 +391,7 @@ export default function CoachDashboard() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50">
+    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top">
         <div className="max-w-md mx-auto px-4 py-3">

@@ -182,7 +182,7 @@ export default function PlayerDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 safe-bottom flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
           <p className="text-gray-600 dark:text-gray-300">Loading player details...</p>
@@ -193,7 +193,7 @@ export default function PlayerDetailPage() {
 
   if (error || !player) {
     return (
-      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 safe-bottom flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Player Not Found</h1>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
@@ -212,7 +212,7 @@ export default function PlayerDetailPage() {
   }
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 safe-bottom">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Navigation */}

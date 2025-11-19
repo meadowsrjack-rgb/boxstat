@@ -303,14 +303,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const selectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
   const activeProfileId = (currentUser as any)?.activeProfileId || selectedPlayerId;
   const { data: activeProfile, isLoading: isLoadingActiveProfile } = useQuery<UserType>({
-    queryKey: [`/api/profile/${activeProfileId}`],
-    queryFn: async () => {
-      const res = await fetch(`/api/profile/${activeProfileId}`, {
-        credentials: "include"
-      });
-      if (!res.ok) throw new Error("Failed to fetch active profile");
-      return res.json();
-    },
+    queryKey: ["/api/profile", activeProfileId],
     enabled: !!activeProfileId,
   });
 
@@ -344,15 +337,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   // Priority: activeProfile (from localStorage) > currentChildProfile (from device config)
   const childProfileId = activeProfile?.id || currentChildProfile?.id;
   const { data: allEvents = [] } = useQuery<any[]>({
-    queryKey: ["/api/events", childProfileId],
-    queryFn: async () => {
-      const url = childProfileId 
-        ? `/api/events?childProfileId=${childProfileId}`
-        : "/api/events";
-      const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch events");
-      return res.json();
-    },
+    queryKey: childProfileId 
+      ? ["/api/events?childProfileId=" + childProfileId]
+      : ["/api/events"],
     enabled: !!currentUser.id,
   });
   
@@ -379,15 +366,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // Latest skill evaluation for overall skills assessment
   const { data: latestEvaluation } = useQuery<any>({
-    queryKey: ["/api/players", userIdForData, "latest-evaluation"],
-    queryFn: async () => {
-      const res = await fetch(`/api/players/${userIdForData}/latest-evaluation`, { 
-        credentials: "include" 
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data;
-    },
+    queryKey: ["/api/players/" + userIdForData + "/latest-evaluation"],
     enabled: !!currentUser.id,
   });
 
@@ -423,12 +402,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // Check-ins (client derives tasks from events; server stores submissions)
   const { data: checkins = [] as CheckIn[] } = useQuery<CheckIn[]>({
-    queryKey: ["/api/attendances", currentUser.id],
-    queryFn: async () => {
-      const res = await fetch(`/api/attendances?userId=${currentUser.id}`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryKey: ["/api/attendances?userId=" + currentUser.id],
     enabled: !!currentUser.id,
     staleTime: 30_000,
   });

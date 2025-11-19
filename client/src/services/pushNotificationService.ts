@@ -19,18 +19,23 @@ export const isNativePlatform = () => {
 
 export const initPushNotifications = async () => {
   if (!isNativePlatform()) {
-    console.log('Not running on native platform, skipping push notification setup');
+    console.log('[Push Init] Not running on native platform, skipping push notification setup');
     return;
   }
 
-  console.log('🔔 Initializing push notification listeners...');
+  console.log('[Push Init] 🔔 Initializing push notification listeners...');
+  console.log('[Push Init] Platform:', Capacitor.getPlatform());
 
   // Registration listener - send token to backend
   await PushNotifications.addListener('registration', async (token) => {
-    console.log('✅ Push registration success, token:', token.value);
+    console.log('[Push Registration] ✅ FCM token received:', token.value);
+    console.log('[Push Registration] Token length:', token.value.length);
     
     try {
-      const response = await fetch(getFullUrl('/api/push/register'), {
+      const url = getFullUrl('/api/push/register');
+      console.log('[Push Registration] Sending token to backend:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -41,62 +46,79 @@ export const initPushNotifications = async () => {
         }),
       });
 
+      console.log('[Push Registration] Backend response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Failed to register push token with backend:', response.status, errorText);
+        console.error('[Push Registration] ❌ Failed to register token with backend');
+        console.error('[Push Registration] Status:', response.status);
+        console.error('[Push Registration] Error:', errorText);
       } else {
         const data = await response.json();
-        console.log('✅ Push token successfully registered with backend:', data);
+        console.log('[Push Registration] ✅ Token successfully registered with backend');
+        console.log('[Push Registration] Backend response:', data);
       }
     } catch (error) {
-      console.error('❌ Error registering push token with backend:', error);
+      console.error('[Push Registration] ❌ Network error registering token:', error);
     }
   });
 
   // Registration error listener
   await PushNotifications.addListener('registrationError', (error) => {
-    console.error('❌ Push registration error:', error);
+    console.error('[Push Registration] ❌ FCM registration failed:', error);
+    console.error('[Push Registration] Error details:', JSON.stringify(error));
   });
 
   // Foreground notification listener
   await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    console.log('📬 Push notification received (foreground):', notification);
+    console.log('[Push Notification] 📬 Received in foreground');
+    console.log('[Push Notification] Title:', notification.title);
+    console.log('[Push Notification] Body:', notification.body);
+    console.log('[Push Notification] Data:', notification.data);
   });
 
   // Notification tap listener
   await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-    console.log('👆 Push notification action performed:', notification);
+    console.log('[Push Notification] 👆 User tapped notification');
+    console.log('[Push Notification] Action:', notification.actionId);
+    console.log('[Push Notification] Data:', notification.notification.data);
   });
 
-  console.log('✅ Push notification listeners initialized');
+  console.log('[Push Init] ✅ All push notification listeners initialized successfully');
 };
 
 export const registerPushNotifications = async () => {
   if (!isNativePlatform()) {
-    console.log('Not on native platform, skipping push notification registration');
+    console.log('[Push Register] Not on native platform, skipping push notification registration');
     return;
   }
+  
+  console.log('[Push Register] Starting push notification registration flow...');
   
   try {
     // Check permissions
     let permStatus = await PushNotifications.checkPermissions();
-    console.log('🔐 Current push notification permission status:', permStatus.receive);
+    console.log('[Push Register] 🔐 Current permission status:', permStatus.receive);
     
     if (permStatus.receive === 'prompt') {
-      console.log('🔐 Requesting push notification permissions...');
+      console.log('[Push Register] 🔐 Permission not yet requested, requesting now...');
       permStatus = await PushNotifications.requestPermissions();
+      console.log('[Push Register] Permission request result:', permStatus.receive);
     }
     
     if (permStatus.receive !== 'granted') {
-      console.error('❌ Push notification permissions denied');
+      console.error('[Push Register] ❌ Push notification permissions denied by user');
+      console.error('[Push Register] Final permission status:', permStatus.receive);
       return;
     }
     
-    console.log('✅ Push notification permissions granted');
-    console.log('📱 Registering for push notifications...');
+    console.log('[Push Register] ✅ Push notification permissions granted');
+    console.log('[Push Register] 📱 Calling PushNotifications.register() to get FCM token...');
     await PushNotifications.register();
-    console.log('📱 Registration triggered, waiting for token...');
+    console.log('[Push Register] 📱 Registration API called successfully, waiting for FCM token callback...');
   } catch (error) {
-    console.error('❌ Error during push notification registration:', error);
+    console.error('[Push Register] ❌ Error during push notification registration:', error);
+    console.error('[Push Register] Error type:', error instanceof Error ? error.name : typeof error);
+    console.error('[Push Register] Error message:', error instanceof Error ? error.message : String(error));
   }
 };

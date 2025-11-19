@@ -127,8 +127,15 @@ export class AdminNotificationService {
 
   // Create a new notification (admin function)
   async createNotification(notification: InsertNotification): Promise<{ notification: SelectNotification; recipientCount: number; skipped: number }> {
+    console.log(`[Admin Notification Create] 📢 Creating new notification for organization ${notification.organizationId}`);
+    console.log(`[Admin Notification Create] Title: "${notification.title}"`);
+    console.log(`[Admin Notification Create] Message: "${notification.message}"`);
+    console.log(`[Admin Notification Create] Recipient target: ${notification.recipientTarget}`);
+    console.log(`[Admin Notification Create] Delivery channels:`, notification.deliveryChannels);
+    
     try {
       // Resolve recipients
+      console.log(`[Admin Notification Create] Resolving recipients...`);
       const resolution = await this.resolveRecipients(
         notification.organizationId,
         notification.recipientTarget,
@@ -141,16 +148,22 @@ export class AdminNotificationService {
         notification.deliveryChannels
       );
 
+      console.log(`[Admin Notification Create] Resolved ${resolution.userIds.length} recipient(s), ${resolution.skippedUsers.length} skipped`);
+
       if (resolution.userIds.length === 0) {
+        console.error(`[Admin Notification Create] ❌ No valid recipients found`);
         throw new Error('No valid recipients found for this notification');
       }
 
       // Create notification record
+      console.log(`[Admin Notification Create] Creating notification record in database...`);
       const [created] = await db.insert(notifications).values({
         ...notification,
         sentAt: sql`CURRENT_TIMESTAMP`,
         status: 'sent'
       }).returning();
+
+      console.log(`[Admin Notification Create] ✅ Notification created with ID: ${created.id}`);
 
       // Create notification_recipients records
       const recipientRecords = resolution.userIds.map(userId => ({
@@ -160,10 +173,14 @@ export class AdminNotificationService {
         deliveryStatus: {}
       }));
 
+      console.log(`[Admin Notification Create] Creating ${recipientRecords.length} recipient record(s)...`);
       await db.insert(notificationRecipients).values(recipientRecords);
+      console.log(`[Admin Notification Create] ✅ Recipient records created`);
 
       // Send notifications through each channel
+      console.log(`[Admin Notification Create] 🚀 Starting delivery through channels:`, notification.deliveryChannels);
       await this.sendToRecipients(created, resolution.userIds, notification.deliveryChannels);
+      console.log(`[Admin Notification Create] ✅ Delivery complete`);
 
       return {
         notification: created,
@@ -171,7 +188,7 @@ export class AdminNotificationService {
         skipped: resolution.skippedUsers.length
       };
     } catch (error) {
-      console.error('Error creating notification:', error);
+      console.error('[Admin Notification Create] ❌ Error creating notification:', error);
       throw new Error('Failed to create notification');
     }
   }
@@ -182,25 +199,41 @@ export class AdminNotificationService {
     userIds: string[],
     channels: string[]
   ): Promise<void> {
+    console.log(`[Admin Notification Delivery] 📤 Sending notification #${notification.id} to ${userIds.length} recipient(s)`);
+    console.log(`[Admin Notification Delivery] Delivery channels selected:`, channels);
+    
+    let pushAttempts = 0;
+    let pushSuccess = 0;
+    let pushFailed = 0;
+    
     const deliveryPromises = userIds.map(async (userId) => {
       const deliveryStatus: Record<string, string> = {};
 
+      console.log(`[Admin Notification Delivery] Processing recipient: ${userId}`);
+
       // Send through each channel
       for (const channel of channels) {
+        console.log(`[Admin Notification Delivery]   Channel: ${channel} for user ${userId}`);
+        
         try {
           switch (channel) {
             case 'in_app':
               deliveryStatus.in_app = 'sent';
+              console.log(`[Admin Notification Delivery]   ✅ In-app notification queued`);
               break;
 
             case 'email':
               // Email delivery would be handled here
               // For now, mark as sent
               deliveryStatus.email = 'sent';
+              console.log(`[Admin Notification Delivery]   ✅ Email notification queued`);
               break;
 
             case 'push':
               // Use existing push notification service
+              pushAttempts++;
+              console.log(`[Admin Notification Delivery]   📱 Calling sendPushNotification for user ${userId}...`);
+              
               try {
                 await notificationService.sendPushNotification(
                   notification.id,
@@ -209,14 +242,17 @@ export class AdminNotificationService {
                   notification.message
                 );
                 deliveryStatus.push = 'sent';
+                pushSuccess++;
+                console.log(`[Admin Notification Delivery]   ✅ Push notification sent successfully`);
               } catch (error) {
-                console.error(`Failed to send push to ${userId}:`, error);
+                console.error(`[Admin Notification Delivery]   ❌ Push notification failed:`, error);
                 deliveryStatus.push = 'failed';
+                pushFailed++;
               }
               break;
           }
         } catch (error) {
-          console.error(`Failed to send ${channel} to ${userId}:`, error);
+          console.error(`[Admin Notification Delivery]   ❌ Failed to send ${channel}:`, error);
           deliveryStatus[channel] = 'failed';
         }
       }
@@ -231,6 +267,11 @@ export class AdminNotificationService {
     });
 
     await Promise.allSettled(deliveryPromises);
+    
+    console.log(`[Admin Notification Delivery] ✅ Notification delivery complete`);
+    if (pushAttempts > 0) {
+      console.log(`[Admin Notification Delivery] 📊 Push notification summary: ${pushSuccess} successful, ${pushFailed} failed (${pushAttempts} total attempts)`);
+    }
   }
 
   // Get all notifications (admin view)

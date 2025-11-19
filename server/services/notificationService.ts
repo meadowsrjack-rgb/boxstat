@@ -162,10 +162,17 @@ export class NotificationService {
   // ===== Notification Creation and Delivery =====
   
   async sendPushNotification(notificationId: number, userId: string, title: string, message: string): Promise<void> {
+    console.log(`[Push Send] 🚀 Attempting to send push notification #${notificationId} to user ${userId}`);
+    console.log(`[Push Send] Title: "${title}"`);
+    console.log(`[Push Send] Message: "${message}"`);
+    
     try {
       // Check user preferences
       const preferences = await this.getNotificationPreferences(userId);
+      console.log(`[Push Send] User preferences:`, preferences ? 'Found' : 'Not set (using defaults)');
+      
       if (preferences && !preferences.pushNotifications) {
+        console.log(`[Push Send] ⏭️  Skipping - user has disabled push notifications in preferences`);
         // Update delivery status to skipped
         await db.update(notificationRecipients)
           .set({ 
@@ -180,6 +187,7 @@ export class NotificationService {
 
       // Check quiet hours
       if (preferences && this.isInQuietHours(preferences)) {
+        console.log(`[Push Send] 🌙 Skipping - user is in quiet hours`);
         await db.update(notificationRecipients)
           .set({ 
             deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '"skipped_quiet_hours"')` 
@@ -192,12 +200,18 @@ export class NotificationService {
       }
 
       // Get all active subscriptions for the user
+      console.log(`[Push Send] 🔍 Looking up active push subscriptions for user ${userId}...`);
       const subscriptions = await db.select()
         .from(pushSubscriptions)
         .where(and(
           eq(pushSubscriptions.userId, userId),
           eq(pushSubscriptions.isActive, true)
         ));
+      
+      console.log(`[Push Send] Found ${subscriptions.length} active subscription(s)`);
+      subscriptions.forEach((sub, idx) => {
+        console.log(`[Push Send]   Subscription ${idx + 1}: Platform=${sub.platform}, Type=${sub.fcmToken ? 'FCM' : 'WebPush'}`);
+      });
 
       // Split into web push and FCM subscriptions
       const webPushSubscriptions = subscriptions.filter(
@@ -208,8 +222,11 @@ export class NotificationService {
         sub.fcmToken && (sub.platform === 'ios' || sub.platform === 'android')
       );
 
+      console.log(`[Push Send] Split into ${webPushSubscriptions.length} WebPush and ${fcmSubscriptions.length} FCM subscriptions`);
+
       // Only skip if BOTH groups are empty
       if (webPushSubscriptions.length === 0 && fcmSubscriptions.length === 0) {
+        console.log(`[Push Send] ⏭️  No subscriptions found - skipping push notification`);
         await db.update(notificationRecipients)
           .set({ 
             deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '"skipped_no_subscription"')` 
@@ -242,7 +259,15 @@ export class NotificationService {
 
       // Send to web push devices if any exist
       if (webPushSubscriptions.length > 0) {
+        console.log(`[Push Send] 🌐 Processing ${webPushSubscriptions.length} Web Push subscription(s)...`);
+        
+        let webPushSuccessCount = 0;
+        let webPushFailCount = 0;
+        const webPushErrors: Array<{ endpoint: string; error: string }> = [];
+        
         const promises = webPushSubscriptions.map(async (subscription) => {
+          const truncatedEndpoint = subscription.endpoint!.substring(0, 50) + '...';
+          
           try {
             await webpush.sendNotification({
               endpoint: subscription.endpoint!,
@@ -252,6 +277,7 @@ export class NotificationService {
               }
             }, payload);
 
+            webPushSuccessCount++;
             sentSuccessfully = true;
             
             // Update last used timestamp
@@ -260,10 +286,15 @@ export class NotificationService {
               .where(eq(pushSubscriptions.id, subscription.id));
 
           } catch (error) {
-            console.error(`Failed to send push to ${subscription.endpoint}:`, error);
+            webPushFailCount++;
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            webPushErrors.push({ endpoint: truncatedEndpoint, error: errorMessage });
+            
+            console.error(`[Push Send] ❌ Failed to send to endpoint ${truncatedEndpoint}:`, errorMessage);
             
             // If subscription is no longer valid, mark as inactive
             if ((error as any).statusCode === 410 || (error as any).statusCode === 404) {
+              console.log(`[Push Send] 🗑️  Marking inactive subscription: ${truncatedEndpoint}`);
               await db.update(pushSubscriptions)
                 .set({ isActive: false })
                 .where(eq(pushSubscriptions.id, subscription.id));
@@ -272,25 +303,62 @@ export class NotificationService {
         });
 
         await Promise.allSettled(promises);
+        
+        // Log final Web Push results
+        console.log(`[Push Send] Web Push Results: ${webPushSuccessCount} succeeded, ${webPushFailCount} failed`);
+        if (webPushSuccessCount > 0) {
+          console.log(`[Push Send] ✅ ${webPushSuccessCount} Web Push notification(s) sent successfully`);
+        }
+        if (webPushFailCount > 0) {
+          console.log(`[Push Send] ❌ ${webPushFailCount} Web Push notification(s) failed:`);
+          webPushErrors.forEach((err, idx) => {
+            console.log(`[Push Send]   Failure ${idx + 1}: ${err.endpoint}`);
+            console.log(`[Push Send]     Error: ${err.error}`);
+          });
+        }
       }
 
       // Send to FCM devices if any exist
       if (fcmSubscriptions.length > 0) {
+        console.log(`[Push Send] 📱 Processing ${fcmSubscriptions.length} FCM subscription(s)...`);
         const fcmTokens = fcmSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
+        console.log(`[Push Send] Extracted ${fcmTokens.length} FCM token(s)`);
+        
         if (fcmTokens.length > 0) {
           try {
-            await this.sendNativePush(fcmTokens, {
+            console.log(`[Push Send] 🚀 Calling sendNativePush with ${fcmTokens.length} token(s)...`);
+            const fcmResult = await this.sendNativePush(fcmTokens, {
               title: title,
               body: message,
             });
-            sentSuccessfully = true;
+            
+            // Log FCM results summary
+            console.log(`[Push Send] FCM Results: ${fcmResult.successCount} succeeded, ${fcmResult.failureCount} failed`);
+            if (fcmResult.successCount > 0) {
+              console.log(`[Push Send] ✅ ${fcmResult.successCount} FCM notification(s) sent successfully`);
+              sentSuccessfully = true;
+            }
+            if (fcmResult.failureCount > 0) {
+              console.log(`[Push Send] ❌ ${fcmResult.failureCount} FCM notification(s) failed`);
+              if (fcmResult.errors.length > 0) {
+                console.log(`[Push Send] ❌ FCM Failures:`);
+                fcmResult.errors.forEach((err, idx) => {
+                  console.log(`[Push Send]   Failure ${idx + 1}: Token ${err.token}`);
+                  console.log(`[Push Send]     Error: ${err.error}`);
+                });
+              }
+            }
           } catch (error) {
-            console.error('Failed to send FCM notifications:', error);
+            console.error('[Push Send] ❌ EXCEPTION during FCM send:', error);
+            console.error('[Push Send] Error message:', error instanceof Error ? error.message : String(error));
           }
         }
       }
 
       // Update delivery status in notification_recipients
+      const finalStatus = sentSuccessfully ? 'sent' : 'failed';
+      console.log(`[Push Send] ${sentSuccessfully ? '✅' : '❌'} Final result: ${finalStatus}`);
+      
       await db.update(notificationRecipients)
         .set({ 
           deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '${sentSuccessfully ? '"sent"' : '"failed"'}')`
@@ -300,8 +368,13 @@ export class NotificationService {
           eq(notificationRecipients.userId, userId)
         ));
 
+      console.log(`[Push Send] ✅ Delivery status updated in database`);
+
     } catch (error) {
-      console.error('Error sending push notification:', error);
+      console.error('[Push Send] ❌ EXCEPTION sending push notification:', error);
+      console.error('[Push Send] Error type:', error instanceof Error ? error.name : typeof error);
+      console.error('[Push Send] Error message:', error instanceof Error ? error.message : String(error));
+      
       // Mark as failed
       await db.update(notificationRecipients)
         .set({ 
@@ -311,13 +384,23 @@ export class NotificationService {
           eq(notificationRecipients.notificationId, notificationId),
           eq(notificationRecipients.userId, userId)
         ));
+      
+      console.log(`[Push Send] ❌ Delivery status marked as failed in database`);
     }
   }
 
-  private async sendNativePush(fcmTokens: string[], notification: { title: string; body: string }): Promise<void> {
+  private async sendNativePush(
+    fcmTokens: string[], 
+    notification: { title: string; body: string }
+  ): Promise<{ successCount: number; failureCount: number; errors: Array<{ token: string; error: string }> }> {
+    console.log(`[FCM] 🚀 Sending FCM push to ${fcmTokens.length} token(s)...`);
+    console.log(`[FCM] Title: "${notification.title}"`);
+    console.log(`[FCM] Body: "${notification.body}"`);
+    
     if (!firebaseServiceAccount) {
-      console.warn('Skipping FCM send - Firebase not configured');
-      return;
+      console.warn('[FCM] ⚠️  Skipping FCM send - Firebase Admin SDK not configured');
+      console.warn('[FCM] Set FIREBASE_SERVICE_ACCOUNT_KEY environment variable');
+      return { successCount: 0, failureCount: fcmTokens.length, errors: [] };
     }
 
     try {
@@ -329,18 +412,35 @@ export class NotificationService {
         tokens: fcmTokens,
       };
 
+      console.log(`[FCM] 📡 Calling Firebase Admin SDK sendEachForMulticast...`);
       const response = await admin.messaging().sendEachForMulticast(message);
-      console.log(`✅ Sent FCM notifications: ${response.successCount} successful, ${response.failureCount} failed`);
+      console.log(`[FCM] ✅ FCM batch send complete: ${response.successCount} successful, ${response.failureCount} failed`);
+      
+      const errors: Array<{ token: string; error: string }> = [];
       
       if (response.failureCount > 0) {
+        console.error(`[FCM] ❌ ${response.failureCount} FCM send(s) failed:`);
         response.responses.forEach((resp: any, idx: number) => {
           if (!resp.success) {
-            console.error(`FCM send failed for token ${fcmTokens[idx]}:`, resp.error);
+            const truncatedToken = fcmTokens[idx].substring(0, 20) + '...';
+            const errorMessage = resp.error?.message || resp.error?.toString() || 'Unknown error';
+            errors.push({ token: truncatedToken, error: errorMessage });
+            console.error(`[FCM]   Token ${idx + 1} (${truncatedToken}): ${errorMessage}`);
           }
         });
+      } else {
+        console.log(`[FCM] ✅ All ${response.successCount} FCM push notifications sent successfully`);
       }
+      
+      return {
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+        errors
+      };
     } catch (error) {
-      console.error('Error sending FCM notifications:', error);
+      console.error('[FCM] ❌ EXCEPTION during FCM send:', error);
+      console.error('[FCM] Error type:', error instanceof Error ? error.name : typeof error);
+      console.error('[FCM] Error message:', error instanceof Error ? error.message : String(error));
       throw new Error('Failed to send native push notifications');
     }
   }

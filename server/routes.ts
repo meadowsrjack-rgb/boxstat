@@ -12,6 +12,7 @@ import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import jwt from "jsonwebtoken";
 import {
   insertUserSchema,
   insertTeamSchema,
@@ -113,19 +114,74 @@ function hashPassword(password: string): string {
   return Buffer.from(password).toString('base64');
 }
 
-// Simple auth middleware for development
+// JWT token generation helper
+function generateToken(userId: string, organizationId: string, role: string): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET not configured");
+  }
+  
+  return jwt.sign(
+    { 
+      userId, 
+      organizationId, 
+      role 
+    },
+    secret,
+    { expiresIn: '30d' } // 30 day token expiration
+  );
+}
+
+// JWT verification helper
+function verifyToken(token: string): { userId: string; organizationId: string; role: string } | null {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return null;
+  }
+  
+  try {
+    const decoded = jwt.verify(token, secret) as any;
+    return {
+      userId: decoded.userId,
+      organizationId: decoded.organizationId,
+      role: decoded.role
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+// Simple auth middleware for development - supports both session and JWT
 const isAuthenticated = (req: any, res: any, next: any) => {
+  // Try session auth first (for web browsers)
   if (req.session && req.session.userId) {
     req.user = { 
       id: req.session.userId, 
       organizationId: req.session.organizationId || "default-org", 
       role: req.session.role || "user" 
     };
-    next();
-  } else {
-    // Return 401 for unauthenticated requests
-    res.status(401).json({ error: "Not authenticated" });
+    return next();
   }
+  
+  // Try JWT auth (for Capacitor mobile apps)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    const decoded = verifyToken(token);
+    
+    if (decoded) {
+      req.user = {
+        id: decoded.userId,
+        organizationId: decoded.organizationId,
+        role: decoded.role
+      };
+      return next();
+    }
+  }
+  
+  // Neither auth method worked
+  // Return 401 for unauthenticated requests
+  res.status(401).json({ error: "Not authenticated" });
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -252,13 +308,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Set session
+      // Set session (for web browsers)
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
+      // Generate JWT token (for Capacitor mobile apps)
+      const token = generateToken(user.id, user.organizationId, user.role);
+      
       res.json({ 
         success: true, 
+        token, // Include JWT token in response
         user: { 
           id: user.id, 
           email: user.email, 
@@ -551,14 +611,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         magicLinkExpiry: null as any,
       });
       
-      // Set session
+      // Set session (for web browsers)
       req.session.userId = user.id;
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
+      // Generate JWT token (for Capacitor mobile apps)
+      const jwtToken = generateToken(user.id, user.organizationId, user.role);
+      
       res.json({ 
         success: true, 
         message: "Logged in successfully!",
+        token: jwtToken, // Include JWT token in response
         user: { 
           id: user.id, 
           email: user.email, 

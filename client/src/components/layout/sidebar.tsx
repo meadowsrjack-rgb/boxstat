@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { logout } from "@/utils/logout";
 import { 
   Home,
   Calendar,
@@ -176,7 +177,7 @@ export default function Sidebar() {
                 ? 'text-white/80 hover:text-white hover:bg-white/10' 
                 : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
             }`}
-            onClick={() => window.location.href = '/api/logout'}
+            onClick={logout}
           >
             <User className="h-5 w-5" />
             <span>Sign Out</span>

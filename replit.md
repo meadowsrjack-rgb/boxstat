@@ -16,13 +16,17 @@ The frontend uses React 18 with TypeScript and Vite, styled with Radix UI, shadc
 ### Backend
 The backend is built with Node.js and Express.js (TypeScript, ESM). It includes a custom email/password authentication system with verification and magic links, utilizing a pending registration system. Session management uses persistent Express sessions with PostgreSQL storage. CORS is configured for mobile apps and web browsers. Stripe handles payment processing, and WebSockets provide real-time features. APIs are RESTful.
 
-**Session Authentication Status**: Web browser authentication works correctly using express-session with persistent PostgreSQL storage (tested and confirmed working). Session cookies are set with `SameSite=Lax` due to Replit's infrastructure (which terminates TLS upstream), preventing `SameSite=None` from being set. Same-origin requests (web browser) authenticate successfully. 
+**Dual Authentication System**: The backend supports both session-based (for web browsers) and JWT token-based (for Capacitor mobile apps) authentication.
 
-**Capacitor iOS Authentication**: Cross-origin authentication is currently untested. If iOS testing reveals that cookies don't persist across requests:
-- **Short-term**: Implement JWT bearer tokens as an alternative authentication method for Capacitor
-- **Long-term**: Consider migrating to a hosting platform that properly forwards HTTPS metadata
+- **Web Browser Authentication**: Uses express-session with persistent PostgreSQL storage. Session cookies are set with `SameSite=Lax` due to Replit's infrastructure (which terminates TLS upstream). Same-origin requests authenticate successfully.
 
-Multiple approaches to override `SameSite=Lax` were attempted (on-headers middleware, res.end override, req.socket.encrypted modification) but all failed due to express-session's internal cookie serialization occurring after middleware execution.
+- **Capacitor iOS Authentication**: Uses JWT bearer tokens stored in localStorage. The login endpoint returns a JWT token (30-day expiration) that is included in the `Authorization: Bearer <token>` header for all API requests. The `isAuthenticated` middleware checks both session cookies (for web) and JWT tokens (for Capacitor), allowing seamless authentication across platforms.
+
+- **Implementation Details**: 
+  - JWT tokens are generated using the `jsonwebtoken` library with `JWT_SECRET` environment variable
+  - Frontend automatically detects Capacitor platform and uses appropriate auth method
+  - All API request helpers (`apiRequest`, `getQueryFn`, and direct fetch calls in services) include JWT headers when running on native platform
+  - Logout clears both session cookies and JWT tokens to ensure complete sign-out
 
 ### Database
 PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe operations. The schema supports users, teams, events, payments, facilities, and a 5-tier badge/trophy system. It includes structures for various programs, age/level divisions, and comprehensive user data fields. A dual-table structure manages player data, distinguishing between app users and Notion-synced roster data. A `playerId` field in the payments table ensures accurate per-player billing. A `pending_registrations` table prevents partial account creation during the multi-step registration process.

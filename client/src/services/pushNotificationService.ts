@@ -30,11 +30,21 @@ export const initPushNotifications = async () => {
     console.log('✅ Push registration success, token:', token.value);
     
     try {
+      // Build headers with JWT token if available
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (Capacitor.isNativePlatform()) {
+        const authToken = localStorage.getItem('authToken');
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+      }
+      
       const response = await fetch(getFullUrl('/api/push/register'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ 
           token: token.value

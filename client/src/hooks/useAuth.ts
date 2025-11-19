@@ -1,11 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
+import { logout as performLogout } from "@/utils/logout";
+import { Capacitor } from '@capacitor/core';
 
 export function useAuth() {
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/user", {
+      // Build headers with JWT token if available (for Capacitor)
+      const headers: HeadersInit = {};
+      if (Capacitor.isNativePlatform()) {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+      
+      // Determine the API base URL
+      const apiBaseUrl = Capacitor.isNativePlatform() 
+        ? 'https://boxstat.replit.app' 
+        : '';
+      
+      const res = await fetch(`${apiBaseUrl}/api/auth/user`, {
         credentials: "include",
+        headers,
       });
       if (res.status === 401) {
         return null;
@@ -22,7 +39,7 @@ export function useAuth() {
   });
 
   const logout = async () => {
-    window.location.href = "/api/logout";
+    performLogout();
   };
 
   return {

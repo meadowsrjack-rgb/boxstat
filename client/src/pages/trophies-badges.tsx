@@ -201,22 +201,22 @@ export default function TrophiesBadgesPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-b from-red-950 via-gray-900 to-black text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="min-h-screen-safe bg-white safe-top safe-bottom">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 pt-4">
           <button
             onClick={handleBack}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             data-testid="button-back"
           >
-            <ArrowLeft className="h-6 w-6" />
+            <ArrowLeft className="h-6 w-6 text-gray-900" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-3xl font-bold text-gray-900" data-testid="text-page-title">
               My Trophies & Badges
             </h1>
-            <p className="text-sm text-gray-400 mt-1" data-testid="text-page-subtitle">
+            <p className="text-sm text-gray-600 mt-1" data-testid="text-page-subtitle">
               Track your achievements and earn rewards for your dedication
             </p>
           </div>
@@ -224,34 +224,34 @@ export default function TrophiesBadgesPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-total">
+          <Card className="bg-white border-gray-200" data-testid="card-stat-total">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Total Awards</p>
-                  <p className="text-3xl font-bold text-white">{stats.total}</p>
+                  <p className="text-sm text-gray-600">Total Awards</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
                 </div>
                 <Award className="h-8 w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-trophies">
+          <Card className="bg-white border-gray-200" data-testid="card-stat-trophies">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Trophies</p>
-                  <p className="text-3xl font-bold text-white">{stats.trophies}</p>
+                  <p className="text-sm text-gray-600">Trophies</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.trophies}</p>
                 </div>
                 <Trophy className="h-8 w-8 text-orange-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-badges">
+          <Card className="bg-white border-gray-200" data-testid="card-stat-badges">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Badges</p>
-                  <p className="text-3xl font-bold text-white">{stats.badges}</p>
+                  <p className="text-sm text-gray-600">Badges</p>
+                  <p className="text-3xl font-bold text-gray-900">{stats.badges}</p>
                 </div>
                 <Award className="h-8 w-8 text-blue-500" />
               </div>
@@ -260,17 +260,17 @@ export default function TrophiesBadgesPage() {
         </div>
 
         {/* Filters */}
-        <Card className="bg-white/5 border-white/10">
+        <Card className="bg-white border-gray-200">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 mb-4">
-              <Filter className="h-4 w-4" />
-              <span className="font-semibold">Filters</span>
+              <Filter className="h-4 w-4 text-gray-900" />
+              <span className="font-semibold text-gray-900">Filters</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Type</label>
+                <label className="text-sm text-gray-600 mb-2 block">Type</label>
                 <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-tier">
+                  <SelectTrigger className="bg-white border-gray-300" data-testid="select-tier">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -281,9 +281,9 @@ export default function TrophiesBadgesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Prestige Level</label>
+                <label className="text-sm text-gray-600 mb-2 block">Prestige Level</label>
                 <Select value={selectedPrestige} onValueChange={(value) => setSelectedPrestige(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-prestige">
+                  <SelectTrigger className="bg-white border-gray-300" data-testid="select-prestige">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -297,9 +297,9 @@ export default function TrophiesBadgesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
+                <label className="text-sm text-gray-600 mb-2 block">Sort By</label>
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-sort">
+                  <SelectTrigger className="bg-white border-gray-300" data-testid="select-sort">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -315,11 +315,11 @@ export default function TrophiesBadgesPage() {
 
         {/* Awards Display */}
         <Tabs defaultValue="earned" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-white/10" data-testid="tabs-awards">
-            <TabsTrigger value="earned" data-testid="tab-earned">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-100" data-testid="tabs-awards">
+            <TabsTrigger value="earned" data-testid="tab-earned" className="data-[state=active]:bg-white">
               Earned ({filteredEarnedAwards.length})
             </TabsTrigger>
-            <TabsTrigger value="available" data-testid="tab-available">
+            <TabsTrigger value="available" data-testid="tab-available" className="data-[state=active]:bg-white">
               Available ({filteredAvailableAwards.length})
             </TabsTrigger>
           </TabsList>
@@ -329,23 +329,23 @@ export default function TrophiesBadgesPage() {
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="bg-white/5 border-white/10">
+                  <Card key={i} className="bg-white border-gray-200">
                     <CardContent className="pt-6">
-                      <Skeleton className="h-32 w-full mb-4 bg-white/10" />
-                      <Skeleton className="h-4 w-3/4 mb-2 bg-white/10" />
-                      <Skeleton className="h-3 w-full bg-white/10" />
+                      <Skeleton className="h-32 w-full mb-4 bg-gray-200" />
+                      <Skeleton className="h-4 w-3/4 mb-2 bg-gray-200" />
+                      <Skeleton className="h-3 w-full bg-gray-200" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : filteredEarnedAwards.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-white border-gray-200">
                 <CardContent className="pt-12 pb-12 text-center">
-                  <Trophy className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                  <h3 className="text-xl font-semibold mb-2" data-testid="text-empty-state">
+                  <Trophy className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-xl font-semibold mb-2 text-gray-900" data-testid="text-empty-state">
                     No Awards Yet
                   </h3>
-                  <p className="text-gray-400" data-testid="text-empty-message">
+                  <p className="text-gray-600" data-testid="text-empty-message">
                     Start attending practices and games to earn your first trophy!
                   </p>
                 </CardContent>
@@ -355,7 +355,7 @@ export default function TrophiesBadgesPage() {
                 {filteredEarnedAwards.map((award) => (
                   <Card
                     key={award.id}
-                    className={`bg-white/5 border-2 ${PRESTIGE_BORDER_COLORS[award.prestige]} hover:scale-105 transition-transform duration-200`}
+                    className={`bg-white border-2 ${PRESTIGE_BORDER_COLORS[award.prestige]} hover:scale-105 transition-transform duration-200`}
                     data-testid={`card-award-${award.id}`}
                   >
                     <CardHeader>
@@ -363,11 +363,11 @@ export default function TrophiesBadgesPage() {
                         <Badge className={PRESTIGE_COLORS[award.prestige]} data-testid={`badge-prestige-${award.id}`}>
                           {award.prestige}
                         </Badge>
-                        <Badge variant="outline" className="border-white/20" data-testid={`badge-tier-${award.id}`}>
+                        <Badge variant="outline" className="border-gray-300 text-gray-900" data-testid={`badge-tier-${award.id}`}>
                           {award.tier}
                         </Badge>
                       </div>
-                      <div className="aspect-square bg-white/10 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                      <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
                         {award.imageUrl ? (
                           <img
                             src={award.imageUrl}
@@ -379,21 +379,21 @@ export default function TrophiesBadgesPage() {
                           <Trophy className={`h-20 w-20 ${PRESTIGE_TEXT_COLORS[award.prestige]}`} />
                         )}
                       </div>
-                      <CardTitle className="text-lg leading-tight" data-testid={`text-award-name-${award.id}`}>
+                      <CardTitle className="text-lg leading-tight text-gray-900" data-testid={`text-award-name-${award.id}`}>
                         {award.name}
                       </CardTitle>
                       {award.description && (
-                        <CardDescription className="text-gray-400 text-sm mt-2" data-testid={`text-award-description-${award.id}`}>
+                        <CardDescription className="text-gray-600 text-sm mt-2" data-testid={`text-award-description-${award.id}`}>
                           {award.description}
                         </CardDescription>
                       )}
                     </CardHeader>
                     <CardContent>
-                      <p className="text-xs text-gray-400" data-testid={`text-earned-date-${award.id}`}>
+                      <p className="text-xs text-gray-600" data-testid={`text-earned-date-${award.id}`}>
                         Earned: {formatDate(award.earnedDate)}
                       </p>
                       {award.year && (
-                        <p className="text-xs text-gray-400" data-testid={`text-award-year-${award.id}`}>
+                        <p className="text-xs text-gray-600" data-testid={`text-award-year-${award.id}`}>
                           Year: {award.year}
                         </p>
                       )}
@@ -409,23 +409,23 @@ export default function TrophiesBadgesPage() {
             {isLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[...Array(8)].map((_, i) => (
-                  <Card key={i} className="bg-white/5 border-white/10">
+                  <Card key={i} className="bg-white border-gray-200">
                     <CardContent className="pt-6">
-                      <Skeleton className="h-32 w-full mb-4 bg-white/10" />
-                      <Skeleton className="h-4 w-3/4 mb-2 bg-white/10" />
-                      <Skeleton className="h-3 w-full bg-white/10" />
+                      <Skeleton className="h-32 w-full mb-4 bg-gray-200" />
+                      <Skeleton className="h-4 w-3/4 mb-2 bg-gray-200" />
+                      <Skeleton className="h-3 w-full bg-gray-200" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : filteredAvailableAwards.length === 0 ? (
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-white border-gray-200">
                 <CardContent className="pt-12 pb-12 text-center">
-                  <Award className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                  <h3 className="text-xl font-semibold mb-2">
+                  <Award className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-xl font-semibold mb-2 text-gray-900">
                     All Awards Earned!
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-gray-600">
                     Congratulations! You've earned all available awards.
                   </p>
                 </CardContent>
@@ -435,7 +435,7 @@ export default function TrophiesBadgesPage() {
                 {filteredAvailableAwards.map((award) => (
                   <Card
                     key={award.id}
-                    className="bg-white/5 border-white/10 opacity-60 hover:opacity-80 transition-opacity duration-200"
+                    className="bg-white border-gray-200 opacity-60 hover:opacity-80 transition-opacity duration-200"
                     data-testid={`card-available-award-${award.id}`}
                   >
                     <CardHeader>
@@ -443,11 +443,11 @@ export default function TrophiesBadgesPage() {
                         <Badge className={`${PRESTIGE_COLORS[award.prestige]} opacity-50`} data-testid={`badge-prestige-available-${award.id}`}>
                           {award.prestige}
                         </Badge>
-                        <Badge variant="outline" className="border-white/20" data-testid={`badge-tier-available-${award.id}`}>
+                        <Badge variant="outline" className="border-gray-300 text-gray-900" data-testid={`badge-tier-available-${award.id}`}>
                           {award.tier}
                         </Badge>
                       </div>
-                      <div className="aspect-square bg-white/10 rounded-lg flex items-center justify-center mb-4 overflow-hidden grayscale">
+                      <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden grayscale">
                         {award.imageUrl ? (
                           <img
                             src={award.imageUrl}
@@ -459,7 +459,7 @@ export default function TrophiesBadgesPage() {
                           <Trophy className="h-20 w-20 text-gray-500" />
                         )}
                       </div>
-                      <CardTitle className="text-lg leading-tight text-gray-400" data-testid={`text-available-award-name-${award.id}`}>
+                      <CardTitle className="text-lg leading-tight text-gray-500" data-testid={`text-available-award-name-${award.id}`}>
                         {award.name}
                       </CardTitle>
                       {award.description && (

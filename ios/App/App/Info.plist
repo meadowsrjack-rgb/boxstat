@@ -107,7 +107,7 @@
         <key>UIViewControllerBasedStatusBarAppearance</key>
         <true/>
         <key>FirebaseAppDelegateProxyEnabled</key>
-        <true/>
+        <false/>
         <key>WKAppBoundDomains</key>
         <array>
                 <string>boxstat.replit.app</string>

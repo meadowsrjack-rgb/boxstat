@@ -5625,17 +5625,17 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     resolver: zodResolver(insertNotificationSchema),
     defaultValues: {
       organizationId: organization?.id || "",
-      types: ["message"] as const,
+      types: ["message"],
       title: "",
       message: "",
-      recipientTarget: "everyone" as const,
+      recipientTarget: "everyone",
       recipientUserIds: [],
       recipientRoles: [],
       recipientTeamIds: [],
       recipientDivisionIds: [],
-      deliveryChannels: ["in_app"] as const,
+      deliveryChannels: ["in_app"],
       sentBy: currentUser?.id || "",
-      status: "pending" as const,
+      status: "pending",
     },
   });
 
@@ -5871,9 +5871,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {users.map((user: any) => (
                             <div key={user.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(user.id)}
+                                checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, user.id]);
                                   } else {
@@ -5906,9 +5906,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {["admin", "coach", "player", "parent"].map((role) => (
                             <div key={role} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(role)}
+                                checked={(field.value as string[] | undefined)?.includes(role) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, role]);
                                   } else {
@@ -5939,9 +5939,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {teams.map((team: any) => (
                             <div key={team.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(String(team.id))}
+                                checked={(field.value as string[] | undefined)?.includes(String(team.id)) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, String(team.id)]);
                                   } else {
@@ -5972,9 +5972,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {divisions.map((division: any) => (
                             <div key={division.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(String(division.id))}
+                                checked={(field.value as string[] | undefined)?.includes(String(division.id)) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, String(division.id)]);
                                   } else {

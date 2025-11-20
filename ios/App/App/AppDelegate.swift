@@ -2,89 +2,45 @@ import UIKit
 import Capacitor
 import Firebase
 import FirebaseMessaging
-import UserNotifications
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    // MARK: - App Launch
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil
-    ) -> Bool {
-
-        // Firebase Init
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // 1. Initialize Firebase
         FirebaseApp.configure()
-        Messaging.messaging().delegate = self
 
-        // APNs Setup
-        UNUserNotificationCenter.current().delegate = self
-        application.registerForRemoteNotifications()
+        // DEBUG: Confirm Plist presence
+        if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") {
+            print("🔥 FOUND GOOGLE PLIST AT RUNTIME: \(path)")
+        } else {
+            print("❌ GOOGLE PLIST MISSING AT RUNTIME — Firebase WILL CRASH")
+        }
 
         return true
     }
 
-    // MARK: - UIScene Support (REQUIRED BY APPLE)
-    func application(
-        _ application: UIApplication,
-        configurationForConnecting connectingSceneSession: UISceneSession,
-        options: UIScene.ConnectionOptions
-    ) -> UISceneConfiguration {
+    // ---------------------------------------------------------------------------
+    // PUSH NOTIFICATION HANDLERS
+    // ---------------------------------------------------------------------------
 
-        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    }
-
-    // MARK: - APNs Token
-    func application(
-        _ application: UIApplication,
-        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-    ) {
-        print("📱 APNs token registered: \(deviceToken)")
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        // 1. Hand the token to Firebase (Necessary because we disabled auto-swizzling)
         Messaging.messaging().apnsToken = deviceToken
+        
+        // 2. Hand the token to Capacitor (Necessary so your JS `PushNotifications.register()` promise resolves)
+        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+        
+        print("✅ [AppDelegate] Device Token received and passed to Capacitor & Firebase")
     }
 
-    func application(
-        _ application: UIApplication,
-        didFailToRegisterForRemoteNotificationsWithError error: Error
-    ) {
-        print("❌ Failed to register for APNs: \(error)")
-    }
-
-    // MARK: - Firebase Messaging Token
-    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("🔥 FCM registration token: \(String(describing: fcmToken))")
-
-        NotificationCenter.default.post(
-            name: Notification.Name("messagingToken"),
-            object: fcmToken
-        )
-    }
-
-    // MARK: - Foreground Notification Handling
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        completionHandler([.banner, .sound, .badge])
-    }
-
-    // MARK: - Deep Links
-    func application(
-        _ application: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey : Any] = [:]
-    ) -> Bool {
-        return ApplicationDelegateProxy.shared.application(application, open: url, options: options)
-    }
-
-    func application(
-        _ application: UIApplication,
-        continue userActivity: NSUserActivity,
-        restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-    ) -> Bool {
-        return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        // 1. Tell Capacitor we failed
+        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+        
+        print("❌ [AppDelegate] Failed to register for remote notifications: \(error)")
     }
 }

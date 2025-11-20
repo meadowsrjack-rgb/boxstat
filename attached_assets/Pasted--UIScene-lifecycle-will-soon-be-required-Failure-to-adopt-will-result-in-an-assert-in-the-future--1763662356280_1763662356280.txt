@@ -1,0 +1,153 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/B37696C4-E63B-4A59-96D7-1D63DE3C9F3A/App.app'
+⚡️  Loading app at capacitor://localhost...
+Networking process (0x115064190) took 1.573281 seconds to launch
+WebContent process (0x1150e4100) took 1.206297 seconds to launch
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+WebContent[28065] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.replit.app/api/auth/user
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  To Native ->  PushNotifications addListener 30108958
+⚡️  [log] - User authenticated, initializing push notifications...
+⚡️  To Native ->  PushNotifications addListener 30108959
+⚡️  To Native ->  PushNotifications addListener 30108960
+⚡️  [log] - [Push Init] 🔔 Initializing push notification listeners...
+⚡️  To Native ->  PushNotifications addListener 30108961
+⚡️  [log] - [Push Init] Platform: ios
+⚡️  To Native ->  PushNotifications checkPermissions 30108962
+⚡️  [log] - [Push Init] ✅ All push notification listeners initialized successfully
+⚡️  [log] - Push notification listeners set up
+⚡️  [log] - [Push Register] Starting push notification registration flow...
+⚡️  TO JS {"receive":"granted"}
+⚡️  [log] - [Push Register] 🔐 Current permission status: granted
+⚡️  To Native ->  PushNotifications register 30108963
+⚡️  [log] - [Push Register] ✅ Push notification permissions granted
+⚡️  [log] - [Push Register] 📱 Calling PushNotifications.register() to get FCM token...
+⚡️  TO JS undefined
+⚡️  [log] - [Push Register] 📱 Registration API called successfully, waiting for FCM token callback...
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x12d146260 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106400.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d021180 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x12d1462b0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106400]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d021180 )>",
+    "<NSLayoutConstraint:0x12d145a40 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106400.width == _UIButtonBarButton:0x12d021400.width   (active)>",
+    "<NSLayoutConstraint:0x12d146120 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d021180.width == 0   (active)>",
+    "<NSLayoutConstraint:0x12d145b80 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x12d1b0e00]   (active, names: '|':_UIButtonBarButton:0x12d021400 )>",
+    "<NSLayoutConstraint:0x12d145bd0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b0e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d021400 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x12d145bd0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b0e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d021400 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x12d147570 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106800.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d020c80 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x12d1475c0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106800]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d020c80 )>",
+    "<NSLayoutConstraint:0x12d146df0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106800.width == _UIButtonBarButton:0x12d020f00.width   (active)>",
+    "<NSLayoutConstraint:0x12d147430 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d020c80.width == 0   (active)>",
+    "<NSLayoutConstraint:0x12d146f30 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x12d1b1180]   (active, names: '|':_UIButtonBarButton:0x12d020f00 )>",
+    "<NSLayoutConstraint:0x12d146f80 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b1180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d020f00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x12d146f80 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b1180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d020f00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x12d2883c0 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106c00.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d022800 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x12d288410 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106c00]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d022800 )>",
+    "<NSLayoutConstraint:0x12cd32120 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x12d106c00.width == _UIButtonBarButton:0x12d020a00.width   (active)>",
+    "<NSLayoutConstraint:0x12d288280 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x12d022800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x12cfcd3b0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x12d1b1500]   (active, names: '|':_UIButtonBarButton:0x12d020a00 )>",
+    "<NSLayoutConstraint:0x12cfcd400 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b1500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d020a00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x12cfcd400 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x12d1b1500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x12d020a00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+⚡️  [log] - 🔐 Attempting login with email: test@example.com
+⚡️  [log] - 🌐 Current window location: capacitor://localhost/login
+⚡️  [log] - 📡 Sending POST to /api/auth/login
+⚡️  [log] - ✅ Login response received: {"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTc2MTMzNjcxMi43NzI5MDgiLCJvcmdhbml6YXRpb25JZCI6ImRlZmF1bHQtb3JnIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzYzNjYyMzE1LCJleHAiOjE3NjYyNTQzMTV9.oxkSgcPY0mtun6JRq0w1__peM6bFk9ZkovPZkQCt_Bc","user":{"id":"test-user-1761336712.772908","email":"test@example.com","role":"admin","firstName":"Admin","lastName":"1"}}
+⚡️  [log] - 🎯 Login success branch - token present? true
+⚡️  [log] - 💾 About to store JWT token...
+⚡️  [log] - ✅ Token stored! Verifying...
+⚡️  [log] - 🔍 Token retrieved from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - 🚀 Redirecting to: /account
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  WebView loaded
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.replit.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [log] - User authenticated, initializing push notifications...
+⚡️  [log] - [Push Init] 🔔 Initializing push notification listeners...
+⚡️  [log] - [Push Init] Platform: ios
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.replit.app/api/auth/user
+⚡️  To Native ->  PushNotifications addListener 124027038
+⚡️  To Native ->  PushNotifications addListener 124027039
+⚡️  To Native ->  PushNotifications addListener 124027040
+⚡️  To Native ->  PushNotifications addListener 124027041
+⚡️  [log] - [Push Init] ✅ All push notification listeners initialized successfully
+⚡️  To Native ->  PushNotifications checkPermissions 124027042
+⚡️  [log] - Push notification listeners set up
+⚡️  [log] - [Push Register] Starting push notification registration flow...
+⚡️  TO JS {"receive":"granted"}
+⚡️  [log] - [Push Register] 🔐 Current permission status: granted
+⚡️  To Native ->  PushNotifications register 124027043
+⚡️  [log] - [Push Register] ✅ Push notification permissions granted
+⚡️  [log] - [Push Register] 📱 Calling PushNotifications.register() to get FCM token...
+⚡️  TO JS undefined
+⚡️  [log] - [Push Register] 📱 Registration API called successfully, waiting for FCM token callback...
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 0A3EAB24-997D-487F-A8D2-64CF84747D1F
+Snapshotting a view (0x12cd0b400, UIKeyboardImpl) that is not in a visible window requires afterScreenUpdates:YES.

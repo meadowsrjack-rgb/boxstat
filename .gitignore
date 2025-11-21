@@ -49,3 +49,9 @@ pids
 .Trashes
 ehthumbs.db
 Thumbs.dbattached_assets/*.json
+
+# Mobile app (Expo)
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts

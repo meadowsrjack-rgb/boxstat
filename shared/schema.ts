@@ -74,6 +74,8 @@ export interface User {
   // Registration flow fields
   registrationType?: RegistrationType; // "myself" or "my_child"
   accountHolderId?: string; // For players linked to a parent account
+  parentId?: string; // Parent/guardian user ID for child players
+  guardianId?: string; // Alternative guardian user ID for child players
   packageSelected?: string; // Selected program/package ID
   teamAssignmentStatus?: TeamAssignmentStatus; // "pending" or "assigned"
   hasRegistered?: boolean; // Whether they have registered in the app

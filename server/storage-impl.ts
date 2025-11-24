@@ -3502,6 +3502,8 @@ class DatabaseStorage implements IStorage {
       allergies: dbUser.allergies,
       gender: undefined,
       accountHolderId: dbUser.parentId,
+      parentId: dbUser.parentId,
+      guardianId: dbUser.guardianId,
       packageSelected: undefined,
       teamAssignmentStatus: undefined,
       hasRegistered: Boolean(dbUser.hasRegistered),

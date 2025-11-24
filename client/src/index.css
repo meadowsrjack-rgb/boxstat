@@ -102,22 +102,31 @@
     background-color: var(--background);
   }
 
-  /* Custom scrollbar */
+  /* Custom scrollbar - make it very visible */
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 12px;
   }
 
   ::-webkit-scrollbar-track {
-    background: hsl(240, 4.8%, 95.9%);
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: hsl(240, 5%, 64.9%);
-    border-radius: 3px;
+    background: #999;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(240, 5.9%, 10%);
+    background: #666;
+    background-clip: content-box;
+  }
+  
+  /* Firefox scrollbar */
+  * {
+    scrollbar-color: #999 transparent;
+    scrollbar-width: auto;
   }
 }
 

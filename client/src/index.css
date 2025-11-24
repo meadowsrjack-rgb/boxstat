@@ -71,6 +71,7 @@
     padding: 0;
     margin: 0;
     height: 100%;
+    overflow: hidden;
     overscroll-behavior: none;
     /* CRITICAL FIX: Force black background to hide the safe-area gap */
     background-color: #000000;
@@ -82,6 +83,7 @@
     padding: 0;
     margin: 0;
     height: 100%;
+    overflow: hidden;
     overscroll-behavior: none;
     display: flex;
     flex-direction: column;

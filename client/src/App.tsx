@@ -417,7 +417,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter>
-        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
           <AppRouter />
         </main>
         <Toaster />

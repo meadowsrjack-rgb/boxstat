@@ -28,7 +28,7 @@ export default function SelectProfileType() {
 
   return (
     <div
-      className="flex-1 text-white safe-bottom flex items-center justify-center p-4"
+      className="min-h-full text-white safe-bottom flex items-center justify-center p-4"
       style={{
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,0.15), transparent 60%), #000`,
       }}

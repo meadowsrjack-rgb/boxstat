@@ -165,7 +165,7 @@ export default function PlayerTeamChat() {
 
   if (!userTeam) {
     return (
-      <div className="flex-1 bg-gradient-to-br from-green-500 to-blue-600 safe-bottom flex items-center justify-center">
+      <div className="min-h-full bg-gradient-to-br from-green-500 to-blue-600 safe-bottom flex items-center justify-center">
         <Card className="p-8 text-center">
           <CardContent>
             <h2 className="text-xl font-bold mb-4">No Team Found</h2>
@@ -180,7 +180,7 @@ export default function PlayerTeamChat() {
   }
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-green-500 to-blue-600 safe-bottom">
+    <div className="min-h-full bg-gradient-to-br from-green-500 to-blue-600 safe-bottom">
       {/* Header */}
       <header className="bg-white shadow-sm border-b safe-top">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -269,8 +269,8 @@ export default function PlayerTeamChat() {
               </CardHeader>
               
               {/* Messages Area */}
-              <CardContent className="flex-1 flex flex-col p-0">
-                <div className="flex-1 p-4 space-y-4">
+              <CardContent className="min-h-full flex flex-col p-0">
+                <div className="min-h-full p-4 space-y-4">
                   {messages && messages.length > 0 ? (
                     messages.map((msg: any) => {
                       // Determine message type from priority or other fields

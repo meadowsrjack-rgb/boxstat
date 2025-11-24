@@ -130,7 +130,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
+    <div className="min-h-full bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center mb-4">

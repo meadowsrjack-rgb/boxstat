@@ -118,7 +118,7 @@ export default function AccountSetup() {
   const isCoach = userType === "coach";
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-blue-50 to-orange-50 safe-bottom flex items-center justify-center p-4">
+    <div className="min-h-full bg-gradient-to-br from-blue-50 to-orange-50 safe-bottom flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">

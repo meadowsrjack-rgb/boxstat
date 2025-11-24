@@ -163,7 +163,7 @@ export default function NotificationsPage() {
   const unreadCount = unreadNotifications.length;
 
   return (
-    <div className="flex-1 bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="min-h-full bg-gray-50 dark:bg-gray-900 safe-bottom">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -258,7 +258,7 @@ export default function NotificationsPage() {
                         <div className="flex-shrink-0 mt-1">
                           {getNotificationIcon(notification.types?.[0] || 'notification')}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-h-full min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className={`text-base leading-tight ${
                               !notification.isRead ? 'font-bold' : ''
@@ -331,7 +331,7 @@ export default function NotificationsPage() {
                         <div className="flex-shrink-0 mt-1">
                           {getNotificationIcon(notification.types?.[0] || 'notification')}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-h-full min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-base leading-tight font-bold">
                               {notification.title}

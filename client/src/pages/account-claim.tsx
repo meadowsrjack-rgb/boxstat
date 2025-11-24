@@ -105,7 +105,7 @@ export default function AccountClaim() {
   };
 
   return (
-    <div className="flex-1 bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
+    <div className="min-h-full bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">

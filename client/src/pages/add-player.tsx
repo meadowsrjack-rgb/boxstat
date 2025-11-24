@@ -125,7 +125,7 @@ export default function AddPlayer() {
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
-    <div className="flex-1 bg-gray-50 safe-bottom py-8 px-4">
+    <div className="min-h-full bg-gray-50 safe-bottom py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
@@ -447,7 +447,7 @@ function PackageSelectionStep({
                           <RadioGroupItem value={program.id} id={program.id} data-testid={`radio-${program.id}`} />
                           <Label
                             htmlFor={program.id}
-                            className="flex-1 cursor-pointer"
+                            className="min-h-full cursor-pointer"
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex-1">

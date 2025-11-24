@@ -987,9 +987,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Payment success callback (for when webhooks don't fire in test mode)
   app.post('/api/payments/verify-session', async (req: any, res) => {
     try {
+      console.log('🔍 verify-session request body:', req.body);
+      console.log('🔍 verify-session headers:', req.headers['content-type']);
+      
       const { sessionId } = req.body;
       
       if (!sessionId || !stripe) {
+        console.error('❌ Missing sessionId:', sessionId, 'or Stripe not configured:', !!stripe);
         return res.status(400).json({ error: 'Missing session ID or Stripe not configured' });
       }
 

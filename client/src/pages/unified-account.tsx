@@ -404,10 +404,7 @@ export default function UnifiedAccount() {
       // Verify the session and create payment record
       apiRequest('/api/payments/verify-session', {
         method: 'POST',
-        body: JSON.stringify({ sessionId }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        data: { sessionId },
       })
         .then(response => response.json())
         .then(data => {

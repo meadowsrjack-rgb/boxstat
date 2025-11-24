@@ -7,7 +7,7 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative h-full overflow-hidden bg-black" style={{
+    <div className="relative flex-1 min-h-screen overflow-hidden bg-black" style={{
       paddingTop: 'var(--safe-area-top)',
       paddingBottom: 'var(--safe-area-bottom)',
     }}>
@@ -30,7 +30,7 @@ export default function Landing() {
       </video>
 
       {/* Content Layer - Safe area aware */}
-      <div className="relative z-10 h-full flex flex-col justify-between items-center py-8">
+      <div className="relative z-10 min-h-full flex flex-col justify-between items-center py-8">
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 

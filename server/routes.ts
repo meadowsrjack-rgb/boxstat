@@ -737,11 +737,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "Invalid player ID" });
         }
         
+        // Debug logging
+        console.log("🔍 Payment validation debug:");
+        console.log("  playerId:", playerId);
+        console.log("  req.user.id:", req.user.id);
+        console.log("  player.parentId:", (player as any).parentId);
+        console.log("  player.guardianId:", (player as any).guardianId);
+        console.log("  player.email:", (player as any).email);
+        
         // Ensure player belongs to the paying user or is the paying user
         // Check both parentId and guardianId to handle all parent-child relationships
         const isValidPlayer = playerId === req.user.id || 
                              (player as any).parentId === req.user.id || 
                              (player as any).guardianId === req.user.id;
+        
+        console.log("  isValidPlayer:", isValidPlayer);
+        
         if (!isValidPlayer) {
           return res.status(403).json({ error: "You can only make payments for yourself or your children" });
         }

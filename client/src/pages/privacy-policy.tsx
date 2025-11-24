@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-full bg-background safe-bottom">
+    <div className="min-h-screen-safe bg-background safe-bottom">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Link href="/">
           <Button variant="ghost" className="mb-6" data-testid="button-back-home">

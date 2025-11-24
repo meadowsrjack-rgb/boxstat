@@ -59,7 +59,7 @@ export default function MagicLinkLogin() {
   }, []);
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-blue-50 to-indigo-100 safe-bottom flex items-center justify-center p-4">
+    <div className="min-h-screen-safe bg-gradient-to-br from-blue-50 to-indigo-100 safe-bottom flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

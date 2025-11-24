@@ -163,7 +163,7 @@ export default function SchedulePage() {
   const calendarDays = renderCalendar();
 
   return (
-    <div className="min-h-full bg-white safe-bottom p-5">
+    <div className="min-h-screen-safe bg-white safe-bottom p-5">
       <div className="max-w-sm mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="bg-white text-gray-900 px-5 py-4 text-center border-b border-gray-200 safe-top">

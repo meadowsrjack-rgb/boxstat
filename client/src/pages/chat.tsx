@@ -155,7 +155,7 @@ export default function Chat() {
   const isPlayerInterface = (user as any)?.userType === "player";
 
   return (
-    <div className={`flex-1 safe-bottom ${isPlayerInterface ? 'bg-gradient-to-br from-green-500 to-blue-600' : 'bg-gray-50'}`}>
+    <div className={`min-h-screen-safe safe-bottom ${isPlayerInterface ? 'bg-gradient-to-br from-green-500 to-blue-600' : 'bg-gray-50'}`}>
       {/* Header */}
       <header className="bg-white shadow-sm border-b safe-top">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -207,7 +207,7 @@ export default function Chat() {
                         {player.firstName?.[0]}{player.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-h-full min-w-0">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {player.firstName} {player.lastName}
                       </p>

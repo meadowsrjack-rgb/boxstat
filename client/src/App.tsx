@@ -108,7 +108,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -183,7 +183,7 @@ function AccountRoute() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -284,7 +284,7 @@ function AppRouter() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
@@ -417,9 +417,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter>
-        <main className="flex-1 min-h-0 overflow-y-scroll overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <AppRouter />
-        </main>
+        <AppRouter />
         <Toaster />
       </WouterRouter>
     </QueryClientProvider>

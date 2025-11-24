@@ -82,51 +82,49 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    height: 100%;
+    /* Ensure body takes up full viewport height */
+    min-height: 100vh;
     overflow: hidden;
     overscroll-behavior: none;
-    display: flex;
-    flex-direction: column;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
     /* CRITICAL FIX: Force black background here too */
     background-color: #000000;
   }
 
-  /* Root container - flex layout, no scroll here */
+  /* Root container must fill viewport and handle scroll */
   #root {
-    flex: 1;
-    min-height: 0;
+    height: 100%;
+    min-height: 100vh;
+    /* Flex column ensures content stretches to fill height */
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
     /* Root handles the actual theme background color */
     background-color: var(--background);
   }
 
-  /* Custom scrollbar - make it very visible */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 12px;
+    width: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: hsl(240, 4.8%, 95.9%);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #999;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+    background: hsl(240, 5%, 64.9%);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #666;
-    background-clip: content-box;
-  }
-  
-  /* Firefox scrollbar */
-  * {
-    scrollbar-color: #999 transparent;
-    scrollbar-width: auto;
+    background: hsl(240, 5.9%, 10%);
   }
 }
 

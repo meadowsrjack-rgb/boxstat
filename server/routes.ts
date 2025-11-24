@@ -1018,7 +1018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if payment already exists (check by stripePaymentId for webhook compatibility)
-        const existingPayments = await storage.getPayments({ userId: playerId });
+        const existingPayments = await storage.getPaymentsByUser(playerId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
         );
@@ -1058,7 +1058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if payment already exists
-        const existingPayments = await storage.getPayments({ userId });
+        const existingPayments = await storage.getPaymentsByUser(userId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
         );
@@ -1094,7 +1094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if payment already exists (check by stripePaymentId for webhook compatibility)
-        const existingPayments = await storage.getPayments({ userId });
+        const existingPayments = await storage.getPaymentsByUser(userId);
         const alreadyProcessed = existingPayments.some(p => 
           p.stripePaymentId === session.payment_intent && p.status === 'completed'
         );

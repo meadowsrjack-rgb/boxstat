@@ -82,7 +82,7 @@ export default function PhotoUploadPage() {
   const initials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() : '';
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-gray-900 to-gray-800 safe-bottom p-4">
+    <div className="flex-1 bg-gradient-to-br from-gray-900 to-gray-800 safe-bottom p-4">
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

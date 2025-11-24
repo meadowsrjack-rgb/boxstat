@@ -203,14 +203,14 @@ export default function AdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-gray-50 safe-bottom flex items-center justify-center" data-testid="loading-admin-dashboard">
+      <div className="flex-1 bg-gray-50 safe-bottom flex items-center justify-center" data-testid="loading-admin-dashboard">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 safe-bottom" data-testid="admin-dashboard">
+    <div className="flex-1 bg-gray-50 safe-bottom" data-testid="admin-dashboard">
       {/* Header */}
       <div className="bg-white border-b safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1426,7 +1426,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 p-6">
 
               {/* Team Info Tab */}
               {detailTab === "team" && (

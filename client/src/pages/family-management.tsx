@@ -289,7 +289,7 @@ export default function FamilyManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto bg-gray-50 safe-bottom flex items-center justify-center">
+      <div className="flex-1 bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
           <p>Loading family members...</p>
@@ -299,7 +299,7 @@ export default function FamilyManagement() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="flex-1 bg-gray-50 dark:bg-gray-900 safe-bottom">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-4">

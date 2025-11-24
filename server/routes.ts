@@ -3149,6 +3149,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(payments);
   });
   
+  // Get payment history with Stripe subscription details
+  app.get('/api/payments/history', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get all child player IDs if user is a parent
+      const allUsers = await storage.getUsersByOrganization(req.user.organizationId);
+      const childPlayerIds = allUsers
+        .filter(u => u.parentId === userId || u.guardianId === userId)
+        .map(u => u.id);
+      
+      // Get payments for the user and all their children
+      const userIds = [userId, ...childPlayerIds];
+      const allPayments = await Promise.all(
+        userIds.map(id => storage.getPaymentsByUser(id))
+      );
+      const payments = allPayments.flat();
+      
+      // Enrich with Stripe data
+      const enrichedPayments = await Promise.all(
+        payments.map(async (payment) => {
+          let stripeData: any = null;
+          
+          if (payment.stripePaymentId && stripe) {
+            try {
+              // Check if it's a subscription or payment intent
+              if (payment.stripePaymentId.startsWith('sub_')) {
+                // It's a subscription
+                const subscription = await stripe.subscriptions.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: 'subscription',
+                  status: subscription.status,
+                  currentPeriodEnd: subscription.current_period_end,
+                  currentPeriodStart: subscription.current_period_start,
+                  cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                  interval: subscription.items.data[0]?.price?.recurring?.interval,
+                };
+              } else if (payment.stripePaymentId.startsWith('pi_')) {
+                // It's a payment intent
+                const paymentIntent = await stripe.paymentIntents.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: 'one_time',
+                  status: paymentIntent.status,
+                };
+              } else if (payment.stripePaymentId.startsWith('cs_')) {
+                // It's a checkout session
+                const session = await stripe.checkout.sessions.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: session.mode === 'subscription' ? 'subscription' : 'one_time',
+                  status: session.payment_status,
+                };
+                
+                // If it's a subscription, try to get the subscription ID
+                if (session.subscription && typeof session.subscription === 'string') {
+                  const subscription = await stripe.subscriptions.retrieve(session.subscription);
+                  stripeData.subscriptionDetails = {
+                    id: subscription.id,
+                    status: subscription.status,
+                    currentPeriodEnd: subscription.current_period_end,
+                    currentPeriodStart: subscription.current_period_start,
+                    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                    interval: subscription.items.data[0]?.price?.recurring?.interval,
+                  };
+                }
+              }
+            } catch (error: any) {
+              console.error(`Error fetching Stripe data for ${payment.stripePaymentId}:`, error.message);
+            }
+          }
+          
+          // Get player info if applicable
+          let playerInfo = null;
+          if (payment.playerId) {
+            const player = await storage.getUser(payment.playerId);
+            if (player) {
+              playerInfo = {
+                id: player.id,
+                firstName: player.firstName,
+                lastName: player.lastName,
+              };
+            }
+          }
+          
+          return {
+            ...payment,
+            stripeData,
+            playerInfo,
+          };
+        })
+      );
+      
+      // Sort by creation date (newest first)
+      enrichedPayments.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json(enrichedPayments);
+    } catch (error: any) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ error: "Failed to fetch payment history" });
+    }
+  });
+  
   app.post('/api/payments', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {

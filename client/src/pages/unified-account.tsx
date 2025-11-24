@@ -37,6 +37,7 @@ import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { PaymentHistory } from "@/components/PaymentHistory";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -641,8 +642,8 @@ export default function UnifiedAccount() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Payment History</CardTitle>
-                    <CardDescription>View and manage your payments</CardDescription>
+                    <CardTitle>Make a Payment</CardTitle>
+                    <CardDescription>Purchase packages and memberships</CardDescription>
                   </div>
                   <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
                     <DialogTrigger asChild>
@@ -822,37 +823,10 @@ export default function UnifiedAccount() {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent>
-                {payments.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No payments yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {payments.map((payment: any) => (
-                      <div
-                        key={payment.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                        data-testid={`payment-${payment.id}`}
-                      >
-                        <div>
-                          <p className="font-semibold">{payment.description || "Payment"}</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(payment.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">${(payment.amount / 100).toFixed(2)}</p>
-                          <Badge
-                            variant={payment.status === "completed" ? "default" : "outline"}
-                          >
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
             </Card>
+            
+            {/* Payment History Component */}
+            <PaymentHistory />
           </TabsContent>
 
           {/* Messages Tab */}

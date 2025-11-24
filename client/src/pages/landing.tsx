@@ -45,7 +45,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content - Both button and sign in text */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 mb-6 space-y-4 w-full">
+        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 space-y-4 w-full">
           {/* Primary CTA Button */}
           <Button 
             size="lg" 

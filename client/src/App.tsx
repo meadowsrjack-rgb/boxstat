@@ -417,7 +417,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WouterRouter>
-        <AppRouter />
+        <main className="flex-1 overflow-y-auto flex flex-col">
+          <AppRouter />
+        </main>
         <Toaster />
       </WouterRouter>
     </QueryClientProvider>

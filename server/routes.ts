@@ -738,7 +738,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Ensure player belongs to the paying user or is the paying user
-        const isValidPlayer = playerId === req.user.id || (player as any).guardianId === req.user.id;
+        // Check both parentId and guardianId to handle all parent-child relationships
+        const isValidPlayer = playerId === req.user.id || 
+                             (player as any).parentId === req.user.id || 
+                             (player as any).guardianId === req.user.id;
         if (!isValidPlayer) {
           return res.status(403).json({ error: "You can only make payments for yourself or your children" });
         }
@@ -2040,7 +2043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else if (role === 'parent') {
       // Parent Mode: Show events from ALL children's teams + parent's own events
       const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
-      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
+      const childProfiles = allUsersInOrg.filter(u => u.parentId === userId || u.guardianId === userId);
       
       // Collect all team IDs and division IDs from children
       for (const child of childProfiles) {
@@ -3174,7 +3177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if playerId is the paying user or a child of the paying user
+        // Check both parentId and guardianId to handle all parent-child relationships
         const isValidPlayer = paymentData.playerId === paymentData.userId || 
+                             (player as any).parentId === paymentData.userId ||
                              (player as any).guardianId === paymentData.userId;
         
         if (!isValidPlayer) {

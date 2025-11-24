@@ -710,13 +710,7 @@ export default function UnifiedAccount() {
                             <SelectContent>
                               {programs?.filter(p => p.price && p.price > 0).map((program: any) => (
                                 <SelectItem key={program.id} value={program.id} data-testid={`package-option-${program.id}`}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{program.name}</span>
-                                    <span className="ml-4 text-sm text-gray-600">
-                                      ${(program.price / 100).toFixed(2)}
-                                      {program.billingCycle && ` / ${program.billingCycle}`}
-                                    </span>
-                                  </div>
+                                  {program.name}
                                 </SelectItem>
                               ))}
                               {(!programs || programs.filter((p: any) => p.price && p.price > 0).length === 0) && (
@@ -726,27 +720,24 @@ export default function UnifiedAccount() {
                           </Select>
                         </div>
 
-                        {/* Player Selection (for per-player billing) */}
+                        {/* Player Selection (conditionally shown based on billing model) */}
                         {selectedPackage && (() => {
                           const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                          const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
-                          const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+                          const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
+                          const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
+                          
+                          if (!requiresPlayerSelection) {
+                            return null;
+                          }
                           
                           return (
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                {isPerPlayer ? "Player (required)" : "Player (optional)"}
-                              </label>
+                              <label className="text-sm font-medium">Player *</label>
                               <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
                                 <SelectTrigger data-testid="select-player">
-                                  <SelectValue placeholder={isPerPlayer ? "Select a player" : "All players"} />
+                                  <SelectValue placeholder="Select a player" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {!isPerPlayer && (
-                                    <SelectItem value="" data-testid="player-option-all">
-                                      All Players (Family Plan)
-                                    </SelectItem>
-                                  )}
                                   {players?.map((player: any) => (
                                     <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
                                       {player.firstName} {player.lastName}
@@ -754,11 +745,9 @@ export default function UnifiedAccount() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                              {isPerPlayer && (
-                                <p className="text-xs text-gray-600">
-                                  This is a per-player package. Select which player this payment is for.
-                                </p>
-                              )}
+                              <p className="text-xs text-gray-600">
+                                This is a per-player package. Select which player this payment is for.
+                              </p>
                             </div>
                           );
                         })()}
@@ -767,20 +756,41 @@ export default function UnifiedAccount() {
                         {selectedPackage && (() => {
                           const pkg = programs?.find((p: any) => p.id === selectedPackage);
                           return pkg && (
-                            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                               <h4 className="font-semibold">{pkg.name}</h4>
                               {(pkg as any).description && (
                                 <p className="text-sm text-gray-600">{(pkg as any).description}</p>
                               )}
+                              
+                              <div className="flex gap-2 flex-wrap">
+                                {(pkg as any).type && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {(pkg as any).type}
+                                  </span>
+                                )}
+                                {pkg.billingModel && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    {pkg.billingModel}
+                                  </span>
+                                )}
+                                {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    {(pkg as any).billingCycle}
+                                  </span>
+                                )}
+                              </div>
+                              
                               <div className="flex justify-between items-center pt-2 border-t">
                                 <span className="font-medium">Total:</span>
-                                <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                                  {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      per {(pkg as any).billingCycle.toLowerCase()}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              {pkg.billingModel && (
-                                <p className="text-xs text-gray-600">
-                                  Billing: {pkg.billingModel}
-                                </p>
-                              )}
                             </div>
                           );
                         })()}
@@ -807,10 +817,10 @@ export default function UnifiedAccount() {
                               }
 
                               const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                              const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
-                              const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+                              const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
+                              const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
 
-                              if (isPerPlayer && !selectedPlayer) {
+                              if (requiresPlayerSelection && !selectedPlayer) {
                                 toast({
                                   title: "Error",
                                   description: "Please select a player for this per-player package",

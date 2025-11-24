@@ -310,6 +310,8 @@ export default function AdminDashboard() {
                 testId="stat-total-revenue"
               />
             </div>
+
+            <RecentTransactionsCard payments={payments} users={users} programs={programs} />
           </TabsContent>
 
           <TabsContent value="users">
@@ -361,6 +363,139 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
             {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
           </div>
           <div className="text-primary">{icon}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentTransactionsCard({ payments, users, programs }: any) {
+  const [showAll, setShowAll] = useState(false);
+  
+  const sortedPayments = [...payments]
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  const recentPayments = sortedPayments.slice(0, 5);
+  const olderPayments = sortedPayments.slice(5);
+  
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: any; label: string }> = {
+      completed: { variant: "default", label: "Completed" },
+      pending: { variant: "secondary", label: "Pending" },
+      failed: { variant: "destructive", label: "Failed" },
+    };
+    
+    const config = statusConfig[status] || statusConfig.pending;
+    return <Badge variant={config.variant as any} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
+  };
+  
+  const getUserName = (userId: string) => {
+    const user = users.find((u: any) => u.id === userId);
+    if (user) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return "Unknown User";
+  };
+  
+  const getProgramName = (programId: string) => {
+    const program = programs.find((p: any) => p.id === programId);
+    return program ? program.name : "N/A";
+  };
+  
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM d, yyyy");
+    } catch {
+      return "Invalid date";
+    }
+  };
+  
+  const TransactionRow = ({ payment }: { payment: any }) => (
+    <div className="flex items-center justify-between py-3 border-b last:border-0" data-testid={`transaction-${payment.id}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
+            {getUserName(payment.userId)}
+          </p>
+          {getStatusBadge(payment.status)}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>
+            {getProgramName(payment.programId)}
+          </p>
+          <span className="text-xs text-gray-400">•</span>
+          <p className="text-xs text-gray-500" data-testid={`transaction-date-${payment.id}`}>
+            {formatDate(payment.createdAt)}
+          </p>
+        </div>
+      </div>
+      <div className="ml-4 flex-shrink-0">
+        <p className="text-sm font-semibold" data-testid={`transaction-amount-${payment.id}`}>
+          ${(payment.amount / 100).toFixed(2)}
+        </p>
+      </div>
+    </div>
+  );
+  
+  if (payments.length === 0) {
+    return (
+      <Card data-testid="card-recent-transactions">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="w-5 h-5" />
+            Recent Transactions
+          </CardTitle>
+          <CardDescription>View all payment transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>No transactions yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card data-testid="card-recent-transactions">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ArrowLeftRight className="w-5 h-5" />
+          Recent Transactions
+        </CardTitle>
+        <CardDescription>
+          {sortedPayments.length} total transaction{sortedPayments.length !== 1 ? 's' : ''}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-0">
+          {recentPayments.map((payment: any) => (
+            <TransactionRow key={payment.id} payment={payment} />
+          ))}
+          
+          {olderPayments.length > 0 && (
+            <Collapsible open={showAll} onOpenChange={setShowAll}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full mt-2 flex items-center justify-center gap-2"
+                  data-testid="button-show-all-transactions"
+                >
+                  <span className="text-sm">
+                    {showAll ? 'Show Less' : `Show ${olderPayments.length} More`}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-0 mt-2">
+                  {olderPayments.map((payment: any) => (
+                    <TransactionRow key={payment.id} payment={payment} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       </CardContent>
     </Card>

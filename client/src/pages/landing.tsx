@@ -7,30 +7,20 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative flex-1 min-h-screen overflow-hidden bg-black" style={{
-      paddingTop: 'var(--safe-area-top)',
-      paddingBottom: 'var(--safe-area-bottom)',
-    }}>
+    <div className="relative flex flex-col flex-1 overflow-hidden bg-black safe-bottom">
       {/* Video Background - Extends through safe areas */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute w-full object-cover z-0"
-        style={{
-          top: 'calc(var(--safe-area-top) * -1)',
-          bottom: 'calc(var(--safe-area-bottom) * -1)',
-          left: 0,
-          right: 0,
-          height: 'calc(100% + var(--safe-area-top) + var(--safe-area-bottom))',
-        }}
+        className="absolute w-full h-full object-cover z-0"
       >
         <source src={backgroundVideo} type="video/mp4" />
       </video>
 
-      {/* Content Layer - Safe area aware */}
-      <div className="relative z-10 h-full flex flex-col items-center pt-8">
+      {/* Content Layer - Flex to fill space */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8 safe-top">
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 
@@ -41,11 +31,11 @@ export default function Landing() {
           />
         </div>
 
-        {/* Spacer - pushes content to bottom */}
+        {/* Spacer - pushes buttons to bottom */}
         <div className="flex-1"></div>
 
         {/* Bottom Content - Both button and sign in text */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full mb-6">
+        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full flex-shrink-0 mb-6">
           {/* Primary CTA Button */}
           <Button 
             size="lg" 

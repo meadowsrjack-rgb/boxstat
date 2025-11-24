@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: 'payment',
-        success_url: `${origin}/payments?success=true`,
+        success_url: `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/payments?canceled=true`,
         metadata: {
           userId: user.id,
@@ -949,19 +949,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Optionally create a payment record
+        // Create one consolidated payment record for the entire checkout
         if (session.amount_total) {
           try {
             await storage.createPayment({
               organizationId: "default-org",
               userId,
-              amount: session.amount_total, // Store in cents (Stripe convention)
+              amount: session.amount_total,
               currency: 'usd',
               paymentType: 'stripe_checkout',
               status: 'completed',
-              description: `Stripe Checkout Session: ${session.id}`,
+              description: `Package Selections Payment`,
+              stripePaymentId: session.payment_intent as string,
             });
-            console.log(`✅ Created payment record for user ${userId}`);
+            console.log(`✅ Created consolidated payment record for user ${userId}`);
           } catch (paymentError: any) {
             console.error("Error creating payment record:", paymentError);
             // Don't fail the webhook if payment record creation fails
@@ -1012,10 +1013,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: 'Missing required metadata' });
         }
         
-        // Check if payment already exists
+        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
         const existingPayments = await storage.getPayments({ userId: playerId });
         const alreadyProcessed = existingPayments.some(p => 
-          p.description?.includes(`Player Registration`) && p.status === 'completed'
+          p.stripePaymentId === session.payment_intent && p.status === 'completed'
         );
         
         if (!alreadyProcessed) {
@@ -1034,6 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               paymentType: 'add_player',
               status: 'completed',
               description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
+              stripePaymentId: session.payment_intent as string,
             });
             console.log(`✅ Created add_player payment record via callback for player ${playerId}`);
           }
@@ -1075,6 +1077,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✅ Created package_purchase payment record via callback for user ${userId}`);
         } else {
           console.log(`ℹ️ Payment already processed for user ${userId}`);
+        }
+      }
+
+      // Handle package selection flow (existing family onboarding)
+      if (session.metadata?.packageSelectionIds) {
+        const userId = session.metadata.userId;
+        const selectionIds = session.metadata.packageSelectionIds;
+        
+        if (!userId || !selectionIds) {
+          return res.status(400).json({ error: 'Missing required metadata for package selections' });
+        }
+        
+        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
+        const existingPayments = await storage.getPayments({ userId });
+        const alreadyProcessed = existingPayments.some(p => 
+          p.stripePaymentId === session.payment_intent && p.status === 'completed'
+        );
+        
+        if (!alreadyProcessed) {
+          // Mark each package selection as paid
+          const selectionIdArray = selectionIds.split(',');
+          for (const selectionId of selectionIdArray) {
+            try {
+              await storage.markPackageSelectionPaid(selectionId.trim());
+              console.log(`✅ Marked package selection ${selectionId} as paid via callback`);
+            } catch (err) {
+              console.error(`Error marking selection ${selectionId} as paid:`, err);
+            }
+          }
+          
+          // Create one consolidated payment record (matching webhook logic)
+          if (session.amount_total) {
+            await storage.createPayment({
+              organizationId: "default-org",
+              userId,
+              amount: session.amount_total,
+              currency: 'usd',
+              paymentType: 'stripe_checkout',
+              status: 'completed',
+              description: `Package Selections Payment`,
+              stripePaymentId: session.payment_intent as string,
+            });
+            console.log(`✅ Created consolidated payment record via callback for user ${userId}`);
+          }
+        } else {
+          console.log(`ℹ️ Package selection payment already processed for session ${session.id}`);
         }
       }
 

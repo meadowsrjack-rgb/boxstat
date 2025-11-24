@@ -380,6 +380,31 @@ export default function PaymentsPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const paymentSuccess = urlParams.get('success') === 'true';
   const paymentCanceled = urlParams.get('canceled') === 'true';
+  const sessionId = urlParams.get('session_id');
+
+  // Verify payment session on return from Stripe
+  useEffect(() => {
+    if (paymentSuccess && sessionId) {
+      fetch('/api/payments/verify-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Payment verification:', data);
+          // Clean up URL parameters
+          window.history.replaceState({}, '', '/payments');
+        })
+        .catch(error => {
+          console.error('Error verifying payment:', error);
+          // Clean up URL even on error
+          window.history.replaceState({}, '', '/payments');
+        });
+    }
+  }, [paymentSuccess, sessionId]);
 
   // Fetch package selections to determine if there are unpaid items
   const { data: selections = [] } = useQuery<PackageSelection[]>({

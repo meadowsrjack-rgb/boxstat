@@ -41,11 +41,12 @@ export default function Landing() {
           />
         </div>
 
-        {/* Spacer */}
+        {/* Spacer - pushes content to bottom */}
         <div className="flex-1"></div>
 
-        {/* LET'S GO Button */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 mb-4">
+        {/* Bottom Content - Both button and sign in text */}
+        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 mb-6 space-y-4 w-full">
+          {/* Primary CTA Button */}
           <Button 
             size="lg" 
             onClick={() => setLocation('/registration')}
@@ -54,10 +55,8 @@ export default function Landing() {
           >
             LET'S GO
           </Button>
-        </div>
 
-        {/* Sign In Text - At Bottom */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 mb-6">
+          {/* Sign In Text */}
           <div className="text-white text-sm">
             <span>HAVE AN ACCOUNT? </span>
             <button 

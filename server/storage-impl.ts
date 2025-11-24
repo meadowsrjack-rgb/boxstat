@@ -2841,7 +2841,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getPaymentsByOrganization(organizationId: string): Promise<Payment[]> {
-    const results = await db.select().from(schema.payments);
+    const results = await db.select().from(schema.payments)
+      .where(eq(schema.payments.organizationId, organizationId));
     return results.map(payment => this.mapDbPaymentToPayment(payment));
   }
 
@@ -2853,6 +2854,7 @@ class DatabaseStorage implements IStorage {
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const dbPayment = {
+      organizationId: payment.organizationId,
       userId: payment.userId,
       playerId: payment.playerId, // For per-player billing: which specific player this payment covers
       amount: payment.amount,
@@ -2861,6 +2863,9 @@ class DatabaseStorage implements IStorage {
       status: payment.status || 'pending',
       description: payment.description,
       dueDate: payment.dueDate,
+      stripePaymentId: payment.stripePaymentId,
+      packageId: payment.packageId,
+      programId: payment.programId,
       createdAt: new Date().toISOString(),
     };
 

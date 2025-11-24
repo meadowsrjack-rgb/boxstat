@@ -406,7 +406,6 @@ export default function UnifiedAccount() {
         method: 'POST',
         data: { sessionId },
       })
-        .then(response => response.json())
         .then(data => {
           if (data.success) {
             toast({

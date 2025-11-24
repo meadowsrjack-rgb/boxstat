@@ -166,6 +166,7 @@ export default function AdminDashboard() {
   // Fetch payments
   const { data: payments = [], isLoading: paymentsLoading} = useQuery<any[]>({
     queryKey: ["/api/payments"],
+    staleTime: 0, // Always refetch to ensure latest payment data
   });
 
   // Fetch divisions

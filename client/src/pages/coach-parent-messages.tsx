@@ -129,7 +129,7 @@ export default function CoachParentMessages() {
 
   if (!user || user.userType !== "admin") {
     return (
-      <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
+      <div className="flex-1 overflow-y-auto bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
           <p className="text-gray-600">You don't have permission to access this page.</p>
@@ -139,7 +139,7 @@ export default function CoachParentMessages() {
   }
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="flex-1 overflow-y-auto bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-6 py-4">

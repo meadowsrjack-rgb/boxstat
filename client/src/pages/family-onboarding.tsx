@@ -219,7 +219,7 @@ export default function FamilyOnboarding() {
 
   return (
     <div 
-      className="min-h-screen-safe text-white safe-bottom"
+      className="flex-1 overflow-y-auto text-white safe-bottom"
       style={{
         background: `radial-gradient(1200px 600px at 50% -10%, rgba(216,36,40,0.15), transparent 60%), #000`
       }}

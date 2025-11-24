@@ -86,7 +86,7 @@ export default function ClaimVerify() {
   }, [toast]);
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">

@@ -155,7 +155,7 @@ export default function Chat() {
   const isPlayerInterface = (user as any)?.userType === "player";
 
   return (
-    <div className={`min-h-screen-safe safe-bottom ${isPlayerInterface ? 'bg-gradient-to-br from-green-500 to-blue-600' : 'bg-gray-50'}`}>
+    <div className={`flex-1 overflow-y-auto safe-bottom ${isPlayerInterface ? 'bg-gradient-to-br from-green-500 to-blue-600' : 'bg-gray-50'}`}>
       {/* Header */}
       <header className="bg-white shadow-sm border-b safe-top">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">

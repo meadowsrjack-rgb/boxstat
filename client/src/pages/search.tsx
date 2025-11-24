@@ -21,7 +21,7 @@ export default function SearchPage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 safe-bottom">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-red-50 to-red-100 dark:from-gray-900 dark:to-gray-800 safe-bottom">
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

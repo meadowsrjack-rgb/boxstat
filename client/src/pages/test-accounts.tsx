@@ -106,7 +106,7 @@ export default function TestAccounts() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-blue-50 to-green-50 safe-bottom">
+    <div className="flex-1 overflow-y-auto bg-gradient-to-br from-blue-50 to-green-50 safe-bottom">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-6 py-4">

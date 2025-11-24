@@ -398,13 +398,57 @@ export default function UnifiedAccount() {
   // Check for payment success in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
+    const sessionId = urlParams.get('session_id');
+    
+    if (urlParams.get('payment') === 'success' && sessionId) {
+      // Verify the session and create payment record
+      apiRequest('/api/payments/verify-session', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            toast({
+              title: "Payment Successful!",
+              description: "Your payment has been processed successfully.",
+            });
+            
+            // Refetch payment data
+            queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+          } else {
+            toast({
+              title: "Payment Verification",
+              description: data.message || "Payment is being processed.",
+              variant: "default",
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error verifying payment:', error);
+          toast({
+            title: "Payment Status",
+            description: "Payment completed. Refresh the page to see updates.",
+            variant: "default",
+          });
+        })
+        .finally(() => {
+          // Clean up the URL
+          window.history.replaceState({}, '', '/unified-account');
+        });
+    } else if (urlParams.get('payment') === 'success') {
+      // Fallback for old URLs without session_id
       toast({
         title: "Payment Successful!",
-        description: "Player has been successfully added to your account.",
+        description: "Your payment has been processed.",
       });
-      
-      // Clean up the URL
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
       window.history.replaceState({}, '', '/unified-account');
     }
   }, [toast]);

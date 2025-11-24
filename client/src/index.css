@@ -312,6 +312,11 @@
     @apply bg-gray-200 animate-pulse rounded;
   }
 
+  /* Scrollable page container - enables scrolling on desktop */
+  .scrollable-page {
+    @apply flex-1 overflow-y-auto;
+  }
+
   /* Mobile-first responsive utilities */
   .mobile-container {
     @apply max-w-md mx-auto px-6;

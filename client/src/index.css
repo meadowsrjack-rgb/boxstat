@@ -82,29 +82,22 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    /* Ensure body takes up full viewport height */
-    min-height: 100vh;
+    height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    left: 0;
+    display: flex;
+    flex-direction: column;
     /* CRITICAL FIX: Force black background here too */
     background-color: #000000;
   }
 
-  /* Root container must fill viewport and handle scroll */
+  /* Root container - flex layout, no scroll here */
   #root {
-    height: 100%;
-    min-height: 100vh;
-    /* Flex column ensures content stretches to fill height */
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
+    overflow: hidden;
     /* Root handles the actual theme background color */
     background-color: var(--background);
   }

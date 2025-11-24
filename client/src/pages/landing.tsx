@@ -30,7 +30,7 @@ export default function Landing() {
       </video>
 
       {/* Content Layer - Safe area aware */}
-      <div className="relative z-10 min-h-full flex flex-col items-center pt-8 pb-0">
+      <div className="relative z-10 h-full flex flex-col items-center pt-8">
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 
@@ -45,7 +45,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content - Both button and sign in text */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-0 space-y-4 w-full">
+        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full mb-6">
           {/* Primary CTA Button */}
           <Button 
             size="lg" 

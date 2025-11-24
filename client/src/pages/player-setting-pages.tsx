@@ -208,7 +208,7 @@ export function PlayerProfilePage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -506,7 +506,7 @@ export function PlayerPrivacyPage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -628,7 +628,7 @@ export function PlayerNotificationsPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -796,7 +796,7 @@ export function PlayerSecurityPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -963,7 +963,7 @@ export function PlayerDevicesPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1217,7 +1217,7 @@ export function PlayerLegalPage() {
   );
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
@@ -1435,7 +1435,7 @@ export function PlayerDangerPage() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 dark:bg-gray-900 safe-bottom">
+    <div className="scrollable-page bg-gray-50 dark:bg-gray-900 safe-bottom">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">

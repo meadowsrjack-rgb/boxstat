@@ -1170,7 +1170,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
           {/* Profile */}
           {activeTab === "profile" && (
-            <div className="min-h-screen-safe bg-gradient-to-b from-gray-50 to-white safe-bottom -mx-6 px-6 pb-10">
+            <div className="scrollable-page bg-gradient-to-b from-gray-50 to-white safe-bottom -mx-6 px-6 pb-10">
               {/* Futuristic Bio Section */}
               <div className="relative px-0 pt-6">
                 <motion.section

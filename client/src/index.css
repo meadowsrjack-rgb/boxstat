@@ -92,8 +92,6 @@
     left: 0;
     /* CRITICAL FIX: Force black background here too */
     background-color: #000000;
-    /* Optional: Ensure padding doesn't push content out if not handled elsewhere */
-    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* Root container must fill viewport and handle scroll */

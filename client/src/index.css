@@ -71,8 +71,8 @@
     padding: 0;
     margin: 0;
     height: 100%;
-    overflow: hidden;
-    overscroll-behavior: none;
+    overflow-x: hidden;
+    overscroll-behavior-y: none;
     /* CRITICAL FIX: Force black background to hide the safe-area gap */
     background-color: #000000;
   }
@@ -82,30 +82,19 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    /* Ensure body takes up full viewport height */
     min-height: 100vh;
-    overflow: hidden;
-    overscroll-behavior: none;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    left: 0;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: none;
     /* CRITICAL FIX: Force black background here too */
     background-color: #000000;
   }
 
-  /* Root container must fill viewport and handle scroll */
+  /* Root container fills body and allows natural document scroll */
   #root {
-    height: 100%;
     min-height: 100vh;
-    /* Flex column ensures content stretches to fill height */
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
-    /* Root handles the actual theme background color */
+    /* Background color for the app */
     background-color: var(--background);
   }
 
@@ -314,7 +303,7 @@
 
   /* Scrollable page container - enables scrolling on desktop */
   .scrollable-page {
-    @apply flex-1 overflow-y-auto;
+    @apply min-h-full;
   }
 
   /* Mobile-first responsive utilities */

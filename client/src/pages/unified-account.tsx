@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -32,6 +33,8 @@ import {
   Eye,
   Lock,
   Unlock,
+  AlertTriangle,
+  LogOut,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
@@ -214,6 +217,142 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
         <span className="text-sm font-semibold text-gray-900">{skillScore}%</span>
       </div>
     </div>
+  );
+}
+
+// Settings Danger Zone Component for Account Deletion
+function SettingsDangerZone({ user }: { user: any }) {
+  const { toast } = useToast();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const userEmail = user?.email || "";
+  const userRole = user?.role || "";
+  
+  const handleDeleteAccount = async () => {
+    if (confirmEmail !== userEmail) {
+      toast({ title: "Email doesn't match", description: "Please enter your email exactly as shown.", variant: "destructive" });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { 
+        method: "POST", 
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      
+      if (res.ok) {
+        toast({ title: "Account deleted", description: "Your account has been deactivated successfully." });
+        queryClient.clear();
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        toast({ title: "Delete failed", description: data.message || "Could not delete account.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Delete failed", description: "An error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  return (
+    <>
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Irreversible actions that affect your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-red-700">Delete account</div>
+              <div className="text-xs text-red-600">
+                Your account will be deactivated and data removed.
+                {(userRole === "parent" || userRole === "admin") && " This includes all linked player profiles."}
+              </div>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-unified-delete-account"
+            >
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">This action cannot be undone!</p>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                <li>Your account will be deactivated</li>
+                <li>Your login credentials will be removed</li>
+                {(userRole === "parent" || userRole === "admin") && (
+                  <li>All linked player profiles will also be deactivated</li>
+                )}
+                <li>Any active subscriptions will be cancelled</li>
+                <li>You will lose access to all features and history</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                To confirm, please type your email address:
+              </p>
+              <p className="text-sm font-mono bg-gray-100 p-2 rounded">{userEmail}</p>
+              <Input
+                type="email"
+                placeholder="Enter your email to confirm"
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                className="border-red-200 focus:border-red-500"
+                data-testid="input-unified-confirm-email"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConfirmEmail("");
+              }}
+              disabled={isDeleting}
+              data-testid="button-unified-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || confirmEmail !== userEmail}
+              data-testid="button-unified-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -927,11 +1066,15 @@ export default function UnifiedAccount() {
                     onClick={handleSignOut}
                     data-testid="button-logout"
                   >
+                    <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Danger Zone */}
+            <SettingsDangerZone user={user} />
           </TabsContent>
 
           {/* Events Tab */}

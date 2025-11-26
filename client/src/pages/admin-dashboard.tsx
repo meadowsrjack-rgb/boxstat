@@ -43,6 +43,8 @@ import {
   Circle,
   Shield,
   AlertCircle,
+  AlertTriangle,
+  LogOut,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -6261,6 +6263,17 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 // Settings Tab Component
 function SettingsTab({ organization }: any) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+  });
+  
+  const userEmail = currentUser?.email || "";
+  const userRole = currentUser?.role || "";
 
   const updateOrganization = useMutation({
     mutationFn: async (data: any) => {
@@ -6281,124 +6294,277 @@ function SettingsTab({ organization }: any) {
     e.preventDefault();
     updateOrganization.mutate(formData);
   };
+  
+  const handleDeleteAccount = async () => {
+    if (confirmEmail !== userEmail) {
+      toast({ title: "Email doesn't match", description: "Please enter your email exactly as shown.", variant: "destructive" });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { 
+        method: "POST", 
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      
+      if (res.ok) {
+        toast({ title: "Account deleted", description: "Your account has been deactivated successfully." });
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        toast({ title: "Delete failed", description: data.message || "Could not delete account.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Delete failed", description: "An error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      queryClient.clear();
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Organization Settings</CardTitle>
-        <CardDescription>Customize your organization's branding and settings</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Organization Name</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                data-testid="input-org-name"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sportType">Sport Type</Label>
-              <Input
-                id="sportType"
-                value={formData.sportType || ""}
-                onChange={(e) => setFormData({ ...formData, sportType: e.target.value })}
-                placeholder="basketball, soccer, baseball, etc."
-                data-testid="input-sport-type"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Organization Settings</CardTitle>
+          <CardDescription>Customize your organization's branding and settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="primaryColor">Primary Color</Label>
+                <Label htmlFor="name">Organization Name</Label>
                 <Input
-                  id="primaryColor"
-                  type="color"
-                  value={formData.primaryColor || "#1E40AF"}
-                  onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                  data-testid="input-primary-color"
+                  id="name"
+                  value={formData.name || ""}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  data-testid="input-org-name"
                 />
               </div>
+
               <div>
-                <Label htmlFor="secondaryColor">Secondary Color</Label>
+                <Label htmlFor="sportType">Sport Type</Label>
                 <Input
-                  id="secondaryColor"
-                  type="color"
-                  value={formData.secondaryColor || "#DC2626"}
-                  onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                  data-testid="input-secondary-color"
+                  id="sportType"
+                  value={formData.sportType || ""}
+                  onChange={(e) => setFormData({ ...formData, sportType: e.target.value })}
+                  placeholder="basketball, soccer, baseball, etc."
+                  data-testid="input-sport-type"
                 />
               </div>
-            </div>
 
-            <div>
-              <h3 className="font-medium mb-2">Terminology Customization</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="term-athlete">Athlete Term</Label>
+                  <Label htmlFor="primaryColor">Primary Color</Label>
                   <Input
-                    id="term-athlete"
-                    value={formData.terminology?.athlete || "Player"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, athlete: e.target.value }
-                    })}
-                    placeholder="Player, Athlete, Student"
-                    data-testid="input-term-athlete"
+                    id="primaryColor"
+                    type="color"
+                    value={formData.primaryColor || "#1E40AF"}
+                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                    data-testid="input-primary-color"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="term-coach">Coach Term</Label>
+                  <Label htmlFor="secondaryColor">Secondary Color</Label>
                   <Input
-                    id="term-coach"
-                    value={formData.terminology?.coach || "Coach"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, coach: e.target.value }
-                    })}
-                    placeholder="Coach, Trainer, Instructor"
-                    data-testid="input-term-coach"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="term-team">Team Term</Label>
-                  <Input
-                    id="term-team"
-                    value={formData.terminology?.team || "Team"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, team: e.target.value }
-                    })}
-                    placeholder="Team, Squad, Group"
-                    data-testid="input-term-team"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="term-practice">Practice Term</Label>
-                  <Input
-                    id="term-practice"
-                    value={formData.terminology?.practice || "Practice"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, practice: e.target.value }
-                    })}
-                    placeholder="Practice, Training, Session"
-                    data-testid="input-term-practice"
+                    id="secondaryColor"
+                    type="color"
+                    value={formData.secondaryColor || "#DC2626"}
+                    onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                    data-testid="input-secondary-color"
                   />
                 </div>
               </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Terminology Customization</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="term-athlete">Athlete Term</Label>
+                    <Input
+                      id="term-athlete"
+                      value={formData.terminology?.athlete || "Player"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, athlete: e.target.value }
+                      })}
+                      placeholder="Player, Athlete, Student"
+                      data-testid="input-term-athlete"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-coach">Coach Term</Label>
+                    <Input
+                      id="term-coach"
+                      value={formData.terminology?.coach || "Coach"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, coach: e.target.value }
+                      })}
+                      placeholder="Coach, Trainer, Instructor"
+                      data-testid="input-term-coach"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-team">Team Term</Label>
+                    <Input
+                      id="term-team"
+                      value={formData.terminology?.team || "Team"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, team: e.target.value }
+                      })}
+                      placeholder="Team, Squad, Group"
+                      data-testid="input-term-team"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-practice">Practice Term</Label>
+                    <Input
+                      id="term-practice"
+                      value={formData.terminology?.practice || "Practice"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, practice: e.target.value }
+                      })}
+                      placeholder="Practice, Training, Session"
+                      data-testid="input-term-practice"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" disabled={updateOrganization.isPending} data-testid="button-save-settings">
+              {updateOrganization.isPending ? "Saving..." : "Save Settings"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      
+      {/* Account Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+          <CardDescription>Sign out or manage your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleSignOut}
+            data-testid="button-admin-logout"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </CardContent>
+      </Card>
+      
+      {/* Danger Zone */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Irreversible actions that affect your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-red-700">Delete account</div>
+              <div className="text-xs text-red-600">
+                Your account will be deactivated and data removed.
+                {(userRole === "parent" || userRole === "admin") && " This includes all linked player profiles."}
+              </div>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-admin-delete-account"
+            >
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">This action cannot be undone!</p>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                <li>Your account will be deactivated</li>
+                <li>Your login credentials will be removed</li>
+                {(userRole === "parent" || userRole === "admin") && (
+                  <li>All linked player profiles will also be deactivated</li>
+                )}
+                <li>Any active subscriptions will be cancelled</li>
+                <li>You will lose access to all features and history</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                To confirm, please type your email address:
+              </p>
+              <p className="text-sm font-mono bg-gray-100 p-2 rounded">{userEmail}</p>
+              <Input
+                type="email"
+                placeholder="Enter your email to confirm"
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                className="border-red-200 focus:border-red-500"
+                data-testid="input-admin-confirm-email"
+              />
             </div>
           </div>
-
-          <Button type="submit" disabled={updateOrganization.isPending} data-testid="button-save-settings">
-            {updateOrganization.isPending ? "Saving..." : "Save Settings"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConfirmEmail("");
+              }}
+              disabled={isDeleting}
+              data-testid="button-admin-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || confirmEmail !== userEmail}
+              data-testid="button-admin-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

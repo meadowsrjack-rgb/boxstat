@@ -358,15 +358,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email verification endpoint
   app.get('/api/auth/verify-email', async (req: any, res) => {
     try {
-      const { token } = req.query;
+      const { token, email } = req.query;
       
       if (!token) {
         return res.status(400).json({ success: false, message: "Verification token is required" });
       }
       
-      // Find pending registration by verification token
-      // Since we can't query by token directly, we need to check all pending registrations
-      // This is a simple approach - in production you might want a token-to-email mapping
       const organizationId = "default-org";
       const allUsers = await storage.getUsersByOrganization(organizationId);
       
@@ -380,21 +377,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Try to find a pending registration - we'll need to iterate since we can't index by token
-      // This is inefficient but acceptable for now since pending registrations are temporary
-      // In production, consider storing a token-to-email mapping
+      // Find pending registration - first try by email if provided, then by token as fallback
       let pendingReg: any = null;
-      const testEmails = [req.query.email as string]; // If email provided in query
       
-      // If we have an email hint, use it
-      if (testEmails[0]) {
-        pendingReg = await storage.getPendingRegistration(testEmails[0], organizationId);
+      // If email is provided, use it for lookup
+      if (email) {
+        pendingReg = await storage.getPendingRegistration(email as string, organizationId);
+        // Verify the token matches
         if (pendingReg && pendingReg.verificationToken !== token) {
           pendingReg = null;
         }
       }
       
-      // If not found, this is an invalid token
+      // If not found by email, try direct token lookup
+      if (!pendingReg) {
+        pendingReg = await storage.getPendingRegistrationByToken(token as string, organizationId);
+      }
+      
+      // If still not found, invalid token
       if (!pendingReg) {
         return res.status(404).json({ success: false, message: "Invalid or expired verification token" });
       }

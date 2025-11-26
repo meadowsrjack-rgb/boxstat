@@ -1598,6 +1598,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Delete user account (self-deletion)
+  app.post('/api/account/delete', requireAuth, async (req: any, res) => {
+    try {
+      const { id, organizationId } = req.user;
+      const { confirmEmail } = req.body;
+      
+      // Get user info
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "User not found" 
+        });
+      }
+      
+      // STRICTLY require email confirmation - not optional
+      if (!confirmEmail) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email confirmation is required" 
+        });
+      }
+      
+      if (confirmEmail !== user.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email confirmation does not match your account email" 
+        });
+      }
+      
+      // Track Stripe cancellation issues
+      const stripeErrors: string[] = [];
+      
+      // For parent accounts, delete all linked child players first
+      if (user.role === "parent" || user.role === "admin") {
+        const allUsers = await storage.getUsersByOrganization(organizationId);
+        const linkedPlayers = allUsers.filter(u => u.accountHolderId === id);
+        
+        for (const player of linkedPlayers) {
+          // Cancel Stripe subscriptions for child players if they have their own customer
+          if (stripe && player.stripeCustomerId) {
+            try {
+              const subscriptions = await stripe.subscriptions.list({
+                customer: player.stripeCustomerId,
+              });
+              
+              for (const subscription of subscriptions.data) {
+                if (['active', 'trialing', 'past_due'].includes(subscription.status)) {
+                  await stripe.subscriptions.cancel(subscription.id);
+                }
+              }
+            } catch (stripeError: any) {
+              console.error(`Error canceling Stripe subscriptions for player ${player.id}:`, stripeError);
+              stripeErrors.push(`Player ${player.firstName}: ${stripeError.message}`);
+            }
+          }
+          
+          // Soft delete child players
+          await storage.updateUser(player.id, {
+            isActive: false,
+            password: null,
+            verificationToken: null,
+            verificationExpiry: null,
+            magicLinkToken: null,
+            magicLinkExpiry: null,
+            email: `deleted_${player.id}@deleted.local`,
+          });
+        }
+      }
+      
+      // Cancel any active Stripe subscriptions for the main user
+      if (stripe && user.stripeCustomerId) {
+        try {
+          const subscriptions = await stripe.subscriptions.list({
+            customer: user.stripeCustomerId,
+          });
+          
+          for (const subscription of subscriptions.data) {
+            if (['active', 'trialing', 'past_due'].includes(subscription.status)) {
+              await stripe.subscriptions.cancel(subscription.id);
+            }
+          }
+        } catch (stripeError: any) {
+          console.error('Error canceling Stripe subscriptions:', stripeError);
+          stripeErrors.push(`Main account: ${stripeError.message}`);
+        }
+      }
+      
+      // Soft delete the user account
+      await storage.updateUser(id, {
+        isActive: false,
+        password: null,
+        verificationToken: null,
+        verificationExpiry: null,
+        magicLinkToken: null,
+        magicLinkExpiry: null,
+        email: `deleted_${id}@deleted.local`,
+      });
+      
+      // Clear session cookie and destroy session
+      res.clearCookie('connect.sid', { path: '/' });
+      
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) {
+            console.error('Error destroying session:', err);
+          }
+        });
+      }
+      
+      // Return success with any Stripe warnings
+      res.json({ 
+        success: true, 
+        message: "Account deactivated successfully",
+        warnings: stripeErrors.length > 0 ? stripeErrors : undefined
+      });
+    } catch (error: any) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to delete account" 
+      });
+    }
+  });
+  
   // Get profile by ID
   app.get('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {

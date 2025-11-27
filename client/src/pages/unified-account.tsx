@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -32,11 +33,14 @@ import {
   Eye,
   Lock,
   Unlock,
+  AlertTriangle,
+  LogOut,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { PaymentHistory } from "@/components/PaymentHistory";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -213,6 +217,142 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
         <span className="text-sm font-semibold text-gray-900">{skillScore}%</span>
       </div>
     </div>
+  );
+}
+
+// Settings Danger Zone Component for Account Deletion
+function SettingsDangerZone({ user }: { user: any }) {
+  const { toast } = useToast();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const userEmail = user?.email || "";
+  const userRole = user?.role || "";
+  
+  const handleDeleteAccount = async () => {
+    if (confirmEmail !== userEmail) {
+      toast({ title: "Email doesn't match", description: "Please enter your email exactly as shown.", variant: "destructive" });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { 
+        method: "POST", 
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      
+      if (res.ok) {
+        toast({ title: "Account deleted", description: "Your account has been deactivated successfully." });
+        queryClient.clear();
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        toast({ title: "Delete failed", description: data.message || "Could not delete account.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Delete failed", description: "An error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  return (
+    <>
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Irreversible actions that affect your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-red-700">Delete account</div>
+              <div className="text-xs text-red-600">
+                Your account will be deactivated and data removed.
+                {(userRole === "parent" || userRole === "admin") && " This includes all linked player profiles."}
+              </div>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-unified-delete-account"
+            >
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">This action cannot be undone!</p>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                <li>Your account will be deactivated</li>
+                <li>Your login credentials will be removed</li>
+                {(userRole === "parent" || userRole === "admin") && (
+                  <li>All linked player profiles will also be deactivated</li>
+                )}
+                <li>Any active subscriptions will be cancelled</li>
+                <li>You will lose access to all features and history</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                To confirm, please type your email address:
+              </p>
+              <p className="text-sm font-mono bg-gray-100 p-2 rounded">{userEmail}</p>
+              <Input
+                type="email"
+                placeholder="Enter your email to confirm"
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                className="border-red-200 focus:border-red-500"
+                data-testid="input-unified-confirm-email"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConfirmEmail("");
+              }}
+              disabled={isDeleting}
+              data-testid="button-unified-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || confirmEmail !== userEmail}
+              data-testid="button-unified-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -397,13 +537,53 @@ export default function UnifiedAccount() {
   // Check for payment success in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('payment') === 'success') {
+    const sessionId = urlParams.get('session_id');
+    
+    if (urlParams.get('payment') === 'success' && sessionId) {
+      // Verify the session and create payment record
+      apiRequest('/api/payments/verify-session', {
+        method: 'POST',
+        data: { sessionId },
+      })
+        .then(data => {
+          if (data.success) {
+            toast({
+              title: "Payment Successful!",
+              description: "Your payment has been processed successfully.",
+            });
+            
+            // Refetch payment data
+            queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+          } else {
+            toast({
+              title: "Payment Verification",
+              description: data.message || "Payment is being processed.",
+              variant: "default",
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error verifying payment:', error);
+          toast({
+            title: "Payment Status",
+            description: "Payment completed. Refresh the page to see updates.",
+            variant: "default",
+          });
+        })
+        .finally(() => {
+          // Clean up the URL
+          window.history.replaceState({}, '', '/unified-account');
+        });
+    } else if (urlParams.get('payment') === 'success') {
+      // Fallback for old URLs without session_id
       toast({
         title: "Payment Successful!",
-        description: "Player has been successfully added to your account.",
+        description: "Your payment has been processed.",
       });
-      
-      // Clean up the URL
+      queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
       window.history.replaceState({}, '', '/unified-account');
     }
   }, [toast]);
@@ -507,14 +687,14 @@ export default function UnifiedAccount() {
 
   if (playersLoading) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
+      <div className="flex-1 bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="flex-1 bg-gray-50 safe-bottom overflow-y-auto">
       {/* Header */}
       <div className="bg-white border-b safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -641,8 +821,8 @@ export default function UnifiedAccount() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Payment History</CardTitle>
-                    <CardDescription>View and manage your payments</CardDescription>
+                    <CardTitle>Make a Payment</CardTitle>
+                    <CardDescription>Purchase packages and memberships</CardDescription>
                   </div>
                   <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
                     <DialogTrigger asChild>
@@ -669,13 +849,7 @@ export default function UnifiedAccount() {
                             <SelectContent>
                               {programs?.filter(p => p.price && p.price > 0).map((program: any) => (
                                 <SelectItem key={program.id} value={program.id} data-testid={`package-option-${program.id}`}>
-                                  <div className="flex items-center justify-between w-full">
-                                    <span>{program.name}</span>
-                                    <span className="ml-4 text-sm text-gray-600">
-                                      ${(program.price / 100).toFixed(2)}
-                                      {program.billingCycle && ` / ${program.billingCycle}`}
-                                    </span>
-                                  </div>
+                                  {program.name}
                                 </SelectItem>
                               ))}
                               {(!programs || programs.filter((p: any) => p.price && p.price > 0).length === 0) && (
@@ -685,27 +859,24 @@ export default function UnifiedAccount() {
                           </Select>
                         </div>
 
-                        {/* Player Selection (for per-player billing) */}
+                        {/* Player Selection (conditionally shown based on billing model) */}
                         {selectedPackage && (() => {
                           const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                          const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
-                          const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+                          const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
+                          const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
+                          
+                          if (!requiresPlayerSelection) {
+                            return null;
+                          }
                           
                           return (
                             <div className="space-y-2">
-                              <label className="text-sm font-medium">
-                                {isPerPlayer ? "Player (required)" : "Player (optional)"}
-                              </label>
+                              <label className="text-sm font-medium">Player *</label>
                               <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
                                 <SelectTrigger data-testid="select-player">
-                                  <SelectValue placeholder={isPerPlayer ? "Select a player" : "All players"} />
+                                  <SelectValue placeholder="Select a player" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {!isPerPlayer && (
-                                    <SelectItem value="" data-testid="player-option-all">
-                                      All Players (Family Plan)
-                                    </SelectItem>
-                                  )}
                                   {players?.map((player: any) => (
                                     <SelectItem key={player.id} value={player.id} data-testid={`player-option-${player.id}`}>
                                       {player.firstName} {player.lastName}
@@ -713,11 +884,9 @@ export default function UnifiedAccount() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                              {isPerPlayer && (
-                                <p className="text-xs text-gray-600">
-                                  This is a per-player package. Select which player this payment is for.
-                                </p>
-                              )}
+                              <p className="text-xs text-gray-600">
+                                This is a per-player package. Select which player this payment is for.
+                              </p>
                             </div>
                           );
                         })()}
@@ -726,20 +895,41 @@ export default function UnifiedAccount() {
                         {selectedPackage && (() => {
                           const pkg = programs?.find((p: any) => p.id === selectedPackage);
                           return pkg && (
-                            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                               <h4 className="font-semibold">{pkg.name}</h4>
                               {(pkg as any).description && (
                                 <p className="text-sm text-gray-600">{(pkg as any).description}</p>
                               )}
+                              
+                              <div className="flex gap-2 flex-wrap">
+                                {(pkg as any).type && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    {(pkg as any).type}
+                                  </span>
+                                )}
+                                {pkg.billingModel && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    {pkg.billingModel}
+                                  </span>
+                                )}
+                                {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
+                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    {(pkg as any).billingCycle}
+                                  </span>
+                                )}
+                              </div>
+                              
                               <div className="flex justify-between items-center pt-2 border-t">
                                 <span className="font-medium">Total:</span>
-                                <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                                  {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      per {(pkg as any).billingCycle.toLowerCase()}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              {pkg.billingModel && (
-                                <p className="text-xs text-gray-600">
-                                  Billing: {pkg.billingModel}
-                                </p>
-                              )}
                             </div>
                           );
                         })()}
@@ -766,10 +956,10 @@ export default function UnifiedAccount() {
                               }
 
                               const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                              const billingModel = pkg?.billingModel?.toLowerCase().replace(/[-\s]/g, '_') || '';
-                              const isPerPlayer = billingModel.includes('player') && !billingModel.includes('family');
+                              const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
+                              const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
 
-                              if (isPerPlayer && !selectedPlayer) {
+                              if (requiresPlayerSelection && !selectedPlayer) {
                                 toast({
                                   title: "Error",
                                   description: "Please select a player for this per-player package",
@@ -822,37 +1012,10 @@ export default function UnifiedAccount() {
                   </Dialog>
                 </div>
               </CardHeader>
-              <CardContent>
-                {payments.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">No payments yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {payments.map((payment: any) => (
-                      <div
-                        key={payment.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                        data-testid={`payment-${payment.id}`}
-                      >
-                        <div>
-                          <p className="font-semibold">{payment.description || "Payment"}</p>
-                          <p className="text-sm text-gray-600">
-                            {new Date(payment.createdAt).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold">${(payment.amount / 100).toFixed(2)}</p>
-                          <Badge
-                            variant={payment.status === "completed" ? "default" : "outline"}
-                          >
-                            {payment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
             </Card>
+            
+            {/* Payment History Component */}
+            <PaymentHistory />
           </TabsContent>
 
           {/* Messages Tab */}
@@ -903,11 +1066,15 @@ export default function UnifiedAccount() {
                     onClick={handleSignOut}
                     data-testid="button-logout"
                   >
+                    <LogOut className="w-4 h-4 mr-2" />
                     Sign Out
                   </Button>
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Danger Zone */}
+            <SettingsDangerZone user={user} />
           </TabsContent>
 
           {/* Events Tab */}

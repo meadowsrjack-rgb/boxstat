@@ -139,7 +139,7 @@ export default function CoachParentMessages() {
   }
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-6 py-4">

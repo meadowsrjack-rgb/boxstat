@@ -31,7 +31,7 @@ export default function DemoAccountSetup() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white border-b">
         <div className="max-w-md mx-auto px-6 py-4">

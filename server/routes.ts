@@ -358,15 +358,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email verification endpoint
   app.get('/api/auth/verify-email', async (req: any, res) => {
     try {
-      const { token } = req.query;
+      const { token, email } = req.query;
       
       if (!token) {
         return res.status(400).json({ success: false, message: "Verification token is required" });
       }
       
-      // Find pending registration by verification token
-      // Since we can't query by token directly, we need to check all pending registrations
-      // This is a simple approach - in production you might want a token-to-email mapping
       const organizationId = "default-org";
       const allUsers = await storage.getUsersByOrganization(organizationId);
       
@@ -380,21 +377,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Try to find a pending registration - we'll need to iterate since we can't index by token
-      // This is inefficient but acceptable for now since pending registrations are temporary
-      // In production, consider storing a token-to-email mapping
+      // Find pending registration - first try by email if provided, then by token as fallback
       let pendingReg: any = null;
-      const testEmails = [req.query.email as string]; // If email provided in query
       
-      // If we have an email hint, use it
-      if (testEmails[0]) {
-        pendingReg = await storage.getPendingRegistration(testEmails[0], organizationId);
+      // If email is provided, use it for lookup
+      if (email) {
+        pendingReg = await storage.getPendingRegistration(email as string, organizationId);
+        // Verify the token matches
         if (pendingReg && pendingReg.verificationToken !== token) {
           pendingReg = null;
         }
       }
       
-      // If not found, this is an invalid token
+      // If not found by email, try direct token lookup
+      if (!pendingReg) {
+        pendingReg = await storage.getPendingRegistrationByToken(token as string, organizationId);
+      }
+      
+      // If still not found, invalid token
       if (!pendingReg) {
         return res.status(404).json({ success: false, message: "Invalid or expired verification token" });
       }
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: 'payment',
-        success_url: `${origin}/payments?success=true`,
+        success_url: `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/payments?canceled=true`,
         metadata: {
           userId: user.id,
@@ -738,7 +738,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Ensure player belongs to the paying user or is the paying user
-        const isValidPlayer = playerId === req.user.id || (player as any).guardianId === req.user.id;
+        // Check both parentId and guardianId to handle all parent-child relationships
+        const isValidPlayer = playerId === req.user.id || 
+                             (player as any).parentId === req.user.id || 
+                             (player as any).guardianId === req.user.id;
+        
         if (!isValidPlayer) {
           return res.status(403).json({ error: "You can only make payments for yourself or your children" });
         }
@@ -775,7 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: 1,
         }],
         mode: program.type === 'Subscription' ? 'subscription' : 'payment',
-        success_url: `${origin}/unified-account?payment=success`,
+        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/unified-account?payment=canceled`,
         metadata: {
           userId: user.id,
@@ -862,7 +866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 await storage.createPayment({
                   organizationId: updatedPlayer.organizationId,
                   userId: playerId,
-                  amount: session.amount_total / 100, // Convert from cents to dollars
+                  amount: session.amount_total, // Store in cents (Stripe convention)
                   currency: 'usd',
                   paymentType: 'add_player',
                   status: 'completed',
@@ -903,7 +907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 organizationId: "default-org",
                 userId: userId,
                 playerId: playerId,
-                amount: session.amount_total / 100, // Convert from cents to dollars
+                amount: session.amount_total, // Store in cents (Stripe convention)
                 currency: 'usd',
                 paymentType: program?.type || 'package',
                 status: 'completed',
@@ -945,19 +949,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Optionally create a payment record
+        // Create one consolidated payment record for the entire checkout
         if (session.amount_total) {
           try {
             await storage.createPayment({
               organizationId: "default-org",
               userId,
-              amount: session.amount_total / 100, // Convert from cents to dollars
+              amount: session.amount_total,
               currency: 'usd',
               paymentType: 'stripe_checkout',
               status: 'completed',
-              description: `Stripe Checkout Session: ${session.id}`,
+              description: `Package Selections Payment`,
+              stripePaymentId: session.payment_intent as string,
             });
-            console.log(`✅ Created payment record for user ${userId}`);
+            console.log(`✅ Created consolidated payment record for user ${userId}`);
           } catch (paymentError: any) {
             console.error("Error creating payment record:", paymentError);
             // Don't fail the webhook if payment record creation fails
@@ -976,6 +981,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Error processing webhook",
         message: error.message 
       });
+    }
+  });
+
+  // Payment success callback (for when webhooks don't fire in test mode)
+  app.post('/api/payments/verify-session', async (req: any, res) => {
+    try {
+      console.log('🔍 verify-session request body:', req.body);
+      console.log('🔍 verify-session headers:', req.headers['content-type']);
+      
+      const { sessionId } = req.body;
+      
+      if (!sessionId || !stripe) {
+        console.error('❌ Missing sessionId:', sessionId, 'or Stripe not configured:', !!stripe);
+        return res.status(400).json({ error: 'Missing session ID or Stripe not configured' });
+      }
+
+      console.log(`🔍 Verifying checkout session: ${sessionId}`);
+      
+      // Retrieve the session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session.payment_status !== 'paid') {
+        return res.json({ success: false, message: 'Payment not completed' });
+      }
+
+      console.log(`✅ Session verified: ${sessionId}, payment_status: ${session.payment_status}`);
+
+      // Process based on metadata type (same logic as webhook)
+      if (session.metadata?.type === 'add_player') {
+        const playerId = session.metadata.playerId;
+        const accountHolderId = session.metadata.accountHolderId;
+        
+        if (!playerId || !accountHolderId) {
+          return res.status(400).json({ error: 'Missing required metadata' });
+        }
+        
+        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
+        const existingPayments = await storage.getPaymentsByUser(playerId);
+        const alreadyProcessed = existingPayments.some(p => 
+          p.stripePaymentId === session.payment_intent && p.status === 'completed'
+        );
+        
+        if (!alreadyProcessed) {
+          const updatedPlayer = await storage.updateUser(playerId, {
+            paymentStatus: "paid",
+            hasRegistered: true,
+            stripeCheckoutSessionId: session.id,
+          });
+          
+          if (updatedPlayer && session.amount_total) {
+            await storage.createPayment({
+              organizationId: updatedPlayer.organizationId,
+              userId: playerId,
+              amount: session.amount_total,
+              currency: 'usd',
+              paymentType: 'add_player',
+              status: 'completed',
+              description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
+              stripePaymentId: session.payment_intent as string,
+            });
+            console.log(`✅ Created add_player payment record via callback for player ${playerId}`);
+          }
+        } else {
+          console.log(`ℹ️ Payment already processed for player ${playerId}`);
+        }
+      }
+      
+      if (session.metadata?.type === 'package_purchase') {
+        const userId = session.metadata.userId;
+        const packageId = session.metadata.packageId;
+        const playerId = session.metadata.playerId || null;
+        
+        if (!userId || !packageId) {
+          return res.status(400).json({ error: 'Missing required metadata' });
+        }
+        
+        // Check if payment already exists
+        const existingPayments = await storage.getPaymentsByUser(userId);
+        const alreadyProcessed = existingPayments.some(p => 
+          p.stripePaymentId === session.payment_intent && p.status === 'completed'
+        );
+        
+        if (!alreadyProcessed && session.amount_total) {
+          const program = await storage.getProgram(packageId);
+          await storage.createPayment({
+            organizationId: "default-org",
+            userId: userId,
+            playerId: playerId,
+            amount: session.amount_total,
+            currency: 'usd',
+            paymentType: program?.type || 'package',
+            status: 'completed',
+            description: program?.name || `Package Purchase`,
+            packageId: packageId,
+            programId: packageId,
+            stripePaymentId: session.payment_intent as string,
+          });
+          console.log(`✅ Created package_purchase payment record via callback for user ${userId}`);
+        } else {
+          console.log(`ℹ️ Payment already processed for user ${userId}`);
+        }
+      }
+
+      // Handle package selection flow (existing family onboarding)
+      if (session.metadata?.packageSelectionIds) {
+        const userId = session.metadata.userId;
+        const selectionIds = session.metadata.packageSelectionIds;
+        
+        if (!userId || !selectionIds) {
+          return res.status(400).json({ error: 'Missing required metadata for package selections' });
+        }
+        
+        // Check if payment already exists (check by stripePaymentId for webhook compatibility)
+        const existingPayments = await storage.getPaymentsByUser(userId);
+        const alreadyProcessed = existingPayments.some(p => 
+          p.stripePaymentId === session.payment_intent && p.status === 'completed'
+        );
+        
+        if (!alreadyProcessed) {
+          // Mark each package selection as paid
+          const selectionIdArray = selectionIds.split(',');
+          for (const selectionId of selectionIdArray) {
+            try {
+              await storage.markPackageSelectionPaid(selectionId.trim());
+              console.log(`✅ Marked package selection ${selectionId} as paid via callback`);
+            } catch (err) {
+              console.error(`Error marking selection ${selectionId} as paid:`, err);
+            }
+          }
+          
+          // Create one consolidated payment record (matching webhook logic)
+          if (session.amount_total) {
+            await storage.createPayment({
+              organizationId: "default-org",
+              userId,
+              amount: session.amount_total,
+              currency: 'usd',
+              paymentType: 'stripe_checkout',
+              status: 'completed',
+              description: `Package Selections Payment`,
+              stripePaymentId: session.payment_intent as string,
+            });
+            console.log(`✅ Created consolidated payment record via callback for user ${userId}`);
+          }
+        } else {
+          console.log(`ℹ️ Package selection payment already processed for session ${session.id}`);
+        }
+      }
+
+      res.json({ success: true, message: 'Payment verified and processed' });
+    } catch (error: any) {
+      console.error('Error verifying session:', error);
+      res.status(500).json({ error: 'Failed to verify session', message: error.message });
     }
   });
   
@@ -1410,7 +1568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: 1,
         }],
         mode: 'payment',
-        success_url: `${origin}/unified-account?payment=success`,
+        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
         metadata: {
           type: 'add_player',
@@ -1436,6 +1594,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: error.message || "Failed to add player" 
+      });
+    }
+  });
+  
+  // Delete user account (self-deletion)
+  app.post('/api/account/delete', requireAuth, async (req: any, res) => {
+    try {
+      const { id, organizationId } = req.user;
+      const { confirmEmail } = req.body;
+      
+      // Get user info
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "User not found" 
+        });
+      }
+      
+      // STRICTLY require email confirmation - not optional
+      if (!confirmEmail) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email confirmation is required" 
+        });
+      }
+      
+      if (confirmEmail !== user.email) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Email confirmation does not match your account email" 
+        });
+      }
+      
+      // Track Stripe cancellation issues
+      const stripeErrors: string[] = [];
+      
+      // For parent accounts, delete all linked child players first
+      if (user.role === "parent" || user.role === "admin") {
+        const allUsers = await storage.getUsersByOrganization(organizationId);
+        const linkedPlayers = allUsers.filter(u => u.accountHolderId === id);
+        
+        for (const player of linkedPlayers) {
+          // Cancel Stripe subscriptions for child players if they have their own customer
+          if (stripe && player.stripeCustomerId) {
+            try {
+              const subscriptions = await stripe.subscriptions.list({
+                customer: player.stripeCustomerId,
+              });
+              
+              for (const subscription of subscriptions.data) {
+                if (['active', 'trialing', 'past_due'].includes(subscription.status)) {
+                  await stripe.subscriptions.cancel(subscription.id);
+                }
+              }
+            } catch (stripeError: any) {
+              console.error(`Error canceling Stripe subscriptions for player ${player.id}:`, stripeError);
+              stripeErrors.push(`Player ${player.firstName}: ${stripeError.message}`);
+            }
+          }
+          
+          // Soft delete child players
+          await storage.updateUser(player.id, {
+            isActive: false,
+            password: null,
+            verificationToken: null,
+            verificationExpiry: null,
+            magicLinkToken: null,
+            magicLinkExpiry: null,
+            email: `deleted_${player.id}@deleted.local`,
+          });
+        }
+      }
+      
+      // Cancel any active Stripe subscriptions for the main user
+      if (stripe && user.stripeCustomerId) {
+        try {
+          const subscriptions = await stripe.subscriptions.list({
+            customer: user.stripeCustomerId,
+          });
+          
+          for (const subscription of subscriptions.data) {
+            if (['active', 'trialing', 'past_due'].includes(subscription.status)) {
+              await stripe.subscriptions.cancel(subscription.id);
+            }
+          }
+        } catch (stripeError: any) {
+          console.error('Error canceling Stripe subscriptions:', stripeError);
+          stripeErrors.push(`Main account: ${stripeError.message}`);
+        }
+      }
+      
+      // Soft delete the user account
+      await storage.updateUser(id, {
+        isActive: false,
+        password: null,
+        verificationToken: null,
+        verificationExpiry: null,
+        magicLinkToken: null,
+        magicLinkExpiry: null,
+        email: `deleted_${id}@deleted.local`,
+      });
+      
+      // Clear session cookie and destroy session
+      res.clearCookie('connect.sid', { path: '/' });
+      
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) {
+            console.error('Error destroying session:', err);
+          }
+        });
+      }
+      
+      // Return success with any Stripe warnings
+      res.json({ 
+        success: true, 
+        message: "Account deactivated successfully",
+        warnings: stripeErrors.length > 0 ? stripeErrors : undefined
+      });
+    } catch (error: any) {
+      console.error("Account deletion error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to delete account" 
       });
     }
   });
@@ -2040,7 +2323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } else if (role === 'parent') {
       // Parent Mode: Show events from ALL children's teams + parent's own events
       const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
-      const childProfiles = allUsersInOrg.filter(u => u.guardianId === userId);
+      const childProfiles = allUsersInOrg.filter(u => u.parentId === userId || u.guardianId === userId);
       
       // Collect all team IDs and division IDs from children
       for (const child of childProfiles) {
@@ -3145,6 +3428,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(payments);
   });
   
+  // Get payment history with Stripe subscription details
+  app.get('/api/payments/history', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get all child player IDs if user is a parent
+      const allUsers = await storage.getUsersByOrganization(req.user.organizationId);
+      const childPlayerIds = allUsers
+        .filter(u => u.parentId === userId || u.guardianId === userId)
+        .map(u => u.id);
+      
+      // Get payments for the user and all their children
+      const userIds = [userId, ...childPlayerIds];
+      const allPayments = await Promise.all(
+        userIds.map(id => storage.getPaymentsByUser(id))
+      );
+      const payments = allPayments.flat();
+      
+      // Enrich with Stripe data
+      const enrichedPayments = await Promise.all(
+        payments.map(async (payment) => {
+          let stripeData: any = null;
+          
+          if (payment.stripePaymentId && stripe) {
+            try {
+              // Check if it's a subscription or payment intent
+              if (payment.stripePaymentId.startsWith('sub_')) {
+                // It's a subscription
+                const subscription = await stripe.subscriptions.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: 'subscription',
+                  status: subscription.status,
+                  currentPeriodEnd: subscription.current_period_end,
+                  currentPeriodStart: subscription.current_period_start,
+                  cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                  interval: subscription.items.data[0]?.price?.recurring?.interval,
+                };
+              } else if (payment.stripePaymentId.startsWith('pi_')) {
+                // It's a payment intent
+                const paymentIntent = await stripe.paymentIntents.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: 'one_time',
+                  status: paymentIntent.status,
+                };
+              } else if (payment.stripePaymentId.startsWith('cs_')) {
+                // It's a checkout session
+                const session = await stripe.checkout.sessions.retrieve(payment.stripePaymentId);
+                stripeData = {
+                  type: session.mode === 'subscription' ? 'subscription' : 'one_time',
+                  status: session.payment_status,
+                };
+                
+                // If it's a subscription, try to get the subscription ID
+                if (session.subscription && typeof session.subscription === 'string') {
+                  const subscription = await stripe.subscriptions.retrieve(session.subscription);
+                  stripeData.subscriptionDetails = {
+                    id: subscription.id,
+                    status: subscription.status,
+                    currentPeriodEnd: subscription.current_period_end,
+                    currentPeriodStart: subscription.current_period_start,
+                    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+                    interval: subscription.items.data[0]?.price?.recurring?.interval,
+                  };
+                }
+              }
+            } catch (error: any) {
+              console.error(`Error fetching Stripe data for ${payment.stripePaymentId}:`, error.message);
+            }
+          }
+          
+          // Get player info if applicable
+          let playerInfo = null;
+          if (payment.playerId) {
+            const player = await storage.getUser(payment.playerId);
+            if (player) {
+              playerInfo = {
+                id: player.id,
+                firstName: player.firstName,
+                lastName: player.lastName,
+              };
+            }
+          }
+          
+          return {
+            ...payment,
+            stripeData,
+            playerInfo,
+          };
+        })
+      );
+      
+      // Sort by creation date (newest first)
+      enrichedPayments.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      res.json(enrichedPayments);
+    } catch (error: any) {
+      console.error("Error fetching payment history:", error);
+      res.status(500).json({ error: "Failed to fetch payment history" });
+    }
+  });
+  
   app.post('/api/payments', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin') {
@@ -3174,7 +3560,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Check if playerId is the paying user or a child of the paying user
+        // Check both parentId and guardianId to handle all parent-child relationships
         const isValidPlayer = paymentData.playerId === paymentData.userId || 
+                             (player as any).parentId === paymentData.userId ||
                              (player as any).guardianId === paymentData.userId;
         
         if (!isValidPlayer) {

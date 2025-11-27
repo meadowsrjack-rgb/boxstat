@@ -43,6 +43,8 @@ import {
   Circle,
   Shield,
   AlertCircle,
+  AlertTriangle,
+  LogOut,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -166,6 +168,7 @@ export default function AdminDashboard() {
   // Fetch payments
   const { data: payments = [], isLoading: paymentsLoading} = useQuery<any[]>({
     queryKey: ["/api/payments"],
+    staleTime: 0, // Always refetch to ensure latest payment data
   });
 
   // Fetch divisions
@@ -209,7 +212,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom" data-testid="admin-dashboard">
+    <div className="scrollable-page bg-gray-50 safe-bottom" data-testid="admin-dashboard">
       {/* Header */}
       <div className="bg-white border-b safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -309,6 +312,8 @@ export default function AdminDashboard() {
                 testId="stat-total-revenue"
               />
             </div>
+
+            <RecentTransactionsCard payments={payments} users={users} programs={programs} />
           </TabsContent>
 
           <TabsContent value="users">
@@ -360,6 +365,139 @@ function StatCard({ title, value, icon, subtitle, testId }: any) {
             {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
           </div>
           <div className="text-primary">{icon}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RecentTransactionsCard({ payments, users, programs }: any) {
+  const [showAll, setShowAll] = useState(false);
+  
+  const sortedPayments = [...payments]
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  
+  const recentPayments = sortedPayments.slice(0, 5);
+  const olderPayments = sortedPayments.slice(5);
+  
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: any; label: string }> = {
+      completed: { variant: "default", label: "Completed" },
+      pending: { variant: "secondary", label: "Pending" },
+      failed: { variant: "destructive", label: "Failed" },
+    };
+    
+    const config = statusConfig[status] || statusConfig.pending;
+    return <Badge variant={config.variant as any} data-testid={`badge-status-${status}`}>{config.label}</Badge>;
+  };
+  
+  const getUserName = (userId: string) => {
+    const user = users.find((u: any) => u.id === userId);
+    if (user) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return "Unknown User";
+  };
+  
+  const getProgramName = (programId: string) => {
+    const program = programs.find((p: any) => p.id === programId);
+    return program ? program.name : "N/A";
+  };
+  
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM d, yyyy");
+    } catch {
+      return "Invalid date";
+    }
+  };
+  
+  const TransactionRow = ({ payment }: { payment: any }) => (
+    <div className="flex items-center justify-between py-3 border-b last:border-0" data-testid={`transaction-${payment.id}`}>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
+            {getUserName(payment.userId)}
+          </p>
+          {getStatusBadge(payment.status)}
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>
+            {getProgramName(payment.programId)}
+          </p>
+          <span className="text-xs text-gray-400">•</span>
+          <p className="text-xs text-gray-500" data-testid={`transaction-date-${payment.id}`}>
+            {formatDate(payment.createdAt)}
+          </p>
+        </div>
+      </div>
+      <div className="ml-4 flex-shrink-0">
+        <p className="text-sm font-semibold" data-testid={`transaction-amount-${payment.id}`}>
+          ${(payment.amount / 100).toFixed(2)}
+        </p>
+      </div>
+    </div>
+  );
+  
+  if (payments.length === 0) {
+    return (
+      <Card data-testid="card-recent-transactions">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="w-5 h-5" />
+            Recent Transactions
+          </CardTitle>
+          <CardDescription>View all payment transactions</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-gray-500">
+            <p>No transactions yet</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <Card data-testid="card-recent-transactions">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ArrowLeftRight className="w-5 h-5" />
+          Recent Transactions
+        </CardTitle>
+        <CardDescription>
+          {sortedPayments.length} total transaction{sortedPayments.length !== 1 ? 's' : ''}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-0">
+          {recentPayments.map((payment: any) => (
+            <TransactionRow key={payment.id} payment={payment} />
+          ))}
+          
+          {olderPayments.length > 0 && (
+            <Collapsible open={showAll} onOpenChange={setShowAll}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="w-full mt-2 flex items-center justify-center gap-2"
+                  data-testid="button-show-all-transactions"
+                >
+                  <span className="text-sm">
+                    {showAll ? 'Show Less' : `Show ${olderPayments.length} More`}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="space-y-0 mt-2">
+                  {olderPayments.map((payment: any) => (
+                    <TransactionRow key={payment.id} payment={payment} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -5625,17 +5763,17 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     resolver: zodResolver(insertNotificationSchema),
     defaultValues: {
       organizationId: organization?.id || "",
-      types: ["message"] as const,
+      types: ["message"],
       title: "",
       message: "",
-      recipientTarget: "everyone" as const,
+      recipientTarget: "everyone",
       recipientUserIds: [],
       recipientRoles: [],
       recipientTeamIds: [],
       recipientDivisionIds: [],
-      deliveryChannels: ["in_app"] as const,
+      deliveryChannels: ["in_app"],
       sentBy: currentUser?.id || "",
-      status: "pending" as const,
+      status: "pending",
     },
   });
 
@@ -5871,9 +6009,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {users.map((user: any) => (
                             <div key={user.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(user.id)}
+                                checked={(field.value as string[] | undefined)?.includes(user.id) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, user.id]);
                                   } else {
@@ -5906,9 +6044,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {["admin", "coach", "player", "parent"].map((role) => (
                             <div key={role} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(role)}
+                                checked={(field.value as string[] | undefined)?.includes(role) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, role]);
                                   } else {
@@ -5939,9 +6077,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {teams.map((team: any) => (
                             <div key={team.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(String(team.id))}
+                                checked={(field.value as string[] | undefined)?.includes(String(team.id)) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, String(team.id)]);
                                   } else {
@@ -5972,9 +6110,9 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           {divisions.map((division: any) => (
                             <div key={division.id} className="flex items-center gap-2">
                               <Checkbox
-                                checked={field.value?.includes(String(division.id))}
+                                checked={(field.value as string[] | undefined)?.includes(String(division.id)) ?? false}
                                 onCheckedChange={(checked) => {
-                                  const current = field.value || [];
+                                  const current = (field.value as string[]) || [];
                                   if (checked) {
                                     field.onChange([...current, String(division.id)]);
                                   } else {
@@ -6125,6 +6263,17 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 // Settings Tab Component
 function SettingsTab({ organization }: any) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+  });
+  
+  const userEmail = currentUser?.email || "";
+  const userRole = currentUser?.role || "";
 
   const updateOrganization = useMutation({
     mutationFn: async (data: any) => {
@@ -6145,124 +6294,277 @@ function SettingsTab({ organization }: any) {
     e.preventDefault();
     updateOrganization.mutate(formData);
   };
+  
+  const handleDeleteAccount = async () => {
+    if (confirmEmail !== userEmail) {
+      toast({ title: "Email doesn't match", description: "Please enter your email exactly as shown.", variant: "destructive" });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { 
+        method: "POST", 
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      
+      if (res.ok) {
+        toast({ title: "Account deleted", description: "Your account has been deactivated successfully." });
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        toast({ title: "Delete failed", description: data.message || "Could not delete account.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Delete failed", description: "An error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      queryClient.clear();
+      setLocation("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Organization Settings</CardTitle>
-        <CardDescription>Customize your organization's branding and settings</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="name">Organization Name</Label>
-              <Input
-                id="name"
-                value={formData.name || ""}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                data-testid="input-org-name"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sportType">Sport Type</Label>
-              <Input
-                id="sportType"
-                value={formData.sportType || ""}
-                onChange={(e) => setFormData({ ...formData, sportType: e.target.value })}
-                placeholder="basketball, soccer, baseball, etc."
-                data-testid="input-sport-type"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Organization Settings</CardTitle>
+          <CardDescription>Customize your organization's branding and settings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="primaryColor">Primary Color</Label>
+                <Label htmlFor="name">Organization Name</Label>
                 <Input
-                  id="primaryColor"
-                  type="color"
-                  value={formData.primaryColor || "#1E40AF"}
-                  onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                  data-testid="input-primary-color"
+                  id="name"
+                  value={formData.name || ""}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  data-testid="input-org-name"
                 />
               </div>
+
               <div>
-                <Label htmlFor="secondaryColor">Secondary Color</Label>
+                <Label htmlFor="sportType">Sport Type</Label>
                 <Input
-                  id="secondaryColor"
-                  type="color"
-                  value={formData.secondaryColor || "#DC2626"}
-                  onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
-                  data-testid="input-secondary-color"
+                  id="sportType"
+                  value={formData.sportType || ""}
+                  onChange={(e) => setFormData({ ...formData, sportType: e.target.value })}
+                  placeholder="basketball, soccer, baseball, etc."
+                  data-testid="input-sport-type"
                 />
               </div>
-            </div>
 
-            <div>
-              <h3 className="font-medium mb-2">Terminology Customization</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="term-athlete">Athlete Term</Label>
+                  <Label htmlFor="primaryColor">Primary Color</Label>
                   <Input
-                    id="term-athlete"
-                    value={formData.terminology?.athlete || "Player"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, athlete: e.target.value }
-                    })}
-                    placeholder="Player, Athlete, Student"
-                    data-testid="input-term-athlete"
+                    id="primaryColor"
+                    type="color"
+                    value={formData.primaryColor || "#1E40AF"}
+                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
+                    data-testid="input-primary-color"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="term-coach">Coach Term</Label>
+                  <Label htmlFor="secondaryColor">Secondary Color</Label>
                   <Input
-                    id="term-coach"
-                    value={formData.terminology?.coach || "Coach"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, coach: e.target.value }
-                    })}
-                    placeholder="Coach, Trainer, Instructor"
-                    data-testid="input-term-coach"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="term-team">Team Term</Label>
-                  <Input
-                    id="term-team"
-                    value={formData.terminology?.team || "Team"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, team: e.target.value }
-                    })}
-                    placeholder="Team, Squad, Group"
-                    data-testid="input-term-team"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="term-practice">Practice Term</Label>
-                  <Input
-                    id="term-practice"
-                    value={formData.terminology?.practice || "Practice"}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      terminology: { ...formData.terminology, practice: e.target.value }
-                    })}
-                    placeholder="Practice, Training, Session"
-                    data-testid="input-term-practice"
+                    id="secondaryColor"
+                    type="color"
+                    value={formData.secondaryColor || "#DC2626"}
+                    onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+                    data-testid="input-secondary-color"
                   />
                 </div>
               </div>
+
+              <div>
+                <h3 className="font-medium mb-2">Terminology Customization</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="term-athlete">Athlete Term</Label>
+                    <Input
+                      id="term-athlete"
+                      value={formData.terminology?.athlete || "Player"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, athlete: e.target.value }
+                      })}
+                      placeholder="Player, Athlete, Student"
+                      data-testid="input-term-athlete"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-coach">Coach Term</Label>
+                    <Input
+                      id="term-coach"
+                      value={formData.terminology?.coach || "Coach"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, coach: e.target.value }
+                      })}
+                      placeholder="Coach, Trainer, Instructor"
+                      data-testid="input-term-coach"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-team">Team Term</Label>
+                    <Input
+                      id="term-team"
+                      value={formData.terminology?.team || "Team"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, team: e.target.value }
+                      })}
+                      placeholder="Team, Squad, Group"
+                      data-testid="input-term-team"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="term-practice">Practice Term</Label>
+                    <Input
+                      id="term-practice"
+                      value={formData.terminology?.practice || "Practice"}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        terminology: { ...formData.terminology, practice: e.target.value }
+                      })}
+                      placeholder="Practice, Training, Session"
+                      data-testid="input-term-practice"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" disabled={updateOrganization.isPending} data-testid="button-save-settings">
+              {updateOrganization.isPending ? "Saving..." : "Save Settings"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      
+      {/* Account Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+          <CardDescription>Sign out or manage your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={handleSignOut}
+            data-testid="button-admin-logout"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </CardContent>
+      </Card>
+      
+      {/* Danger Zone */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>Irreversible actions that affect your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-red-700">Delete account</div>
+              <div className="text-xs text-red-600">
+                Your account will be deactivated and data removed.
+                {(userRole === "parent" || userRole === "admin") && " This includes all linked player profiles."}
+              </div>
+            </div>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-admin-delete-account"
+            >
+              Delete
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">This action cannot be undone!</p>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                <li>Your account will be deactivated</li>
+                <li>Your login credentials will be removed</li>
+                {(userRole === "parent" || userRole === "admin") && (
+                  <li>All linked player profiles will also be deactivated</li>
+                )}
+                <li>Any active subscriptions will be cancelled</li>
+                <li>You will lose access to all features and history</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                To confirm, please type your email address:
+              </p>
+              <p className="text-sm font-mono bg-gray-100 p-2 rounded">{userEmail}</p>
+              <Input
+                type="email"
+                placeholder="Enter your email to confirm"
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                className="border-red-200 focus:border-red-500"
+                data-testid="input-admin-confirm-email"
+              />
             </div>
           </div>
-
-          <Button type="submit" disabled={updateOrganization.isPending} data-testid="button-save-settings">
-            {updateOrganization.isPending ? "Saving..." : "Save Settings"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConfirmEmail("");
+              }}
+              disabled={isDeleting}
+              data-testid="button-admin-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting || confirmEmail !== userEmail}
+              data-testid="button-admin-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

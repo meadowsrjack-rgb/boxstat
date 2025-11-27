@@ -391,7 +391,7 @@ export default function CoachDashboard() {
   });
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top">
         <div className="max-w-md mx-auto px-4 py-3">

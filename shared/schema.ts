@@ -74,6 +74,8 @@ export interface User {
   // Registration flow fields
   registrationType?: RegistrationType; // "myself" or "my_child"
   accountHolderId?: string; // For players linked to a parent account
+  parentId?: string; // Parent/guardian user ID for child players
+  guardianId?: string; // Alternative guardian user ID for child players
   packageSelected?: string; // Selected program/package ID
   teamAssignmentStatus?: TeamAssignmentStatus; // "pending" or "assigned"
   hasRegistered?: boolean; // Whether they have registered in the app
@@ -452,7 +454,7 @@ export const payments = pgTable("payments", {
   id: serial().primaryKey().notNull(),
   userId: varchar("user_id").notNull(),
   playerId: varchar("player_id"), // For per-player billing: which specific player this payment covers
-  amount: real().notNull(),
+  amount: integer().notNull(), // Amount in cents (e.g., 1000 = $10.00)
   currency: varchar().default('usd'),
   paymentType: varchar("payment_type").notNull(),
   stripePaymentId: varchar("stripe_payment_id"),

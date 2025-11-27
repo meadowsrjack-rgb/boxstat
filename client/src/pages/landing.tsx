@@ -7,30 +7,20 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative h-full overflow-hidden bg-black" style={{
-      paddingTop: 'var(--safe-area-top)',
-      paddingBottom: 'var(--safe-area-bottom)',
-    }}>
+    <div className="relative flex flex-col min-h-screen h-screen overflow-hidden bg-black">
       {/* Video Background - Extends through safe areas */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute w-full object-cover z-0"
-        style={{
-          top: 'calc(var(--safe-area-top) * -1)',
-          bottom: 'calc(var(--safe-area-bottom) * -1)',
-          left: 0,
-          right: 0,
-          height: 'calc(100% + var(--safe-area-top) + var(--safe-area-bottom))',
-        }}
+        className="absolute w-full h-full object-cover z-0"
       >
         <source src={backgroundVideo} type="video/mp4" />
       </video>
 
-      {/* Content Layer - Safe area aware */}
-      <div className="relative z-10 h-full flex flex-col justify-between items-center py-8">
+      {/* Content Layer - Flex to fill space */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8 safe-top">
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 
@@ -41,34 +31,31 @@ export default function Landing() {
           />
         </div>
 
-        {/* Spacer */}
+        {/* Spacer - pushes buttons to bottom */}
         <div className="flex-1"></div>
 
-        {/* Bottom Content */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center pb-6" style={{ paddingBottom: '24px' }}>
-          {/* Call to Action Buttons */}
-          <div className="space-y-4">
-            {/* Primary CTA Button */}
-            <Button 
-              size="lg" 
-              onClick={() => setLocation('/registration')}
-              className="bg-[#01005252] hover:bg-red-600 text-white font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px] text-[14px]"
-              data-testid="button-lets-go"
-            >
-              LET'S GO
-            </Button>
+        {/* Bottom Content - Both button and sign in text */}
+        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full flex-shrink-0 mb-6">
+          {/* Primary CTA Button */}
+          <Button 
+            size="lg" 
+            onClick={() => setLocation('/registration')}
+            className="bg-[#01005252] hover:bg-red-600 text-white font-bold px-12 py-4 rounded-xl shadow-2xl transition-all duration-300 transform hover:scale-105 min-w-[280px] text-[14px]"
+            data-testid="button-lets-go"
+          >
+            LET'S GO
+          </Button>
 
-            {/* Secondary Text/Link */}
-            <div className="text-white text-sm">
-              <span>HAVE AN ACCOUNT? </span>
-              <button 
-                onClick={() => setLocation('/login')}
-                className="text-white font-semibold underline hover:text-gray-200 transition-colors"
-                data-testid="button-sign-in"
-              >
-                SIGN IN
-              </button>
-            </div>
+          {/* Sign In Text */}
+          <div className="text-white text-sm">
+            <span>HAVE AN ACCOUNT? </span>
+            <button 
+              onClick={() => setLocation('/login')}
+              className="text-white font-semibold underline hover:text-gray-200 transition-colors"
+              data-testid="button-sign-in"
+            >
+              SIGN IN
+            </button>
           </div>
         </div>
       </div>

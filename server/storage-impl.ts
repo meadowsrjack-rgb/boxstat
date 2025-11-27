@@ -66,6 +66,7 @@ export interface IStorage {
   
   // Pending Registration operations
   getPendingRegistration(email: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null} | undefined>;
+  getPendingRegistrationByToken(token: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null} | undefined>;
   createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null}>;
   updatePendingRegistration(email: string, organizationId: string, verified: boolean): Promise<void>;
   deletePendingRegistration(email: string, organizationId: string): Promise<void>;
@@ -829,6 +830,15 @@ class MemStorage implements IStorage {
   async getPendingRegistration(email: string, organizationId: string) {
     const key = `${email}-${organizationId}`;
     return this.pendingRegistrations.get(key);
+  }
+  
+  async getPendingRegistrationByToken(token: string, organizationId: string) {
+    for (const pending of this.pendingRegistrations.values()) {
+      if (pending.verificationToken === token && pending.organizationId === organizationId) {
+        return pending;
+      }
+    }
+    return undefined;
   }
   
   async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
@@ -2249,6 +2259,18 @@ class DatabaseStorage implements IStorage {
     return results[0];
   }
   
+  async getPendingRegistrationByToken(token: string, organizationId: string) {
+    const results = await db.select().from(schema.pendingRegistrations)
+      .where(
+        and(
+          eq(schema.pendingRegistrations.verificationToken, token),
+          eq(schema.pendingRegistrations.organizationId, organizationId)
+        )
+      );
+    if (results.length === 0) return undefined;
+    return results[0];
+  }
+  
   async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
     const results = await db.insert(schema.pendingRegistrations)
       .values({
@@ -2841,7 +2863,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getPaymentsByOrganization(organizationId: string): Promise<Payment[]> {
-    const results = await db.select().from(schema.payments);
+    const results = await db.select().from(schema.payments)
+      .where(eq(schema.payments.organizationId, organizationId));
     return results.map(payment => this.mapDbPaymentToPayment(payment));
   }
 
@@ -2853,6 +2876,7 @@ class DatabaseStorage implements IStorage {
 
   async createPayment(payment: InsertPayment): Promise<Payment> {
     const dbPayment = {
+      organizationId: payment.organizationId,
       userId: payment.userId,
       playerId: payment.playerId, // For per-player billing: which specific player this payment covers
       amount: payment.amount,
@@ -2861,6 +2885,9 @@ class DatabaseStorage implements IStorage {
       status: payment.status || 'pending',
       description: payment.description,
       dueDate: payment.dueDate,
+      stripePaymentId: payment.stripePaymentId,
+      packageId: payment.packageId,
+      programId: payment.programId,
       createdAt: new Date().toISOString(),
     };
 
@@ -3502,6 +3529,8 @@ class DatabaseStorage implements IStorage {
       allergies: dbUser.allergies,
       gender: undefined,
       accountHolderId: dbUser.parentId,
+      parentId: dbUser.parentId,
+      guardianId: dbUser.guardianId,
       packageSelected: undefined,
       teamAssignmentStatus: undefined,
       hasRegistered: Boolean(dbUser.hasRegistered),

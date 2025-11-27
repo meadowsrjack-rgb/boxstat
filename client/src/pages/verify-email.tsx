@@ -12,9 +12,10 @@ export default function VerifyEmail() {
 
   useEffect(() => {
     const verifyEmail = async () => {
-      // Get token from URL
+      // Get token and email from URL
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
+      const email = params.get("email");
 
       if (!token) {
         setStatus("error");
@@ -23,7 +24,12 @@ export default function VerifyEmail() {
       }
 
       try {
-        const response = await fetch(`/api/auth/verify-email?token=${token}`);
+        // Include both token and email in the API call
+        let apiUrl = `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+        if (email) {
+          apiUrl += `&email=${encodeURIComponent(email)}`;
+        }
+        const response = await fetch(apiUrl);
         const data = await response.json();
 
         if (response.ok && data.success) {

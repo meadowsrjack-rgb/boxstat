@@ -1127,18 +1127,45 @@ function LegalSection() {
 }
 
 function DangerSection() {
+  const { user, logout } = useAuth();
   const { toast } = useToast();
-  const onDelete = async () => {
-    const ok = confirm("Delete your account? This cannot be undone.");
-    if (!ok) return;
-    const res = await fetch("/api/account/delete", { method: "POST", credentials: "include" });
-    if (res.ok) {
-      toast({ title: "Account deleted" });
-      window.location.href = "/";
-    } else {
-      toast({ title: "Delete failed", variant: "destructive" });
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const userEmail = (user as UserType)?.email || "";
+  const userRole = (user as UserType)?.role || "";
+  
+  const handleDelete = async () => {
+    if (confirmEmail !== userEmail) {
+      toast({ title: "Email doesn't match", description: "Please enter your email exactly as shown.", variant: "destructive" });
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/account/delete", { 
+        method: "POST", 
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmEmail })
+      });
+      
+      if (res.ok) {
+        toast({ title: "Account deleted", description: "Your account has been deactivated successfully." });
+        logout();
+        window.location.href = "/";
+      } else {
+        const data = await res.json();
+        toast({ title: "Delete failed", description: data.message || "Could not delete account.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Delete failed", description: "An error occurred. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
   };
+  
   return (
     <div className="space-y-6">
       <SectionHeader icon={AlertTriangle} title="Danger Zone" subtitle="Irreversible actions." />
@@ -1147,14 +1174,84 @@ function DangerSection() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold text-red-700">Delete account</div>
-              <div className="text-xs text-red-600">All data will be permanently removed.</div>
+              <div className="text-xs text-red-600">
+                Your account will be deactivated and data removed.
+                {(userRole === "parent" || userRole === "admin") && " This includes all linked player profiles."}
+              </div>
             </div>
-            <Button variant="destructive" onClick={onDelete}>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-delete-account"
+            >
               Delete
             </Button>
           </div>
         </CardContent>
       </Card>
+      
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Your Account
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-sm text-red-800 font-medium mb-2">This action cannot be undone!</p>
+              <ul className="text-xs text-red-700 list-disc list-inside space-y-1">
+                <li>Your account will be deactivated</li>
+                <li>Your login credentials will be removed</li>
+                {(userRole === "parent" || userRole === "admin") && (
+                  <li>All linked player profiles will also be deactivated</li>
+                )}
+                <li>Any active subscriptions will be cancelled</li>
+                <li>You will lose access to all features and history</li>
+              </ul>
+            </div>
+            
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                To confirm, please type your email address:
+              </p>
+              <p className="text-sm font-mono bg-gray-100 p-2 rounded">{userEmail}</p>
+              <Input
+                type="email"
+                placeholder="Enter your email to confirm"
+                value={confirmEmail}
+                onChange={(e) => setConfirmEmail(e.target.value)}
+                className="border-red-200 focus:border-red-500"
+                data-testid="input-confirm-email"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setConfirmEmail("");
+              }}
+              disabled={isDeleting}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDelete}
+              disabled={isDeleting || confirmEmail !== userEmail}
+              data-testid="button-confirm-delete"
+            >
+              {isDeleting ? "Deleting..." : "Permanently Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -1249,7 +1346,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom">
+    <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white/70 backdrop-blur border-b border-gray-200 px-4 py-4 sticky top-0 z-10 safe-top">
         <div className="max-w-5xl mx-auto flex items-center justify-between">

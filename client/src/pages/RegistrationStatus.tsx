@@ -113,7 +113,7 @@ export default function RegistrationStatus() {
   const playerProfiles = profiles.filter(p => p.profileType === 'player');
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom p-4">
+    <div className="scrollable-page bg-gray-50 safe-bottom p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2" data-testid="title-registration">

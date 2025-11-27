@@ -125,7 +125,7 @@ export default function AddPlayer() {
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
-    <div className="min-h-screen-safe bg-gray-50 safe-bottom py-8 px-4">
+    <div className="scrollable-page bg-gray-50 safe-bottom py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
@@ -450,7 +450,7 @@ function PackageSelectionStep({
                             className="flex-1 cursor-pointer"
                           >
                             <div className="flex justify-between items-start">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-medium text-gray-900" data-testid={`text-program-name-${program.id}`}>
                                   {program.name}
                                 </p>
@@ -459,17 +459,34 @@ function PackageSelectionStep({
                                     {program.description}
                                   </p>
                                 )}
-                                {program.pricingModel && (
-                                  <p className="text-xs text-gray-500 mt-1 capitalize">
-                                    {program.pricingModel}
-                                  </p>
-                                )}
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                  {(program as any).type && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                      {(program as any).type}
+                                    </span>
+                                  )}
+                                  {(program as any).billingModel && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                      {(program as any).billingModel}
+                                    </span>
+                                  )}
+                                  {(program as any).type === "Subscription" && (program as any).billingCycle && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                      {(program as any).billingCycle}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               {program.price && (
-                                <div className="text-right">
+                                <div className="text-right ml-4">
                                   <p className="font-bold text-blue-600" data-testid={`text-program-price-${program.id}`}>
                                     ${(program.price / 100).toFixed(2)}
                                   </p>
+                                  {(program as any).type === "Subscription" && (program as any).billingCycle && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      per {(program as any).billingCycle.toLowerCase()}
+                                    </p>
+                                  )}
                                 </div>
                               )}
                             </div>

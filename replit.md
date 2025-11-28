@@ -64,7 +64,9 @@ For small backend-only changes (no iOS code changes):
 
 ## External Dependencies
 
-- **Firebase Cloud Messaging**: Push notifications for iOS/Android via Firebase Admin SDK
+- **Apple Push Notification service (APNs)**: Direct iOS push notifications using HTTP/2 and JWT authentication (APNS_AUTH_KEY, APNS_KEY_ID, APNS_TEAM_ID). Production apps use api.push.apple.com, development uses sandbox.
+- **Firebase Cloud Messaging**: Android push notifications via Firebase Admin SDK
+- **Web Push (VAPID)**: Browser push notifications for PWA users
 - **Resend**: Email service for authentication flows
 - **Stripe**: Payment processing, customer management, and transaction handling
 - **Neon Database**: Serverless PostgreSQL hosting

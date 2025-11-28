@@ -15,7 +15,26 @@ import {
 } from "../../shared/schema";
 import { eq, and, or, desc, sql } from "drizzle-orm";
 import webpush from "web-push";
+import { sendAPNsNotification, isAPNsConfigured } from "./apnsService";
 import admin from 'firebase-admin';
+
+// Firebase Admin SDK for Android push notifications
+const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+if (firebaseServiceAccount) {
+  try {
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(firebaseServiceAccount))
+      });
+      console.log('✅ Firebase Admin initialized for Android FCM push notifications');
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize Firebase Admin:', error);
+  }
+} else {
+  console.warn('⚠️ Firebase Admin not configured - Android push notifications will not work');
+}
 
 // Configure web push with VAPID keys from environment variables
 // SECURITY: VAPID keys MUST be set in environment variables for production
@@ -23,7 +42,7 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
-  console.warn('⚠️  VAPID keys not configured - push notifications will not work');
+  console.warn('⚠️  VAPID keys not configured - web push notifications will not work');
   console.warn('   Run: node scripts/generate-vapid-keys.js to generate production keys');
   console.warn('   Then add them to Replit Secrets or environment variables');
 } else {
@@ -32,23 +51,7 @@ if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
   );
-  console.log('✅ Push notifications configured with VAPID keys');
-}
-
-const firebaseServiceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-if (!firebaseServiceAccount) {
-  console.warn('⚠️  Firebase Admin not configured - native push notifications will not work');
-  console.warn('   Add FIREBASE_SERVICE_ACCOUNT_KEY to environment variables');
-} else {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert(JSON.parse(firebaseServiceAccount))
-    });
-    console.log('✅ Firebase Admin initialized for FCM push notifications');
-  } catch (error) {
-    console.error('❌ Failed to initialize Firebase Admin:', error);
-  }
+  console.log('✅ Web Push notifications configured with VAPID keys');
 }
 
 export class NotificationService {
@@ -318,40 +321,103 @@ export class NotificationService {
         }
       }
 
-      // Send to FCM devices if any exist
-      if (fcmSubscriptions.length > 0) {
-        console.log(`[Push Send] 📱 Processing ${fcmSubscriptions.length} FCM subscription(s)...`);
-        const fcmTokens = fcmSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
-        console.log(`[Push Send] Extracted ${fcmTokens.length} FCM token(s)`);
+      // Send to iOS devices via APNs (direct to Apple)
+      const iosSubscriptions = fcmSubscriptions.filter((sub: any) => sub.platform === 'ios');
+      if (iosSubscriptions.length > 0) {
+        console.log(`[Push Send] 🍎 Processing ${iosSubscriptions.length} iOS subscription(s) via APNs...`);
+        const deviceTokens = iosSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
+        console.log(`[Push Send] Extracted ${deviceTokens.length} APNs device token(s)`);
         
-        if (fcmTokens.length > 0) {
+        if (deviceTokens.length > 0 && isAPNsConfigured()) {
           try {
-            console.log(`[Push Send] 🚀 Calling sendNativePush with ${fcmTokens.length} token(s)...`);
-            const fcmResult = await this.sendNativePush(fcmTokens, {
+            console.log(`[Push Send] 🚀 Sending directly to Apple APNs...`);
+            const apnsResult = await sendAPNsNotification(deviceTokens, {
               title: title,
               body: message,
             });
             
-            // Log FCM results summary
-            console.log(`[Push Send] FCM Results: ${fcmResult.successCount} succeeded, ${fcmResult.failureCount} failed`);
-            if (fcmResult.successCount > 0) {
-              console.log(`[Push Send] ✅ ${fcmResult.successCount} FCM notification(s) sent successfully`);
+            console.log(`[Push Send] APNs Results: ${apnsResult.successCount} succeeded, ${apnsResult.failureCount} failed`);
+            if (apnsResult.successCount > 0) {
+              console.log(`[Push Send] ✅ ${apnsResult.successCount} APNs notification(s) sent successfully`);
               sentSuccessfully = true;
             }
-            if (fcmResult.failureCount > 0) {
-              console.log(`[Push Send] ❌ ${fcmResult.failureCount} FCM notification(s) failed`);
-              if (fcmResult.errors.length > 0) {
-                console.log(`[Push Send] ❌ FCM Failures:`);
-                fcmResult.errors.forEach((err, idx) => {
-                  console.log(`[Push Send]   Failure ${idx + 1}: Token ${err.token}`);
-                  console.log(`[Push Send]     Error: ${err.error}`);
-                });
+            if (apnsResult.failureCount > 0) {
+              console.log(`[Push Send] ❌ ${apnsResult.failureCount} APNs notification(s) failed`);
+              apnsResult.results.filter(r => !r.success).forEach((result, idx) => {
+                console.log(`[Push Send]   Failure ${idx + 1}: Token ${result.deviceToken.substring(0, 20)}...`);
+                console.log(`[Push Send]     Error: ${result.error}`);
+              });
+              
+              // Mark invalid tokens as inactive
+              for (const result of apnsResult.results) {
+                if (!result.success && (result.statusCode === 410 || result.error?.includes('BadDeviceToken'))) {
+                  const sub = iosSubscriptions.find((s: any) => s.fcmToken === result.deviceToken);
+                  if (sub) {
+                    console.log(`[Push Send] 🗑️ Marking inactive iOS subscription`);
+                    await db.update(pushSubscriptions)
+                      .set({ isActive: false })
+                      .where(eq(pushSubscriptions.id, sub.id));
+                  }
+                }
               }
             }
           } catch (error) {
-            console.error('[Push Send] ❌ EXCEPTION during FCM send:', error);
+            console.error('[Push Send] ❌ EXCEPTION during APNs send:', error);
             console.error('[Push Send] Error message:', error instanceof Error ? error.message : String(error));
           }
+        } else if (!isAPNsConfigured()) {
+          console.warn('[Push Send] ⚠️ APNs not configured - skipping iOS push notifications');
+        }
+      }
+
+      // Send to Android devices via FCM
+      const androidSubscriptions = fcmSubscriptions.filter((sub: any) => sub.platform === 'android');
+      if (androidSubscriptions.length > 0) {
+        console.log(`[Push Send] 🤖 Processing ${androidSubscriptions.length} Android subscription(s) via FCM...`);
+        const fcmTokens = androidSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
+        
+        if (fcmTokens.length > 0 && firebaseServiceAccount) {
+          try {
+            const fcmMessage = {
+              notification: {
+                title: title,
+                body: message,
+              },
+              tokens: fcmTokens,
+            };
+
+            console.log(`[Push Send] 📡 Calling Firebase Admin SDK for Android...`);
+            const response = await admin.messaging().sendEachForMulticast(fcmMessage);
+            console.log(`[Push Send] FCM Results: ${response.successCount} succeeded, ${response.failureCount} failed`);
+            
+            if (response.successCount > 0) {
+              console.log(`[Push Send] ✅ ${response.successCount} Android notification(s) sent successfully`);
+              sentSuccessfully = true;
+            }
+            if (response.failureCount > 0) {
+              console.log(`[Push Send] ❌ ${response.failureCount} Android notification(s) failed`);
+              response.responses.forEach((resp: any, idx: number) => {
+                if (!resp.success) {
+                  const errorMessage = resp.error?.message || 'Unknown error';
+                  console.log(`[Push Send]   Failure ${idx + 1}: ${errorMessage}`);
+                  
+                  // Mark invalid tokens as inactive
+                  if (resp.error?.code === 'messaging/registration-token-not-registered') {
+                    const sub = androidSubscriptions[idx];
+                    if (sub) {
+                      db.update(pushSubscriptions)
+                        .set({ isActive: false })
+                        .where(eq(pushSubscriptions.id, sub.id));
+                    }
+                  }
+                }
+              });
+            }
+          } catch (error) {
+            console.error('[Push Send] ❌ EXCEPTION during FCM send:', error);
+          }
+        } else if (!firebaseServiceAccount) {
+          console.warn('[Push Send] ⚠️ Firebase not configured - skipping Android push notifications');
         }
       }
 
@@ -386,62 +452,6 @@ export class NotificationService {
         ));
       
       console.log(`[Push Send] ❌ Delivery status marked as failed in database`);
-    }
-  }
-
-  private async sendNativePush(
-    fcmTokens: string[], 
-    notification: { title: string; body: string }
-  ): Promise<{ successCount: number; failureCount: number; errors: Array<{ token: string; error: string }> }> {
-    console.log(`[FCM] 🚀 Sending FCM push to ${fcmTokens.length} token(s)...`);
-    console.log(`[FCM] Title: "${notification.title}"`);
-    console.log(`[FCM] Body: "${notification.body}"`);
-    
-    if (!firebaseServiceAccount) {
-      console.warn('[FCM] ⚠️  Skipping FCM send - Firebase Admin SDK not configured');
-      console.warn('[FCM] Set FIREBASE_SERVICE_ACCOUNT_KEY environment variable');
-      return { successCount: 0, failureCount: fcmTokens.length, errors: [] };
-    }
-
-    try {
-      const message = {
-        notification: {
-          title: notification.title,
-          body: notification.body,
-        },
-        tokens: fcmTokens,
-      };
-
-      console.log(`[FCM] 📡 Calling Firebase Admin SDK sendEachForMulticast...`);
-      const response = await admin.messaging().sendEachForMulticast(message);
-      console.log(`[FCM] ✅ FCM batch send complete: ${response.successCount} successful, ${response.failureCount} failed`);
-      
-      const errors: Array<{ token: string; error: string }> = [];
-      
-      if (response.failureCount > 0) {
-        console.error(`[FCM] ❌ ${response.failureCount} FCM send(s) failed:`);
-        response.responses.forEach((resp: any, idx: number) => {
-          if (!resp.success) {
-            const truncatedToken = fcmTokens[idx].substring(0, 20) + '...';
-            const errorMessage = resp.error?.message || resp.error?.toString() || 'Unknown error';
-            errors.push({ token: truncatedToken, error: errorMessage });
-            console.error(`[FCM]   Token ${idx + 1} (${truncatedToken}): ${errorMessage}`);
-          }
-        });
-      } else {
-        console.log(`[FCM] ✅ All ${response.successCount} FCM push notifications sent successfully`);
-      }
-      
-      return {
-        successCount: response.successCount,
-        failureCount: response.failureCount,
-        errors
-      };
-    } catch (error) {
-      console.error('[FCM] ❌ EXCEPTION during FCM send:', error);
-      console.error('[FCM] Error type:', error instanceof Error ? error.name : typeof error);
-      console.error('[FCM] Error message:', error instanceof Error ? error.message : String(error));
-      throw new Error('Failed to send native push notifications');
     }
   }
 

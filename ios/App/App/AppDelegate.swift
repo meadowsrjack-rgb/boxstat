@@ -1,46 +1,43 @@
 import UIKit
 import Capacitor
-import Firebase
-import FirebaseMessaging
 
-@UIApplicationMain
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        
-        // 1. Initialize Firebase
-        FirebaseApp.configure()
-
-        // DEBUG: Confirm Plist presence
-        if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") {
-            print("🔥 FOUND GOOGLE PLIST AT RUNTIME: \(path)")
-        } else {
-            print("❌ GOOGLE PLIST MISSING AT RUNTIME — Firebase WILL CRASH")
-        }
-
         return true
     }
 
     // ---------------------------------------------------------------------------
-    // PUSH NOTIFICATION HANDLERS
+    // PUSH NOTIFICATION HANDLERS - Direct APNs (No Firebase)
     // ---------------------------------------------------------------------------
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        // 1. Hand the token to Firebase (Necessary because we disabled auto-swizzling)
-        Messaging.messaging().apnsToken = deviceToken
+        // Convert token to hex string for logging
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        print("✅ [AppDelegate] APNs Device Token: \(token)")
         
-        // 2. Hand the token to Capacitor (Necessary so your JS `PushNotifications.register()` promise resolves)
+        // Hand the token to Capacitor so JS `PushNotifications.register()` promise resolves
         NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
-        
-        print("✅ [AppDelegate] Device Token received and passed to Capacitor & Firebase")
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        // 1. Tell Capacitor we failed
+        // Tell Capacitor we failed
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
         
         print("❌ [AppDelegate] Failed to register for remote notifications: \(error)")
     }
+    
+    // ---------------------------------------------------------------------------
+    // SCENE LIFECYCLE (Required for modern iOS)
+    // ---------------------------------------------------------------------------
+    
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {}
 }

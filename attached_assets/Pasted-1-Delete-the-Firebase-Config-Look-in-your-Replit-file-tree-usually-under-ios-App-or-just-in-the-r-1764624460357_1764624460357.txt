@@ -1,0 +1,138 @@
+1. Delete the Firebase Config
+
+Look in your Replit file tree (usually under ios/App or just in the root of the iOS folder).
+
+Find: GoogleService-Info.plist
+
+Action: Delete it.
+
+Why: If this file exists, the app tries to load Firebase. If it’s gone, the app stays "Native Apple."
+
+2. Update Info.plist (The Permissions & Rules)
+
+In Replit, open ios/App/Info.plist. Replace the entire file with this clean version.
+
+What I changed in this code:
+
+Removed: FirebaseAppDelegateProxyEnabled (Stopped the hijacker).
+
+Added: WKAppBoundDomains (Fixed the "WebKit ignoring request" error so your login works).
+
+Added: NSCameraUsageDescription & NSLocation... (Fixed the "Missing Info.plist" install error by ensuring all permissions are valid).
+
+XML
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>BoxStat</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+    <key>NSCameraUsageDescription</key>
+	<string>BoxStat needs camera access to scan QR codes.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BoxStat needs location access for event check-ins.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BoxStat needs photo access for profile uploads.</string>
+    
+    <key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+    
+    <key>WKAppBoundDomains</key>
+    <array>
+        <string>boxstat.replit.app</string>
+    </array>
+    
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>
+3. Update AppDelegate.swift (The Token Handler)
+
+In Replit, open ios/App/AppDelegate.swift. Replace the entire file with this.
+
+Why: This removes all Firebase code and replaces it with the code that prints the Apple Device Token directly to your console.
+
+Swift
+import UIKit
+import UserNotifications
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // 1. Set up the notification delegate
+        UNUserNotificationCenter.current().delegate = self
+        
+        // 2. Request permission immediately on launch
+        let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+        UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+            print("🔔 Notification Permission Granted: \(granted)")
+            if let error = error {
+                print("❌ Error: \(error)")
+            }
+        }
+        
+        // 3. Register with Apple Push Notification Service (APNs)
+        application.registerForRemoteNotifications()
+        
+        return true
+    }
+
+    // --- SUCCESS: We got a token from Apple ---
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        print("✅ DEVICE TOKEN: \(token)")
+        // This is the token you will eventually need to copy into your dashboard
+    }
+
+    // --- FAILURE: Something went wrong ---
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ Failed to register for notifications: \(error)")
+    }
+
+    // --- MARK: UISceneSession Lifecycle (Required for modern iOS) ---
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {}
+}

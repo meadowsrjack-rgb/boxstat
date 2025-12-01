@@ -134,6 +134,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // STATIC ASSETS ROUTES
   // =============================================
   
+  // Apple App Site Association for Universal Links (magic link deep linking)
+  app.get('/.well-known/apple-app-site-association', (req, res) => {
+    const teamId = process.env.APNS_TEAM_ID || 'TEAMID';
+    const bundleId = 'com.boxstat.app';
+    
+    const aasa = {
+      applinks: {
+        apps: [],
+        details: [
+          {
+            appID: `${teamId}.${bundleId}`,
+            paths: [
+              "/magic-link-login",
+              "/magic-link-login/*",
+              "/claim-verify",
+              "/claim-verify/*"
+            ]
+          }
+        ]
+      },
+      webcredentials: {
+        apps: [`${teamId}.${bundleId}`]
+      }
+    };
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.json(aasa);
+  });
+  
   // Serve BoxStat logo for emails
   app.get('/assets/logo', (req, res) => {
     const logoPath = new URL('../attached_assets/BoxStats_1761255444178.png', import.meta.url).pathname;

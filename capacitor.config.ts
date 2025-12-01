@@ -1,21 +1,25 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'boxstat.app',
+  appId: 'com.boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
+  server: {
+    // Enable deep links from boxstat.replit.app
+    url: 'https://boxstat.replit.app',
+    cleartext: false,
+  },
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#FFFFFF', // White background to prevent red bleed
+    backgroundColor: '#FFFFFF',
   },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#FFFFFF', // White splash screen
+      backgroundColor: '#FFFFFF',
       showSpinner: false,
     },
     Geolocation: {
-      // Permissions for geo-fencing check-ins
     },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],

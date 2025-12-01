@@ -53,6 +53,7 @@ import FamilyOnboarding from "@/pages/family-onboarding";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
+import { initDeepLinks } from "@/services/deepLinkService";
 
 type Profile = {
   id: string;
@@ -246,7 +247,7 @@ function AppRouter() {
   // Check if user needs profile setup
   const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
-  // Register service worker for PWA
+  // Register service worker for PWA and initialize deep links
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
@@ -257,6 +258,11 @@ function AppRouter() {
           console.log('SW registration failed: ', registrationError);
         });
     }
+
+    // Initialize deep links for Universal Links (magic link handling)
+    initDeepLinks().then(() => {
+      console.log('Deep link listeners initialized');
+    });
 
     // Add global error handler for unhandled promise rejections
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {

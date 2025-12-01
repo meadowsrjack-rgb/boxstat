@@ -280,10 +280,6 @@ export default function AdminDashboard() {
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
               </TabsTrigger>
-              <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -342,10 +338,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="notifications">
             <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
-          </TabsContent>
-
-          <TabsContent value="settings">
-            <SettingsTab organization={organization} />
           </TabsContent>
         </Tabs>
       </div>

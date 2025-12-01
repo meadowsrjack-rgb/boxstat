@@ -2030,47 +2030,86 @@ class DatabaseStorage implements IStorage {
 
   // Organization operations
   async getOrganization(id: string): Promise<Organization | undefined> {
-    if (id !== this.defaultOrgId) return undefined;
-    
-    return {
-      id: this.defaultOrgId,
-      name: "My Sports Organization",
-      subdomain: "default",
-      sportType: "basketball",
-      primaryColor: "#1E40AF",
-      secondaryColor: "#DC2626",
-      logoUrl: undefined,
-      terminology: {
-        athlete: "Player",
-        coach: "Coach",
-        parent: "Parent",
-        team: "Team",
-        practice: "Practice",
-        game: "Game",
-      },
-      features: {
-        payments: true,
-        awards: true,
-        messaging: true,
-        events: true,
-        training: true,
-      },
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    try {
+      const results = await db.select().from(schema.organizations).where(eq(schema.organizations.id, id));
+      if (results.length === 0) return undefined;
+      
+      const org = results[0];
+      return {
+        id: org.id,
+        name: org.name,
+        subdomain: org.subdomain,
+        sportType: org.sportType,
+        primaryColor: org.primaryColor,
+        secondaryColor: org.secondaryColor,
+        logoUrl: org.logoUrl || undefined,
+        terminology: org.terminology as Organization['terminology'],
+        features: org.features as Organization['features'],
+        createdAt: org.createdAt ? new Date(org.createdAt) : new Date(),
+        updatedAt: org.updatedAt ? new Date(org.updatedAt) : new Date(),
+      };
+    } catch (error) {
+      console.error('Error fetching organization:', error);
+      return undefined;
+    }
   }
 
   async getOrganizationBySubdomain(subdomain: string): Promise<Organization | undefined> {
-    if (subdomain !== "default") return undefined;
-    return this.getOrganization(this.defaultOrgId);
+    try {
+      const results = await db.select().from(schema.organizations).where(eq(schema.organizations.subdomain, subdomain));
+      if (results.length === 0) return undefined;
+      return this.getOrganization(results[0].id);
+    } catch (error) {
+      console.error('Error fetching organization by subdomain:', error);
+      return undefined;
+    }
   }
 
   async createOrganization(org: Omit<Organization, "id" | "createdAt" | "updatedAt">): Promise<Organization> {
-    throw new Error("Organization creation not supported in database mode yet");
+    const id = `org-${Date.now()}`;
+    const now = new Date().toISOString();
+    
+    await db.insert(schema.organizations).values({
+      id,
+      name: org.name,
+      subdomain: org.subdomain,
+      sportType: org.sportType,
+      primaryColor: org.primaryColor,
+      secondaryColor: org.secondaryColor,
+      logoUrl: org.logoUrl || null,
+      terminology: org.terminology,
+      features: org.features,
+      createdAt: now,
+      updatedAt: now,
+    });
+    
+    return (await this.getOrganization(id))!;
   }
 
   async updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined> {
-    return undefined;
+    try {
+      const updateData: any = {
+        updatedAt: new Date().toISOString(),
+      };
+      
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.subdomain !== undefined) updateData.subdomain = updates.subdomain;
+      if (updates.sportType !== undefined) updateData.sportType = updates.sportType;
+      if (updates.primaryColor !== undefined) updateData.primaryColor = updates.primaryColor;
+      if (updates.secondaryColor !== undefined) updateData.secondaryColor = updates.secondaryColor;
+      if (updates.logoUrl !== undefined) updateData.logoUrl = updates.logoUrl;
+      if (updates.terminology !== undefined) updateData.terminology = updates.terminology;
+      if (updates.features !== undefined) updateData.features = updates.features;
+      
+      await db.update(schema.organizations)
+        .set(updateData)
+        .where(eq(schema.organizations.id, id));
+      
+      return this.getOrganization(id);
+    } catch (error) {
+      console.error('Error updating organization:', error);
+      return undefined;
+    }
   }
 
   // User operations

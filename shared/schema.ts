@@ -39,6 +39,34 @@ export interface Organization {
   updatedAt: Date;
 }
 
+// Drizzle pgTable definition for organizations
+export const organizations = pgTable("organizations", {
+  id: varchar().primaryKey().notNull(),
+  name: varchar().notNull().default('My Sports Organization'),
+  subdomain: varchar().notNull().default('default'),
+  sportType: varchar("sport_type").notNull().default('basketball'),
+  logoUrl: varchar("logo_url"),
+  primaryColor: varchar("primary_color").notNull().default('#1E40AF'),
+  secondaryColor: varchar("secondary_color").notNull().default('#DC2626'),
+  terminology: jsonb().notNull().default({
+    athlete: "Player",
+    coach: "Coach",
+    parent: "Parent",
+    team: "Team",
+    practice: "Practice",
+    game: "Game",
+  }),
+  features: jsonb().notNull().default({
+    payments: true,
+    awards: true,
+    messaging: true,
+    events: true,
+    training: true,
+  }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
 // =============================================
 // User Schema (Simplified)
 // =============================================

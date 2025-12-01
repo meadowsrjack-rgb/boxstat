@@ -56,6 +56,35 @@ app.use(session({
   rolling: true, // Reset the cookie maxAge on every request to keep session alive
 }));
 
+// Apple App Site Association for Universal Links (must be before static files)
+app.get('/.well-known/apple-app-site-association', (req, res) => {
+  const teamId = process.env.APNS_TEAM_ID || 'TEAMID';
+  const bundleId = 'com.boxstat.app';
+  
+  const aasa = {
+    applinks: {
+      apps: [],
+      details: [
+        {
+          appID: `${teamId}.${bundleId}`,
+          paths: [
+            "/magic-link-login",
+            "/magic-link-login/*",
+            "/claim-verify",
+            "/claim-verify/*"
+          ]
+        }
+      ]
+    },
+    webcredentials: {
+      apps: [`${teamId}.${bundleId}`]
+    }
+  };
+  
+  res.setHeader('Content-Type', 'application/json');
+  res.json(aasa);
+});
+
 // Serve static files from public directory (for trophies, assets, etc.)
 const publicPath = path.resolve(import.meta.dirname, "..", "public");
 app.use(express.static(publicPath));

@@ -7,14 +7,14 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative flex flex-col min-h-screen h-screen overflow-hidden bg-black">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-black">
       {/* Video Background - Extends through safe areas */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute w-full h-full object-cover z-0"
+        className="absolute inset-0 w-full h-full object-cover z-0"
       >
         <source src={backgroundVideo} type="video/mp4" />
       </video>

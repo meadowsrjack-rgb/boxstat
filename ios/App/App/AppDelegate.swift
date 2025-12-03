@@ -30,14 +30,4 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         print("❌ [AppDelegate] Failed to register for remote notifications: \(error)")
     }
-    
-    // ---------------------------------------------------------------------------
-    // SCENE LIFECYCLE (Required for modern iOS)
-    // ---------------------------------------------------------------------------
-    
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    }
-
-    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {}
 }

@@ -400,11 +400,11 @@ export default function CoachDashboard() {
               variant="ghost"
               size="icon"
               className="h-12 w-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-              onClick={() => setLocation("/unified-account")}
-              aria-label="Back to Account"
-              data-testid="button-back-to-account"
+              onClick={() => setLocation("/profile-gateway")}
+              aria-label="Switch Profile"
+              data-testid="button-switch-profile"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <Users className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-1">
             <NotificationBell />

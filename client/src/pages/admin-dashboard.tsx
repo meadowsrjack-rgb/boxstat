@@ -221,10 +221,10 @@ export default function AdminDashboard() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => setLocation("/unified-account")}
-                data-testid="button-back-to-account"
+                onClick={() => setLocation("/profile-gateway")}
+                data-testid="button-switch-profile"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <Users className="h-5 w-5" />
               </Button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900" data-testid="text-dashboard-title">Admin Dashboard</h1>

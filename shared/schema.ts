@@ -1477,3 +1477,92 @@ export const insertRsvpResponseSchema = z.object({
 });
 
 export type InsertRsvpResponse = z.infer<typeof insertRsvpResponseSchema>;
+
+// =============================================
+// Migration Lookup Schema (Legacy UYP Migration)
+// =============================================
+
+export const migrationLookup = pgTable("migration_lookup", {
+  id: serial().primaryKey().notNull(),
+  email: varchar().notNull(),
+  stripeCustomerId: varchar("stripe_customer_id").notNull(),
+  stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
+  productName: varchar("product_name").notNull(),
+  isClaimed: boolean("is_claimed").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export interface MigrationLookup {
+  id: number;
+  email: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  productName: string;
+  isClaimed: boolean;
+  createdAt: Date;
+}
+
+export const insertMigrationLookupSchema = z.object({
+  email: z.string().email(),
+  stripeCustomerId: z.string(),
+  stripeSubscriptionId: z.string(),
+  productName: z.string(),
+  isClaimed: z.boolean().default(false),
+});
+
+export type InsertMigrationLookup = z.infer<typeof insertMigrationLookupSchema>;
+export type SelectMigrationLookup = typeof migrationLookup.$inferSelect;
+
+// =============================================
+// Subscriptions Schema (User Wallet System)
+// =============================================
+
+export const subscriptions = pgTable("subscriptions", {
+  id: serial().primaryKey().notNull(),
+  ownerUserId: varchar("owner_user_id").notNull(),
+  assignedPlayerId: varchar("assigned_player_id"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
+  productName: varchar("product_name").notNull(),
+  status: varchar().default('active').notNull(),
+  isMigrated: boolean("is_migrated").default(false).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.ownerUserId],
+    foreignColumns: [users.id],
+    name: "subscriptions_owner_user_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.assignedPlayerId],
+    foreignColumns: [users.id],
+    name: "subscriptions_assigned_player_id_fkey"
+  }),
+]);
+
+export interface Subscription {
+  id: number;
+  ownerUserId: string;
+  assignedPlayerId: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string;
+  productName: string;
+  status: string;
+  isMigrated: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertSubscriptionSchema = z.object({
+  ownerUserId: z.string(),
+  assignedPlayerId: z.string().nullable().optional(),
+  stripeCustomerId: z.string().optional(),
+  stripeSubscriptionId: z.string(),
+  productName: z.string(),
+  status: z.string().default('active'),
+  isMigrated: z.boolean().default(false),
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type SelectSubscription = typeof subscriptions.$inferSelect;

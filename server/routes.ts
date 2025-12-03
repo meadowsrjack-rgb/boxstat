@@ -1451,17 +1451,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete the pending registration now that account is created
       await storage.deletePendingRegistration(primaryEmail, organizationId);
       
+      // Check for migrated subscriptions from legacy UYP system
+      let hasUnassignedSubs = false;
+      let migratedSubsCount = 0;
+      
+      if (primaryUser) {
+        try {
+          const migrationLookups = await storage.getMigrationLookupsByEmail(primaryEmail);
+          
+          if (migrationLookups.length > 0) {
+            console.log(`🔄 Found ${migrationLookups.length} legacy subscriptions for ${primaryEmail}`);
+            
+            // Create subscription records for each migrated subscription
+            for (const lookup of migrationLookups) {
+              await storage.createSubscription({
+                ownerUserId: primaryUser.id,
+                assignedPlayerId: null,
+                stripeCustomerId: lookup.stripeCustomerId,
+                stripeSubscriptionId: lookup.stripeSubscriptionId,
+                productName: lookup.productName,
+                status: 'active',
+                isMigrated: true,
+              });
+              
+              // Mark the lookup as claimed
+              await storage.markMigrationLookupClaimed(lookup.id);
+              migratedSubsCount++;
+            }
+            
+            hasUnassignedSubs = true;
+            console.log(`✅ Migrated ${migratedSubsCount} subscriptions to wallet for user ${primaryUser.id}`);
+            
+            // Update user with stripe customer ID from first subscription
+            if (migrationLookups[0].stripeCustomerId) {
+              await storage.updateUser(primaryUser.id, {
+                stripeCustomerId: migrationLookups[0].stripeCustomerId,
+              });
+            }
+          }
+        } catch (migrationError: any) {
+          console.error("Migration lookup error (non-fatal):", migrationError);
+          // Don't fail registration if migration lookup fails
+        }
+      }
+      
       res.json({
         success: true,
-        message: "Registration complete! You can now login.",
+        message: hasUnassignedSubs 
+          ? `Registration complete! We found ${migratedSubsCount} subscription(s) linked to your email.`
+          : "Registration complete! You can now login.",
         requiresVerification: false,
         email: primaryEmail,
+        hasUnassignedSubs,
+        migratedSubsCount,
       });
     } catch (error: any) {
       console.error("Registration error:", error);
       res.status(400).json({ 
         success: false, 
         message: error.message || "Registration failed" 
+      });
+    }
+  });
+  
+  // =============================================
+  // SUBSCRIPTION WALLET ROUTES (Legacy Migration)
+  // =============================================
+  
+  // Get unassigned subscriptions for current user
+  app.get('/api/subscriptions/unassigned', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const unassignedSubs = await storage.getUnassignedSubscriptionsByOwner(userId);
+      
+      res.json({
+        success: true,
+        subscriptions: unassignedSubs,
+        count: unassignedSubs.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching unassigned subscriptions:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch unassigned subscriptions" 
+      });
+    }
+  });
+  
+  // Get all subscriptions for current user
+  app.get('/api/subscriptions', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const subs = await storage.getSubscriptionsByOwner(userId);
+      
+      res.json({
+        success: true,
+        subscriptions: subs,
+        count: subs.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscriptions:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to fetch subscriptions" 
+      });
+    }
+  });
+  
+  // Assign subscription to player
+  app.post('/api/subscriptions/assign', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { subscriptionId, playerId } = req.body;
+      
+      if (!subscriptionId || !playerId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Subscription ID and Player ID are required" 
+        });
+      }
+      
+      // Verify the subscription belongs to the current user
+      const subscription = await storage.getSubscription(subscriptionId);
+      
+      if (!subscription) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Subscription not found" 
+        });
+      }
+      
+      if (subscription.ownerUserId !== userId) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "You don't have permission to assign this subscription" 
+        });
+      }
+      
+      if (subscription.assignedPlayerId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "This subscription is already assigned to a player" 
+        });
+      }
+      
+      // Verify the player belongs to the current user
+      const player = await storage.getUser(playerId);
+      
+      if (!player) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Player not found" 
+        });
+      }
+      
+      if (player.accountHolderId !== userId && player.id !== userId) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "You can only assign subscriptions to your own players" 
+        });
+      }
+      
+      // Assign the subscription
+      const updatedSubscription = await storage.assignSubscriptionToPlayer(subscriptionId, playerId);
+      
+      if (!updatedSubscription) {
+        return res.status(500).json({ 
+          success: false, 
+          message: "Failed to assign subscription" 
+        });
+      }
+      
+      console.log(`✅ Assigned subscription ${subscriptionId} to player ${playerId}`);
+      
+      res.json({
+        success: true,
+        message: `Successfully assigned "${subscription.productName}" to ${player.firstName} ${player.lastName}`,
+        subscription: updatedSubscription,
+      });
+    } catch (error: any) {
+      console.error("Error assigning subscription:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: "Failed to assign subscription" 
       });
     }
   });

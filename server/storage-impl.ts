@@ -18,6 +18,8 @@ import {
   type EventWindow,
   type RsvpResponse,
   type Facility,
+  type MigrationLookup,
+  type Subscription,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -36,10 +38,14 @@ import {
   type InsertEventWindow,
   type InsertRsvpResponse,
   type InsertFacility,
+  type InsertMigrationLookup,
+  type InsertSubscription,
   type SelectAwardDefinition,
   type InsertAwardDefinition,
   type SelectUserAwardRecord,
   type InsertUserAwardRecord,
+  type SelectMigrationLookup,
+  type SelectSubscription,
 } from "@shared/schema";
 
 // =============================================
@@ -213,6 +219,19 @@ export interface IStorage {
   createFacility(facility: InsertFacility): Promise<Facility>;
   updateFacility(id: number, updates: Partial<Facility>): Promise<Facility | undefined>;
   deleteFacility(id: number): Promise<void>;
+  
+  // Migration Lookup operations (Legacy UYP Migration)
+  getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]>;
+  createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup>;
+  markMigrationLookupClaimed(id: number): Promise<void>;
+  
+  // Subscription operations (User Wallet System)
+  getSubscription(id: number): Promise<SelectSubscription | undefined>;
+  getSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]>;
+  getUnassignedSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]>;
+  createSubscription(data: InsertSubscription): Promise<SelectSubscription>;
+  assignSubscriptionToPlayer(subscriptionId: number, playerId: string): Promise<SelectSubscription | undefined>;
+  updateSubscription(id: number, updates: Partial<Subscription>): Promise<SelectSubscription | undefined>;
 }
 
 // =============================================
@@ -242,6 +261,8 @@ class MemStorage implements IStorage {
   private rsvpResponses: Map<number, RsvpResponse> = new Map();
   private awardDefinitions: Map<number, SelectAwardDefinition> = new Map();
   private userAwardRecords: Map<number, SelectUserAwardRecord> = new Map();
+  private migrationLookups: Map<number, SelectMigrationLookup> = new Map();
+  private subscriptionsStore: Map<number, SelectSubscription> = new Map();
   private nextTeamId = 1;
   private nextEventId = 1;
   private nextDivisionId = 1;
@@ -252,6 +273,8 @@ class MemStorage implements IStorage {
   private nextRsvpResponseId = 1;
   private nextAwardDefinitionId = 1;
   private nextUserAwardRecordId = 1;
+  private nextMigrationLookupId = 1;
+  private nextSubscriptionId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1680,6 +1703,104 @@ class MemStorage implements IStorage {
   
   async deleteFacility(id: number): Promise<void> {
     return;
+  }
+  
+  // Migration Lookup operations
+  async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
+    const results: SelectMigrationLookup[] = [];
+    this.migrationLookups.forEach(lookup => {
+      if (lookup.email.toLowerCase() === email.toLowerCase() && !lookup.isClaimed) {
+        results.push(lookup);
+      }
+    });
+    return results;
+  }
+  
+  async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {
+    const now = new Date();
+    const lookup: SelectMigrationLookup = {
+      id: this.nextMigrationLookupId++,
+      email: data.email,
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      productName: data.productName,
+      isClaimed: data.isClaimed ?? false,
+      createdAt: now.toISOString(),
+    };
+    this.migrationLookups.set(lookup.id, lookup);
+    return lookup;
+  }
+  
+  async markMigrationLookupClaimed(id: number): Promise<void> {
+    const lookup = this.migrationLookups.get(id);
+    if (lookup) {
+      lookup.isClaimed = true;
+      this.migrationLookups.set(id, lookup);
+    }
+  }
+  
+  // Subscription operations
+  async getSubscription(id: number): Promise<SelectSubscription | undefined> {
+    return this.subscriptionsStore.get(id);
+  }
+  
+  async getSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]> {
+    const results: SelectSubscription[] = [];
+    this.subscriptionsStore.forEach(sub => {
+      if (sub.ownerUserId === ownerUserId) {
+        results.push(sub);
+      }
+    });
+    return results;
+  }
+  
+  async getUnassignedSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]> {
+    const results: SelectSubscription[] = [];
+    this.subscriptionsStore.forEach(sub => {
+      if (sub.ownerUserId === ownerUserId && !sub.assignedPlayerId) {
+        results.push(sub);
+      }
+    });
+    return results;
+  }
+  
+  async createSubscription(data: InsertSubscription): Promise<SelectSubscription> {
+    const now = new Date();
+    const subscription: SelectSubscription = {
+      id: this.nextSubscriptionId++,
+      ownerUserId: data.ownerUserId,
+      assignedPlayerId: data.assignedPlayerId ?? null,
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      productName: data.productName,
+      status: data.status ?? 'active',
+      isMigrated: data.isMigrated ?? false,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    this.subscriptionsStore.set(subscription.id, subscription);
+    return subscription;
+  }
+  
+  async assignSubscriptionToPlayer(subscriptionId: number, playerId: string): Promise<SelectSubscription | undefined> {
+    const subscription = this.subscriptionsStore.get(subscriptionId);
+    if (subscription) {
+      subscription.assignedPlayerId = playerId;
+      subscription.updatedAt = new Date().toISOString();
+      this.subscriptionsStore.set(subscriptionId, subscription);
+      return subscription;
+    }
+    return undefined;
+  }
+  
+  async updateSubscription(id: number, updates: Partial<Subscription>): Promise<SelectSubscription | undefined> {
+    const subscription = this.subscriptionsStore.get(id);
+    if (subscription) {
+      const updated = { ...subscription, ...updates, updatedAt: new Date().toISOString() };
+      this.subscriptionsStore.set(id, updated as SelectSubscription);
+      return updated as SelectSubscription;
+    }
+    return undefined;
   }
 }
 
@@ -3544,6 +3665,98 @@ class DatabaseStorage implements IStorage {
   
   async deleteFacility(id: number): Promise<void> {
     await db.delete(schema.facilities).where(eq(schema.facilities.id, id));
+  }
+  
+  // Migration Lookup operations
+  async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
+    const results = await db.select().from(schema.migrationLookup)
+      .where(and(
+        sql`LOWER(${schema.migrationLookup.email}) = LOWER(${email})`,
+        eq(schema.migrationLookup.isClaimed, false)
+      ));
+    return results;
+  }
+  
+  async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {
+    const results = await db.insert(schema.migrationLookup).values({
+      email: data.email,
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      productName: data.productName,
+      isClaimed: data.isClaimed ?? false,
+    }).returning();
+    return results[0];
+  }
+  
+  async markMigrationLookupClaimed(id: number): Promise<void> {
+    await db.update(schema.migrationLookup)
+      .set({ isClaimed: true })
+      .where(eq(schema.migrationLookup.id, id));
+  }
+  
+  // Subscription operations
+  async getSubscription(id: number): Promise<SelectSubscription | undefined> {
+    const results = await db.select().from(schema.subscriptions)
+      .where(eq(schema.subscriptions.id, id));
+    return results[0] || undefined;
+  }
+  
+  async getSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]> {
+    const results = await db.select().from(schema.subscriptions)
+      .where(eq(schema.subscriptions.ownerUserId, ownerUserId));
+    return results;
+  }
+  
+  async getUnassignedSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]> {
+    const results = await db.select().from(schema.subscriptions)
+      .where(and(
+        eq(schema.subscriptions.ownerUserId, ownerUserId),
+        sql`${schema.subscriptions.assignedPlayerId} IS NULL`
+      ));
+    return results;
+  }
+  
+  async createSubscription(data: InsertSubscription): Promise<SelectSubscription> {
+    const results = await db.insert(schema.subscriptions).values({
+      ownerUserId: data.ownerUserId,
+      assignedPlayerId: data.assignedPlayerId ?? null,
+      stripeCustomerId: data.stripeCustomerId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId,
+      productName: data.productName,
+      status: data.status ?? 'active',
+      isMigrated: data.isMigrated ?? false,
+    }).returning();
+    return results[0];
+  }
+  
+  async assignSubscriptionToPlayer(subscriptionId: number, playerId: string): Promise<SelectSubscription | undefined> {
+    const results = await db.update(schema.subscriptions)
+      .set({ 
+        assignedPlayerId: playerId,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.subscriptions.id, subscriptionId))
+      .returning();
+    return results[0] || undefined;
+  }
+  
+  async updateSubscription(id: number, updates: Partial<Subscription>): Promise<SelectSubscription | undefined> {
+    const dbUpdates: any = {
+      assignedPlayerId: updates.assignedPlayerId,
+      status: updates.status,
+      isMigrated: updates.isMigrated,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+    
+    const results = await db.update(schema.subscriptions)
+      .set(dbUpdates)
+      .where(eq(schema.subscriptions.id, id))
+      .returning();
+    return results[0] || undefined;
   }
 
   // Helper mapping functions

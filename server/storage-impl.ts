@@ -229,6 +229,7 @@ export interface IStorage {
   getSubscription(id: number): Promise<SelectSubscription | undefined>;
   getSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]>;
   getUnassignedSubscriptionsByOwner(ownerUserId: string): Promise<SelectSubscription[]>;
+  getSubscriptionsByPlayerId(playerId: string): Promise<SelectSubscription[]>;
   createSubscription(data: InsertSubscription): Promise<SelectSubscription>;
   assignSubscriptionToPlayer(subscriptionId: number, playerId: string): Promise<SelectSubscription | undefined>;
   updateSubscription(id: number, updates: Partial<Subscription>): Promise<SelectSubscription | undefined>;
@@ -1758,6 +1759,16 @@ class MemStorage implements IStorage {
     const results: SelectSubscription[] = [];
     this.subscriptionsStore.forEach(sub => {
       if (sub.ownerUserId === ownerUserId && !sub.assignedPlayerId) {
+        results.push(sub);
+      }
+    });
+    return results;
+  }
+  
+  async getSubscriptionsByPlayerId(playerId: string): Promise<SelectSubscription[]> {
+    const results: SelectSubscription[] = [];
+    this.subscriptionsStore.forEach(sub => {
+      if (sub.assignedPlayerId === playerId && sub.status === 'active') {
         results.push(sub);
       }
     });
@@ -3712,6 +3723,15 @@ class DatabaseStorage implements IStorage {
       .where(and(
         eq(schema.subscriptions.ownerUserId, ownerUserId),
         sql`${schema.subscriptions.assignedPlayerId} IS NULL`
+      ));
+    return results;
+  }
+  
+  async getSubscriptionsByPlayerId(playerId: string): Promise<SelectSubscription[]> {
+    const results = await db.select().from(schema.subscriptions)
+      .where(and(
+        eq(schema.subscriptions.assignedPlayerId, playerId),
+        eq(schema.subscriptions.status, 'active')
       ));
     return results;
   }

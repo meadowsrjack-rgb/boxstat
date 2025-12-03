@@ -260,14 +260,14 @@ export function setupNotificationRoutes(app: Express) {
     }
   });
 
-  // Get announcements (type='announcement' from notification_recipients)
+  // Get announcements (type='announcement' or 'legacy_subscription' from notification_recipients)
   app.get('/api/notifications/announcements', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       
       const { db } = await import("../db");
       const { notifications, notificationRecipients } = await import("../../shared/schema");
-      const { eq, and, desc, sql } = await import("drizzle-orm");
+      const { eq, and, desc, sql, or } = await import("drizzle-orm");
       
       const announcements = await db.select({
         id: notifications.id,
@@ -282,11 +282,14 @@ export function setupNotificationRoutes(app: Express) {
         .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
         .where(and(
           eq(notificationRecipients.userId, userId),
-          sql`'announcement' = ANY(${notifications.types})`,
+          or(
+            sql`'announcement' = ANY(${notifications.types})`,
+            sql`'legacy_subscription' = ANY(${notifications.types})`
+          ),
           eq(notificationRecipients.isRead, false)
         ))
         .orderBy(desc(notifications.createdAt))
-        .limit(3);
+        .limit(5);
 
       res.json(announcements);
     } catch (error) {

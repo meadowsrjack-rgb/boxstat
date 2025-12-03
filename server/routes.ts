@@ -37,8 +37,91 @@ import {
 } from "@shared/schema";
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
+import { db } from "./db";
+import { notifications, notificationRecipients } from "@shared/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
+
+// Helper function to create a legacy subscription notification for a user
+async function createLegacySubscriptionNotification(userId: string, subscriptionCount: number, organizationId: string = "default-org"): Promise<void> {
+  try {
+    // Check if a legacy_subscription notification already exists and is unread for this user
+    const existingNotification = await db.select({
+      id: notifications.id,
+      recipientId: notificationRecipients.id,
+    })
+      .from(notificationRecipients)
+      .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
+      .where(and(
+        eq(notificationRecipients.userId, userId),
+        sql`'legacy_subscription' = ANY(${notifications.types})`,
+        eq(notificationRecipients.isRead, false)
+      ))
+      .limit(1);
+    
+    if (existingNotification.length > 0) {
+      console.log(`📋 Legacy subscription notification already exists for user ${userId}`);
+      return;
+    }
+    
+    // Create a new notification
+    const [createdNotification] = await db.insert(notifications).values({
+      organizationId,
+      types: ['announcement', 'legacy_subscription'],
+      title: '🎁 You Have Subscriptions to Assign!',
+      message: `You have ${subscriptionCount} subscription${subscriptionCount > 1 ? 's' : ''} from your previous account that need${subscriptionCount === 1 ? 's' : ''} to be assigned to your players.`,
+      recipientTarget: 'users',
+      recipientUserIds: [userId],
+      deliveryChannels: ['in_app'],
+      sentBy: 'system',
+      status: 'sent',
+    }).returning();
+    
+    // Create the recipient record
+    await db.insert(notificationRecipients).values({
+      notificationId: createdNotification.id,
+      userId,
+      isRead: false,
+      deliveryStatus: { in_app: 'sent' },
+    });
+    
+    console.log(`✅ Created legacy subscription notification for user ${userId}`);
+  } catch (error) {
+    console.error('Error creating legacy subscription notification:', error);
+  }
+}
+
+// Helper function to clear legacy subscription notification when all subscriptions are assigned
+async function clearLegacySubscriptionNotification(userId: string): Promise<void> {
+  try {
+    // Find and mark as read all legacy_subscription notifications for this user
+    const legacyNotifications = await db.select({
+      recipientId: notificationRecipients.id,
+    })
+      .from(notificationRecipients)
+      .innerJoin(notifications, eq(notificationRecipients.notificationId, notifications.id))
+      .where(and(
+        eq(notificationRecipients.userId, userId),
+        sql`'legacy_subscription' = ANY(${notifications.types})`,
+        eq(notificationRecipients.isRead, false)
+      ));
+    
+    if (legacyNotifications.length > 0) {
+      for (const notification of legacyNotifications) {
+        await db.update(notificationRecipients)
+          .set({ 
+            isRead: true,
+            readAt: sql`CURRENT_TIMESTAMP`
+          })
+          .where(eq(notificationRecipients.id, notification.recipientId));
+      }
+      console.log(`✅ Cleared ${legacyNotifications.length} legacy subscription notification(s) for user ${userId}`);
+    }
+  } catch (error) {
+    console.error('Error clearing legacy subscription notification:', error);
+  }
+}
 
 // Initialize Stripe
 const stripe = process.env.STRIPE_SECRET_KEY 
@@ -286,6 +369,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         process.env.JWT_SECRET,
         { expiresIn: '30d' }
       );
+      
+      // Check for unassigned subscriptions and create notification if needed
+      const unassignedSubs = await storage.getUnassignedSubscriptionsByOwner(user.id);
+      if (unassignedSubs.length > 0) {
+        await createLegacySubscriptionNotification(user.id, unassignedSubs.length, user.organizationId);
+      }
       
       res.json({ 
         success: true,
@@ -1624,6 +1713,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`✅ Assigned subscription ${subscriptionId} to player ${playerId}`);
       
+      // Check if user has any remaining unassigned subscriptions
+      const remainingUnassigned = await storage.getUnassignedSubscriptionsByOwner(userId);
+      if (remainingUnassigned.length === 0) {
+        // Clear the legacy subscription notification
+        await clearLegacySubscriptionNotification(userId);
+      }
+      
       res.json({
         success: true,
         message: `Successfully assigned "${subscription.productName}" to ${player.firstName} ${player.lastName}`,
@@ -1643,17 +1739,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { id } = req.user;
     const user = await storage.getUser(id);
     
+    let players: any[] = [];
+    
     if (user?.role === "parent" || user?.role === "admin") {
       // Get all players linked to this parent/admin
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      const linkedPlayers = allUsers.filter(u => u.accountHolderId === id && u.role === "player");
-      res.json(linkedPlayers);
+      players = allUsers.filter(u => u.accountHolderId === id && u.role === "player");
     } else if (user?.role === "player") {
       // Return self
-      res.json([user]);
-    } else {
-      res.json([]);
+      players = [user];
     }
+    
+    // Fetch active subscriptions for each player
+    const playersWithSubscriptions = await Promise.all(
+      players.map(async (player: any) => {
+        const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
+        return {
+          ...player,
+          activeSubscriptions: subscriptions.map(s => ({
+            id: s.id,
+            productName: s.productName,
+            status: s.status,
+          })),
+        };
+      })
+    );
+    
+    res.json(playersWithSubscriptions);
   });
   
   // Add player to account (for parents and admins adding players)

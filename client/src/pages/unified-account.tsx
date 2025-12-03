@@ -408,6 +408,9 @@ function EnhancedPlayerCard({
   );
   const statusColor = getStatusColor(status);
   const statusLabel = getStatusLabel(status);
+  
+  // Active subscriptions from player data (added by backend)
+  const activeSubscriptions = player.activeSubscriptions || [];
 
   return (
     <Card
@@ -424,7 +427,7 @@ function EnhancedPlayerCard({
           </Avatar>
           
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-semibold text-gray-900 truncate" data-testid={`player-name-${player.id}`}>
                 {player.firstName} {player.lastName}
               </h3>
@@ -450,6 +453,21 @@ function EnhancedPlayerCard({
                 <span className="text-xs text-gray-500" data-testid={`status-label-${player.id}`}>{statusLabel}</span>
               </div>
             </div>
+            
+            {activeSubscriptions.length > 0 && (
+              <div className="flex items-center gap-1 mt-2 flex-wrap">
+                {activeSubscriptions.map((sub: any) => (
+                  <Badge 
+                    key={sub.id} 
+                    variant="outline" 
+                    className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] px-1.5 py-0"
+                    data-testid={`subscription-badge-${sub.id}`}
+                  >
+                    {sub.productName}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </CardContent>
@@ -704,7 +722,7 @@ export default function UnifiedAccount() {
 
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
-            {/* Subscription Alert for Legacy Migrations */}
+            {/* Subscription Alert - shows if unassigned subscriptions exist */}
             <SubscriptionAlert players={players} />
             
             {/* Player Cards Section */}

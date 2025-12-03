@@ -56,6 +56,8 @@ export default function SubscriptionAlert({ players = [] }: SubscriptionAlertPro
       });
       queryClient.invalidateQueries({ queryKey: ["/api/subscriptions/unassigned"] });
       queryClient.invalidateQueries({ queryKey: ["/api/subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/announcements"] });
       setAssignDialogOpen(false);
       setSelectedSubscription(null);
       setSelectedPlayerId("");

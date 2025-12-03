@@ -224,7 +224,7 @@ export default function AdminDashboard() {
                 onClick={() => setLocation("/profile-gateway")}
                 data-testid="button-switch-profile"
               >
-                <Users className="h-5 w-5" />
+                <ChevronLeft className="h-6 w-6" />
               </Button>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900" data-testid="text-dashboard-title">Admin Dashboard</h1>

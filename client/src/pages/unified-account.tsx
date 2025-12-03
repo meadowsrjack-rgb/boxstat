@@ -35,6 +35,7 @@ import {
   Unlock,
   AlertTriangle,
   LogOut,
+  ChevronLeft,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
@@ -699,24 +700,23 @@ export default function UnifiedAccount() {
       <div className="bg-white border-b safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900" data-testid="text-welcome">
-                Welcome, {user?.firstName || "User"}!
-              </h1>
-              <p className="text-gray-600 mt-1">Manage your account and players</p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <NotificationBell />
-              <Button
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
                 onClick={() => setLocation("/profile-gateway")}
-                variant="outline"
                 data-testid="button-switch-profile"
-                className="w-full sm:w-auto"
               >
-                <User className="w-4 h-4 mr-2" />
-                Switch Profile
+                <ChevronLeft className="h-6 w-6" />
               </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900" data-testid="text-welcome">
+                  Welcome, {user?.firstName || "User"}!
+                </h1>
+                <p className="text-gray-600 mt-1">Manage your account and players</p>
+              </div>
             </div>
+            <NotificationBell />
           </div>
 
         </div>

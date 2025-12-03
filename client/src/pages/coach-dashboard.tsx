@@ -404,7 +404,7 @@ export default function CoachDashboard() {
               aria-label="Switch Profile"
               data-testid="button-switch-profile"
             >
-              <Users className="h-5 w-5" />
+              <ChevronLeft className="h-6 w-6" />
             </Button>
             <div className="flex items-center gap-1">
             <NotificationBell />

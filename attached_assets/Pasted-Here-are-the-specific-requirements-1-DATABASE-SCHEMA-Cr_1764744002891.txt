@@ -1,0 +1,52 @@
+Here are the specific requirements:
+
+1. DATABASE SCHEMA
+Create two primary tables:
+
+Table A: "Users"
+- id (UUID, primary key)
+- email (unique, string)
+- password_hash (string)
+- stripe_customer_id (string, nullable)
+- stripe_subscription_id (string, nullable)
+- subscription_status (string, default: 'inactive') — values: 'active', 'inactive'
+- plan_tier (string, default: 'free')
+
+Table B: "MigrationLookup" (This holds the old data)
+- email (unique, string) — This is the matching key.
+- old_stripe_customer_id (string)
+- old_stripe_subscription_id (string)
+- plan_tier (string) — e.g., 'Pro', 'Basic'
+- is_claimed (boolean, default: false)
+
+2. BACKEND LOGIC (The Registration Flow)
+Create a POST /register endpoint that performs the following steps in order:
+
+Step 1: Validate email/password inputs.
+Step 2: Check if a User already exists with that email (return error if true).
+Step 3: Create the new User in the "Users" table.
+Step 4: AUTOMATIC MIGRATION CHECK
+   - Query the "MigrationLookup" table for the registered email.
+   - IF A MATCH IS FOUND:
+     a. Update the new User record:
+        - set stripe_customer_id = MigrationLookup.old_stripe_customer_id
+        - set stripe_subscription_id = MigrationLookup.old_stripe_subscription_id
+        - set subscription_status = 'active'
+        - set plan_tier = MigrationLookup.plan_tier
+     b. Mark the "MigrationLookup" row as is_claimed = true.
+     c. Return a JSON response indicating registration success AND that an existing subscription was found and linked.
+   - IF NO MATCH IS FOUND:
+     a. Leave stripe fields null.
+     b. Return a JSON response indicating registration success but subscription_status is 'inactive'.
+
+3. SEEDING SCRIPT (For Testing)
+Create a script (seed.js) that populates the "MigrationLookup" table with dummy data so I can test the flow.
+Use this data for the seed:
+- Email: "parent@test.com", StripeCust: "cus_123", StripeSub: "sub_456", Tier: "Pro"
+- Email: "coach@test.com", StripeCust: "cus_789", StripeSub: "sub_012", Tier: "Coach"
+
+4. FRONTEND (Minimal)
+Create a simple HTML registration form.
+- On submit, call the API.
+- If the API returns "active", show a success message: "Welcome back! Your existing UYP subscription has been linked."
+- If the API returns "inactive", show: "Account created. Please select a plan to subscribe."

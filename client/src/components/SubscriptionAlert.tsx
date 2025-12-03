@@ -106,6 +106,12 @@ export default function SubscriptionAlert({ players = [] }: SubscriptionAlertPro
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          {players.length === 0 && (
+            <div className="flex items-center gap-2 p-3 bg-amber-100 rounded-lg text-amber-800 text-sm mb-3">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>You need to add a player to your account before you can assign subscriptions. Use the "Add Player" button below.</span>
+            </div>
+          )}
           {unassignedSubs.map((subscription) => (
             <div
               key={subscription.id}
@@ -134,6 +140,7 @@ export default function SubscriptionAlert({ players = [] }: SubscriptionAlertPro
                 onClick={() => handleAssignClick(subscription)}
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700"
+                disabled={players.length === 0}
                 data-testid={`assign-button-${subscription.id}`}
               >
                 <User className="h-4 w-4 mr-2" />

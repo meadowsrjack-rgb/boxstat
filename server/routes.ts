@@ -1750,18 +1750,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       players = [user];
     }
     
-    // Fetch active subscriptions for each player
+    // Fetch active subscriptions for each player with defensive error handling
     const playersWithSubscriptions = await Promise.all(
       players.map(async (player: any) => {
-        const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
-        return {
-          ...player,
-          activeSubscriptions: subscriptions.map(s => ({
-            id: s.id,
-            productName: s.productName,
-            status: s.status,
-          })),
-        };
+        try {
+          const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
+          return {
+            ...player,
+            activeSubscriptions: (subscriptions || []).map(s => ({
+              id: s.id,
+              productName: s.productName,
+              status: s.status,
+            })),
+          };
+        } catch (error) {
+          console.error(`Error fetching subscriptions for player ${player.id}:`, error);
+          return {
+            ...player,
+            activeSubscriptions: [],
+          };
+        }
       })
     );
     

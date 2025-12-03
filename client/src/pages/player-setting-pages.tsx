@@ -760,7 +760,7 @@ export function PlayerSecurityPage() {
   });
 
   const handleSwitchProfile = () => {
-    setLocation('/profile-selection');
+    setLocation('/profile-gateway');
   };
 
   const handleDeleteProfile = () => {

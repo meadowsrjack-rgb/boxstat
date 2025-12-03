@@ -41,6 +41,17 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
     return next();
   }
   
+  // Debug logging for failed auth
+  console.log('🔐 Auth failed:', {
+    method: req.method,
+    path: req.path,
+    hasSession: !!req.session,
+    sessionId: req.session?.id,
+    hasUserId: !!req.session?.userId,
+    hasCookie: !!req.headers.cookie,
+    origin: req.headers.origin,
+  });
+  
   // Neither JWT nor session found
   return res.status(401).json({ error: "Not authenticated" });
 };

@@ -1,0 +1,72 @@
+Project: Update BoxStat for Legacy Subscription Migration
+
+Act as a Senior Full-Stack Developer. I have an existing BoxStat application (Node.js/Express/PostgreSQL) with a working "Registration Flow" and a "Parent Dashboard."
+
+I need you to UPDATE this existing application to handle a "Legacy Migration" feature. We are moving customers from an old platform (UYP) and need to link their Stripe subscriptions to their new BoxStat accounts.
+
+**The Challenge:**
+1. Parents already have paid Stripe subscriptions but no BoxStat account.
+2. One parent might pay for multiple children (multiple subscriptions).
+3. Subscriptions must be detected via email during registration, moved to an "Unassigned Wallet," and then manually assigned by the parent to the correct Player profile.
+
+Here are the specific tasks to modify the current codebase:
+
+### 1. DATABASE SCHEMA UPDATES
+Check existing tables and apply these changes using Sequelize/Prisma migrations:
+
+A. Create New Table: "MigrationLookup"
+- email (string) — The matching key from the old system
+- stripe_customer_id (string)
+- stripe_subscription_id (string)
+- product_name (string)
+- is_claimed (boolean, default: false)
+
+B. Update Table: "Subscriptions"
+- Ensure `owner_user_id` exists (FK to Users).
+- Add Column: `assigned_player_id` (FK to Players, NULLABLE). *Crucial: If null, it is in the "Wallet".*
+- Add Column: `is_migrated` (boolean, default: false).
+- Add Column: `product_name` (string).
+- Add Column: `stripe_subscription_id` (string).
+
+C. Update Table: "Users"
+- Ensure `stripe_customer_id` column exists (nullable).
+
+### 2. BACKEND LOGIC UPDATES
+
+A. Modify Existing `POST /auth/register`
+- Locate the existing registration function.
+- AFTER the new User is successfully created, inject this logic:
+  1. Query "MigrationLookup" for the user's email.
+  2. IF MATCHES FOUND:
+     - Loop through matches.
+     - Create a new row in "Subscriptions" for each match.
+     - Set `owner_user_id` = New User ID.
+     - Set `assigned_player_id` = NULL (Unassigned).
+     - Set `is_migrated` = true.
+     - Update "MigrationLookup" row to `is_claimed` = true.
+- Ensure the response includes a flag `has_unassigned_subs: true` if matches were found.
+
+B. Create New Endpoints
+1. `GET /subscriptions/unassigned`
+   - Return subscriptions where `owner_user_id` = Current User AND `assigned_player_id` IS NULL.
+2. `POST /subscriptions/assign`
+   - Body: `{ subscription_id, player_id }`
+   - Logic: Update the Subscription record to set `assigned_player_id` = player_id.
+
+### 3. FRONTEND UPDATES (Parent Dashboard)
+
+A. Update the "Dashboard Home"
+- On load, check the `GET /subscriptions/unassigned` endpoint.
+- IF unassigned subscriptions exist, display a prominent "Action Required" alert:
+  "⚠️ We found [x] active subscriptions linked to your email. Please assign them to a player."
+
+B. Update "Player Management" or "Add Player" Section
+- Add an "Assign Subscription" feature (Modal or Dropdown) next to each Player card.
+- The dropdown should list the unassigned subscriptions (e.g., "Elite Team - Migrated").
+- On selection, call the assign endpoint and update the UI to show the plan is now active for that child.
+
+### 4. SEED DATA (For Testing)
+Create a script `seed_migration.js` to populate `MigrationLookup` with this test data:
+- Email: "mom@test.com", StripeSub: "sub_101", Product: "U12 Basketball Team"
+- Email: "mom@test.com", StripeSub: "sub_102", Product: "Advanced Shooting Camp"
+- Email: "dad@test.com", StripeSub: "sub_103", Product: "U14 Basketball Team"

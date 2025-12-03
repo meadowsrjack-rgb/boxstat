@@ -22,6 +22,8 @@ import Schedule from "@/pages/schedule";
 import Chat from "@/pages/chat";
 import RegistrationFlow from "@/pages/registration-flow";
 import UnifiedAccount from "@/pages/unified-account";
+import ProfileGateway from "@/pages/profile-gateway";
+import DashboardDispatcher from "@/components/DashboardDispatcher";
 import LoginPage from "@/pages/login";
 import AddPlayer from "@/pages/add-player";
 import VerifyEmail from "@/pages/verify-email";
@@ -126,6 +128,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 // Create protected route wrappers as proper components (not anonymous functions)
 const ProtectedNotificationsPage = () => <ProtectedRoute component={NotificationsPage} />;
 const ProtectedUnifiedAccount = () => <ProtectedRoute component={UnifiedAccount} />;
+const ProtectedProfileGateway = () => <ProtectedRoute component={ProfileGateway} />;
+const ProtectedDashboardDispatcher = () => <ProtectedRoute component={DashboardDispatcher} />;
 const ProtectedAddPlayer = () => <ProtectedRoute component={AddPlayer} />;
 const ProtectedPlayerDashboard = () => <ProtectedRoute component={PlayerDashboard} />;
 const ProtectedAdminDashboard = () => <ProtectedRoute component={AdminDashboard} />;
@@ -195,27 +199,22 @@ function AccountRoute() {
     return null;
   }
 
-  if ((user as any)?.role === "admin") {
-    setLocation("/admin-dashboard");
-    return null;
-  }
-
-  return <UnifiedAccount />;
+  setLocation("/home");
+  return null;
 }
 
 function DashboardRoute() {
-  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation("/home");
+  }, [setLocation]);
 
-  switch ((user as any)?.userType) {
-    case "admin":
-      return <AdminDashboard />;
-    case "player":
-      return <PlayerDashboard />;
-    case "coach":
-      return <CoachDashboard />;
-    default:
-      return <PlayerDashboard />;
-  }
+  return (
+    <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+    </div>
+  );
 }
 
 function ProfileCheckWrapper({ children }: { children: React.ReactNode }) {
@@ -315,6 +314,9 @@ function AppRouter() {
       <Route path="/" component={Landing} />
       
       {/* Protected routes */}
+      <Route path="/home" component={ProtectedDashboardDispatcher} />
+      <Route path="/profile-gateway" component={ProtectedProfileGateway} />
+      <Route path="/parent-dashboard" component={ProtectedUnifiedAccount} />
       <Route path="/account" component={AccountRoute} />
       <Route path="/unified-account" component={ProtectedUnifiedAccount} />
       <Route path="/add-player" component={ProtectedAddPlayer} />

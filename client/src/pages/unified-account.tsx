@@ -707,28 +707,15 @@ export default function UnifiedAccount() {
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <NotificationBell />
-              {user?.role === "admin" && (
-                <Button
-                  onClick={() => setLocation("/admin-dashboard")}
-                  variant="outline"
-                  data-testid="button-admin"
-                  className="w-full sm:w-auto"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              )}
-              {(user?.role === "admin" || user?.role === "coach") && (
-                <Button
-                  onClick={() => setLocation("/coach-dashboard")}
-                  variant="outline"
-                  data-testid="button-coach"
-                  className="w-full sm:w-auto"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Coach
-                </Button>
-              )}
+              <Button
+                onClick={() => setLocation("/profile-gateway")}
+                variant="outline"
+                data-testid="button-switch-profile"
+                className="w-full sm:w-auto"
+              >
+                <User className="w-4 h-4 mr-2" />
+                Switch Profile
+              </Button>
             </div>
           </div>
 

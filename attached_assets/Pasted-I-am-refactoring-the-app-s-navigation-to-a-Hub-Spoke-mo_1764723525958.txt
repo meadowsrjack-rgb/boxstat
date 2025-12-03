@@ -1,0 +1,31 @@
+I am refactoring the app's navigation to a "Hub & Spoke" model to handle multi-role accounts (e.g., families sharing one login) better.
+
+Please implement the following architectural changes:
+
+### 1. Create `DashboardDispatcher` (The Logic Guard)
+Create a new component `DashboardDispatcher` to act as the default authenticated route. It must inspect the `user` object:
+* **Check Roles/Data:** Does the user have `roles` containing 'coach' or 'admin'? Do they have any `managedPlayers` (linked children)?
+* **Scenario A (Solo Player):** If they are NOT a coach/admin AND have 0 managed players, redirect immediately to `/player-dashboard/:userId`. Skip all menus.
+* **Scenario B (Multi-Role/Parent):** If they ARE a coach/admin OR have managed players, redirect to `/profile-gateway`.
+
+### 2. Create `ProfileGateway` (The Selector)
+Create a new page `ProfileGateway`. This is the "Who is watching?" screen.
+* **Layout:** A simple grid of large cards/avatars.
+* **Profile Cards:**
+    * **"Account Manager / Parent":** Links to `/parent-dashboard`.
+    * **"Coach View":** (Only show if user is a coach) Links to `/coach-dashboard`.
+    * **"Admin View":** (Only show if user is an admin) Links to `/admin-dashboard`.
+    * **Player Cards:** Map through `user.managedPlayers`. Each card links to `/player-dashboard/:id` (ensure this passes necessary props so the dashboard knows it's being viewed by a parent/sibling).
+
+### 3. Refactor `UnifiedAccountPage` -> `ParentDashboard`
+* Rename/Refactor the existing `UnifiedAccountPage` component to `ParentDashboard`.
+* **CRITICAL UI CHANGE:** Remove the buttons at the top of this page that currently allow switching to "Coach Dashboard" or "Admin Dashboard".
+    * *Reason:* Navigating between roles should now ONLY happen via the `ProfileGateway`. We want this dashboard to be strictly for parent/billing/account management tasks.
+* Retain all other functionality (billing, chat groups, family schedule).
+
+### 4. Update Routing
+* Set `DashboardDispatcher` as the default route for `/` or `/home`.
+* Add the route for `/profile-gateway`.
+* Ensure `/parent-dashboard` is accessible.
+
+Please analyze my `UserContext` structure before implementing the logic to ensure you use the correct variable names for roles and players.

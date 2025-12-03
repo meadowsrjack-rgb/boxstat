@@ -21,6 +21,13 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
 
 ### Key Features & Design Decisions
 - **Authentication & Registration**: Features a required email verification, magic link, and a non-blocking registration flow using the pending registration system.
+- **Hub & Spoke Navigation**: After login, users are routed through a DashboardDispatcher that intelligently routes based on role:
+  - Solo players → Player Dashboard directly
+  - Parents without managed players → Parent Dashboard
+  - Parents with managed players, coaches, admins → Profile Gateway ("Who's watching?" screen)
+  - Profile Gateway shows role-specific cards (Account Manager, Coach View, Admin View) and player profile cards
+  - Respects backend-stored preferences (activeProfileId, defaultDashboardView) and remembers last viewed profile via localStorage
+  - "Switch Profile" button on dashboards returns to Profile Gateway
 - **User & Player Management**: Supports single parent accounts with linked child profiles, a Dual Mode System (Parent/Player) secured by PIN, and a Parental Device Lock feature. Player profiles require verification and completion to become public, with profile photo uploads.
 - **Team & Coach Management**: Coaches can manage multiple teams, view rosters (including Notion-synced players), evaluate players, award badges, and use real-time team chat. Roster management aligns with Notion data.
 - **Event & Scheduling**: In-app CRUD for events, color-coded UI, and player RSVP with GPS-based check-in (200m geofencing) using OpenStreetMap and Leaflet. Events support multi-select targeting and display real-time distance indicators for participants. Event filtering is dynamic based on user mode (Parent/Player).

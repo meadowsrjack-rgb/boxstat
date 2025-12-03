@@ -4,6 +4,7 @@ import UypTrophyRings from "@/components/UypTrophyRings";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailModal from "@/components/EventDetailModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import type { User as UserType, Team, Event } from "@shared/schema";
@@ -1930,14 +1931,10 @@ function SaveProfile({
   
   const updateProfile = useMutation({
     mutationFn: async (payload: any) => {
-      const res = await fetch(`/api/profile/${profileId}`, {
+      return await apiRequest(`/api/profile/${profileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
+        data: payload,
       });
-      if (!res.ok) throw new Error("Failed to save profile");
-      return res.json();
     },
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved." });

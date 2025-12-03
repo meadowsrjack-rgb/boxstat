@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 
 const API_BASE_URL = Capacitor.isNativePlatform() 
-  ? 'https://boxstat.replit.app' 
+  ? 'https://boxstat.app' 
   : '';
 
 function getFullUrl(path: string): string {

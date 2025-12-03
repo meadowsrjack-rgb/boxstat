@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 
 // API base URL - use production backend when running in Capacitor native app
 const API_BASE_URL = Capacitor.isNativePlatform() 
-  ? 'https://boxstat.replit.app' 
+  ? 'https://boxstat.app' 
   : '';
 
 function getFullUrl(path: string): string {

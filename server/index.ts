@@ -23,6 +23,7 @@ app.use(cors({
       'ionic://localhost',
       'http://localhost',
       'http://localhost:5000',
+      'https://boxstat.app',
       'https://boxstat.replit.app',
     ];
     

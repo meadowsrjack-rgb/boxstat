@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { X, Megaphone, Gift } from "lucide-react";
+import { X, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useState, useEffect } from "react";
@@ -90,17 +90,14 @@ export function AnnouncementBanner() {
     <div className="space-y-3 mb-4">
       {visibleAnnouncements.map((announcement) => {
         const isLegacySubscription = announcement.types.includes("legacy_subscription");
-        const Icon = isLegacySubscription ? Gift : Megaphone;
-        const borderColor = isLegacySubscription ? "border-l-amber-500" : "border-l-primary";
-        const bgColor = isLegacySubscription ? "bg-amber-50" : "bg-primary/5";
         
         return (
           <Alert
             key={announcement.recipientId}
-            className={`border-l-4 ${borderColor} ${bgColor}`}
+            className="border-l-4 border-l-primary bg-primary/5"
             data-testid={`announcement-${announcement.id}`}
           >
-            <Icon className="h-4 w-4" />
+            <Megaphone className="h-4 w-4" />
             <AlertTitle className="flex items-center justify-between">
               <span>{announcement.title}</span>
               <Button
@@ -119,11 +116,10 @@ export function AnnouncementBanner() {
                 <Button
                   variant="default"
                   size="sm"
-                  className="mt-3 bg-amber-600 hover:bg-amber-700"
+                  className="mt-3"
                   onClick={() => handleAction(announcement)}
                   data-testid={`button-assign-subscriptions-${announcement.id}`}
                 >
-                  <Gift className="h-4 w-4 mr-2" />
                   Assign to Players
                 </Button>
               )}

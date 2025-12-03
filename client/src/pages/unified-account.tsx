@@ -42,7 +42,6 @@ import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
-import SubscriptionAlert from "@/components/SubscriptionAlert";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -722,9 +721,6 @@ export default function UnifiedAccount() {
 
           {/* Home Tab */}
           <TabsContent value="home" className="space-y-6">
-            {/* Subscription Alert - shows if unassigned subscriptions exist */}
-            <SubscriptionAlert players={players} />
-            
             {/* Player Cards Section */}
             <div>
               <div className="flex items-center justify-between mb-4">

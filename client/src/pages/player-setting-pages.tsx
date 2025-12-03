@@ -183,9 +183,12 @@ export function PlayerProfilePage() {
       // Invalidate ALL profile-related queries to force UI refresh
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${accountId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${accountId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", accountId] });
       queryClient.invalidateQueries({ queryKey: ["/api/users", accountId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] }); // For admin dashboard
       
       toast({ 
         title: "Profile Updated", 

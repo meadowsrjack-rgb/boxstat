@@ -175,10 +175,13 @@ export function ParentProfilePage() {
       queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
       
       // Force refetch for PlayerCard and other views
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${activeProfileId}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${accountId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
       queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] }); // For admin dashboard
       
       toast({ 
         title: "Profile Updated", 

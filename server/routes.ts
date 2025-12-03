@@ -643,6 +643,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // In-memory store for app redirect tokens (valid for 60 seconds)
+  const appRedirectTokens = new Map<string, { userId: string; expires: Date }>();
+  
+  // Clean up expired tokens periodically
+  setInterval(() => {
+    const now = new Date();
+    for (const [token, data] of appRedirectTokens.entries()) {
+      if (data.expires < now) {
+        appRedirectTokens.delete(token);
+      }
+    }
+  }, 30000); // Clean every 30 seconds
+  
   // Magic link login endpoint
   app.get('/api/auth/magic-link-login', async (req: any, res) => {
     try {
@@ -676,6 +689,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.organizationId = user.organizationId;
       req.session.role = user.role;
       
+      // Generate a one-time app redirect token (valid for 60 seconds)
+      const appRedirectToken = crypto.randomBytes(32).toString('hex');
+      appRedirectTokens.set(appRedirectToken, {
+        userId: user.id,
+        expires: new Date(Date.now() + 60000) // 60 seconds
+      });
+      
       res.json({ 
         success: true, 
         message: "Logged in successfully!",
@@ -686,11 +706,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: user.firstName,
           lastName: user.lastName,
           defaultDashboardView: user.defaultDashboardView
-        } 
+        },
+        appRedirectToken // Token for iOS app to use
       });
     } catch (error: any) {
       console.error("Magic link login error:", error);
       res.status(500).json({ success: false, message: "Login failed" });
+    }
+  });
+  
+  // Exchange app redirect token for session (used by iOS app after browser auth)
+  app.get('/api/auth/app-redirect', async (req: any, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ success: false, message: "Token is required" });
+      }
+      
+      const tokenData = appRedirectTokens.get(token as string);
+      
+      if (!tokenData) {
+        return res.status(404).json({ success: false, message: "Invalid or expired token" });
+      }
+      
+      if (tokenData.expires < new Date()) {
+        appRedirectTokens.delete(token as string);
+        return res.status(400).json({ success: false, message: "Token has expired" });
+      }
+      
+      // Delete the token (one-time use)
+      appRedirectTokens.delete(token as string);
+      
+      // Get user and set session
+      const user = await storage.getUser(tokenData.userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
+      req.session.organizationId = user.organizationId;
+      req.session.role = user.role;
+      
+      res.json({ 
+        success: true, 
+        message: "Session created successfully!",
+        user: { 
+          id: user.id, 
+          email: user.email, 
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          defaultDashboardView: user.defaultDashboardView
+        }
+      });
+    } catch (error: any) {
+      console.error("App redirect error:", error);
+      res.status(500).json({ success: false, message: "Failed to create session" });
     }
   });
   

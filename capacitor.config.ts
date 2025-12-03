@@ -4,11 +4,12 @@ const config: CapacitorConfig = {
   appId: 'com.boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
-  server: {
-    // Enable deep links from boxstat.replit.app
-    url: 'https://boxstat.replit.app',
-    cleartext: false,
-  },
+  // server: {
+  //   // Enable deep links from boxstat.replit.app
+  //   // Uncomment for production to load from live server
+  //   url: 'https://boxstat.replit.app',
+  //   cleartext: false,
+  // },
   ios: {
     contentInset: 'automatic',
     backgroundColor: '#FFFFFF',

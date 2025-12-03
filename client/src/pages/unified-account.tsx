@@ -410,68 +410,47 @@ function EnhancedPlayerCard({
 
   return (
     <Card
-      className="transition-shadow hover:shadow-lg"
+      className="transition-all hover:shadow-md border-0 shadow-sm bg-white"
       data-testid={`player-card-${player.id}`}
     >
-      <CardContent className="p-6">
-        {/* Header with Avatar */}
-        <div className="flex items-start justify-between mb-4">
-          <Avatar className="w-16 h-16">
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          <Avatar className="w-12 h-12 flex-shrink-0">
             <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-2xl font-bold">
+            <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-lg font-bold">
               {player.firstName?.[0]}{player.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
           
-          {player.teamAssignmentStatus === "pending" && (
-            <Badge variant="outline" className="bg-yellow-50">
-              Pending
-            </Badge>
-          )}
-        </div>
-
-        {/* Player Name */}
-        <h3 className="text-lg font-semibold mb-1" data-testid={`player-name-${player.id}`}>
-          {player.firstName} {player.lastName}
-        </h3>
-
-        {/* Team Name */}
-        {teamData?.name && (
-          <p className="text-sm text-gray-600 mb-3 flex items-center gap-1">
-            <User className="w-3 h-3" />
-            {teamData.name}
-          </p>
-        )}
-
-        {/* Payment Status Indicator */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${statusColor}`} data-testid={`status-indicator-${player.id}`}></span>
-            <span className="text-sm font-medium" data-testid={`status-label-${player.id}`}>{statusLabel}</span>
-          </div>
-          {plan && (
-            <span className="text-xs text-gray-400" data-testid={`plan-name-${player.id}`}>{plan}</span>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="border-t border-gray-100 my-4"></div>
-
-        {/* Awards and Skills Indicators */}
-        <div className="space-y-3">
-          <CompactAwardsIndicator playerId={player.id} />
-          <SkillsIndicator playerId={player.id} />
-        </div>
-        
-        {/* Lock Status Indicator */}
-        {isDeviceLocked && (
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-xs text-red-600">
-              <Lock className="h-3 w-3" />
-              <span>Device locked to this player</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-gray-900 truncate" data-testid={`player-name-${player.id}`}>
+                {player.firstName} {player.lastName}
+              </h3>
+              {player.teamAssignmentStatus === "pending" && (
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 text-[10px] px-1.5 py-0">
+                  Pending
+                </Badge>
+              )}
+              {isDeviceLocked && (
+                <Lock className="h-3 w-3 text-red-500 flex-shrink-0" />
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2 mt-0.5">
+              {teamData?.name && (
+                <span className="text-xs text-gray-500 truncate">
+                  {teamData.name}
+                </span>
+              )}
+              {teamData?.name && <span className="text-gray-300">•</span>}
+              <div className="flex items-center gap-1">
+                <span className={`h-1.5 w-1.5 rounded-full ${statusColor}`} data-testid={`status-indicator-${player.id}`}></span>
+                <span className="text-xs text-gray-500" data-testid={`status-label-${player.id}`}>{statusLabel}</span>
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

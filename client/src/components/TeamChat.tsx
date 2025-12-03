@@ -4,16 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
-import type { Message, User } from "@shared/schema";
 import {
   Send,
   MessageCircle,
   Crown,
-  Clock
+  Clock,
+  ChevronUp
 } from "lucide-react";
 
 interface TeamChatProps {
@@ -23,28 +22,44 @@ interface TeamChatProps {
   currentProfileId?: string;
 }
 
-// Using shared schema types
-interface TeamMessageWithSender extends Message {
-  sender: Pick<User, 'id' | 'firstName' | 'lastName' | 'profileImageUrl' | 'userType'>;
+interface TeamMessageWithSender {
+  id: number;
+  teamId: number;
+  senderId: string;
+  content: string;
+  messageType: string;
+  createdAt: string | Date;
+  sender: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl?: string;
+    userType?: string;
+  };
 }
+
+const MESSAGES_PER_PAGE = 10;
 
 export default function TeamChat({ teamId, teamName, className, currentProfileId }: TeamChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(MESSAGES_PER_PAGE);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Fetch team messages
-  const { data: messages = [], isLoading } = useQuery<TeamMessageWithSender[]>({
+  const { data: allMessages = [], isLoading } = useQuery<TeamMessageWithSender[]>({
     queryKey: ['/api/teams', teamId, 'messages'],
     enabled: !!teamId,
-    refetchInterval: false, // We'll use WebSocket for real-time updates
+    refetchInterval: false,
   });
 
-  // Send message mutation
+  const messages = allMessages.slice(-visibleCount);
+  const hasMoreMessages = allMessages.length > visibleCount;
+
   const sendMessageMutation = useMutation({
     mutationFn: async (messageData: { message: string; messageType?: string; profileId?: string }) => {
       const result = await apiRequest(`/api/teams/${teamId}/messages`, {
@@ -55,7 +70,6 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     },
     onSuccess: () => {
       setNewMessage("");
-      // The WebSocket will handle updating the UI, but we can also refetch for safety
       queryClient.invalidateQueries({ queryKey: ['/api/teams', teamId, 'messages'] });
     },
     onError: () => {
@@ -67,7 +81,6 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     },
   });
 
-  // WebSocket setup for real-time messaging
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -78,7 +91,6 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log('WebSocket connected');
       setIsConnected(true);
     };
 
@@ -86,16 +98,14 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'new_team_message' && data.teamId === teamId) {
-          // Optimized: append new message directly to cache
-          const newMessage = data.message;
+          const newMsg = data.message;
           queryClient.setQueryData<TeamMessageWithSender[]>(
             ['/api/teams', teamId, 'messages'], 
             (oldMessages) => {
-              if (!oldMessages) return [newMessage];
-              // Avoid duplicates by checking if message already exists
-              const messageExists = oldMessages.some(msg => msg.id === newMessage.id);
+              if (!oldMessages) return [newMsg];
+              const messageExists = oldMessages.some(msg => msg.id === newMsg.id);
               if (messageExists) return oldMessages;
-              return [...oldMessages, newMessage];
+              return [...oldMessages, newMsg];
             }
           );
         }
@@ -105,12 +115,10 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     };
 
     ws.onclose = () => {
-      console.log('WebSocket disconnected');
       setIsConnected(false);
     };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+    ws.onerror = () => {
       setIsConnected(false);
     };
 
@@ -119,13 +127,16 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     };
   }, [teamId, queryClient]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + MESSAGES_PER_PAGE);
   };
 
   const handleSendMessage = () => {
@@ -154,12 +165,12 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     return `${sender.firstName || ''} ${sender.lastName || ''}`.trim() || 'Unknown User';
   };
 
-  const isCoach = (userType: string) => {
+  const isCoach = (userType?: string) => {
     return userType === 'coach' || userType === 'admin';
   };
 
-  const formatMessageTime = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatMessageTime = (dateInput: string | Date) => {
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
     const now = new Date();
     const diffInHours = Math.abs(now.getTime() - date.getTime()) / (1000 * 60 * 60);
     
@@ -170,117 +181,135 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
     }
   };
 
-  const isOwnMessage = (senderId: string) => {
-    // Message is "own" if it matches either the authenticated user ID or the current profile ID
-    return user?.id === senderId || currentProfileId === senderId;
+  const isOwnMessage = (senderId: string | unknown) => {
+    const senderIdStr = String(senderId);
+    return user?.id === senderIdStr || currentProfileId === senderIdStr;
   };
 
   return (
     <div className={className}>
-      {/* Messages Area */}
-      <div className="space-y-4">
-        <ScrollArea className="h-80 w-full bg-gray-50 rounded-xl p-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <span className="ml-2 text-sm text-gray-500">Loading messages...</span>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <MessageCircle className="h-12 w-12 mb-3 text-gray-300" />
-              <p className="text-sm">No messages yet</p>
-              <p className="text-xs">Be the first to start the conversation!</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message, index) => {
-                const isOwn = isOwnMessage(message.senderId);
-                const showAvatar = !isOwn && (index === 0 || messages[index - 1].senderId !== message.senderId);
-                
-                return (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${isOwn ? 'justify-end' : 'justify-start'}`}
-                    data-testid={`message-${message.id}`}
-                  >
-                    {!isOwn && (
-                      <div className="flex-shrink-0">
-                        {showAvatar ? (
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={message.sender.profileImageUrl} />
-                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                              {getSenderInitials(message.sender)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : (
-                          <div className="w-8" />
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className={`flex flex-col gap-1 max-w-xs ${isOwn ? 'items-end' : 'items-start'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${isOwn ? 'text-blue-600' : 'text-gray-700'}`}>
+      <div 
+        ref={scrollContainerRef}
+        className="h-72 overflow-y-auto bg-gray-50 rounded-xl p-4"
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500"></div>
+            <span className="ml-2 text-sm text-gray-500">Loading messages...</span>
+          </div>
+        ) : allMessages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <MessageCircle className="h-10 w-10 mb-2 text-gray-300" />
+            <p className="text-sm">No messages yet</p>
+            <p className="text-xs text-gray-400">Start the conversation!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {hasMoreMessages && (
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMore}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                  data-testid="button-load-more"
+                >
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Load earlier messages
+                </Button>
+              </div>
+            )}
+            
+            {messages.map((message, index) => {
+              const isOwn = isOwnMessage(message.senderId);
+              const showAvatar = !isOwn && (index === 0 || messages[index - 1].senderId !== message.senderId);
+              
+              return (
+                <div
+                  key={message.id}
+                  className={`flex gap-2 ${isOwn ? 'justify-end' : 'justify-start'}`}
+                  data-testid={`message-${message.id}`}
+                >
+                  {!isOwn && (
+                    <div className="flex-shrink-0">
+                      {showAvatar ? (
+                        <Avatar className="h-7 w-7">
+                          <AvatarImage src={message.sender?.profileImageUrl} />
+                          <AvatarFallback className="bg-red-100 text-red-600 text-xs">
+                            {getSenderInitials(message.sender)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="w-7" />
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className={`flex flex-col gap-0.5 max-w-[70%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                    {showAvatar && !isOwn && (
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-medium text-gray-600">
                           {getSenderName(message.sender)}
                         </span>
-                        {!isOwn && isCoach(message.sender.userType) && (
-                          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                            <Crown className="h-3 w-3 mr-1" />
+                        {isCoach(message.sender?.userType) && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 bg-yellow-50 text-yellow-700 border-yellow-200">
+                            <Crown className="h-2.5 w-2.5 mr-0.5" />
                             Coach
                           </Badge>
                         )}
                       </div>
-                      
-                      <div
-                        className={`px-3 py-2 rounded-lg text-sm ${
-                          isOwn
-                            ? 'bg-blue-500 text-white rounded-br-none'
-                            : 'bg-gray-100 text-gray-900 rounded-bl-none'
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                      </div>
-                      
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Clock className="h-3 w-3" />
-                        <span>{formatMessageTime(message.createdAt)}</span>
-                      </div>
+                    )}
+                    
+                    <div
+                      className={`px-3 py-2 rounded-2xl text-sm ${
+                        isOwn
+                          ? 'bg-red-600 text-white rounded-br-sm'
+                          : 'bg-white text-gray-900 rounded-bl-sm shadow-sm'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 text-[10px] text-gray-400 px-1">
+                      <Clock className="h-2.5 w-2.5" />
+                      <span>{formatMessageTime(message.createdAt)}</span>
                     </div>
                   </div>
-                );
-              })}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </ScrollArea>
-
-        {/* Message Input */}
-        <div className="flex items-center gap-2 mt-4">
-          <Input
-            type="text"
-            placeholder="Type a message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={sendMessageMutation.isPending || !user}
-            className="flex-1 bg-white"
-            data-testid="input-message"
-          />
-          <Button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
-            size="sm"
-            className="bg-red-600 hover:bg-red-700"
-            data-testid="button-send-message"
-          >
-            {sendMessageMutation.isPending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </div>
+
+      <div className="flex items-center gap-2 mt-3">
+        <Input
+          type="text"
+          placeholder="Type a message..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          disabled={sendMessageMutation.isPending || !user}
+          className="flex-1 bg-white rounded-full px-4"
+          data-testid="input-message"
+        />
+        <Button
+          onClick={handleSendMessage}
+          disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
+          size="icon"
+          className="bg-red-600 hover:bg-red-700 rounded-full h-10 w-10"
+          data-testid="button-send-message"
+        >
+          {sendMessageMutation.isPending ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      
+      <div className="h-6" />
     </div>
   );
 }

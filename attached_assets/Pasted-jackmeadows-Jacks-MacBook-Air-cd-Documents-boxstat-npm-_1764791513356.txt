@@ -1,0 +1,40 @@
+jackmeadows@Jacks-MacBook-Air ~ % cd ~/Documents/boxstat && npm run build && npx cap sync ios
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.19 building for production...
+transforming (1) index.htmlBrowserslist: browsers data (caniuse-lite) is 14 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 3553 modules transformed.
+../dist/public/index.html                                   2.03 kB │ gzip:   0.83 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png    107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png         606.43 kB
+../dist/public/assets/landing-background-Bql6giPT.png     912.43 kB
+../dist/public/assets/index-dT15XUmQ.css                  150.38 kB │ gzip:  27.14 kB
+../dist/public/assets/web-DuY-3dpt.js                       0.76 kB │ gzip:   0.35 kB
+../dist/public/assets/purify.es-DfngIMfA.js                22.26 kB │ gzip:   8.72 kB
+../dist/public/assets/index.es-CVg5Tumw.js                150.53 kB │ gzip:  51.48 kB
+../dist/public/assets/index-BnVbWN2e.js                 2,344.70 kB │ gzip: 627.59 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.20s
+
+  dist/index.js  401.9kb
+
+⚡ Done in 18ms
+✔ Copying web assets from public to ios/App/App/public in 42.49ms
+✔ Creating capacitor.config.json in ios/App/App in 869.21μs
+✔ copy ios in 97.97ms
+✔ Updating iOS plugins in 12.55ms
+✔ Updating iOS native dependencies with pod install in 4.13s
+[info] Found 2 Capacitor plugins for ios:
+       @capacitor/app@7.1.0
+       @capacitor/push-notifications@7.0.3
+✔ update ios in 4.21s
+[info] Sync finished in 4.626s
+jackmeadows@Jacks-MacBook-Air boxstat % 

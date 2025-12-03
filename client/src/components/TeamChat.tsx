@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,9 +12,7 @@ import type { Message, User } from "@shared/schema";
 import {
   Send,
   MessageCircle,
-  Users,
   Crown,
-  User as UserIcon,
   Clock
 } from "lucide-react";
 
@@ -179,26 +176,10 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
   };
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {teamName && (
-              <span className="text-sm font-normal text-gray-600">{teamName}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-xs text-gray-500">
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </span>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {/* Messages Area */}
-        <ScrollArea className="h-96 w-full border rounded-lg p-4">
+    <div className={className}>
+      {/* Messages Area */}
+      <div className="space-y-4">
+        <ScrollArea className="h-80 w-full bg-gray-50 rounded-xl p-4">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
@@ -274,7 +255,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
         </ScrollArea>
 
         {/* Message Input */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-4">
           <Input
             type="text"
             placeholder="Type a message..."
@@ -282,13 +263,14 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={sendMessageMutation.isPending || !user}
-            className="flex-1"
+            className="flex-1 bg-white"
             data-testid="input-message"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
             size="sm"
+            className="bg-red-600 hover:bg-red-700"
             data-testid="button-send-message"
           >
             {sendMessageMutation.isPending ? (
@@ -298,14 +280,7 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
             )}
           </Button>
         </div>
-
-        {/* Connection status message */}
-        {!isConnected && (
-          <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded border">
-            Real-time messaging is temporarily unavailable. Messages will still be sent.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

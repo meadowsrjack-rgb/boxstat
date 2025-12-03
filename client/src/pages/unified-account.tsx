@@ -414,7 +414,7 @@ function EnhancedPlayerCard({
       data-testid={`player-card-${player.id}`}
     >
       <CardContent className="p-6">
-        {/* Header with Avatar and Action Buttons */}
+        {/* Header with Avatar */}
         <div className="flex items-start justify-between mb-4">
           <Avatar className="w-16 h-16">
             <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
@@ -423,41 +423,11 @@ function EnhancedPlayerCard({
             </AvatarFallback>
           </Avatar>
           
-          <div className="flex items-center gap-2">
-            {player.teamAssignmentStatus === "pending" && (
-              <Badge variant="outline" className="bg-yellow-50">
-                Pending
-              </Badge>
-            )}
-            
-            {/* Lock/Unlock Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => onToggleLock(player.id)}
-              data-testid={`button-lock-${player.id}`}
-              title={isDeviceLocked ? "Unlock device from this player" : "Lock device to this player"}
-            >
-              {isDeviceLocked ? (
-                <Lock className="h-4 w-4 text-red-600" />
-              ) : (
-                <Unlock className="h-4 w-4 text-gray-400" />
-              )}
-            </Button>
-            
-            {/* View Dashboard Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={() => onViewDashboard(player.id)}
-              data-testid={`button-view-dashboard-${player.id}`}
-              title="View player dashboard"
-            >
-              <Eye className="h-4 w-4 text-blue-600" />
-            </Button>
-          </div>
+          {player.teamAssignmentStatus === "pending" && (
+            <Badge variant="outline" className="bg-yellow-50">
+              Pending
+            </Badge>
+          )}
         </div>
 
         {/* Player Name */}

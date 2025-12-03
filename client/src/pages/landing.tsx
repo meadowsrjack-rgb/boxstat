@@ -1,23 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import backgroundVideo from "@assets/Laanding page background_1762477206539.mp4";
+import backgroundImage from "@assets/landing-background.png";
 import logo from "@assets/logo2_1762477206651.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-black">
-      {/* Video Background - Extends through safe areas */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
-      >
-        <source src={backgroundVideo} type="video/mp4" />
-      </video>
+    <div 
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
 
       {/* Content Layer - Flex to fill space */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8 safe-top">

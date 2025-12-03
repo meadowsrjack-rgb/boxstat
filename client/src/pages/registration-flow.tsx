@@ -7,12 +7,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Package, Check, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail } from "lucide-react";
 
 // Form schemas for each step
 const emailEntrySchema = z.object({
@@ -161,180 +160,185 @@ export default function RegistrationFlow() {
     });
   };
 
+  const getStepTitle = () => {
+    if (currentStep === 1) return "Enter Your Email";
+    if (currentStep === 2) return "Who are you registering for?";
+    if (currentStep === 3 && registrationData.registrationType === "myself") return "Your Information";
+    if (currentStep === 3 && registrationData.registrationType === "my_child") return "Parent/Guardian Information";
+    if (currentStep === 4 && registrationData.registrationType === "my_child") return "Player Information";
+    if ((currentStep === 4 && registrationData.registrationType === "myself") ||
+        (currentStep === 5 && registrationData.registrationType === "my_child")) return "Create Account";
+    return "Email Verification";
+  };
+
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-blue-50 to-indigo-100 safe-bottom flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/")}
-            className="absolute top-4 left-4 p-2"
-            data-testid="button-back-to-home"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex gap-2">
+    <div className="min-h-screen-safe bg-gradient-to-br from-gray-900 via-gray-800 to-black safe-bottom">
+      {/* Back Button */}
+      <div className="absolute top-6 left-6 safe-top z-10">
+        <button
+          onClick={() => currentStep === 1 ? setLocation("/") : handleBack()}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          data-testid="button-back"
+        >
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </button>
+      </div>
+
+      <div className="flex flex-col min-h-screen-safe px-8 py-16 safe-top">
+        <div className="w-full max-w-lg mx-auto flex-1 flex flex-col">
+          {/* Progress Bar */}
+          <div className="flex items-center justify-between mb-8 pt-8">
+            <div className="flex gap-2 flex-1">
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div
                   key={i}
-                  className={`h-2 w-12 rounded-full ${
-                    i + 1 <= currentStep ? "bg-blue-600" : "bg-gray-200"
+                  className={`h-1.5 flex-1 rounded-full transition-colors ${
+                    i + 1 <= currentStep ? "bg-red-500" : "bg-white/20"
                   }`}
                   data-testid={`progress-step-${i + 1}`}
                 />
               ))}
             </div>
-            <span className="text-sm text-gray-500" data-testid="step-counter">
-              Step {currentStep} of {totalSteps}
+            <span className="text-sm text-gray-400 ml-4" data-testid="step-counter">
+              {currentStep}/{totalSteps}
             </span>
           </div>
-          <CardTitle>
-            {currentStep === 1 && "Enter Your Email"}
-            {currentStep === 2 && "Who are you registering for?"}
-            {currentStep === 3 && registrationData.registrationType === "myself" && "Your Information"}
-            {currentStep === 3 && registrationData.registrationType === "my_child" && "Parent/Guardian Information"}
-            {currentStep === 4 && registrationData.registrationType === "my_child" && "Player Information"}
-            {(currentStep === 4 && registrationData.registrationType === "myself") ||
-             (currentStep === 5 && registrationData.registrationType === "my_child") && "Create Account"}
-            {currentStep > totalSteps && "Email Verification"}
-          </CardTitle>
-        </CardHeader>
 
-        <CardContent>
-          {/* Step 1: Email Entry */}
-          {currentStep === 1 && !emailSent && (
-            <EmailEntryStep
-              onSubmit={(data, emailCheckData) => {
-                setRegistrationData({ 
-                  ...registrationData, 
-                  email: data.email,
-                  emailCheckData: emailCheckData 
-                });
-                setEmailSent(true);
-              }}
-            />
-          )}
-          
-          {/* Step 1: Email Verification Pending */}
-          {currentStep === 1 && emailSent && (
-            <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Mail className="w-8 h-8 text-blue-600" />
+          {/* Step Title */}
+          <h1 className="text-3xl font-bold text-white mb-8 tracking-tight">
+            {getStepTitle()}
+          </h1>
+
+          {/* Step Content */}
+          <div className="flex-1">
+            {/* Step 1: Email Entry */}
+            {currentStep === 1 && !emailSent && (
+              <EmailEntryStep
+                onSubmit={(data, emailCheckData) => {
+                  setRegistrationData({ 
+                    ...registrationData, 
+                    email: data.email,
+                    emailCheckData: emailCheckData 
+                  });
+                  setEmailSent(true);
+                }}
+              />
+            )}
+            
+            {/* Step 1: Email Verification Pending */}
+            {currentStep === 1 && emailSent && (
+              <div className="text-center py-8">
+                <div className="mx-auto w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mb-6">
+                  <Mail className="w-10 h-10 text-red-500" />
+                </div>
+                <h3 className="text-2xl font-semibold text-white mb-3">Check Your Email</h3>
+                <p className="text-gray-400 mb-2">
+                  We sent a verification link to
+                </p>
+                <p className="text-white font-medium mb-6">{registrationData.email}</p>
+                <p className="text-gray-500 text-sm">
+                  Please click the link in your email to verify your account and continue with registration.
+                </p>
+                <p className="text-gray-600 text-xs mt-4">
+                  Don't see it? Check your spam folder.
+                </p>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Check Your Email</h3>
-              <p className="text-gray-600 mb-2">
-                We sent a verification link to <strong>{registrationData.email}</strong>
-              </p>
-              <p className="text-gray-600 mb-6">
-                Please click the link in your email to verify your account and continue with registration.
-              </p>
-              <p className="text-sm text-gray-500">
-                Don't see it? Check your spam folder.
-              </p>
-            </div>
-          )}
+            )}
 
-          {/* Step 2: Registration Intent */}
-          {currentStep === 2 && (
-            <RegistrationIntentStep
-              email={registrationData.email}
-              emailCheckData={registrationData.emailCheckData}
-              onSubmit={(data) => {
-                setRegistrationData({ ...registrationData, registrationType: data.registrationType });
-                handleNext();
-              }}
-              onBack={handleBack}
-            />
-          )}
+            {/* Step 2: Registration Intent */}
+            {currentStep === 2 && (
+              <RegistrationIntentStep
+                email={registrationData.email}
+                emailCheckData={registrationData.emailCheckData}
+                onSubmit={(data) => {
+                  setRegistrationData({ ...registrationData, registrationType: data.registrationType });
+                  handleNext();
+                }}
+              />
+            )}
 
-          {/* Step 3: User Information */}
-          {currentStep === 3 && registrationData.registrationType === "myself" && (
-            <PlayerInfoStep
-              email={registrationData.email}
-              emailCheckData={registrationData.emailCheckData}
-              onSubmit={(data) => {
-                setRegistrationData({
-                  ...registrationData,
-                  players: [{ ...data, id: "player-1" }],
-                });
-                handleNext();
-              }}
-              onBack={handleBack}
-              isSelf={true}
-            />
-          )}
+            {/* Step 3: User Information */}
+            {currentStep === 3 && registrationData.registrationType === "myself" && (
+              <PlayerInfoStep
+                email={registrationData.email}
+                emailCheckData={registrationData.emailCheckData}
+                onSubmit={(data) => {
+                  setRegistrationData({
+                    ...registrationData,
+                    players: [{ ...data, id: "player-1" }],
+                  });
+                  handleNext();
+                }}
+                isSelf={true}
+              />
+            )}
 
-          {currentStep === 3 && registrationData.registrationType === "my_child" && (
-            <ParentInfoStep
-              email={registrationData.email}
-              emailCheckData={registrationData.emailCheckData}
-              onSubmit={(data) => {
-                setRegistrationData({ ...registrationData, parentInfo: data });
-                handleNext();
-              }}
-              onBack={handleBack}
-            />
-          )}
+            {currentStep === 3 && registrationData.registrationType === "my_child" && (
+              <ParentInfoStep
+                email={registrationData.email}
+                emailCheckData={registrationData.emailCheckData}
+                onSubmit={(data) => {
+                  setRegistrationData({ ...registrationData, parentInfo: data });
+                  handleNext();
+                }}
+              />
+            )}
 
-          {/* Step 4: Player Information (for "my_child" flow) */}
-          {currentStep === 4 && registrationData.registrationType === "my_child" && (
-            <PlayerListStep
-              players={registrationData.players}
-              onUpdate={(players) => {
-                setRegistrationData({ ...registrationData, players });
-              }}
-              onNext={handleNext}
-              onBack={handleBack}
-            />
-          )}
+            {/* Step 4: Player Information (for "my_child" flow) */}
+            {currentStep === 4 && registrationData.registrationType === "my_child" && (
+              <PlayerListStep
+                players={registrationData.players}
+                onUpdate={(players) => {
+                  setRegistrationData({ ...registrationData, players });
+                }}
+                onNext={handleNext}
+              />
+            )}
 
-          {/* Account Creation */}
-          {((currentStep === 4 && registrationData.registrationType === "myself") ||
-            (currentStep === 5 && registrationData.registrationType === "my_child")) && (
-            <AccountCreationStep
-              onSubmit={handleSubmitRegistration}
-              onBack={handleBack}
-              isLoading={registrationMutation.isPending}
-            />
-          )}
+            {/* Account Creation */}
+            {((currentStep === 4 && registrationData.registrationType === "myself") ||
+              (currentStep === 5 && registrationData.registrationType === "my_child")) && (
+              <AccountCreationStep
+                onSubmit={handleSubmitRegistration}
+                isLoading={registrationMutation.isPending}
+              />
+            )}
 
-          {/* Email Verification Message */}
-          {currentStep > totalSteps && (
-            <div className="text-center py-8">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Check className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Check Your Email</h3>
-              <p className="text-gray-600 mb-6">
-                A verification link has been sent to your email address. Please click the link to verify your account and complete registration.
-              </p>
-              <Button
-                onClick={() => setLocation("/login")}
-                data-testid="button-go-to-login"
-              >
-                Go to Login
-              </Button>
-            </div>
-          )}
-          
-          {/* Privacy Policy Link - Show on all steps */}
-          {currentStep <= totalSteps && (
-            <div className="mt-6 text-center">
-              <div className="text-gray-500 text-xs">
-                <button 
-                  onClick={() => setLocation('/privacy-policy')}
-                  className="hover:text-gray-900 underline transition-colors"
-                  data-testid="link-privacy-policy"
+            {/* Email Verification Message */}
+            {currentStep > totalSteps && (
+              <div className="text-center py-8">
+                <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-6">
+                  <Check className="w-10 h-10 text-green-500" />
+                </div>
+                <h3 className="text-2xl font-semibold text-white mb-3">Check Your Email</h3>
+                <p className="text-gray-400 mb-6">
+                  A verification link has been sent to your email address. Please click the link to verify your account and complete registration.
+                </p>
+                <Button
+                  onClick={() => setLocation("/login")}
+                  className="bg-red-600 hover:bg-red-700"
+                  data-testid="button-go-to-login"
                 >
-                  Privacy Policy
-                </button>
+                  Go to Login
+                </Button>
               </div>
+            )}
+          </div>
+          
+          {/* Privacy Policy Link */}
+          {currentStep <= totalSteps && (
+            <div className="mt-8 text-center">
+              <button 
+                onClick={() => setLocation('/privacy-policy')}
+                className="text-gray-500 text-xs hover:text-gray-400 underline transition-colors"
+                data-testid="link-privacy-policy"
+              >
+                Privacy Policy
+              </button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
@@ -432,16 +436,16 @@ function EmailEntryStep({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <CardDescription>
+        <p className="text-gray-400 text-lg leading-relaxed">
           Please enter your email address to get started. We'll check if you have an existing account with us.
-        </CardDescription>
+        </p>
         
         <FormField
           control={form.control}
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email Address *</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Email Address</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
@@ -449,48 +453,34 @@ function EmailEntryStep({
                   placeholder="your@email.com"
                   data-testid="input-email"
                   disabled={isCheckingEmail}
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500 focus:ring-red-500/20"
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
 
         {/* Show existing user info if found */}
         {emailCheckData?.exists && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">Account Found</h4>
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <h4 className="font-semibold text-blue-400 mb-2">Account Found</h4>
             {emailCheckData.hasRegistered && (
-              <p className="text-sm text-blue-700">
+              <p className="text-sm text-blue-300">
                 This email is already registered in our system.
               </p>
             )}
             
             {emailCheckData.stripeCustomer && (
               <div className="mt-3 space-y-2">
-                <h5 className="font-medium text-blue-900">Payment History:</h5>
+                <h5 className="font-medium text-blue-300 text-sm">Payment History:</h5>
                 {emailCheckData.activeSubscriptions?.length > 0 && (
                   <div className="text-sm">
-                    <p className="font-medium text-green-700">Active Subscriptions:</p>
-                    <ul className="list-disc list-inside ml-2">
+                    <p className="font-medium text-green-400">Active Subscriptions:</p>
+                    <ul className="list-disc list-inside ml-2 text-gray-300">
                       {emailCheckData.activeSubscriptions.map((sub: any, idx: number) => (
-                        <li key={idx} className="text-blue-700">
-                          {sub.product} - ${(sub.amount / 100).toFixed(2)}/
-                          {sub.interval}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {emailCheckData.recentPayments?.length > 0 && (
-                  <div className="text-sm mt-2">
-                    <p className="font-medium text-blue-900">Recent Payments:</p>
-                    <ul className="list-disc list-inside ml-2">
-                      {emailCheckData.recentPayments.slice(0, 3).map((payment: any, idx: number) => (
-                        <li key={idx} className="text-blue-700">
-                          ${(payment.amount / 100).toFixed(2)} on{" "}
-                          {new Date(payment.created * 1000).toLocaleDateString()} - {payment.status}
+                        <li key={idx}>
+                          {sub.product} - ${(sub.amount / 100).toFixed(2)}/{sub.interval}
                         </li>
                       ))}
                     </ul>
@@ -501,16 +491,15 @@ function EmailEntryStep({
           </div>
         )}
 
-        <div className="flex justify-end">
-          <Button 
-            type="submit" 
-            disabled={isCheckingEmail}
-            data-testid="button-continue-email"
-          >
-            {isCheckingEmail ? "Checking..." : "Continue"}
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          type="submit" 
+          disabled={isCheckingEmail}
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
+          data-testid="button-continue-email"
+        >
+          {isCheckingEmail ? "Checking..." : "Continue"}
+          <ChevronRight className="ml-2 h-4 w-4" />
+        </Button>
       </form>
     </Form>
   );
@@ -520,12 +509,10 @@ function RegistrationIntentStep({
   email,
   emailCheckData,
   onSubmit,
-  onBack,
 }: { 
   email?: string;
   emailCheckData?: any;
   onSubmit: (data: RegistrationIntent) => void;
-  onBack: () => void;
 }) {
   const form = useForm<RegistrationIntent>({
     resolver: zodResolver(registrationIntentSchema),
@@ -535,16 +522,17 @@ function RegistrationIntentStep({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {email && (
-          <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Email:</span> {email}
+          <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+            <p className="text-sm text-gray-400">
+              <span className="text-gray-500">Email:</span>{" "}
+              <span className="text-white">{email}</span>
             </p>
           </div>
         )}
 
         {emailCheckData?.exists && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-700">
+          <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <p className="text-sm text-blue-300">
               {emailCheckData.hasRegistered 
                 ? "We found your existing account. Continue to add a new registration."
                 : "Email found in our system. Continue to complete your registration."}
@@ -558,23 +546,31 @@ function RegistrationIntentStep({
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <button
                     type="button"
                     onClick={() => {
                       field.onChange("myself");
                       form.handleSubmit(onSubmit)();
                     }}
-                    className={`p-6 border-2 rounded-lg transition-all ${
+                    className={`p-6 border-2 rounded-2xl transition-all text-left ${
                       field.value === "myself"
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
+                        ? "border-red-500 bg-red-500/10"
+                        : "border-white/10 bg-white/5 hover:border-white/30"
                     }`}
                     data-testid="option-myself"
                   >
-                    <UserPlus className="w-12 h-12 mx-auto mb-3 text-blue-600" />
-                    <h3 className="font-semibold text-lg mb-1">Myself</h3>
-                    <p className="text-sm text-gray-600">I am registering for myself</p>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                        field.value === "myself" ? "bg-red-500/20" : "bg-white/10"
+                      }`}>
+                        <UserPlus className={`w-7 h-7 ${field.value === "myself" ? "text-red-500" : "text-gray-400"}`} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-white mb-1">Myself</h3>
+                        <p className="text-sm text-gray-400">I am registering for myself</p>
+                      </div>
+                    </div>
                   </button>
 
                   <button
@@ -583,35 +579,31 @@ function RegistrationIntentStep({
                       field.onChange("my_child");
                       form.handleSubmit(onSubmit)();
                     }}
-                    className={`p-6 border-2 rounded-lg transition-all ${
+                    className={`p-6 border-2 rounded-2xl transition-all text-left ${
                       field.value === "my_child"
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-300"
+                        ? "border-red-500 bg-red-500/10"
+                        : "border-white/10 bg-white/5 hover:border-white/30"
                     }`}
                     data-testid="option-my-child"
                   >
-                    <Users className="w-12 h-12 mx-auto mb-3 text-blue-600" />
-                    <h3 className="font-semibold text-lg mb-1">My Child</h3>
-                    <p className="text-sm text-gray-600">I am registering my child or another player</p>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
+                        field.value === "my_child" ? "bg-red-500/20" : "bg-white/10"
+                      }`}>
+                        <Users className={`w-7 h-7 ${field.value === "my_child" ? "text-red-500" : "text-gray-400"}`} />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg text-white mb-1">My Child</h3>
+                        <p className="text-sm text-gray-400">I am registering my child or another player</p>
+                      </div>
+                    </div>
                   </button>
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
-
-        <div className="flex justify-start">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onBack}
-            data-testid="button-back"
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-        </div>
       </form>
     </Form>
   );
@@ -621,12 +613,10 @@ function ParentInfoStep({
   email,
   emailCheckData,
   onSubmit,
-  onBack,
 }: {
   email?: string;
   emailCheckData?: any;
   onSubmit: (data: ParentInfo) => void;
-  onBack: () => void;
 }) {
   // Prefill data from Stripe if available
   const prefillData = emailCheckData?.stripeCustomer?.prefillData || {};
@@ -644,18 +634,22 @@ function ParentInfoStep({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name *</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">First Name</FormLabel>
                 <FormControl>
-                  <Input {...field} data-testid="input-parent-first-name" />
+                  <Input 
+                    {...field} 
+                    data-testid="input-parent-first-name"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400" />
               </FormItem>
             )}
           />
@@ -664,11 +658,15 @@ function ParentInfoStep({
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name *</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">Last Name</FormLabel>
                 <FormControl>
-                  <Input {...field} data-testid="input-parent-last-name" />
+                  <Input 
+                    {...field} 
+                    data-testid="input-parent-last-name"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400" />
               </FormItem>
             )}
           />
@@ -679,82 +677,34 @@ function ParentInfoStep({
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email *</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Email</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
                   type="email" 
                   data-testid="input-parent-email"
                   readOnly
-                  className="bg-gray-50"
+                  className="h-12 bg-white/10 border-white/10 text-gray-400 cursor-not-allowed"
                 />
               </FormControl>
               <FormDescription className="text-xs text-gray-500">
                 Email verified in previous step
               </FormDescription>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
 
         {/* Display Stripe customer information if found */}
         {emailCheckData?.stripeCustomer && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3" data-testid="stripe-customer-info">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 space-y-3" data-testid="stripe-customer-info">
             <div className="flex items-start gap-2">
-              <Check className="w-5 h-5 text-green-600 mt-0.5" />
+              <Check className="w-5 h-5 text-green-500 mt-0.5" />
               <div className="flex-1">
-                <h4 className="font-semibold text-green-900">Welcome Back!</h4>
-                <p className="text-sm text-green-800">We found your payment history.</p>
+                <h4 className="font-semibold text-green-400">Welcome Back!</h4>
+                <p className="text-sm text-green-300/80">We found your payment history.</p>
               </div>
             </div>
-            
-            {emailCheckData.stripeCustomer.subscriptions?.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-900">Active Subscriptions:</p>
-                {emailCheckData.stripeCustomer.subscriptions.map((sub: any) => (
-                  <div key={sub.id} className="bg-white rounded p-3 text-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">${(sub.amount / 100).toFixed(2)}/{sub.interval}</p>
-                        <p className="text-gray-600">Status: {sub.status}</p>
-                      </div>
-                      <div className="text-right text-xs text-gray-600">
-                        Next payment: {new Date(sub.currentPeriodEnd * 1000).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {emailCheckData.stripeCustomer.payments?.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-900">Recent Payments:</p>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
-                  {emailCheckData.stripeCustomer.payments.slice(0, 5).map((payment: any) => (
-                    <div key={payment.id} className="bg-white rounded p-2 text-xs flex justify-between">
-                      <span>{payment.packageName || 'Payment'}</span>
-                      <div className="text-right">
-                        <span className="font-medium">${(payment.amount / 100).toFixed(2)}</span>
-                        <span className="ml-2 text-gray-600">
-                          {new Date(payment.created * 1000).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {emailCheckData?.exists && !emailCheckData?.stripeCustomer && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-900">
-              {emailCheckData.hasRegistered 
-                ? "This email has an existing account. You can proceed with registration or login instead."
-                : "This email is in our system but hasn't completed registration yet."}
-            </p>
           </div>
         )}
 
@@ -763,9 +713,14 @@ function ParentInfoStep({
           name="phoneNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Phone Number</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Phone Number</FormLabel>
               <FormControl>
-                <Input {...field} type="tel" data-testid="input-parent-phone" />
+                <Input 
+                  {...field} 
+                  type="tel" 
+                  data-testid="input-parent-phone"
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                />
               </FormControl>
             </FormItem>
           )}
@@ -776,24 +731,27 @@ function ParentInfoStep({
           name="dateOfBirth"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date of Birth</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth</FormLabel>
               <FormControl>
-                <Input {...field} type="date" data-testid="input-parent-dob" />
+                <Input 
+                  {...field} 
+                  type="date" 
+                  data-testid="input-parent-dob"
+                  className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500"
+                />
               </FormControl>
             </FormItem>
           )}
         />
 
-        <div className="flex justify-between pt-4">
-          <Button type="button" onClick={onBack} variant="outline" data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+        <Button 
+          type="submit" 
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold mt-6"
+          data-testid="button-next"
+        >
+          Continue
+          <ChevronRight className="w-4 h-4 ml-2" />
+        </Button>
       </form>
     </Form>
   );
@@ -803,13 +761,11 @@ function PlayerInfoStep({
   email,
   emailCheckData,
   onSubmit,
-  onBack,
   isSelf,
 }: {
   email?: string;
   emailCheckData?: any;
   onSubmit: (data: PlayerInfo) => void;
-  onBack: () => void;
   isSelf?: boolean;
 }) {
   // Prefill data from Stripe if available
@@ -848,18 +804,22 @@ function PlayerInfoStep({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name *</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">First Name</FormLabel>
                 <FormControl>
-                  <Input {...field} data-testid="input-player-first-name" />
+                  <Input 
+                    {...field} 
+                    data-testid="input-player-first-name"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400" />
               </FormItem>
             )}
           />
@@ -868,11 +828,15 @@ function PlayerInfoStep({
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name *</FormLabel>
+                <FormLabel className="text-gray-300 text-sm font-medium">Last Name</FormLabel>
                 <FormControl>
-                  <Input {...field} data-testid="input-player-last-name" />
+                  <Input 
+                    {...field} 
+                    data-testid="input-player-last-name"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-400" />
               </FormItem>
             )}
           />
@@ -883,16 +847,21 @@ function PlayerInfoStep({
           name="dateOfBirth"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date of Birth</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth</FormLabel>
               <FormControl>
-                <Input {...field} type="date" data-testid="input-player-dob" />
+                <Input 
+                  {...field} 
+                  type="date" 
+                  data-testid="input-player-dob"
+                  className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500"
+                />
               </FormControl>
               {isUnderAge && (
-                <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md" data-testid="age-warning">
-                  <p className="text-sm text-yellow-800 font-medium">
-                    ⚠️ Players under 18 years old must have a parent or guardian register on their behalf.
+                <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg" data-testid="age-warning">
+                  <p className="text-sm text-yellow-400 font-medium">
+                    Players under 18 years old must have a parent or guardian register on their behalf.
                   </p>
-                  <p className="text-xs text-yellow-700 mt-1">
+                  <p className="text-xs text-yellow-500/80 mt-1">
                     Please go back and select "I'm registering my child" to continue.
                   </p>
                 </div>
@@ -906,10 +875,13 @@ function PlayerInfoStep({
           name="gender"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Gender</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Gender</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
-                  <SelectTrigger data-testid="select-player-gender">
+                  <SelectTrigger 
+                    data-testid="select-player-gender"
+                    className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500"
+                  >
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                 </FormControl>
@@ -924,16 +896,15 @@ function PlayerInfoStep({
           )}
         />
 
-        <div className="flex justify-between pt-4">
-          <Button type="button" onClick={onBack} variant="outline" data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" disabled={isUnderAge} data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+        <Button 
+          type="submit" 
+          disabled={isUnderAge}
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold mt-6 disabled:opacity-50"
+          data-testid="button-next"
+        >
+          Continue
+          <ChevronRight className="w-4 h-4 ml-2" />
+        </Button>
       </form>
     </Form>
   );
@@ -943,12 +914,10 @@ function PlayerListStep({
   players,
   onUpdate,
   onNext,
-  onBack,
 }: {
   players: Player[];
   onUpdate: (players: Player[]) => void;
   onNext: () => void;
-  onBack: () => void;
 }) {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
@@ -986,25 +955,33 @@ function PlayerListStep({
 
   if (editingPlayer) {
     return (
-      <PlayerInfoStep
-        onSubmit={savePlayer}
-        onBack={() => setEditingPlayer(null)}
-      />
+      <div>
+        <button 
+          onClick={() => setEditingPlayer(null)}
+          className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Back to player list
+        </button>
+        <PlayerInfoStep
+          onSubmit={savePlayer}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="space-y-3">
         {players.map((player) => (
           <div
             key={player.id}
-            className="flex items-center justify-between p-4 border rounded-lg"
+            className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl"
             data-testid={`player-card-${player.id}`}
           >
             <div>
-              <p className="font-medium">{player.firstName} {player.lastName}</p>
-              <p className="text-sm text-gray-600">
+              <p className="font-medium text-white">{player.firstName} {player.lastName}</p>
+              <p className="text-sm text-gray-400">
                 {player.dateOfBirth && new Date(player.dateOfBirth).toLocaleDateString()}
               </p>
             </div>
@@ -1012,8 +989,9 @@ function PlayerListStep({
               <Button
                 type="button"
                 size="sm"
-                variant="outline"
+                variant="ghost"
                 onClick={() => setEditingPlayer(player)}
+                className="text-gray-400 hover:text-white hover:bg-white/10"
                 data-testid={`button-edit-player-${player.id}`}
               >
                 Edit
@@ -1021,8 +999,9 @@ function PlayerListStep({
               <Button
                 type="button"
                 size="sm"
-                variant="destructive"
+                variant="ghost"
                 onClick={() => removePlayer(player.id)}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                 data-testid={`button-remove-player-${player.id}`}
               >
                 Remove
@@ -1036,41 +1015,35 @@ function PlayerListStep({
         type="button"
         variant="outline"
         onClick={addPlayer}
-        className="w-full"
+        className="w-full h-12 bg-transparent border-white/20 text-white hover:bg-white/10"
         data-testid="button-add-player"
       >
         <UserPlus className="w-4 h-4 mr-2" />
         Add Player
       </Button>
 
-      <div className="flex justify-between pt-4">
-        <Button type="button" onClick={onBack} variant="outline" data-testid="button-back">
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button
-          type="button"
-          onClick={onNext}
-          disabled={players.length === 0}
-          data-testid="button-next"
-        >
-          Next
-          <ChevronRight className="w-4 h-4 ml-2" />
-        </Button>
-      </div>
+      <Button
+        type="button"
+        onClick={onNext}
+        disabled={players.length === 0}
+        className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
+        data-testid="button-next"
+      >
+        Continue
+        <ChevronRight className="w-4 h-4 ml-2" />
+      </Button>
     </div>
   );
 }
 
 function AccountCreationStep({
   onSubmit,
-  onBack,
   isLoading,
 }: {
   onSubmit: (data: AccountCreation) => void;
-  onBack: () => void;
   isLoading: boolean;
 }) {
+  const [, setLocation] = useLocation();
   const form = useForm<AccountCreation>({
     resolver: zodResolver(accountCreationSchema),
     defaultValues: {
@@ -1083,20 +1056,25 @@ function AccountCreationStep({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
         <FormField
           control={form.control}
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password *</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Password</FormLabel>
               <FormControl>
-                <Input {...field} type="password" data-testid="input-password" />
+                <Input 
+                  {...field} 
+                  type="password" 
+                  data-testid="input-password"
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                />
               </FormControl>
-              <FormDescription>
+              <FormDescription className="text-xs text-gray-500">
                 Must be at least 8 characters with 1 uppercase letter and 1 number/symbol
               </FormDescription>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
@@ -1106,11 +1084,16 @@ function AccountCreationStep({
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password *</FormLabel>
+              <FormLabel className="text-gray-300 text-sm font-medium">Confirm Password</FormLabel>
               <FormControl>
-                <Input {...field} type="password" data-testid="input-confirm-password" />
+                <Input 
+                  {...field} 
+                  type="password" 
+                  data-testid="input-confirm-password"
+                  className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500"
+                />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
@@ -1119,19 +1102,27 @@ function AccountCreationStep({
           control={form.control}
           name="acceptTerms"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 py-2">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
                   data-testid="checkbox-accept-terms"
+                  className="border-white/30 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>
-                  I accept the Terms of Service and <a href="/privacy-policy" target="_blank" className="text-primary hover:underline">Privacy Policy</a> *
+                <FormLabel className="text-gray-300 text-sm font-normal">
+                  I accept the{" "}
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/privacy-policy')}
+                    className="text-red-400 hover:text-red-300 underline"
+                  >
+                    Terms and Conditions
+                  </button>
                 </FormLabel>
-                <FormMessage />
+                <FormMessage className="text-red-400" />
               </div>
             </FormItem>
           )}
@@ -1141,32 +1132,32 @@ function AccountCreationStep({
           control={form.control}
           name="marketingOptIn"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 py-2">
               <FormControl>
                 <Checkbox
                   checked={field.value}
                   onCheckedChange={field.onChange}
-                  data-testid="checkbox-marketing-opt-in"
+                  data-testid="checkbox-marketing"
+                  className="border-white/30 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500"
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>
-                  I would like to receive news and updates (optional)
+                <FormLabel className="text-gray-300 text-sm font-normal">
+                  I'd like to receive updates and promotional emails
                 </FormLabel>
               </div>
             </FormItem>
           )}
         />
 
-        <div className="flex justify-between pt-4">
-          <Button type="button" onClick={onBack} variant="outline" data-testid="button-back" disabled={isLoading}>
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" disabled={isLoading} data-testid="button-create-account">
-            {isLoading ? "Creating Account..." : "Create Account"}
-          </Button>
-        </div>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold mt-6"
+          data-testid="button-complete-registration"
+        >
+          {isLoading ? "Creating Account..." : "Complete Registration"}
+        </Button>
       </form>
     </Form>
   );

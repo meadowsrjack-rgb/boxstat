@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { LogIn, ArrowLeft, Mail } from "lucide-react";
+import { LogIn, ChevronLeft, Mail } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
 
@@ -130,29 +129,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-red-50 to-gray-100 safe-bottom flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="flex items-center mb-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/")}
-              data-testid="button-back-to-home"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
+    <div className="min-h-screen-safe bg-gradient-to-br from-gray-900 via-gray-800 to-black safe-bottom">
+      {/* Back Button */}
+      <div className="absolute top-6 left-6 safe-top">
+        <button
+          onClick={() => setLocation("/")}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          data-testid="button-back-to-home"
+        >
+          <ChevronLeft className="w-5 h-5 text-white" />
+        </button>
+      </div>
+
+      <div className="flex flex-col justify-center min-h-screen-safe px-8 py-16 safe-top">
+        <div className="w-full max-w-sm mx-auto space-y-8">
+          {/* Header */}
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold text-white tracking-tight">
+              Welcome Back
+            </h1>
+            <p className="text-gray-400 text-lg">
+              Login to access your account
+            </p>
           </div>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
-          <CardDescription>Login to access your account</CardDescription>
-        </CardHeader>
-        <CardContent>
+
           {!showMagicLink ? (
             <>
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-gray-300 text-sm font-medium">
+                    Email
+                  </Label>
                   <Input
                     id="email"
                     type="email"
@@ -161,10 +168,13 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     data-testid="input-email"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500 focus:ring-red-500/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-gray-300 text-sm font-medium">
+                    Password
+                  </Label>
                   <Input
                     id="password"
                     type="password"
@@ -173,11 +183,12 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     data-testid="input-password"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500 focus:ring-red-500/20"
                   />
                 </div>
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
                   disabled={isLoading}
                   data-testid="button-login"
                 >
@@ -186,24 +197,30 @@ export default function LoginPage() {
                 </Button>
               </form>
               
-              <div className="mt-4">
-                <Separator className="my-4" />
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowMagicLink(true)}
-                  data-testid="button-show-magic-link"
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Login with Magic Link
-                </Button>
+              <div className="relative">
+                <Separator className="bg-white/10" />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-sm text-gray-500">
+                  or
+                </span>
               </div>
+              
+              <Button
+                variant="outline"
+                className="w-full h-12 bg-transparent border-white/20 text-white hover:bg-white/10"
+                onClick={() => setShowMagicLink(true)}
+                data-testid="button-show-magic-link"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Login with Magic Link
+              </Button>
             </>
           ) : (
             <>
-              <form onSubmit={handleMagicLinkRequest} className="space-y-4">
+              <form onSubmit={handleMagicLinkRequest} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="magic-link-email">Email</Label>
+                  <Label htmlFor="magic-link-email" className="text-gray-300 text-sm font-medium">
+                    Email
+                  </Label>
                   <Input
                     id="magic-link-email"
                     type="email"
@@ -212,14 +229,15 @@ export default function LoginPage() {
                     onChange={(e) => setMagicLinkEmail(e.target.value)}
                     required
                     data-testid="input-magic-link-email"
+                    className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500 focus:ring-red-500/20"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm text-gray-500">
                     We'll send you a secure login link to your email
                   </p>
                 </div>
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full h-12 bg-red-600 hover:bg-red-700 text-white font-semibold"
                   disabled={isSendingMagicLink}
                   data-testid="button-send-magic-link"
                 >
@@ -228,26 +246,24 @@ export default function LoginPage() {
                 </Button>
               </form>
               
-              <div className="mt-4">
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setShowMagicLink(false)}
-                  data-testid="button-back-to-password"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Password Login
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                className="w-full text-gray-400 hover:text-white hover:bg-white/5"
+                onClick={() => setShowMagicLink(false)}
+                data-testid="button-back-to-password"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Password Login
+              </Button>
             </>
           )}
           
-          <div className="mt-6 text-center space-y-3">
-            <p className="text-sm text-gray-600">
+          <div className="space-y-4 pt-4">
+            <p className="text-center text-gray-400">
               Don't have an account?{" "}
               <Button
                 variant="link"
-                className="p-0 h-auto"
+                className="p-0 h-auto text-red-500 hover:text-red-400"
                 onClick={() => setLocation("/register")}
                 data-testid="link-register"
               >
@@ -255,19 +271,18 @@ export default function LoginPage() {
               </Button>
             </p>
             
-            {/* Privacy Policy Link */}
-            <div className="text-gray-500 text-xs">
+            <div className="text-center">
               <button 
                 onClick={() => setLocation('/privacy-policy')}
-                className="hover:text-gray-900 underline transition-colors"
+                className="text-gray-500 text-xs hover:text-gray-400 underline transition-colors"
                 data-testid="link-privacy-policy"
               >
                 Privacy Policy
               </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

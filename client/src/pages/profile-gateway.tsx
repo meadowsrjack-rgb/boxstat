@@ -157,9 +157,17 @@ export default function ProfileGateway() {
 
         <div className="mt-8 text-center">
           <button 
-            onClick={() => {
+            onClick={async () => {
+              try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+              } catch (e) {
+                // Continue with logout even if API fails
+              }
               localStorage.removeItem('authToken');
-              window.location.href = '/api/logout';
+              localStorage.removeItem('selectedPlayerId');
+              localStorage.removeItem('viewingAsParent');
+              localStorage.removeItem('lastViewedProfileType');
+              setLocation('/');
             }}
             className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
             data-testid="button-sign-out"

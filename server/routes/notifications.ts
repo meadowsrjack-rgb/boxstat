@@ -91,7 +91,13 @@ export function setupNotificationRoutes(app: Express) {
     try {
       const { token } = req.body;
       
+      console.log('[Push Register] 📱 Received push token registration request');
+      console.log('[Push Register] User ID:', req.user.id);
+      console.log('[Push Register] Token length:', token?.length || 0);
+      console.log('[Push Register] Token preview:', token?.substring(0, 30) + '...');
+      
       if (!token || typeof token !== 'string') {
+        console.log('[Push Register] ❌ Token missing or invalid');
         return res.status(400).json({ error: 'Token is required' });
       }
 
@@ -102,6 +108,9 @@ export function setupNotificationRoutes(app: Express) {
       const platform = userAgent.includes('iPhone') || userAgent.includes('iPad') ? 'ios' : 'android';
       const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
       
+      console.log('[Push Register] Platform detected:', platform);
+      console.log('[Push Register] Device type:', deviceType);
+      
       await notificationService.subscribeToPush(userId, {
         fcmToken: token,
         platform,
@@ -109,10 +118,50 @@ export function setupNotificationRoutes(app: Express) {
         deviceType,
       });
 
-      res.json({ success: true });
+      console.log('[Push Register] ✅ Token registered successfully for user', userId);
+      res.json({ success: true, platform, deviceType });
     } catch (error) {
-      console.error('Error registering push token:', error);
+      console.error('[Push Register] ❌ Error registering push token:', error);
       res.status(500).json({ error: 'Failed to register push token' });
+    }
+  });
+  
+  // Debug endpoint to check push configuration status
+  app.get('/api/push/debug', async (req, res) => {
+    try {
+      const { isAPNsConfigured } = await import("../services/apnsService");
+      const { db } = await import("../db");
+      const { pushSubscriptions } = await import("../../shared/schema");
+      const { eq, sql } = await import("drizzle-orm");
+      
+      // Count registered devices by platform
+      const iosCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.platform, 'ios'));
+      
+      const androidCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.platform, 'android'));
+      
+      const webCount = await db.select({ count: sql<number>`count(*)` })
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.platform, 'web'));
+      
+      res.json({
+        apnsConfigured: isAPNsConfigured(),
+        apnsHost: process.env.NODE_ENV === 'development' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com',
+        bundleId: process.env.APNS_BUNDLE_ID || 'com.boxstat.app',
+        registeredDevices: {
+          ios: Number(iosCount[0]?.count) || 0,
+          android: Number(androidCount[0]?.count) || 0,
+          web: Number(webCount[0]?.count) || 0,
+        },
+        vapidConfigured: !!(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY),
+        nodeEnv: process.env.NODE_ENV
+      });
+    } catch (error) {
+      console.error('Error in push debug:', error);
+      res.status(500).json({ error: 'Failed to get debug info' });
     }
   });
 

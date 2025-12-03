@@ -1,0 +1,198 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/32335F41-8B69-49E5-B391-4DA9FAD91019/App.app'
+⚡️  Loading app at https://boxstat.app...
+Networking process (0x114070190) took 1.218639 seconds to launch
+Updated list with error: DownloadFailed
+Updated list with error: DownloadFailed
+WebContent process (0x1140f0100) took 1.180946 seconds to launch
+Updated list with error: DownloadFailed
+WebContent[74467] Unable to hide query parameters from script (missing data)
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+Updated list with error: DownloadFailed
+⚡️  WebView loaded
+Updated list with error: DownloadFailed
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+Updated list with error: DownloadFailed
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x10a83e240 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11e51df40 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b400.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e431180 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11e51df90 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b400]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e431180 )>",
+    "<NSLayoutConstraint:0x11e51d6d0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b400.width == _UIButtonBarButton:0x11e431400.width   (active)>",
+    "<NSLayoutConstraint:0x11e51de00 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e431180.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11e51d810 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11e5a8e00]   (active, names: '|':_UIButtonBarButton:0x11e431400 )>",
+    "<NSLayoutConstraint:0x11e51d860 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a8e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e431400 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11e51d860 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a8e00]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e431400 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x11e51f250 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b800.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e430c80 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x11e51f2a0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b800]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e430c80 )>",
+    "<NSLayoutConstraint:0x11e51ead0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47b800.width == _UIButtonBarButton:0x11e430f00.width   (active)>",
+    "<NSLayoutConstraint:0x11e51f110 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e430c80.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11e51ec10 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11e5a9180]   (active, names: '|':_UIButtonBarButton:0x11e430f00 )>",
+    "<NSLayoutConstraint:0x11e51ec60 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e430f00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11e51ec60 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e430f00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x119aab250 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47bc00.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e432800 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x119aab2a0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47bc00]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e432800 )>",
+    "<NSLayoutConstraint:0x11e51fcf0 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x11e47bc00.width == _UIButtonBarButton:0x11e430a00.width   (active)>",
+    "<NSLayoutConstraint:0x11993dfe0 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x11e432800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x11e51fde0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x11e5a9500]   (active, names: '|':_UIButtonBarButton:0x11e430a00 )>",
+    "<NSLayoutConstraint:0x11e51fe30 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e430a00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x11e51fe30 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x11e5a9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x11e430a00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = BC30EB5F-C594-4075-8C39-D30E37EC8DEB
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = BC30EB5F-C594-4075-8C39-D30E37EC8DEB
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+WebContent[74467] 0x10a1c80c0 - Frame::injectUserScriptImmediately: Ignoring user script injection for non app-bound domain
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+⚡️  WebView loaded
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] 0x11604a3c0 - WebKitNamespace::Ignoring messageHandlers() request for non app-bound domain
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] handle_error:268: IDAT: CRC error
+WebContent[74467] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[74467] img_image: Bad image source
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = BC30EB5F-C594-4075-8C39-D30E37EC8DEB
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = BC30EB5F-C594-4075-8C39-D30E37EC8DEB
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+Snapshotting a view (0x11984b400, UIKeyboardImpl) that is not in a visible window requires afterScreenUpdates:YES.
+WebContent[74467] 0x100ea8b48 - [webPageID=8] WebPage::runJavaScriptInFrameInScriptWorld: Request to run JavaScript failed with error <private>
+WebContent[74467] 0x100ea8b48 - [webPageID=8] WebPage::runJavaScript: Ignoring user script injection for non app-bound domain
+⚡️  JS Eval error JavaScript execution targeted a frame that is not in an app-bound domain

@@ -24,7 +24,6 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
         return next();
       }
     } catch (err: any) {
-      console.log('🔐 JWT verify failed:', err.message);
       // JWT invalid, fall through to session check
     }
   }
@@ -41,13 +40,6 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
     };
     return next();
   }
-  
-  // Debug: Log auth failure details
-  console.log('🔐 Auth failed:', req.method, req.path, {
-    hasAuthHeader: !!auth,
-    hasSession: !!req.session,
-    sessionUserId: req.session?.userId,
-  });
   
   // Neither JWT nor session found
   return res.status(401).json({ error: "Not authenticated" });

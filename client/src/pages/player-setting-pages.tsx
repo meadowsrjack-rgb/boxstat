@@ -152,16 +152,10 @@ export function PlayerProfilePage() {
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
       };
       
-      const response = await fetch(`/api/profile/${profileId}`, {
+      return await apiRequest(`/api/profile/${profileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(updateData),
+        data: updateData,
       });
-      if (!response.ok) throw new Error("Failed to update profile");
-      const updatedUser = await response.json();
-      
-      return updatedUser;
     },
     onSuccess: (updatedProfile) => {
       // Update local profile state with server response

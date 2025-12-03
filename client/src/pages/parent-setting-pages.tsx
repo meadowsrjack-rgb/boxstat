@@ -148,14 +148,10 @@ export function ParentProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
-      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
+      return await apiRequest(`/api/profile/${(user as any)?.activeProfileId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
+        data: data,
       });
-      if (!response.ok) throw new Error("Failed to update profile");
-      return response.json();
     },
     onSuccess: (updatedProfile) => {
       setProfile({

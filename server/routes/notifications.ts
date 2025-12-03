@@ -334,4 +334,113 @@ export function setupNotificationRoutes(app: Express) {
     }
   });
 
+  // Test iOS push notification endpoint (admin only)
+  app.post('/api/push/test-ios', requireAuth, async (req: any, res) => {
+    try {
+      const { deviceToken, title, body } = req.body;
+      const userId = req.user.id;
+      
+      // Check if user is admin
+      const { db } = await import("../db");
+      const { users } = await import("../../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      // Import APNs service
+      const { sendAPNsNotification, isAPNsConfigured } = await import("../services/apnsService");
+      
+      if (!isAPNsConfigured()) {
+        return res.status(503).json({ 
+          error: 'APNs not configured',
+          message: 'Missing APNS_KEY_ID, APNS_TEAM_ID, or APNS_AUTH_KEY'
+        });
+      }
+      
+      let targetTokens: string[] = [];
+      
+      if (deviceToken) {
+        // Use provided token
+        targetTokens = [deviceToken];
+      } else {
+        // Get all active iOS devices
+        const { pushSubscriptions } = await import("../../shared/schema");
+        const iosDevices = await db.select()
+          .from(pushSubscriptions)
+          .where(eq(pushSubscriptions.platform, 'ios'));
+        
+        targetTokens = iosDevices
+          .filter(d => d.isActive && d.fcmToken)
+          .map(d => d.fcmToken!);
+      }
+      
+      if (targetTokens.length === 0) {
+        return res.status(400).json({ 
+          error: 'No iOS devices registered',
+          message: 'Install the app on an iOS device and grant notification permissions first'
+        });
+      }
+      
+      const result = await sendAPNsNotification(targetTokens, {
+        title: title || '🏀 BoxStat Test',
+        body: body || 'This is a test push notification from BoxStat!',
+        data: { type: 'test', timestamp: Date.now() }
+      });
+      
+      res.json({
+        success: result.successCount > 0,
+        message: `Sent to ${result.successCount}/${targetTokens.length} devices`,
+        details: result
+      });
+    } catch (error) {
+      console.error('Error sending test push:', error);
+      res.status(500).json({ error: 'Failed to send test push notification' });
+    }
+  });
+
+  // Get registered iOS devices (admin only)
+  app.get('/api/push/ios-devices', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      const { db } = await import("../db");
+      const { users, pushSubscriptions } = await import("../../shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user || user.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      const iosDevices = await db.select({
+        id: pushSubscriptions.id,
+        userId: pushSubscriptions.userId,
+        platform: pushSubscriptions.platform,
+        deviceType: pushSubscriptions.deviceType,
+        isActive: pushSubscriptions.isActive,
+        createdAt: pushSubscriptions.createdAt,
+        tokenPreview: pushSubscriptions.fcmToken
+      })
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.platform, 'ios'));
+      
+      // Mask tokens for security
+      const maskedDevices = iosDevices.map(d => ({
+        ...d,
+        tokenPreview: d.tokenPreview ? `${d.tokenPreview.substring(0, 20)}...` : null
+      }));
+      
+      res.json({
+        count: maskedDevices.length,
+        devices: maskedDevices
+      });
+    } catch (error) {
+      console.error('Error fetching iOS devices:', error);
+      res.status(500).json({ error: 'Failed to fetch iOS devices' });
+    }
+  });
+
 }

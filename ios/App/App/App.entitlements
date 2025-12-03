@@ -6,8 +6,8 @@
         <string>development</string>
         <key>com.apple.developer.associated-domains</key>
         <array>
-                <string>applinks:boxstat.replit.app</string>
-                <string>webcredentials:boxstat.replit.app</string>
+                <string>applinks:boxstat.app</string>
+                <string>webcredentials:boxstat.app</string>
         </array>
 </dict>
 </plist>

@@ -79,7 +79,7 @@
         <true/>
         <key>WKAppBoundDomains</key>
         <array>
-                <string>boxstat.replit.app</string>
+                <string>boxstat.app</string>
         </array>
 </dict>
 </plist>

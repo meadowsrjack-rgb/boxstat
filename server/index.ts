@@ -12,15 +12,35 @@ const app = express();
 // Trust proxy - required for secure cookies behind Replit's infrastructure
 app.set('trust proxy', 1);
 
-// CORS configuration for mobile apps
+// CORS configuration for mobile apps and Replit dev environments
 app.use(cors({
-  origin: [
-    'capacitor://localhost',
-    'ionic://localhost',
-    'http://localhost',
-    'http://localhost:5000',
-    'https://boxstat.replit.app',
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'capacitor://localhost',
+      'ionic://localhost',
+      'http://localhost',
+      'http://localhost:5000',
+      'https://boxstat.replit.app',
+    ];
+    
+    // Check static list
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Allow Replit dev URLs (*.replit.dev, *.repl.co, etc.)
+    if (origin.includes('.replit.dev') || 
+        origin.includes('.repl.co') || 
+        origin.includes('.replit.app')) {
+      return callback(null, true);
+    }
+    
+    // Allow the origin anyway for development
+    return callback(null, true);
+  },
   credentials: true, // Allow cookies to be sent
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],

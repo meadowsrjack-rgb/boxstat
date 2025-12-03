@@ -128,10 +128,7 @@ export interface User {
   
   // Payment information
   stripeCustomerId?: string; // Stripe Customer ID for payment tracking
-  stripeSubscriptionId?: string; // Stripe Subscription ID for subscription management
   stripeCheckoutSessionId?: string; // Stripe Checkout Session ID for player registration
-  subscriptionStatus?: string; // 'active' or 'inactive'
-  planTier?: string; // 'free', 'Pro', 'Coach', etc.
   paymentStatus?: string; // "pending" or "paid" for player registrations
   lastPaymentDate?: Date; // Date of last payment received
   nextPaymentDate?: Date; // Expected date of next payment (28 days from last)
@@ -176,8 +173,6 @@ export const users = pgTable("users", {
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   stripeCheckoutSessionId: varchar("stripe_checkout_session_id"),
-  subscriptionStatus: varchar("subscription_status").default('inactive'),
-  planTier: varchar("plan_tier").default('free'),
   paymentStatus: varchar("payment_status"),
   products: jsonb().default('[]'),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -249,20 +244,6 @@ export const pendingRegistrations = pgTable("pending_registrations", {
   verified: boolean().default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
-
-// Migration Lookup table (for migrating existing Stripe subscriptions)
-export const migrationLookup = pgTable("migration_lookup", {
-  id: serial().primaryKey().notNull(),
-  email: varchar().notNull().unique(),
-  oldStripeCustomerId: varchar("old_stripe_customer_id").notNull(),
-  oldStripeSubscriptionId: varchar("old_stripe_subscription_id").notNull(),
-  planTier: varchar("plan_tier").notNull(),
-  isClaimed: boolean("is_claimed").default(false).notNull(),
-  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-});
-
-export type MigrationLookup = typeof migrationLookup.$inferSelect;
-export type InsertMigrationLookup = typeof migrationLookup.$inferInsert;
 
 // Programs table (packages/subscriptions)
 export const programs = pgTable("programs", {

@@ -350,7 +350,7 @@ function DOBStep({
                       defaultDay={defaultDay}
                       startYear={2000}
                       endYear={new Date().getFullYear()}
-                      highlightOverlayStyle={{ backgroundColor: 'transparent', color: '#ffffff' }}
+                      highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
                       onDateChange={handleDateChange}
                     />
                   </div>

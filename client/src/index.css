@@ -306,21 +306,35 @@
     --picker-text-color: white;
   }
   
-  .date-wheel-picker-dark div[class*="picker"] {
-    color: white !important;
-  }
-  
-  .date-wheel-picker-dark span,
-  .date-wheel-picker-dark div {
-    color: white !important;
-  }
-  
-  /* Highlight selected date with lighter text */
-  .date-wheel-picker-dark [class*="highlight"],
-  .date-wheel-picker-dark [class*="selected"] {
+  /* Remove ALL backgrounds from date picker */
+  .date-wheel-picker-dark,
+  .date-wheel-picker-dark * {
+    background: transparent !important;
     background-color: transparent !important;
+  }
+  
+  /* Default text color - dimmed */
+  .date-wheel-picker-dark div,
+  .date-wheel-picker-dark span {
+    color: rgba(255, 255, 255, 0.4) !important;
+  }
+  
+  /* Selected/center items get full white */
+  .date-wheel-picker-dark [style*="opacity: 1"],
+  .date-wheel-picker-dark [style*="opacity:1"] {
     color: #ffffff !important;
-    border: none !important;
+  }
+  
+  /* Fix column spacing - add gap between day/month/year */
+  .date-wheel-picker-dark > div > div {
+    display: flex !important;
+    gap: 24px !important;
+  }
+  
+  /* Each column needs minimum width and spacing */
+  .date-wheel-picker-dark > div > div > div {
+    min-width: 60px !important;
+    text-align: center !important;
   }
 
   /* Scrollable page container - enables scrolling on desktop */

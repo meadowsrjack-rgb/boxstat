@@ -1600,46 +1600,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let accountHolderId: string | undefined;
       let primaryUser: any = null;
       
-      if (registrationType === "my_child" && parentInfo) {
-        // Create parent user account
-        primaryUser = await storage.createUser({
-          organizationId,
-          email: primaryEmail,
-          role: "parent",
-          firstName: parentInfo.firstName,
-          lastName: parentInfo.lastName,
-          phoneNumber: parentInfo.phoneNumber,
-          dateOfBirth: sanitizeDate(parentInfo.dateOfBirth),
-          password: hashedPassword,
-          hasRegistered: true,
-          verified: true,
-          isActive: true,
-          awards: [],
-          totalPractices: 0,
-          totalGames: 0,
-          consecutiveCheckins: 0,
-          videosCompleted: 0,
-          yearsActive: 0,
-        });
-        accountHolderId = primaryUser.id;
-        
-        // Create player profiles for children
-        const createdPlayers = [];
-        for (const player of players) {
-          const playerEmail = `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}@temp.com`;
-          
-          const playerUser = await storage.createUser({
+      try {
+        if (registrationType === "my_child" && parentInfo) {
+          // Create parent user account
+          primaryUser = await storage.createUser({
             organizationId,
-            email: playerEmail,
-            role: "player",
-            firstName: player.firstName,
-            lastName: player.lastName,
-            dateOfBirth: sanitizeDate(player.dateOfBirth),
-            gender: player.gender,
-            accountHolderId,
-            teamAssignmentStatus: "pending",
+            email: primaryEmail,
+            role: "parent",
+            firstName: parentInfo.firstName,
+            lastName: parentInfo.lastName,
+            phoneNumber: parentInfo.phoneNumber,
+            dateOfBirth: sanitizeDate(parentInfo.dateOfBirth),
+            password: hashedPassword,
             hasRegistered: true,
-            verified: true, // Child profiles are auto-verified through parent
+            verified: true,
             isActive: true,
             awards: [],
             totalPractices: 0,
@@ -1648,32 +1622,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
             videosCompleted: 0,
             yearsActive: 0,
           });
-          createdPlayers.push(playerUser);
+          accountHolderId = primaryUser.id;
+          
+          // Create player profiles for children with unique emails
+          const createdPlayers = [];
+          for (const player of players) {
+            // Use timestamp + random suffix to ensure uniqueness
+            const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const playerEmail = `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}.${uniqueSuffix}@child.boxstat.app`;
+            
+            const playerUser = await storage.createUser({
+              organizationId,
+              email: playerEmail,
+              role: "player",
+              firstName: player.firstName,
+              lastName: player.lastName,
+              dateOfBirth: sanitizeDate(player.dateOfBirth),
+              gender: player.gender,
+              accountHolderId,
+              teamAssignmentStatus: "pending",
+              hasRegistered: true,
+              verified: true, // Child profiles are auto-verified through parent
+              isActive: true,
+              awards: [],
+              totalPractices: 0,
+              totalGames: 0,
+              consecutiveCheckins: 0,
+              videosCompleted: 0,
+              yearsActive: 0,
+            });
+            createdPlayers.push(playerUser);
+          }
+        } else {
+          // "myself" registration - create player user account
+          const player = players[0];
+          primaryUser = await storage.createUser({
+            organizationId,
+            email: primaryEmail,
+            role: "player",
+            firstName: player.firstName,
+            lastName: player.lastName,
+            dateOfBirth: sanitizeDate(player.dateOfBirth),
+            gender: player.gender,
+            password: hashedPassword,
+            teamAssignmentStatus: "pending",
+            hasRegistered: true,
+            verified: true,
+            registrationType: "myself",
+            isActive: true,
+            awards: [],
+            totalPractices: 0,
+            totalGames: 0,
+            consecutiveCheckins: 0,
+            videosCompleted: 0,
+            yearsActive: 0,
+          });
         }
-      } else {
-        // "myself" registration - create player user account
-        const player = players[0];
-        primaryUser = await storage.createUser({
-          organizationId,
-          email: primaryEmail,
-          role: "player",
-          firstName: player.firstName,
-          lastName: player.lastName,
-          dateOfBirth: sanitizeDate(player.dateOfBirth),
-          gender: player.gender,
-          password: hashedPassword,
-          teamAssignmentStatus: "pending",
-          hasRegistered: true,
-          verified: true,
-          registrationType: "myself",
-          isActive: true,
-          awards: [],
-          totalPractices: 0,
-          totalGames: 0,
-          consecutiveCheckins: 0,
-          videosCompleted: 0,
-          yearsActive: 0,
-        });
+      } catch (createError: any) {
+        console.error("Error creating user:", createError);
+        if (createError.message?.includes("duplicate key") || createError.code === '23505') {
+          return res.status(400).json({ 
+            success: false, 
+            message: "This email is already registered. Please login instead." 
+          });
+        }
+        throw createError;
       }
       
       // Delete the pending registration now that account is created

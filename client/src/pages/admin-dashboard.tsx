@@ -4752,6 +4752,10 @@ function ProductsTab({ organization }: any) {
     queryKey: ["/api/award-definitions"],
   });
 
+  const { data: waivers = [] } = useQuery<any[]>({
+    queryKey: ["/api/waivers"],
+  });
+
   const form = useForm({
     resolver: zodResolver(z.object({
       organizationId: z.string(),
@@ -4773,6 +4777,7 @@ function ProductsTab({ organization }: any) {
       requireAAUMembership: z.boolean().default(false),
       requireConcussionWaiver: z.boolean().default(false),
       requireClubAgreement: z.boolean().default(false),
+      requiredWaivers: z.array(z.string()).default([]),
       autoAssignPlayers: z.boolean().default(false),
       adminNotes: z.string().optional(),
       isActive: z.boolean().default(true),
@@ -4797,6 +4802,7 @@ function ProductsTab({ organization }: any) {
       requireAAUMembership: false,
       requireConcussionWaiver: false,
       requireClubAgreement: false,
+      requiredWaivers: [],
       autoAssignPlayers: false,
       adminNotes: "",
       isActive: true,
@@ -4868,6 +4874,7 @@ function ProductsTab({ organization }: any) {
       requireAAUMembership: pkg.requireAAUMembership || false,
       requireConcussionWaiver: pkg.requireConcussionWaiver || false,
       requireClubAgreement: pkg.requireClubAgreement || false,
+      requiredWaivers: pkg.requiredWaivers || [],
       autoAssignPlayers: pkg.autoAssignPlayers || false,
       adminNotes: pkg.adminNotes || "",
       isActive: pkg.isActive,
@@ -5487,6 +5494,42 @@ function ProductsTab({ organization }: any) {
                     </FormItem>
                   )}
                 />
+
+                {waivers.filter((w: any) => w.isActive).length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="requiredWaivers"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Custom Waivers</FormLabel>
+                        <FormDescription>Select additional waivers created in the Waivers tab</FormDescription>
+                        <div className="space-y-2 mt-2">
+                          {waivers.filter((w: any) => w.isActive).map((waiver: any) => (
+                            <div key={waiver.id} className="flex items-center justify-between rounded-lg border p-4">
+                              <div className="space-y-0.5">
+                                <div className="text-sm font-medium">{waiver.name}</div>
+                                <div className="text-xs text-gray-500">{waiver.title}</div>
+                              </div>
+                              <Switch
+                                checked={(field.value || []).includes(waiver.id)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, waiver.id]);
+                                  } else {
+                                    field.onChange(current.filter((id: string) => id !== waiver.id));
+                                  }
+                                }}
+                                data-testid={`switch-waiver-${waiver.id}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               {/* Automation */}

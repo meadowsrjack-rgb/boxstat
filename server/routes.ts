@@ -1777,18 +1777,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             createdPlayers.push(playerUser);
           }
         } else {
-          // "myself" registration - create player user account
+          // "myself" registration - create parent account first
+          // User will add themselves as a player through the Add Player flow
           const player = players[0];
           primaryUser = await storage.createUser({
             organizationId,
             email: primaryEmail,
-            role: "player",
+            role: "parent",
             firstName: player.firstName,
             lastName: player.lastName,
             dateOfBirth: sanitizeDate(player.dateOfBirth),
             gender: player.gender,
             password: hashedPassword,
-            teamAssignmentStatus: "pending",
             hasRegistered: true,
             verified: true,
             registrationType: "myself",
@@ -1800,6 +1800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             videosCompleted: 0,
             yearsActive: 0,
           });
+          accountHolderId = primaryUser.id;
         }
       } catch (createError: any) {
         console.error("Error creating user:", createError);

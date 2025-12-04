@@ -77,6 +77,7 @@ export class NotificationService {
           }),
           ...(isFCM && {
             fcmToken: subscription.fcmToken,
+            apnsEnvironment: subscription.apnsEnvironment, // Store APNs environment for iOS
           }),
           platform: subscription.platform,
           userAgent: subscription.userAgent,
@@ -325,13 +326,20 @@ export class NotificationService {
       const iosSubscriptions = fcmSubscriptions.filter((sub: any) => sub.platform === 'ios');
       if (iosSubscriptions.length > 0) {
         console.log(`[Push Send] 🍎 Processing ${iosSubscriptions.length} iOS subscription(s) via APNs...`);
-        const deviceTokens = iosSubscriptions.map((sub: any) => sub.fcmToken).filter(Boolean);
-        console.log(`[Push Send] Extracted ${deviceTokens.length} APNs device token(s)`);
+        // Extract tokens with their environment (sandbox vs production)
+        const devices = iosSubscriptions
+          .filter((sub: any) => sub.fcmToken)
+          .map((sub: any) => ({
+            token: sub.fcmToken,
+            environment: sub.apnsEnvironment || 'production' // Default to production for legacy tokens
+          }));
+        console.log(`[Push Send] Extracted ${devices.length} APNs device(s)`);
+        devices.forEach((d: any) => console.log(`[Push Send]   Token: ${d.token.substring(0, 20)}... (${d.environment})`));
         
-        if (deviceTokens.length > 0 && isAPNsConfigured()) {
+        if (devices.length > 0 && isAPNsConfigured()) {
           try {
             console.log(`[Push Send] 🚀 Sending directly to Apple APNs...`);
-            const apnsResult = await sendAPNsNotification(deviceTokens, {
+            const apnsResult = await sendAPNsNotification(devices, {
               title: title,
               body: message,
             });

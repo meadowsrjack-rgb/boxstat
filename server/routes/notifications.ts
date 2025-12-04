@@ -89,12 +89,13 @@ export function setupNotificationRoutes(app: Express) {
   // Register FCM token for native push notifications (iOS/Android)
   app.post('/api/push/register', requireAuth, async (req: any, res) => {
     try {
-      const { token } = req.body;
+      const { token, apnsEnvironment } = req.body;
       
       console.log('[Push Register] 📱 Received push token registration request');
       console.log('[Push Register] User ID:', req.user.id);
       console.log('[Push Register] Token length:', token?.length || 0);
       console.log('[Push Register] Token preview:', token?.substring(0, 30) + '...');
+      console.log('[Push Register] APNs Environment:', apnsEnvironment || 'not specified');
       
       if (!token || typeof token !== 'string') {
         console.log('[Push Register] ❌ Token missing or invalid');
@@ -108,18 +109,25 @@ export function setupNotificationRoutes(app: Express) {
       const platform = userAgent.includes('iPhone') || userAgent.includes('iPad') ? 'ios' : 'android';
       const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
       
+      // For iOS, use the provided APNs environment or default to 'sandbox' for development builds
+      const resolvedApnsEnv = platform === 'ios' 
+        ? (apnsEnvironment || 'sandbox') // Default to sandbox for safety 
+        : undefined;
+      
       console.log('[Push Register] Platform detected:', platform);
       console.log('[Push Register] Device type:', deviceType);
+      console.log('[Push Register] Resolved APNs Environment:', resolvedApnsEnv || 'N/A');
       
       await notificationService.subscribeToPush(userId, {
         fcmToken: token,
         platform,
         userAgent,
         deviceType,
+        apnsEnvironment: resolvedApnsEnv,
       });
 
       console.log('[Push Register] ✅ Token registered successfully for user', userId);
-      res.json({ success: true, platform, deviceType });
+      res.json({ success: true, platform, deviceType, apnsEnvironment: resolvedApnsEnv });
     } catch (error) {
       console.error('[Push Register] ❌ Error registering push token:', error);
       res.status(500).json({ error: 'Failed to register push token' });
@@ -409,31 +417,36 @@ export function setupNotificationRoutes(app: Express) {
         });
       }
       
-      let targetTokens: string[] = [];
+      let targetDevices: Array<{ token: string; environment?: string }> = [];
       
       if (deviceToken) {
-        // Use provided token
-        targetTokens = [deviceToken];
+        // Use provided token - default to sandbox for manual testing
+        targetDevices = [{ token: deviceToken, environment: 'sandbox' }];
       } else {
-        // Get all active iOS devices
+        // Get all active iOS devices with their APNs environment
         const { pushSubscriptions } = await import("../../shared/schema");
         const iosDevices = await db.select()
           .from(pushSubscriptions)
           .where(eq(pushSubscriptions.platform, 'ios'));
         
-        targetTokens = iosDevices
+        targetDevices = iosDevices
           .filter(d => d.isActive && d.fcmToken)
-          .map(d => d.fcmToken!);
+          .map(d => ({ 
+            token: d.fcmToken!, 
+            environment: d.apnsEnvironment || 'sandbox' // Default to sandbox for dev builds
+          }));
       }
       
-      if (targetTokens.length === 0) {
+      if (targetDevices.length === 0) {
         return res.status(400).json({ 
           error: 'No iOS devices registered',
           message: 'Install the app on an iOS device and grant notification permissions first'
         });
       }
       
-      const result = await sendAPNsNotification(targetTokens, {
+      console.log('[Test Push] Sending to devices:', targetDevices.map(d => `${d.token.substring(0, 20)}... (${d.environment})`));
+      
+      const result = await sendAPNsNotification(targetDevices, {
         title: title || '🏀 BoxStat Test',
         body: body || 'This is a test push notification from BoxStat!',
         data: { type: 'test', timestamp: Date.now() }
@@ -441,7 +454,7 @@ export function setupNotificationRoutes(app: Express) {
       
       res.json({
         success: result.successCount > 0,
-        message: `Sent to ${result.successCount}/${targetTokens.length} devices`,
+        message: `Sent to ${result.successCount}/${targetDevices.length} devices`,
         details: result
       });
     } catch (error) {

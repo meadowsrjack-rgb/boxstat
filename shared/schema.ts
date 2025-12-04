@@ -608,6 +608,7 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   platform: text("platform").notNull(),
   userAgent: text("user_agent"),
   deviceType: varchar("device_type"), // "desktop", "mobile", "tablet"
+  apnsEnvironment: varchar("apns_environment"), // "sandbox" or "production" - for iOS tokens
   isActive: boolean("is_active").default(true),
   lastUsed: timestamp("last_used", { mode: 'string' }).defaultNow(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -1374,6 +1375,7 @@ export interface PushSubscription {
   platform?: string;
   userAgent?: string;
   deviceType?: string;
+  apnsEnvironment?: string; // 'sandbox' or 'production' for iOS tokens
   isActive: boolean;
   lastUsed: Date;
   createdAt: Date;
@@ -1388,6 +1390,7 @@ export const insertPushSubscriptionSchema = z.object({
   platform: z.enum(["web", "ios", "android"]),
   userAgent: z.string().optional(),
   deviceType: z.string().optional(),
+  apnsEnvironment: z.enum(["sandbox", "production"]).optional(), // For iOS APNs environment
 }).refine(
   (data) => {
     if (data.platform === "web") {

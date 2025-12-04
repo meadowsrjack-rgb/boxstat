@@ -101,7 +101,8 @@ export interface APNsSendResult {
 
 async function sendSingleNotification(
   deviceToken: string,
-  notification: APNsNotification
+  notification: APNsNotification,
+  apnsEnvironment?: string // 'sandbox' or 'production'
 ): Promise<APNsSendResult> {
   return new Promise((resolve) => {
     const token = generateJWT();
@@ -131,7 +132,11 @@ async function sendSingleNotification(
     // Clean device token (remove spaces and angle brackets if present)
     const cleanToken = deviceToken.replace(/[<>\s]/g, '');
 
-    const client = http2.connect(`https://${APNS_HOST}`);
+    // Use the correct APNs host based on the token's environment
+    const host = apnsEnvironment === 'sandbox' ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
+    console.log(`[APNs] Using host ${host} for token (environment: ${apnsEnvironment || 'default'})`);
+    
+    const client = http2.connect(`https://${host}`);
     
     client.on('error', (err) => {
       console.error('[APNs] ❌ HTTP/2 connection error:', err.message);
@@ -207,18 +212,22 @@ async function sendSingleNotification(
   });
 }
 
+export interface APNsDevice {
+  token: string;
+  environment?: string; // 'sandbox' or 'production'
+}
+
 export async function sendAPNsNotification(
-  deviceTokens: string[],
+  devices: APNsDevice[],
   notification: APNsNotification
 ): Promise<{
   successCount: number;
   failureCount: number;
   results: APNsSendResult[];
 }> {
-  console.log(`[APNs] 🚀 Sending push notification to ${deviceTokens.length} device(s)`);
+  console.log(`[APNs] 🚀 Sending push notification to ${devices.length} device(s)`);
   console.log(`[APNs] Title: "${notification.title}"`);
   console.log(`[APNs] Body: "${notification.body}"`);
-  console.log(`[APNs] Using host: ${APNS_HOST}`);
   console.log(`[APNs] Bundle ID: ${APNS_BUNDLE_ID}`);
 
   // Check configuration
@@ -226,17 +235,17 @@ export async function sendAPNsNotification(
     console.error('[APNs] ⚠️ APNs not configured - missing required environment variables');
     return {
       successCount: 0,
-      failureCount: deviceTokens.length,
-      results: deviceTokens.map(token => ({
+      failureCount: devices.length,
+      results: devices.map(d => ({
         success: false,
-        deviceToken: token,
+        deviceToken: d.token,
         error: 'APNs not configured'
       }))
     };
   }
 
   const results = await Promise.all(
-    deviceTokens.map(token => sendSingleNotification(token, notification))
+    devices.map(device => sendSingleNotification(device.token, notification, device.environment))
   );
 
   const successCount = results.filter(r => r.success).length;

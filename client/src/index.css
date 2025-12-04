@@ -321,27 +321,34 @@
   
   /* The picker wrapper - reorder columns: Month(2), Day(1), Year(3) */
   .date-wheel-picker-dark #pickerWrapper {
-    gap: 16px !important;
-    padding: 0 8px !important;
+    gap: 24px !important;
+    padding: 0 16px !important;
+    width: 100% !important;
+    max-width: 320px !important;
+  }
+  
+  /* All columns - fixed widths */
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(1),
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(2),
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(3) {
+    width: 80px !important;
+    min-width: 80px !important;
+    flex-shrink: 0 !important;
   }
   
   /* Day column (first child) - move to middle */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(1) {
     order: 2 !important;
-    width: 25% !important;
   }
   
   /* Month column (second child) - move to left */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(2) {
     order: 1 !important;
-    width: 30% !important;
   }
   
-  /* Year column (third child) - stays right, more space */
+  /* Year column (third child) - stays right */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(3) {
     order: 3 !important;
-    width: 35% !important;
-    padding-right: 8px !important;
   }
   
   /* Highlight overlay - stays in place */

@@ -4756,6 +4756,10 @@ function ProductsTab({ organization }: any) {
       price: z.number().min(0).optional(),
       billingModel: z.string().optional(),
       durationDays: z.number().min(1).optional(),
+      allowInstallments: z.boolean().default(false),
+      installments: z.number().min(2).optional(),
+      installmentPrice: z.number().min(0).optional(),
+      payInFullDiscount: z.number().min(0).max(100).optional(),
       stripePriceId: z.string().optional(),
       stripeProductId: z.string().optional(),
       tags: z.array(z.string()).default([]),
@@ -4776,6 +4780,10 @@ function ProductsTab({ organization }: any) {
       price: 0,
       billingModel: "Per Player",
       durationDays: 90,
+      allowInstallments: false,
+      installments: 3,
+      installmentPrice: 0,
+      payInFullDiscount: 0,
       stripePriceId: "",
       stripeProductId: "",
       tags: [],
@@ -4789,6 +4797,9 @@ function ProductsTab({ organization }: any) {
   });
 
   const selectedType = form.watch("type");
+  const allowInstallments = form.watch("allowInstallments");
+  const price = form.watch("price");
+  const installments = form.watch("installments");
 
   const createPackage = useMutation({
     mutationFn: async (data: any) => {
@@ -4840,6 +4851,10 @@ function ProductsTab({ organization }: any) {
       price: pkg.price || 0,
       billingModel: pkg.billingModel || "Per Player",
       durationDays: pkg.durationDays || 90,
+      allowInstallments: pkg.allowInstallments || false,
+      installments: pkg.installments || 3,
+      installmentPrice: pkg.installmentPrice || 0,
+      payInFullDiscount: pkg.payInFullDiscount || 0,
       stripePriceId: pkg.stripePriceId || "",
       stripeProductId: pkg.stripeProductId || "",
       tags: pkg.tags || [],
@@ -4865,6 +4880,10 @@ function ProductsTab({ organization }: any) {
       price: 0,
       billingModel: "Per Player",
       durationDays: 90,
+      allowInstallments: false,
+      installments: 3,
+      installmentPrice: 0,
+      payInFullDiscount: 0,
       stripePriceId: "",
       stripeProductId: "",
       tags: [],
@@ -5236,6 +5255,126 @@ function ProductsTab({ organization }: any) {
                     )}
                   />
                 </div>
+              </div>
+
+              {/* Payment Options */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700">Payment Options</h3>
+                
+                <FormField
+                  control={form.control}
+                  name="allowInstallments"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Allow Installment Plan</FormLabel>
+                        <FormDescription>
+                          Enable customers to pay in multiple installments
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-allow-installments"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {allowInstallments && (
+                  <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-gray-200">
+                    <FormField
+                      control={form.control}
+                      name="installments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Installments</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="2"
+                              max="12"
+                              placeholder="3"
+                              {...field}
+                              onChange={(e) => {
+                                const numInstallments = parseInt(e.target.value || "3");
+                                field.onChange(numInstallments);
+                                if (price && numInstallments > 0) {
+                                  const calculatedInstallmentPrice = Math.ceil(price / numInstallments);
+                                  form.setValue("installmentPrice", calculatedInstallmentPrice);
+                                }
+                              }}
+                              value={field.value || ""}
+                              data-testid="input-installments"
+                            />
+                          </FormControl>
+                          <FormDescription>How many payments (2-12)</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="installmentPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price Per Installment (USD)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Auto-calculated"
+                              {...field}
+                              onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                              value={field.value ? (field.value / 100).toFixed(2) : ""}
+                              data-testid="input-installment-price"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            {price && installments ? (
+                              <span className="text-green-600">
+                                Total: ${((field.value || 0) * (installments || 1) / 100).toFixed(2)}
+                              </span>
+                            ) : "Auto-calculated from total price"}
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="payInFullDiscount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pay In Full Discount (%)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0"
+                          max="100"
+                          placeholder="10"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                          value={field.value || ""}
+                          data-testid="input-pay-in-full-discount"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {price && field.value && field.value > 0 ? (
+                          <span className="text-green-600">
+                            Discounted price: ${((price * (100 - field.value) / 100) / 100).toFixed(2)} (saves ${((price * field.value / 100) / 100).toFixed(2)})
+                          </span>
+                        ) : "Percentage discount if customer pays the full amount upfront"}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Coverage & Access */}

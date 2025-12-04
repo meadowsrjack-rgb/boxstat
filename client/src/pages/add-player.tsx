@@ -350,7 +350,7 @@ function DOBStep({
                       defaultDay={defaultDay}
                       startYear={2000}
                       endYear={new Date().getFullYear()}
-                      highlightOverlayStyle={{ borderTop: '2px solid #dc2626', borderBottom: '2px solid #dc2626' }}
+                      highlightOverlayStyle={{ backgroundColor: 'rgba(220, 38, 38, 0.3)', color: '#dc2626' }}
                       onDateChange={handleDateChange}
                     />
                   </div>
@@ -363,7 +363,7 @@ function DOBStep({
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
+                      className="flex-1 border-gray-600 text-gray-500 hover:bg-gray-800"
                       onClick={() => setShowPicker(false)}
                     >
                       Cancel

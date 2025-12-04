@@ -823,13 +823,12 @@ function ParentInfoStep({
                   </button>
                 </FormControl>
                 <FormMessage className="text-red-400" />
-                
                 <Dialog open={showPicker} onOpenChange={setShowPicker}>
                   <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
                     <DialogHeader>
                       <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4 flex justify-center date-wheel-picker-dark">
+                    <div className="py-4 flex justify-center date-wheel-picker-dark text-[#d9d9d9]">
                       <DateScrollPicker
                         key={showPicker ? 'open' : 'closed'}
                         defaultYear={defaultYear}

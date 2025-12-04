@@ -1444,9 +1444,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             <header className="px-6 pt-10 pb-6">
               <div className="text-center">
                 <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">UYP Foundation Program</h1>
-                <p className="mt-2 max-w-2xl mx-auto text-sm leading-6 text-gray-700">
-                  Master your fundamentals in 12 weeks. Five Skill drills and Strength & Conditioning exercises each week — plus a Basketball IQ lesson. Quizzes and reflections follow each week of learning.
-                </p>
+                <p className="mt-2 max-w-2xl mx-auto text-sm leading-6 text-gray-700">Master your fundamentals in 12 weeks. Five Skill drills and one Strength & Conditioning exercise each week.</p>
               </div>
             </header>
 

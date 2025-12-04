@@ -4,15 +4,26 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function PrivacyPolicy() {
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "/";
+    }
+  };
+
   return (
     <div className="min-h-screen-safe bg-background safe-bottom">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Link href="/">
-          <Button variant="ghost" className="mb-6" data-testid="button-back-home">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
-          </Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          className="mb-6" 
+          data-testid="button-back"
+          onClick={handleBack}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
 
         <Card>
           <CardHeader>

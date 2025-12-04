@@ -1377,7 +1377,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
         </Table>
         </div>
       </CardContent>
-
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
@@ -4918,7 +4917,7 @@ function ProductsTab({ organization }: any) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Package Management</CardTitle>
+            <CardTitle>Products</CardTitle>
             <CardDescription>Create and manage subscription packages for your organization</CardDescription>
           </div>
           <Button onClick={handleCreate} data-testid="button-create-package">
@@ -5027,7 +5026,6 @@ function ProductsTab({ organization }: any) {
           </Table>
         )}
       </CardContent>
-
       {/* Create/Edit Package Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -5574,7 +5572,6 @@ function ProductsTab({ organization }: any) {
           </Form>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <DialogContent>

@@ -1470,21 +1470,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
             </section>
 
-            {/* Pricing */}
-            <section className="px-6 py-6">
-              <div className="mb-6 flex items-end justify-between">
-                <h2 className="text-xl font-extrabold tracking-tight">Choose your price</h2>
-                <p className="text-sm text-gray-500">Two options, same program.</p>
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2 mb-6">
-                <PriceCard title="Monthly" priceLine="$29/mo" cta="Start monthly — $29/mo" />
-                <PriceCard title="Pay in Full" priceLine="$249" badge="Best value" cta="Pay in full — $249" />
-              </div>
-
-              <p className="text-center text-xs text-gray-500">30-day satisfaction guarantee.</p>
-            </section>
-
             {/* Footer */}
             <footer className="px-6 pb-12">
               <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">

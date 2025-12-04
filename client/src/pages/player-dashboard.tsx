@@ -1440,15 +1440,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
         >
           <DialogTitle className="sr-only">BoxStat Foundation Program</DialogTitle>
           <div className="relative">
-            <button
-              onClick={() => setShowFoundationProgram(false)}
-              className="absolute right-6 top-6 p-2 text-gray-400 hover:text-gray-600 transition-colors z-10"
-              data-testid="close-foundation-popup"
-            >
-              {/* X icon removed from imports? keep using More icons; or use same X as before if desired */}
-              ✕
-            </button>
-
             {/* Header */}
             <header className="px-6 pt-10 pb-6">
               <div className="text-center">

@@ -266,8 +266,10 @@ export const programs = pgTable("programs", {
   pricingModel: varchar("pricing_model"), // DEPRECATED: backwards compat
   duration: varchar(), // DEPRECATED: backwards compat
   durationDays: integer("duration_days"), // Expiration period in days
+  allowInstallments: boolean("allow_installments").default(false), // Enable installment payment option
   installments: integer(), // Number of installments
   installmentPrice: integer("installment_price"), // Price per installment in cents
+  payInFullDiscount: integer("pay_in_full_discount"), // Discount percentage for paying in full (0-100)
   stripePriceId: varchar("stripe_price_id"),
   stripeProductId: varchar("stripe_product_id"),
   category: varchar(), // DEPRECATED: backwards compat

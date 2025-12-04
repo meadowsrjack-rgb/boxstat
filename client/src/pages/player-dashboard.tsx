@@ -1456,7 +1456,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 <div className="grid gap-6 md:grid-cols-3">
                   <div className="rounded-xl bg-red-50 p-4">
                     <p className="text-sm font-semibold text-red-600">Weekly Flow</p>
-                    <p className="mt-1 text-sm text-gray-700">5 Skill & S&C videos in one focused session • 1 Basketball IQ • Quick quiz • Reflection</p>
+                    <p className="mt-1 text-sm text-gray-700">5 Skill & 1 S&C video in one focused session.</p>
                   </div>
                   <div className="rounded-xl bg-red-50 p-4">
                     <p className="text-sm font-semibold text-red-600">For All Levels</p>
@@ -1481,7 +1481,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
           </div>
         </DialogContent>
       </Dialog>
-      
       {/* PIN Dialog for unlocking */}
       <PINDialog
         open={pinDialogOpen}

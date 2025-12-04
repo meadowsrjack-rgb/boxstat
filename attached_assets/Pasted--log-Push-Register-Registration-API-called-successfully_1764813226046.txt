@@ -1,0 +1,20 @@
+⚡️  [log] - [Push Register] 📱 Registration API called successfully, waiting for FCM token callback...
+✅ [AppDelegate] APNs Device Token: ac3b7743981c021f31251c784b998d059b0ba96a832611a0873bb9b912ea22b1
+⚡️  TO JS {"value":"AC3B7743981C021F31251C784B998D059B0BA96A832611A0873BB9B912EA22B1"}
+⚡️  [log] - [Push Registration] ✅ FCM token received: AC3B7743981C021F31251C784B998D059B0BA96A832611A0873BB9B912EA22B1
+⚡️  [log] - [Push Registration] Token length: 64
+⚡️  [log] - [Push Registration] Sending token to backend: https://boxstat.app/api/push/register
+⚡️  [log] - [Push Registration] Backend response status: 500
+⚡️  [error] - [Push Registration] ❌ Failed to register token with backend
+⚡️  [error] - [Push Registration] Status: 500
+⚡️  [error] - [Push Registration] Error: {"error":"Failed to register push token"}
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 7BCAB76D-D823-4548-B074-4B31ECD71B85
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = 7BCAB76D-D823-4548-B074-4B31ECD71B85
+⚡️  [log] - [Notification Form] Submitting notification: {"organizationId":"default-org","types":["message","announcement","notification"],"title":"ff","message":"ff","recipientTarget":"everyone","recipientUserIds":[],"recipientRoles":[],"recipientTeamIds":[],"recipientDivisionIds":[],"deliveryChannels":["in_app","push","email"],"sentBy":"test-user-1761336712.772908","status":"pending"}

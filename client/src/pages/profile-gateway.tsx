@@ -54,9 +54,9 @@ export default function ProfileGateway() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom">
-      <div className="max-w-md mx-auto pt-8">
+      <div className="max-w-md mx-auto pt-20">
         {/* Account Settings Button - Top Right */}
-        <div className="absolute top-6 right-6 safe-top">
+        <div className="absolute top-6 right-6 safe-top mb-20">
           <Button
             variant="ghost"
             onClick={() => handleSelectProfile("account")}

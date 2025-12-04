@@ -7,6 +7,7 @@ import { Camera, Upload, ArrowLeft, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function PhotoUploadPage() {
   const { user } = useAuth();
@@ -24,16 +25,10 @@ export default function PhotoUploadPage() {
       const formData = new FormData();
       formData.append('photo', file);
       
-      const response = await fetch('/api/upload-profile-photo', {
+      return apiRequest('/api/upload-profile-photo', {
         method: 'POST',
-        body: formData,
+        data: formData,
       });
-      
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-      
-      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });

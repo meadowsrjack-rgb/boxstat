@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserRoundPlus } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ProfileGateway() {
@@ -154,7 +154,7 @@ export default function ProfileGateway() {
               className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
               data-testid="button-add-player-icon"
             >
-              <UserRoundPlus className="w-10 h-10 text-gray-500" />
+              <UserPlus className="w-6 h-6 text-gray-500" />
             </button>
           </div>
         </div>

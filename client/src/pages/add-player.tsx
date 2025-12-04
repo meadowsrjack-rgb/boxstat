@@ -239,11 +239,11 @@ function PlayerNameStep({
           name="firstName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name *</FormLabel>
+              <FormLabel className="text-gray-400">First Name *</FormLabel>
               <FormControl>
-                <Input {...field} data-testid="input-firstName" />
+                <Input {...field} data-testid="input-firstName" className="bg-gray-800 border-gray-700 text-white placeholder-gray-500" />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
@@ -252,23 +252,21 @@ function PlayerNameStep({
           name="lastName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name *</FormLabel>
+              <FormLabel className="text-gray-400">Last Name *</FormLabel>
               <FormControl>
-                <Input {...field} data-testid="input-lastName" />
+                <Input {...field} data-testid="input-lastName" className="bg-gray-800 border-gray-700 text-white placeholder-gray-500" />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
-        <div className="flex justify-between pt-4">
-          <Button type="button" variant="outline" onClick={onBack} data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
       </form>
     </Form>
@@ -297,23 +295,21 @@ function DOBStep({
           name="dateOfBirth"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Date of Birth *</FormLabel>
+              <FormLabel className="text-gray-400">Date of Birth *</FormLabel>
               <FormControl>
-                <Input type="date" {...field} data-testid="input-dateOfBirth" />
+                <Input type="date" {...field} data-testid="input-dateOfBirth" className="bg-gray-800 border-gray-700 text-white" />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
-        <div className="flex justify-between pt-4">
-          <Button type="button" variant="outline" onClick={onBack} data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
       </form>
     </Form>
@@ -342,10 +338,10 @@ function GenderStep({
           name="gender"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Gender *</FormLabel>
+              <FormLabel className="text-gray-400">Gender *</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger data-testid="select-gender">
+                  <SelectTrigger data-testid="select-gender" className="bg-gray-800 border-gray-700 text-white">
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                 </FormControl>
@@ -355,19 +351,17 @@ function GenderStep({
                   <SelectItem value="other" data-testid="option-other">Other</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
-        <div className="flex justify-between pt-4">
-          <Button type="button" variant="outline" onClick={onBack} data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
       </form>
     </Form>
@@ -397,8 +391,8 @@ function PackageSelectionStep({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">Loading programs...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+        <span className="ml-3 text-gray-400">Loading programs...</span>
       </div>
     );
   }
@@ -406,11 +400,11 @@ function PackageSelectionStep({
   if (programs.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">No programs available at this time.</p>
-        <Button onClick={onBack} variant="outline" className="mt-4" data-testid="button-back">
-          <ChevronLeft className="w-4 h-4 mr-2" />
+        <p className="text-gray-400">No programs available at this time.</p>
+        <button onClick={onBack} className="mt-4 text-gray-400 hover:text-white" data-testid="button-back">
+          <ChevronLeft className="w-6 h-6 inline mr-2" />
           Back
-        </Button>
+        </button>
       </div>
     );
   }
@@ -423,7 +417,7 @@ function PackageSelectionStep({
           name="packageId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Select a Program *</FormLabel>
+              <FormLabel className="text-gray-400">Select a Program *</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -433,13 +427,13 @@ function PackageSelectionStep({
                 >
                   {Object.entries(programsByCategory).map(([category, categoryPrograms]) => (
                     <div key={category} className="space-y-2">
-                      <h3 className="font-semibold text-gray-700 text-sm mt-4">
+                      <h3 className="font-semibold text-gray-400 text-sm mt-4">
                         {category}
                       </h3>
                       {categoryPrograms.map((program) => (
                         <div
                           key={program.id}
-                          className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-gray-50 transition"
+                          className="flex items-center space-x-3 border border-gray-700 rounded-lg p-4 bg-gray-800/50 hover:bg-gray-700/50 transition"
                           data-testid={`package-option-${program.id}`}
                         >
                           <RadioGroupItem value={program.id} id={program.id} data-testid={`radio-${program.id}`} />
@@ -449,27 +443,27 @@ function PackageSelectionStep({
                           >
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
-                                <p className="font-medium text-gray-900" data-testid={`text-program-name-${program.id}`}>
+                                <p className="font-medium text-white" data-testid={`text-program-name-${program.id}`}>
                                   {program.name}
                                 </p>
                                 {program.description && (
-                                  <p className="text-sm text-gray-600 mt-1">
+                                  <p className="text-sm text-gray-400 mt-1">
                                     {program.description}
                                   </p>
                                 )}
                                 <div className="flex gap-2 mt-2 flex-wrap">
                                   {(program as any).type && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-900 text-blue-300">
                                       {(program as any).type}
                                     </span>
                                   )}
                                   {(program as any).billingModel && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-700 text-gray-300">
                                       {(program as any).billingModel}
                                     </span>
                                   )}
                                   {(program as any).type === "Subscription" && (program as any).billingCycle && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-900 text-green-300">
                                       {(program as any).billingCycle}
                                     </span>
                                   )}
@@ -477,7 +471,7 @@ function PackageSelectionStep({
                               </div>
                               {program.price && (
                                 <div className="text-right ml-4">
-                                  <p className="font-bold text-blue-600" data-testid={`text-program-price-${program.id}`}>
+                                  <p className="font-bold text-red-400" data-testid={`text-program-price-${program.id}`}>
                                     ${(program.price / 100).toFixed(2)}
                                   </p>
                                   {(program as any).type === "Subscription" && (program as any).billingCycle && (
@@ -495,19 +489,17 @@ function PackageSelectionStep({
                   ))}
                 </RadioGroup>
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-400" />
             </FormItem>
           )}
         />
-        <div className="flex justify-between pt-4">
-          <Button type="button" variant="outline" onClick={onBack} data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button type="submit" data-testid="button-next">
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
         </div>
       </form>
     </Form>
@@ -530,44 +522,44 @@ function PaymentSummaryStep({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
+        <h3 className="text-lg font-semibold mb-4 text-white">Payment Summary</h3>
         
         {/* Player Information */}
-        <div className="border rounded-lg p-4 mb-4 bg-gray-50">
-          <h4 className="font-medium text-gray-700 mb-2">Player Information</h4>
+        <div className="border border-gray-700 rounded-lg p-4 mb-4 bg-gray-800/50">
+          <h4 className="font-medium text-gray-300 mb-2">Player Information</h4>
           <div className="space-y-1 text-sm">
             <p data-testid="text-player-name">
-              <span className="text-gray-600">Name:</span>{" "}
-              <span className="font-medium">{playerData.firstName} {playerData.lastName}</span>
+              <span className="text-gray-400">Name:</span>{" "}
+              <span className="font-medium text-white">{playerData.firstName} {playerData.lastName}</span>
             </p>
             <p data-testid="text-player-dob">
-              <span className="text-gray-600">Date of Birth:</span>{" "}
-              <span className="font-medium">{playerData.dateOfBirth}</span>
+              <span className="text-gray-400">Date of Birth:</span>{" "}
+              <span className="font-medium text-white">{playerData.dateOfBirth}</span>
             </p>
             <p data-testid="text-player-gender">
-              <span className="text-gray-600">Gender:</span>{" "}
-              <span className="font-medium capitalize">{playerData.gender}</span>
+              <span className="text-gray-400">Gender:</span>{" "}
+              <span className="font-medium text-white capitalize">{playerData.gender}</span>
             </p>
           </div>
         </div>
 
         {/* Package Information */}
         {selectedProgram && (
-          <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-            <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+          <div className="border border-red-900 rounded-lg p-4 bg-red-950/30">
+            <h4 className="font-medium text-gray-300 mb-2 flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
               Selected Package
             </h4>
             <div className="space-y-1">
-              <p className="font-semibold text-gray-900" data-testid="text-selected-program-name">
+              <p className="font-semibold text-white" data-testid="text-selected-program-name">
                 {selectedProgram.name}
               </p>
               {selectedProgram.description && (
-                <p className="text-sm text-gray-600">{selectedProgram.description}</p>
+                <p className="text-sm text-gray-400">{selectedProgram.description}</p>
               )}
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-blue-200">
-                <span className="text-gray-700 font-medium">Total Amount:</span>
-                <span className="text-2xl font-bold text-blue-600" data-testid="text-total-amount">
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-red-900">
+                <span className="text-gray-300 font-medium">Total Amount:</span>
+                <span className="text-2xl font-bold text-red-400" data-testid="text-total-amount">
                   ${selectedProgram.price ? (selectedProgram.price / 100).toFixed(2) : "0.00"}
                 </span>
               </div>
@@ -576,32 +568,31 @@ function PaymentSummaryStep({
         )}
 
         {/* Payment Notice */}
-        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded-lg">
+          <p className="text-sm text-gray-300">
             <strong>Note:</strong> You will be redirected to a secure payment page to complete your transaction.
             The player will be added to your account after successful payment.
           </p>
         </div>
       </div>
 
-      <div className="flex justify-between pt-4">
-        <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting} data-testid="button-back">
-          <ChevronLeft className="w-4 h-4 mr-2" />
-          Back
-        </Button>
-        <Button onClick={onSubmit} disabled={isSubmitting} data-testid="button-proceed-payment">
+      <div className="flex justify-between pt-6">
+        <button type="button" onClick={onBack} disabled={isSubmitting} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors disabled:opacity-50">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button onClick={onSubmit} disabled={isSubmitting} data-testid="button-proceed-payment" className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
           {isSubmitting ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               Processing...
             </>
           ) : (
             <>
-              <CreditCard className="w-4 h-4 mr-2" />
+              <CreditCard className="w-4 h-4" />
               Proceed to Payment
             </>
           )}
-        </Button>
+        </button>
       </div>
     </div>
   );

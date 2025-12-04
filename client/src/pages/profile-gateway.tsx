@@ -111,11 +111,13 @@ export default function ProfileGateway() {
             </Card>
           )}
 
-          {(isCoach || isAdmin) && (
+          {players.length > 0 && (
             <>
-              <div className="border-t border-gray-700 my-6 pt-4">
-                <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
-              </div>
+              {(isCoach || isAdmin) && (
+                <div className="border-t border-gray-700 my-6 pt-4">
+                  <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
+                </div>
+              )}
 
               {players.map((player: any) => (
                 <Card 

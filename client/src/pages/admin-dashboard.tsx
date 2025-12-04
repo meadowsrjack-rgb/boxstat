@@ -32,6 +32,7 @@ import {
   ChevronRight,
   CalendarDays,
   List,
+  Dribble,
   Eye,
   ArrowLeft,
   Star,
@@ -257,8 +258,12 @@ export default function AdminDashboard() {
                 Users
               </TabsTrigger>
               <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Users className="w-4 h-4 mr-2" />
+                <Dribble className="w-4 h-4 mr-2" />
                 Teams
+              </TabsTrigger>
+              <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Layers className="w-4 h-4 mr-2" />
+                Divisions
               </TabsTrigger>
               <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Calendar className="w-4 h-4 mr-2" />
@@ -271,10 +276,6 @@ export default function AdminDashboard() {
               <TabsTrigger value="products" data-testid="tab-products" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <DollarSign className="w-4 h-4 mr-2" />
                 Products
-              </TabsTrigger>
-              <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Layers className="w-4 h-4 mr-2" />
-                Divisions
               </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
@@ -320,6 +321,10 @@ export default function AdminDashboard() {
             <TeamsTab teams={teams} users={users} divisions={divisions} organization={organization} />
           </TabsContent>
 
+          <TabsContent value="divisions">
+            <DivisionsTab divisions={divisions} users={users} teams={teams} organization={organization} />
+          </TabsContent>
+
           <TabsContent value="events">
             <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} />
           </TabsContent>
@@ -330,10 +335,6 @@ export default function AdminDashboard() {
 
           <TabsContent value="products">
             <ProductsTab organization={organization} />
-          </TabsContent>
-
-          <TabsContent value="divisions">
-            <DivisionsTab divisions={divisions} teams={teams} organization={organization} />
           </TabsContent>
 
           <TabsContent value="notifications">

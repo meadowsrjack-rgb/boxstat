@@ -69,9 +69,7 @@ export default function ProfileGateway() {
         </div>
 
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">
-            Who's Using BoxStat?
-          </h1>
+          <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
         </div>
 
         <div className="space-y-4">

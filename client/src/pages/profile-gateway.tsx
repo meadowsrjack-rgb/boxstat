@@ -60,7 +60,7 @@ export default function ProfileGateway() {
           <Button
             variant="ghost"
             onClick={() => handleSelectProfile("account")}
-            className="text-gray-400 hover:text-white hover:bg-gray-800 flex items-center gap-2"
+            className="bg-[#293845c2] text-gray-400 hover:text-white hover:bg-gray-800 flex items-center gap-2"
             data-testid="button-account-settings"
           >
             <Settings className="w-12 h-12" />

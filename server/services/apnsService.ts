@@ -1,12 +1,12 @@
 import * as https from 'https';
 import * as http2 from 'http2';
-import * as jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 
 // APNs Configuration from environment variables
 const APNS_KEY_ID = process.env.APNS_KEY_ID;
 const APNS_TEAM_ID = process.env.APNS_TEAM_ID;
 const APNS_AUTH_KEY = process.env.APNS_AUTH_KEY;
-const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'com.boxstat.app';
+const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'boxstat.app';
 
 // APNs endpoints
 const APNS_HOST_PRODUCTION = 'api.push.apple.com';
@@ -25,16 +25,30 @@ function getPrivateKey(): string | null {
   
   // Handle both raw key and escaped newlines
   let key = APNS_AUTH_KEY;
+  
+  // Replace escaped newlines with actual newlines
   if (key.includes('\\n')) {
     key = key.replace(/\\n/g, '\n');
   }
   
-  // Ensure proper PEM format
-  if (!key.startsWith('-----BEGIN PRIVATE KEY-----')) {
-    key = `-----BEGIN PRIVATE KEY-----\n${key}\n-----END PRIVATE KEY-----`;
+  // If key already has proper PEM format with newlines, use it
+  if (key.includes('-----BEGIN PRIVATE KEY-----') && key.includes('\n')) {
+    return key;
   }
   
-  return key;
+  // Extract just the base64 content if wrapped in PEM headers (but no newlines)
+  let base64Content = key;
+  if (key.includes('-----BEGIN PRIVATE KEY-----')) {
+    base64Content = key
+      .replace('-----BEGIN PRIVATE KEY-----', '')
+      .replace('-----END PRIVATE KEY-----', '')
+      .replace(/\s/g, ''); // Remove any whitespace
+  }
+  
+  // Format with proper 64-character line breaks for PEM
+  const formattedKey = base64Content.match(/.{1,64}/g)?.join('\n') || base64Content;
+  
+  return `-----BEGIN PRIVATE KEY-----\n${formattedKey}\n-----END PRIVATE KEY-----`;
 }
 
 function generateJWT(): string | null {

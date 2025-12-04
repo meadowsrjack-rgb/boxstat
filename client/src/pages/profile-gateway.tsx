@@ -72,7 +72,6 @@ export default function ProfileGateway() {
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">
             Who's Using BoxStat?
           </h1>
-          <p className="text-gray-400">Select a profile to continue</p>
         </div>
 
         <div className="space-y-4">

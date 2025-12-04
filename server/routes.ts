@@ -2529,7 +2529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.delete('/api/users/:id', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
+    const { role, organizationId } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
@@ -2539,37 +2539,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Get the user being deleted
     const user = await storage.getUser(userId);
     
-    // Soft delete: set isActive to false and clear credentials
-    await storage.updateUser(userId, {
-      isActive: false,
-      password: null,
-      verificationToken: null,
-      verificationExpiry: null,
-      magicLinkToken: null,
-      magicLinkExpiry: null,
-    });
-    
-    // If this is a child user (has accountHolderId), check if parent has any other active children
-    if (user?.accountHolderId) {
-      const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      const activeChildren = allUsers.filter((u: any) => 
-        u.accountHolderId === user.accountHolderId && u.isActive && u.id !== userId
-      );
-      
-      // If no active children remain, deactivate the parent too
-      if (activeChildren.length === 0) {
-        await storage.updateUser(user.accountHolderId, {
-          isActive: false,
-          password: null,
-          verificationToken: null,
-          verificationExpiry: null,
-          magicLinkToken: null,
-          magicLinkExpiry: null,
-        });
-      }
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
     
-    res.json({ success: true });
+    try {
+      // Get all children of this user (if parent account)
+      const allUsers = await storage.getUsersByOrganization(user.organizationId);
+      const childUsers = allUsers.filter((u: any) => u.accountHolderId === userId);
+      
+      // Hard delete all child profiles first
+      for (const child of childUsers) {
+        // Delete pending registration for child email
+        if (child.email) {
+          await storage.deletePendingRegistration(child.email, child.organizationId);
+        }
+        await storage.deleteUser(child.id);
+      }
+      
+      // Delete pending registration for this user's email
+      if (user.email) {
+        await storage.deletePendingRegistration(user.email, user.organizationId);
+      }
+      
+      // If this is a child user, check if parent should also be deleted
+      if (user.accountHolderId) {
+        const remainingChildren = allUsers.filter((u: any) => 
+          u.accountHolderId === user.accountHolderId && u.id !== userId
+        );
+        
+        // If no children remain, delete the parent too
+        if (remainingChildren.length === 0) {
+          const parent = await storage.getUser(user.accountHolderId);
+          if (parent?.email) {
+            await storage.deletePendingRegistration(parent.email, parent.organizationId);
+          }
+          await storage.deleteUser(user.accountHolderId);
+        }
+      }
+      
+      // Hard delete the user
+      await storage.deleteUser(userId);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ message: 'Failed to delete user', error: error.message });
+    }
   });
   
   // Get user's team information

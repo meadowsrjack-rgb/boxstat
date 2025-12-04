@@ -836,6 +836,7 @@ function ParentInfoStep({
                         defaultDay={defaultDay}
                         startYear={1920}
                         endYear={new Date().getFullYear()}
+                        dateTimeFormatOptions={{ month: 'short' }}
                         highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
                         onDateChange={(date) => setTempDate(date)}
                       />
@@ -1026,6 +1027,7 @@ function PlayerInfoStep({
                         defaultDay={defaultDay}
                         startYear={2000}
                         endYear={new Date().getFullYear()}
+                        dateTimeFormatOptions={{ month: 'short' }}
                         highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
                         onDateChange={(date) => setTempDate(date)}
                       />

@@ -350,6 +350,7 @@ function DOBStep({
                       defaultDay={defaultDay}
                       startYear={2000}
                       endYear={new Date().getFullYear()}
+                      dateTimeFormatOptions={{ month: 'short' }}
                       highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
                       onDateChange={handleDateChange}
                     />

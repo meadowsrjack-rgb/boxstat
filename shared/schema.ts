@@ -205,6 +205,8 @@ export const users = pgTable("users", {
   postalCode: varchar("postal_code"),
   concussionWaiverAcknowledged: boolean("concussion_waiver_acknowledged").default(false),
   concussionWaiverDate: timestamp("concussion_waiver_date", { mode: 'string' }),
+  clubAgreementAcknowledged: boolean("club_agreement_acknowledged").default(false),
+  clubAgreementDate: timestamp("club_agreement_date", { mode: 'string' }),
   passcode: varchar({ length: 4 }),
   password: varchar(),
   city: varchar(),

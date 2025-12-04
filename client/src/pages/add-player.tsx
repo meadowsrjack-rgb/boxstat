@@ -742,6 +742,220 @@ function ConcussionWaiverStep({
   );
 }
 
+function ClubAgreementStep({
+  defaultValues,
+  onSubmit,
+  onBack,
+}: {
+  defaultValues: { clubAgreementAcknowledged: boolean };
+  onSubmit: (data: ClubAgreement) => void;
+  onBack: () => void;
+}) {
+  const form = useForm<ClubAgreement>({
+    resolver: zodResolver(clubAgreementSchema),
+    defaultValues: { clubAgreementAcknowledged: defaultValues.clubAgreementAcknowledged },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex items-center gap-3 mb-4">
+          <FileText className="w-8 h-8 text-red-500" />
+          <h2 className="text-2xl font-bold text-white">Club Team Agreement</h2>
+        </div>
+        
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
+          <p className="text-gray-300 text-sm">
+            Please review the UYP Club Team Experience agreement carefully before proceeding. 
+            This agreement outlines the expectations and commitments for parents, players, and coaches.
+          </p>
+        </div>
+        
+        <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-80 overflow-y-auto text-sm text-gray-300 space-y-4">
+          <div className="text-center border-b border-gray-700 pb-4 mb-4">
+            <h3 className="text-white font-bold text-lg">Welcome to Up Your Performance Basketball Academy</h3>
+            <p className="text-gray-400 mt-2">UYP Youth Club Team Experience</p>
+          </div>
+          
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">ABOUT US</h4>
+            <p className="leading-relaxed">
+              UYP Basketball is dedicated to provide each individual in our program the highest quality 
+              basketball training and club team experience, through professional coaches and an organized 
+              infrastructure. We hope to inspire and empower our student athletes to excel and be leaders.
+            </p>
+            <p className="mt-2 leading-relaxed">
+              UYP Youth is the year-round club experience empowered by Up Your Performance Basketball Academy. 
+              Our overall mission is to provide a platform for student athletes to showcase their talents in 
+              a competitive environment that will prepare each athlete for High School.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">CLUB TEAM MISSION</h4>
+            <ul className="space-y-1 pl-4">
+              <li>1. Cultivate individual skills for readiness at the next playing level</li>
+              <li>2. Impart team and individual concepts to deepen comprehension of the game</li>
+              <li>3. Foster team chemistry to enable cohesive unit play</li>
+              <li>4. Emphasize playing hard, smart, and together</li>
+              <li>5. Elevate each player's confidence to the utmost level achievable</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">COACHING STAFF</h4>
+            <p className="leading-relaxed">
+              We've been integral in securing college scholarships for countless student-athletes, 
+              and our team comprises former collegiate and professional players boasting a collective 
+              coaching experience exceeding 30 years.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">PRACTICE / TRAINING SCHEDULE</h4>
+            <ul className="space-y-1 pl-4">
+              <li>• All teams practice weekly for 90 minutes each session</li>
+              <li>• Players are encouraged to participate in the weekly Skills Clinic</li>
+              <li>• Small group, semi-private, and private training classes are offered</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">TOURNAMENT SCHEDULE</h4>
+            <ul className="space-y-1 pl-4">
+              <li>• Tournaments take place in the Orange County area</li>
+              <li>• Teams engage in approximately two tournaments per month</li>
+              <li>• Exact game times come out the Thursday prior to the weekend we play</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">UNIFORMS / GEAR</h4>
+            <ul className="space-y-1 pl-4">
+              <li>• Players must wear the practice jersey to all practices and full uniform to all games</li>
+              <li>• Returning players after one season won't need to purchase additional gear</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-red-400 font-semibold mb-2">FEES</h4>
+            <ul className="space-y-1 pl-4">
+              <li>• Joining the club program requires a three-month commitment</li>
+              <li>• Payment must be made before the first practice to secure a spot</li>
+              <li>• Birth certificates and report cards must be submitted at the first practice</li>
+            </ul>
+          </div>
+
+          <div className="border-t border-gray-700 pt-4">
+            <h4 className="text-white font-bold mb-2">I. MISSION</h4>
+            <p className="leading-relaxed">
+              The club team experience aims to develop student-athletes for high school-level play. 
+              The coaching staff focuses on building confidence, work ethic, and character, emphasizing 
+              experiences and development over wins and losses.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-2">II. PARENT EXPECTATIONS AND COMMITMENT</h4>
+            <p className="leading-relaxed mb-2">
+              <span className="text-yellow-400 font-medium">Support:</span> Parental support and involvement is essential 
+              to team success. Parents must do their best to make sure the player attends all club and team functions.
+            </p>
+            <p className="leading-relaxed mb-2">
+              <span className="text-yellow-400 font-medium">Sideline Coaching:</span> We will not allow any coaching by 
+              parents on the sideline. Parents are asked to NOT engage in negative conversations with referees or 
+              parents of the opposing team.
+            </p>
+            <p className="leading-relaxed">
+              <span className="text-yellow-400 font-medium">Instruction:</span> Players will only receive one set of 
+              instructions before, during, and after practices or games. The team's head and/or assistant coach will 
+              be the only voice at all games and practices.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-2">III. COACH EXPECTATIONS AND COMMITMENT</h4>
+            <p className="leading-relaxed">
+              Coaches commit to professionalism, timely preparedness, positive feedback, transparent communication, 
+              and fostering player development.
+            </p>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-2">IV. PLAYER EXPECTATIONS AND COMMITMENT</h4>
+            <ul className="space-y-1 pl-4">
+              <li>• Accepting a roster spot is a three-month commitment</li>
+              <li>• Attend all team practices, tournaments and special events</li>
+              <li>• Wear full uniform to all games</li>
+              <li>• Players are encouraged to attend our weekly skills clinic</li>
+              <li>• Notify your coach if you are going to be absent or late to any practice or game</li>
+              <li>• Playing time will be based upon the player's performance, subject to the coach's discretion</li>
+              <li>• Sportsmanship and a positive attitude are expected at all times</li>
+              <li>• No offensive language. No fighting. No exceptions!</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-white font-bold mb-2">V. PAYMENT POLICIES</h4>
+            <p className="leading-relaxed">
+              We have a monthly fee or a pay-in-full option (three months), and parents are expected to make 
+              payments on time. If you opt for the three-month option, you are expected to commit to the three months. 
+              If the 3-month or 6-month upfront payment has been cancelled or withdrawn from the team, you will be 
+              charged the full regular monthly rate. In case of an injury or any other medical condition, you will 
+              have a credit applied to use at your return.
+            </p>
+          </div>
+
+          <div className="border-t border-gray-700 pt-4">
+            <h4 className="text-white font-bold mb-2">ACKNOWLEDGMENT</h4>
+            <p className="leading-relaxed">
+              All parties agree to uphold the outlined standards and expectations of the UYP Club Program. 
+              Players retain the right to exit after the three-month season, with automatic renewal upon team placement. 
+              Signatures below indicate acknowledgment and agreement.
+            </p>
+          </div>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="clubAgreementAcknowledged"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-700 p-4 bg-gray-800/30">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="checkbox-club-agreement"
+                  className="mt-1"
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel className="text-white font-medium">
+                  I have reviewed and agree to abide by the rules, terms, and policies
+                </FormLabel>
+                <p className="text-gray-400 text-sm">
+                  As the parent or legal guardian of the participant, I confirm that I have reviewed and agree 
+                  to abide by the rules, terms, cancellation and refund policies set forth in this registration contract.
+                </p>
+                <FormMessage className="text-red-400" />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
 function PackageSelectionStep({
   defaultValues,
   programs,

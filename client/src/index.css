@@ -315,12 +315,11 @@
     color: white !important;
   }
   
-  /* Highlight middle text item with red background */
+  /* Highlight selected date with lighter text */
   .date-wheel-picker-dark [class*="highlight"],
-  .date-wheel-picker-dark [class*="selected"],
-  .date-wheel-picker-dark div[style*="opacity"] {
-    background-color: rgba(220, 38, 38, 0.3) !important;
-    color: #dc2626 !important;
+  .date-wheel-picker-dark [class*="selected"] {
+    background-color: transparent !important;
+    color: #ffffff !important;
     border: none !important;
   }
 

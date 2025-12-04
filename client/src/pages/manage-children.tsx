@@ -31,6 +31,7 @@ import {
   Eye
 } from "lucide-react";
 import QRCode from "qrcode";
+import { DateScrollPicker } from "react-date-wheel-picker";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 const childSchema = z.object({
@@ -78,6 +79,8 @@ export default function ManageChildren() {
   const [showQRCode, setShowQRCode] = useState(false);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [pinInput, setPinInput] = useState("");
+  const [showAddDobPicker, setShowAddDobPicker] = useState(false);
+  const [showEditDobPicker, setShowEditDobPicker] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<ChildFormData>({
@@ -340,9 +343,57 @@ export default function ManageChildren() {
                       <FormItem>
                         <FormLabel>Date of Birth</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <button
+                            type="button"
+                            onClick={() => setShowAddDobPicker(true)}
+                            className="w-full h-10 px-3 bg-white border border-gray-200 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <span className={field.value ? "text-gray-900" : "text-gray-400"}>
+                              {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                            </span>
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                          </button>
                         </FormControl>
                         <FormMessage />
+                        
+                        <Dialog open={showAddDobPicker} onOpenChange={setShowAddDobPicker}>
+                          <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                            <DialogHeader>
+                              <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 flex justify-center date-wheel-picker-dark">
+                              <DateScrollPicker
+                                defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
+                                defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
+                                defaultDay={field.value ? new Date(field.value).getDate() : 1}
+                                startYear={2000}
+                                endYear={new Date().getFullYear()}
+                                dateTimeFormatOptions={{ month: 'short' }}
+                                highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                                onDateChange={(date: Date) => {
+                                  field.onChange(date.toISOString().split('T')[0]);
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                                onClick={() => setShowAddDobPicker(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => setShowAddDobPicker(false)}
+                              >
+                                Confirm
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </FormItem>
                     )}
                   />
@@ -552,9 +603,57 @@ export default function ManageChildren() {
                   <FormItem>
                     <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditDobPicker(true)}
+                        className="w-full h-10 px-3 bg-white border border-gray-200 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span className={field.value ? "text-gray-900" : "text-gray-400"}>
+                          {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                        </span>
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                      </button>
                     </FormControl>
                     <FormMessage />
+                    
+                    <Dialog open={showEditDobPicker} onOpenChange={setShowEditDobPicker}>
+                      <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 flex justify-center date-wheel-picker-dark">
+                          <DateScrollPicker
+                            defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
+                            defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
+                            defaultDay={field.value ? new Date(field.value).getDate() : 1}
+                            startYear={2000}
+                            endYear={new Date().getFullYear()}
+                            dateTimeFormatOptions={{ month: 'short' }}
+                            highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                            onDateChange={(date: Date) => {
+                              field.onChange(date.toISOString().split('T')[0]);
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                            onClick={() => setShowEditDobPicker(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => setShowEditDobPicker(false)}
+                          >
+                            Confirm
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </FormItem>
                 )}
               />

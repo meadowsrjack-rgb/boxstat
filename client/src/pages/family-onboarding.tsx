@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash, ArrowLeft, Users, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
+import { Plus, Trash, ArrowLeft, Users, ChevronRight, CheckCircle2, Loader2, Calendar } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { DateScrollPicker } from "react-date-wheel-picker";
 
 // Minimal player shape for onboarding
 type NewPlayer = {
@@ -61,6 +63,9 @@ export default function FamilyOnboarding() {
 
   // Package selections: Map of player index to program ID
   const [packageSelections, setPackageSelections] = useState<Record<number, string>>({});
+
+  // Track which player's DOB picker is open
+  const [showDobPickerIdx, setShowDobPickerIdx] = useState<number | null>(null);
 
   // Fetch programs for step 2
   const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
@@ -355,13 +360,56 @@ export default function FamilyOnboarding() {
                         </div>
                         <div className="space-y-2">
                           <Label className="text-white/80">Date of Birth</Label>
-                          <Input
-                            type="date"
-                            value={player.dob ?? ""}
-                            onChange={(e) => updatePlayer(idx, "dob", e.target.value)}
+                          <button
+                            type="button"
+                            onClick={() => setShowDobPickerIdx(idx)}
                             data-testid={`input-player-dob-${idx}`}
-                            className="bg-white/5 border-white/20 text-white placeholder-white/40"
-                          />
+                            className="w-full h-10 px-3 bg-white/5 border border-white/20 text-white rounded-md flex items-center justify-between hover:bg-white/10 transition-colors"
+                          >
+                            <span className={player.dob ? "text-white" : "text-white/40"}>
+                              {player.dob ? new Date(player.dob).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                            </span>
+                            <Calendar className="w-4 h-4 text-white/40" />
+                          </button>
+                          
+                          <Dialog open={showDobPickerIdx === idx} onOpenChange={(open) => !open && setShowDobPickerIdx(null)}>
+                            <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                              <DialogHeader>
+                                <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                              </DialogHeader>
+                              <div className="py-4 flex justify-center date-wheel-picker-dark">
+                                <DateScrollPicker
+                                  defaultYear={player.dob ? new Date(player.dob).getFullYear() : 2015}
+                                  defaultMonth={(player.dob ? new Date(player.dob).getMonth() : 0) + 1}
+                                  defaultDay={player.dob ? new Date(player.dob).getDate() : 1}
+                                  startYear={2000}
+                                  endYear={new Date().getFullYear()}
+                                  dateTimeFormatOptions={{ month: 'short' }}
+                                  highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                                  onDateChange={(date: Date) => {
+                                    updatePlayer(idx, "dob", date.toISOString().split('T')[0]);
+                                  }}
+                                />
+                              </div>
+                              <div className="flex gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                                  onClick={() => setShowDobPickerIdx(null)}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  type="button"
+                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                  onClick={() => setShowDobPickerIdx(null)}
+                                >
+                                  Confirm
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                         <div className="space-y-2">
                           <Label className="text-white/80">Grade</Label>

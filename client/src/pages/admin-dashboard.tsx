@@ -68,6 +68,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ChevronDown } from "lucide-react";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { DateScrollPicker } from "react-date-wheel-picker";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -509,6 +510,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [detailTab, setDetailTab] = useState("team");
+  const [showDobPicker, setShowDobPicker] = useState(false);
   const tableRef = useDragScroll();
 
   // Fetch user evaluations - only when viewing user in performance tab
@@ -1107,13 +1109,56 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   
                   <div className="space-y-2">
                     <Label htmlFor="edit-dob" data-testid="label-edit-dob">Date of Birth</Label>
-                    <Input 
-                      id="edit-dob"
-                      type="date"
-                      value={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).toISOString().split('T')[0] : ""}
-                      onChange={(e) => setEditingUser({...editingUser, dateOfBirth: e.target.value})}
+                    <button
+                      type="button"
+                      onClick={() => setShowDobPicker(true)}
                       data-testid="input-edit-dob"
-                    />
+                      className="w-full h-10 px-3 bg-white border border-gray-300 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <span className={editingUser.dateOfBirth ? "text-gray-900" : "text-gray-400"}>
+                        {editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date"}
+                      </span>
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                    </button>
+                    
+                    <Dialog open={showDobPicker} onOpenChange={setShowDobPicker}>
+                      <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                        <DialogHeader>
+                          <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 flex justify-center date-wheel-picker-dark">
+                          <DateScrollPicker
+                            defaultYear={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getFullYear() : 2000}
+                            defaultMonth={(editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getMonth() : 0) + 1}
+                            defaultDay={editingUser.dateOfBirth ? new Date(editingUser.dateOfBirth).getDate() : 1}
+                            startYear={1950}
+                            endYear={new Date().getFullYear()}
+                            dateTimeFormatOptions={{ month: 'short' }}
+                            highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                            onDateChange={(date: Date) => {
+                              setEditingUser({...editingUser, dateOfBirth: date.toISOString().split('T')[0]});
+                            }}
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                            onClick={() => setShowDobPicker(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => setShowDobPicker(false)}
+                          >
+                            Confirm
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   
                   <div className="space-y-2">

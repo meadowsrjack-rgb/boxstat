@@ -8,7 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Clock, MapPin, Plus, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, Calendar as CalendarIcon, Clock, MapPin, Plus, CheckCircle, XCircle } from "lucide-react";
+import { DateScrollPicker } from "react-date-wheel-picker";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
@@ -60,6 +61,7 @@ export default function ScheduleRequests() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const form = useForm<ScheduleRequestFormData>({
     resolver: zodResolver(scheduleRequestSchema),
@@ -263,9 +265,57 @@ export default function ScheduleRequests() {
                       <FormItem>
                         <FormLabel>Requested Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <button
+                            type="button"
+                            onClick={() => setShowDatePicker(true)}
+                            className="w-full h-10 px-3 bg-white border border-gray-200 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                          >
+                            <span className={field.value ? "text-gray-900" : "text-gray-400"}>
+                              {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date"}
+                            </span>
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                          </button>
                         </FormControl>
                         <FormMessage />
+                        
+                        <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+                          <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                            <DialogHeader>
+                              <DialogTitle className="text-white text-center">Select Requested Date</DialogTitle>
+                            </DialogHeader>
+                            <div className="py-4 flex justify-center date-wheel-picker-dark">
+                              <DateScrollPicker
+                                defaultYear={field.value ? new Date(field.value).getFullYear() : new Date().getFullYear()}
+                                defaultMonth={(field.value ? new Date(field.value).getMonth() : new Date().getMonth()) + 1}
+                                defaultDay={field.value ? new Date(field.value).getDate() : new Date().getDate()}
+                                startYear={new Date().getFullYear()}
+                                endYear={new Date().getFullYear() + 2}
+                                dateTimeFormatOptions={{ month: 'short' }}
+                                highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                                onDateChange={(date: Date) => {
+                                  field.onChange(date.toISOString().split('T')[0]);
+                                }}
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                                onClick={() => setShowDatePicker(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                onClick={() => setShowDatePicker(false)}
+                              >
+                                Confirm
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </FormItem>
                     )}
                   />

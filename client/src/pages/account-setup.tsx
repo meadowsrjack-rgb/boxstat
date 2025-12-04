@@ -10,11 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { User, Baby, Users, Calendar, Phone, MapPin, AlertTriangle, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { DateScrollPicker } from "react-date-wheel-picker";
 import logoPath from "@assets/UYP Logo nback_1752703900579.png";
 
 // Account setup schema for new users with conditional validation
@@ -57,6 +59,7 @@ export default function AccountSetup() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [step, setStep] = useState(1);
+  const [showDobPicker, setShowDobPicker] = useState(false);
 
   const form = useForm<AccountSetupData>({
     resolver: zodResolver(accountSetupSchema),
@@ -318,9 +321,57 @@ export default function AccountSetup() {
                               Date of Birth
                             </FormLabel>
                             <FormControl>
-                              <Input type="date" {...field} />
+                              <button
+                                type="button"
+                                onClick={() => setShowDobPicker(true)}
+                                className="w-full h-10 px-3 bg-white border border-gray-200 rounded-md flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+                              >
+                                <span className={field.value ? "text-gray-900" : "text-gray-400"}>
+                                  {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                                </span>
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                              </button>
                             </FormControl>
                             <FormMessage />
+                            
+                            <Dialog open={showDobPicker} onOpenChange={setShowDobPicker}>
+                              <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                                <DialogHeader>
+                                  <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                                </DialogHeader>
+                                <div className="py-4 flex justify-center date-wheel-picker-dark">
+                                  <DateScrollPicker
+                                    defaultYear={field.value ? new Date(field.value).getFullYear() : 2000}
+                                    defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
+                                    defaultDay={field.value ? new Date(field.value).getDate() : 1}
+                                    startYear={1950}
+                                    endYear={new Date().getFullYear()}
+                                    dateTimeFormatOptions={{ month: 'short' }}
+                                    highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
+                                    onDateChange={(date: Date) => {
+                                      field.onChange(date.toISOString().split('T')[0]);
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-3">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
+                                    onClick={() => setShowDobPicker(false)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => setShowDobPicker(false)}
+                                  >
+                                    Confirm
+                                  </Button>
+                                </div>
+                              </DialogContent>
+                            </Dialog>
                           </FormItem>
                         )}
                       />

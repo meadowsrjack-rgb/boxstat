@@ -1,0 +1,166 @@
+`UIScene` lifecycle will soon be required. Failure to adopt will result in an assert in the future.
+Could not create a sandbox extension for '/var/containers/Bundle/Application/897F20C1-AD63-4977-88FC-2838B939EFD3/App.app'
+⚡️  Loading app at https://boxstat.app...
+Networking process (0x113060190) took 1.728525 seconds to launch
+WebContent process (0x1130dc100) took 1.373378 seconds to launch
+GPU process (0x1131081e0) took 1.154191 seconds to launch
+⚡️  JS Eval error A JavaScript exception occurred
+WebContent[76194] Unable to hide query parameters from script (missing data)
+⚡️  WebView loaded
+⚡️  To Native ->  App addListener 115169337
+⚡️  [log] - 🔑 useAuth: Token from localStorage: NULL
+⚡️  [log] - ⚠️ useAuth: No token, using cookies only
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - [DeepLink] Deep link listener initialized
+⚡️  [log] - Deep link listeners initialized
+⚡️  [log] - 📥 useAuth: Response status: 401
+⚡️  [log] - 🚫 useAuth: Not authenticated (401)
+0x1131081e0 - GPUProcessProxy::gpuProcessExited: reason=IdleExit
+0x1130dc100 - [PID=76194] WebProcessProxy::gpuProcessExited: reason=IdleExit
+Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x146d392f0 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
+Failed to terminate process: Error Domain=com.apple.extensionKit.errorDomain Code=18 "(null)" UserInfo={NSUnderlyingError=0x146c88840 {Error Domain=RBSRequestErrorDomain Code=3 "No such process found" UserInfo={NSLocalizedFailureReason=No such process found}}}
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x14719a080 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b000.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a5180 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x14719a0d0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b000]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a5180 )>",
+    "<NSLayoutConstraint:0x147199860 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b000.width == _UIButtonBarButton:0x1470a5680.width   (active)>",
+    "<NSLayoutConstraint:0x147199f40 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a5180.width == 0   (active)>",
+    "<NSLayoutConstraint:0x1471999a0 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x1471e9180]   (active, names: '|':_UIButtonBarButton:0x1470a5680 )>",
+    "<NSLayoutConstraint:0x1471999f0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a5680 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x1471999f0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9180]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a5680 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x14719b390 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b400.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a4c80 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x14719b3e0 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b400]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a4c80 )>",
+    "<NSLayoutConstraint:0x14719ac10 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b400.width == _UIButtonBarButton:0x1470a4f00.width   (active)>",
+    "<NSLayoutConstraint:0x14719b250 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a4c80.width == 0   (active)>",
+    "<NSLayoutConstraint:0x14719ad50 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x1471e9500]   (active, names: '|':_UIButtonBarButton:0x1470a4f00 )>",
+    "<NSLayoutConstraint:0x14719ada0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a4f00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x14719ada0 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9500]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a4f00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+Unable to simultaneously satisfy constraints.
+	Probably at least one of the constraints in the following list is one you don't want. 
+	Try this: 
+		(1) look at each constraint and try to figure out which you don't expect; 
+		(2) find the code that added the unwanted constraint or constraints and fix it. 
+	(Note: If you're seeing NSAutoresizingMaskLayoutConstraints that you don't understand, refer to the documentation for the UIView property translatesAutoresizingMaskIntoConstraints) 
+(
+    "<NSAutoresizingMaskLayoutConstraint:0x147153f70 h=-&- v=-&- _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b800.minX == 0   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a6800 )>",
+    "<NSAutoresizingMaskLayoutConstraint:0x147153f20 h=-&- v=-&- H:[_TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b800]-(0)-|   (active, names: '|':_TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a6800 )>",
+    "<NSLayoutConstraint:0x14719be30 _TtC5UIKitP33_DDE14AA6B49FCAFC5A54255A118E1D8713ButtonWrapper:0x14710b800.width == _UIButtonBarButton:0x1470a4a00.width   (active)>",
+    "<NSLayoutConstraint:0x146d329e0 '_UITemporaryLayoutWidth' _TtGC5UIKit22UICorePlatformViewHostGVS_32PlatformViewRepresentableAdaptorVS_P10$193a1420020ButtonRepresentation__:0x1470a6800.width == 0   (active)>",
+    "<NSLayoutConstraint:0x14719bf20 'IB_Leading_Leading' H:|-(8)-[_UIModernBarButton:0x1471e9880]   (active, names: '|':_UIButtonBarButton:0x1470a4a00 )>",
+    "<NSLayoutConstraint:0x14719bf70 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a4a00 )>"
+)
+
+Will attempt to recover by breaking constraint 
+<NSLayoutConstraint:0x14719bf70 'IB_Trailing_Trailing' H:[_UIModernBarButton:0x1471e9880]-(8)-|   (active, names: '|':_UIButtonBarButton:0x1470a4a00 )>
+
+Make a symbolic breakpoint at UIViewAlertForUnsatisfiableConstraints to catch this in the debugger.
+The methods in the UIConstraintBasedLayoutDebugging category on UIView listed in <UIKitCore/UIView.h> may also be helpful.
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = AFFE9F2C-CEF8-41EC-8ACD-D2D12BAFE93B
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = AFFE9F2C-CEF8-41EC-8ACD-D2D12BAFE93B
+⚡️  [log] - 🔐 Attempting login with email: test@example.com
+⚡️  [log] - 🌐 Current window location: https://boxstat.app/login
+⚡️  [log] - 📡 Sending POST to /api/auth/login
+⚡️  [log] - ✅ Login response received: {"success":true,"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTc2MTMzNjcxMi43NzI5MDgiLCJvcmdhbml6YXRpb25JZCI6ImRlZmF1bHQtb3JnIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY0ODE1NDE3LCJleHAiOjE3Njc0MDc0MTd9.cyjleq2bbxWJkcxLZkCgceJ6YhU4afbAqI478fC25V8","user":{"id":"test-user-1761336712.772908","email":"test@example.com","role":"admin","firstName":"Admin","lastName":"1"}}
+⚡️  [log] - 🎯 Login success branch - token present? true
+⚡️  [log] - 💾 About to store JWT token...
+⚡️  [log] - ✅ Token stored! Verifying...
+⚡️  [log] - 🔍 Token retrieved from storage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - 🚀 Redirecting to: /account
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+⚡️  WebView loaded
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - [DeepLink] Deep link listener initialized
+⚡️  To Native ->  App addListener 18885009
+⚡️  [log] - Deep link listeners initialized
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - User authenticated, initializing push notifications...
+⚡️  [log] - [Push Init] 🔔 Initializing push notification listeners...
+⚡️  [log] - [Push Init] Platform: ios
+⚡️  To Native ->  PushNotifications addListener 18885010
+⚡️  To Native ->  PushNotifications addListener 18885011
+⚡️  To Native ->  PushNotifications addListener 18885012
+⚡️  To Native ->  PushNotifications addListener 18885013
+⚡️  [log] - [Push Init] ✅ All push notification listeners initialized successfully
+⚡️  [log] - Push notification listeners set up
+⚡️  To Native ->  PushNotifications checkPermissions 18885014
+⚡️  [log] - [Push Register] Starting push notification registration flow...
+⚡️  TO JS {"receive":"prompt"}
+⚡️  To Native ->  PushNotifications requestPermissions 18885015
+⚡️  [log] - [Push Register] 🔐 Current permission status: prompt
+⚡️  [log] - [Push Register] 🔐 Permission not yet requested, requesting now...
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+WebContent[76194] handle_error:268: IDAT: CRC error
+WebContent[76194] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[76194] handle_error:268: IDAT: CRC error
+WebContent[76194] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[76194] img_image: Bad image source
+WebContent[76194] handle_error:268: IDAT: CRC error
+WebContent[76194] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[76194] handle_error:268: IDAT: CRC error
+WebContent[76194] imagePNG_error_break:384: *** ERROR: imagePNG_error_break
+WebContent[76194] img_image: Bad image source
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  TO JS {"receive":"granted"}
+⚡️  [log] - [Push Register] Permission request result: granted
+⚡️  To Native ->  PushNotifications register 18885016
+⚡️  [log] - [Push Register] ✅ Push notification permissions granted
+⚡️  [log] - [Push Register] 📱 Calling PushNotifications.register() to get FCM token...
+⚡️  TO JS undefined
+⚡️  [log] - [Push Register] 📱 Registration API called successfully, waiting for FCM token callback...
+✅ [AppDelegate] APNs Device Token: 6349f3c36af754258020946d11372ca1600682c168250a94db44e7b67bd4f7b5
+⚡️  TO JS {"value":"6349F3C36AF754258020946D11372CA1600682C168250A94DB44E7B67BD4F7B5"}
+⚡️  [log] - [Push Registration] ✅ FCM token received: 6349F3C36AF754258020946D11372CA1600682C168250A94DB44E7B67BD4F7B5
+⚡️  [log] - [Push Registration] Token length: 64
+⚡️  [log] - [Push Registration] Sending token to backend: https://boxstat.app/api/push/register
+⚡️  [log] - [Push Registration] Backend response status: 200
+⚡️  [log] - [Push Registration] ✅ Token successfully registered with backend
+⚡️  [log] - [Push Registration] Backend response: {"success":true,"platform":"ios","deviceType":"iPhone","apnsEnvironment":"sandbox"}
+⚡️  [log] - 🔑 useAuth: Token from localStorage: eyJhbGciOiJIUzI1NiIs...
+⚡️  [log] - ✅ useAuth: Added Authorization header
+⚡️  [log] - 📡 useAuth: Fetching from: https://boxstat.app/api/auth/user
+⚡️  [log] - 📥 useAuth: Response status: 200
+⚡️  [log] - 👤 useAuth: User data received: test@example.com
+⚡️  [warn] - Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = <null selector>, customInfoType = UIEmojiSearchOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = AFFE9F2C-CEF8-41EC-8ACD-D2D12BAFE93B
+-[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:]  Can only set suggestions for an active session. sessionID = AFFE9F2C-CEF8-41EC-8ACD-D2D12BAFE93B
+⚡️  [log] - [Notification Form] Submitting notification: {"organizationId":"default-org","types":["message","announcement","notification"],"title":"aa","message":"aa","recipientTarget":"everyone","recipientUserIds":[],"recipientRoles":[],"recipientTeamIds":[],"recipientDivisionIds":[],"deliveryChannels":["in_app","push","email"],"sentBy":"test-user-1761336712.772908","status":"pending"}
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+-[RTIInputSystemClient remoteTextInputSessionWithID:performInputOperation:]  perform input operation requires a valid sessionID. inputModality = Keyboard, inputOperation = dismissAutoFillPanel, customInfoType = UIUserInteractionRemoteInputOperations
+Snapshotting a view (0x146eec000, UIKeyboardImpl) that is not in a visible window requires afterScreenUpdates:YES.

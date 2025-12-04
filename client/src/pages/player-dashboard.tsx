@@ -1470,14 +1470,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               </div>
             </section>
 
-            {/* Footer */}
-            <footer className="px-6 pb-12">
-              <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center">
-                <p className="text-sm">
-                  Questions about team pricing or scholarships? <a href="#" className="font-semibold text-red-600">Contact us</a>.
-                </p>
-              </div>
-            </footer>
+            
           </div>
         </DialogContent>
       </Dialog>

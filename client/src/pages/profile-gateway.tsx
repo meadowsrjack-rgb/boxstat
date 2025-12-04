@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ProfileGateway() {
@@ -111,13 +111,11 @@ export default function ProfileGateway() {
             </Card>
           )}
 
-          {players.length > 0 && (
+          {(isCoach || isAdmin) && (
             <>
-              {(isCoach || isAdmin) && (
-                <div className="border-t border-gray-700 my-6 pt-4">
-                  <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
-                </div>
-              )}
+              <div className="border-t border-gray-700 my-6 pt-4">
+                <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
+              </div>
 
               {players.map((player: any) => (
                 <Card 
@@ -143,6 +141,18 @@ export default function ProfileGateway() {
                   </CardContent>
                 </Card>
               ))}
+
+              {isParent && (
+                <Button
+                  onClick={() => setLocation("/add-player")}
+                  variant="outline"
+                  className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white flex items-center justify-center gap-2 py-6"
+                  data-testid="button-add-player-gateway"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Player
+                </Button>
+              )}
             </>
           )}
         </div>

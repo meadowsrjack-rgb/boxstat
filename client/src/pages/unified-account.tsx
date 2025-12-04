@@ -723,31 +723,14 @@ export default function UnifiedAccount() {
           <TabsContent value="home" className="space-y-6">
             {/* Player Cards Section */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold">My Players</h2>
-                <Button
-                  onClick={() => setLocation("/add-player")}
-                  variant="outline"
-                  data-testid="button-add-player"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Add Player
-                </Button>
-              </div>
+              <h2 className="text-2xl font-bold mb-4">My Players</h2>
 
               {players.length === 0 ? (
                 <Card>
                   <CardContent className="p-12 text-center">
                     <User className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <h3 className="text-lg font-semibold mb-2">No Players Yet</h3>
-                    <p className="text-gray-600 mb-4">Add your first player to get started</p>
-                    <Button
-                      onClick={() => setLocation("/add-player")}
-                      data-testid="button-add-first-player"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Add Player
-                    </Button>
+                    <p className="text-gray-600">Go to your profile to add your first player</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -1047,16 +1030,9 @@ export default function UnifiedAccount() {
                   <div className="text-center py-8" data-testid="no-children-message">
                     <User className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <h3 className="text-lg font-semibold mb-2">No Children Added</h3>
-                    <p className="text-gray-600 mb-4">
-                      Add a child to your account to check them in to events
+                    <p className="text-gray-600">
+                      Add a child to your account to check them in to events. Go to your profile to add a child.
                     </p>
-                    <Button
-                      onClick={() => setLocation("/add-player")}
-                      data-testid="button-add-child-from-events"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Add Child
-                    </Button>
                   </div>
                 ) : allUpcomingEvents.length === 0 ? (
                   <div className="text-center py-8" data-testid="no-events-message">

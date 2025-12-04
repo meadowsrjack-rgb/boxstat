@@ -156,9 +156,6 @@ export default function ProfileGateway() {
             >
               <User className="w-10 h-10 text-gray-500" />
             </button>
-            {players.length === 0 && (
-              <p className="text-gray-400 text-center text-[12px]" data-testid="text-add-first-player">Add your first player</p>
-            )}
           </div>
         </div>
       </div>

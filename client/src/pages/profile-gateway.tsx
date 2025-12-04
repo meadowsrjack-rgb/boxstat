@@ -59,12 +59,12 @@ export default function ProfileGateway() {
         <div className="absolute top-6 right-6 safe-top">
           <Button
             variant="ghost"
-            size="icon"
             onClick={() => handleSelectProfile("account")}
-            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            className="text-gray-400 hover:text-white hover:bg-gray-800 flex items-center gap-2"
             data-testid="button-account-settings"
           >
-            <Settings className="w-6 h-6" />
+            <Settings className="w-12 h-12" />
+            <span className="text-lg font-semibold">Account</span>
           </Button>
         </div>
 

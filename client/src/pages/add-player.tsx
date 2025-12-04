@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, Calendar } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { DateScrollPicker } from "react-date-wheel-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Step schemas
 const playerNameSchema = z.object({
@@ -286,6 +288,30 @@ function DOBStep({
     resolver: zodResolver(dobSchema),
     defaultValues,
   });
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
+  const [userHasSelected, setUserHasSelected] = useState(false);
+  
+  const existingDate = defaultValues.dateOfBirth ? new Date(defaultValues.dateOfBirth) : null;
+  const defaultYear = existingDate?.getFullYear() ?? 2010;
+  const defaultMonth = existingDate?.getMonth() ?? 0;
+  const defaultDay = existingDate?.getDate() ?? 1;
+  
+  const handleOpenPicker = () => {
+    if (existingDate) {
+      setTempDate(existingDate);
+      setUserHasSelected(true);
+    } else {
+      setTempDate(undefined);
+      setUserHasSelected(false);
+    }
+    setShowPicker(true);
+  };
+  
+  const handleDateChange = (date: Date) => {
+    setTempDate(date);
+    setUserHasSelected(true);
+  };
 
   return (
     <Form {...form}>
@@ -297,9 +323,67 @@ function DOBStep({
             <FormItem>
               <FormLabel className="text-gray-400">Date of Birth *</FormLabel>
               <FormControl>
-                <Input type="date" {...field} data-testid="input-dateOfBirth" className="bg-gray-800 border-gray-700 text-white" />
+                <button
+                  type="button"
+                  onClick={handleOpenPicker}
+                  data-testid="input-dateOfBirth"
+                  className="w-full h-12 px-4 bg-gray-800 border border-gray-700 text-white rounded-md flex items-center justify-between hover:bg-gray-700 transition-colors"
+                >
+                  <span className={field.value ? "text-white" : "text-gray-500"}>
+                    {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                  </span>
+                  <Calendar className="w-5 h-5 text-gray-400" />
+                </button>
               </FormControl>
               <FormMessage className="text-red-400" />
+              
+              <Dialog open={showPicker} onOpenChange={setShowPicker}>
+                <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4 flex justify-center date-wheel-picker-dark">
+                    <DateScrollPicker
+                      key={showPicker ? 'open' : 'closed'}
+                      defaultYear={defaultYear}
+                      defaultMonth={defaultMonth}
+                      defaultDay={defaultDay}
+                      startYear={2000}
+                      endYear={new Date().getFullYear()}
+                      highlightOverlayStyle={{ borderTop: '2px solid #dc2626', borderBottom: '2px solid #dc2626' }}
+                      onDateChange={handleDateChange}
+                    />
+                  </div>
+                  {!userHasSelected && (
+                    <p className="text-center text-sm text-gray-400 -mt-2">
+                      Scroll to select a date
+                    </p>
+                  )}
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
+                      onClick={() => setShowPicker(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                      disabled={!userHasSelected}
+                      onClick={() => {
+                        if (tempDate && userHasSelected) {
+                          field.onChange(tempDate.toISOString().split('T')[0]);
+                        }
+                        setShowPicker(false);
+                      }}
+                    >
+                      Confirm
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </FormItem>
           )}
         />

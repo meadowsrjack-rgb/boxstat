@@ -301,6 +301,20 @@
     @apply bg-gray-200 animate-pulse rounded;
   }
 
+  /* Date wheel picker dark theme */
+  .date-wheel-picker-dark {
+    --picker-text-color: white;
+  }
+  
+  .date-wheel-picker-dark div[class*="picker"] {
+    color: white !important;
+  }
+  
+  .date-wheel-picker-dark span,
+  .date-wheel-picker-dark div {
+    color: white !important;
+  }
+
   /* Scrollable page container - enables scrolling on desktop */
   .scrollable-page {
     @apply min-h-full;

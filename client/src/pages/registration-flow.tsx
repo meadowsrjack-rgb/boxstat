@@ -794,9 +794,17 @@ function ParentInfoStep({
           name="dateOfBirth"
           render={({ field }) => {
             const [showPicker, setShowPicker] = useState(false);
-            const [tempDate, setTempDate] = useState<Date | undefined>(
-              field.value ? new Date(field.value) : undefined
-            );
+            const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
+            
+            const existingDate = field.value ? new Date(field.value) : null;
+            const defaultYear = existingDate?.getFullYear() ?? 2000;
+            const defaultMonth = existingDate?.getMonth() ?? 0;
+            const defaultDay = existingDate?.getDate() ?? 1;
+            
+            const handleOpenPicker = () => {
+              setTempDate(existingDate ?? new Date(2000, 0, 1));
+              setShowPicker(true);
+            };
             
             return (
               <FormItem>
@@ -804,7 +812,7 @@ function ParentInfoStep({
                 <FormControl>
                   <button
                     type="button"
-                    onClick={() => setShowPicker(true)}
+                    onClick={handleOpenPicker}
                     data-testid="input-parent-dob"
                     className="w-full h-12 px-4 bg-white/5 border border-white/10 text-white rounded-md flex items-center justify-between hover:bg-white/10 transition-colors"
                   >
@@ -821,19 +829,16 @@ function ParentInfoStep({
                     <DialogHeader>
                       <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4 flex justify-center">
+                    <div className="py-4 flex justify-center date-wheel-picker-dark">
                       <DateScrollPicker
+                        key={showPicker ? 'open' : 'closed'}
+                        defaultYear={defaultYear}
+                        defaultMonth={defaultMonth}
+                        defaultDay={defaultDay}
+                        startYear={1920}
+                        endYear={new Date().getFullYear()}
+                        highlightOverlayStyle={{ borderTop: '2px solid #dc2626', borderBottom: '2px solid #dc2626' }}
                         onDateChange={(date) => setTempDate(date)}
-                        classNames={{
-                          pickerItem: {
-                            color: 'white',
-                            fontSize: '16px'
-                          },
-                          highlightOverlay: {
-                            borderTop: '2px solid #dc2626',
-                            borderBottom: '2px solid #dc2626'
-                          }
-                        }}
                       />
                     </div>
                     <div className="flex gap-3">
@@ -883,23 +888,25 @@ function PlayerInfoStep({
   emailCheckData,
   onSubmit,
   isSelf,
+  defaultValues,
 }: {
   email?: string;
   emailCheckData?: any;
   onSubmit: (data: PlayerInfo) => void;
   isSelf?: boolean;
+  defaultValues?: PlayerInfo;
 }) {
-  // Prefill data from Stripe if available
+  // Prefill data from Stripe if available, then override with defaultValues
   const prefillData = emailCheckData?.stripeCustomer?.prefillData || {};
   const [isUnderAge, setIsUnderAge] = useState(false);
   
   const form = useForm<PlayerInfo>({
     resolver: zodResolver(playerInfoSchema),
     defaultValues: {
-      firstName: prefillData.firstName || "",
-      lastName: prefillData.lastName || "",
-      dateOfBirth: "",
-      gender: "",
+      firstName: defaultValues?.firstName || prefillData.firstName || "",
+      lastName: defaultValues?.lastName || prefillData.lastName || "",
+      dateOfBirth: defaultValues?.dateOfBirth || "",
+      gender: defaultValues?.gender || "",
     },
   });
 
@@ -968,9 +975,17 @@ function PlayerInfoStep({
           name="dateOfBirth"
           render={({ field }) => {
             const [showPicker, setShowPicker] = useState(false);
-            const [tempDate, setTempDate] = useState<Date | undefined>(
-              field.value ? new Date(field.value) : undefined
-            );
+            const [tempDate, setTempDate] = useState<Date | undefined>(undefined);
+            
+            const existingDate = field.value ? new Date(field.value) : null;
+            const defaultYear = existingDate?.getFullYear() ?? 2010;
+            const defaultMonth = existingDate?.getMonth() ?? 0;
+            const defaultDay = existingDate?.getDate() ?? 1;
+            
+            const handleOpenPicker = () => {
+              setTempDate(existingDate ?? new Date(2010, 0, 1));
+              setShowPicker(true);
+            };
             
             return (
               <FormItem>
@@ -978,7 +993,7 @@ function PlayerInfoStep({
                 <FormControl>
                   <button
                     type="button"
-                    onClick={() => setShowPicker(true)}
+                    onClick={handleOpenPicker}
                     data-testid="input-player-dob"
                     className="w-full h-12 px-4 bg-white/5 border border-white/10 text-white rounded-md flex items-center justify-between hover:bg-white/10 transition-colors"
                   >
@@ -1004,19 +1019,16 @@ function PlayerInfoStep({
                     <DialogHeader>
                       <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4 flex justify-center">
+                    <div className="py-4 flex justify-center date-wheel-picker-dark">
                       <DateScrollPicker
+                        key={showPicker ? 'open' : 'closed'}
+                        defaultYear={defaultYear}
+                        defaultMonth={defaultMonth}
+                        defaultDay={defaultDay}
+                        startYear={2000}
+                        endYear={new Date().getFullYear()}
+                        highlightOverlayStyle={{ borderTop: '2px solid #dc2626', borderBottom: '2px solid #dc2626' }}
                         onDateChange={(date) => setTempDate(date)}
-                        classNames={{
-                          pickerItem: {
-                            color: 'white',
-                            fontSize: '16px'
-                          },
-                          highlightOverlay: {
-                            borderTop: '2px solid #dc2626',
-                            borderBottom: '2px solid #dc2626'
-                          }
-                        }}
                       />
                     </div>
                     <div className="flex gap-3">
@@ -1143,6 +1155,12 @@ function PlayerListStep({
         </button>
         <PlayerInfoStep
           onSubmit={savePlayer}
+          defaultValues={{
+            firstName: editingPlayer.firstName,
+            lastName: editingPlayer.lastName,
+            dateOfBirth: editingPlayer.dateOfBirth,
+            gender: editingPlayer.gender,
+          }}
         />
       </div>
     );

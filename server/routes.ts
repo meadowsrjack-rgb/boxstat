@@ -220,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apple App Site Association for Universal Links (magic link deep linking)
   app.get('/.well-known/apple-app-site-association', (req, res) => {
     const teamId = process.env.APNS_TEAM_ID || 'TEAMID';
-    const bundleId = 'com.boxstat.app';
+    const bundleId = 'boxstat.app'; // Must match iOS app bundle ID exactly
     
     const aasa = {
       applinks: {
@@ -412,7 +412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send verification email (called at step 1 of registration)
   app.post('/api/auth/send-verification', async (req: any, res) => {
     try {
-      const { email, organizationId = "default-org" } = req.body;
+      const { email, organizationId = "default-org", sourcePlatform = "web" } = req.body;
       
       if (!email) {
         return res.status(400).json({ success: false, message: "Email is required" });
@@ -428,6 +428,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Get session ID for notifying original session when verified
+      const sessionId = req.sessionID || crypto.randomBytes(16).toString('hex');
+      
       // Check if there's a pending registration
       let pending = await storage.getPendingRegistration(email, organizationId);
       
@@ -437,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (pending) {
         // Update existing pending registration
         await storage.deletePendingRegistration(email, organizationId);
-        pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry);
+        pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry, sourcePlatform, sessionId);
         
         await emailService.sendVerificationEmail({
           email,
@@ -448,12 +451,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ 
           success: true, 
           message: "Verification email re-sent. Please check your inbox.",
-          exists: true 
+          exists: true,
+          sessionId // Return session ID so frontend can poll for verification status
         });
       }
       
       // Create new pending registration
-      pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry);
+      pending = await storage.createPendingRegistration(email, organizationId, verificationToken, verificationExpiry, sourcePlatform, sessionId);
       
       // Send verification email
       await emailService.sendVerificationEmail({
@@ -465,7 +469,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Verification email sent! Please check your inbox.",
-        exists: false
+        exists: false,
+        sessionId // Return session ID so frontend can poll for verification status
       });
     } catch (error: any) {
       console.error("Send verification error:", error);
@@ -526,14 +531,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark pending registration as verified
       await storage.updatePendingRegistration(pendingReg.email, organizationId, true);
       
+      // Determine if user should check original session
+      const sourcePlatform = pendingReg.sourcePlatform || 'web';
+      const hasOriginalSession = !!pendingReg.sessionId;
+      
       res.json({ 
         success: true, 
-        message: "Email verified successfully! Continue with registration.",
+        message: hasOriginalSession 
+          ? "Email verified! Return to your original session to continue registration."
+          : "Email verified successfully! Continue with registration.",
         email: pendingReg.email,
+        sourcePlatform,
+        hasOriginalSession,
+        // Indicate that user should NOT continue in this tab if they have an original session
+        shouldRedirect: !hasOriginalSession
       });
     } catch (error: any) {
       console.error("Email verification error:", error);
       res.status(500).json({ success: false, message: "Verification failed" });
+    }
+  });
+  
+  // Poll for verification status (used by original session to detect when email is verified)
+  app.get('/api/auth/check-verification-status', async (req: any, res) => {
+    try {
+      const { email, organizationId = "default-org" } = req.query;
+      
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
+      
+      const pendingReg = await storage.getPendingRegistration(email as string, organizationId);
+      
+      if (!pendingReg) {
+        // No pending registration - either verified and completed, or never existed
+        return res.json({ 
+          success: true, 
+          verified: false,
+          notFound: true,
+          message: "No pending registration found for this email"
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        verified: pendingReg.verified,
+        email: pendingReg.email,
+        message: pendingReg.verified 
+          ? "Email verified! You can continue with registration."
+          : "Email not yet verified. Please check your inbox."
+      });
+    } catch (error: any) {
+      console.error("Check verification status error:", error);
+      res.status(500).json({ success: false, message: "Failed to check verification status" });
     }
   });
   
@@ -600,7 +650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Request magic link
   app.post('/api/auth/request-magic-link', async (req: any, res) => {
     try {
-      const { email } = req.body;
+      const { email, sourcePlatform = "web" } = req.body;
       
       if (!email) {
         return res.status(400).json({ success: false, message: "Email is required" });
@@ -623,10 +673,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const magicLinkToken = crypto.randomBytes(32).toString('hex');
       const magicLinkExpiry = new Date(Date.now() + 15 * 60 * 1000);
       
-      // Update user with magic link token
+      // Update user with magic link token and source platform
       await storage.updateUser(user.id, {
         magicLinkToken,
         magicLinkExpiry,
+        magicLinkSourcePlatform: sourcePlatform, // Track where magic link was requested from
       });
       
       // Send magic link email
@@ -678,10 +729,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ success: false, message: "Magic link has expired. Please request a new one." });
       }
       
+      // Get source platform before clearing (so we know if it came from iOS app)
+      const sourcePlatform = (user as any).magicLinkSourcePlatform || 'web';
+      
       // Clear magic link token
       await storage.updateUser(user.id, {
         magicLinkToken: null as any,
         magicLinkExpiry: null as any,
+        magicLinkSourcePlatform: null as any,
       });
       
       // Set session
@@ -707,7 +762,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: user.lastName,
           defaultDashboardView: user.defaultDashboardView
         },
-        appRedirectToken // Token for iOS app to use
+        appRedirectToken, // Token for iOS app to use
+        sourcePlatform, // Where the magic link was originally requested from
+        shouldRedirectToApp: sourcePlatform === 'ios' // Indicate if user should be redirected to iOS app
       });
     } catch (error: any) {
       console.error("Magic link login error:", error);

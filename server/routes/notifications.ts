@@ -158,7 +158,7 @@ export function setupNotificationRoutes(app: Express) {
       res.json({
         apnsConfigured: isAPNsConfigured(),
         apnsHost: process.env.NODE_ENV === 'development' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com',
-        bundleId: process.env.APNS_BUNDLE_ID || 'com.boxstat.app',
+        bundleId: process.env.APNS_BUNDLE_ID || 'boxstat.app',
         registeredDevices: {
           ios: Number(iosCount[0]?.count) || 0,
           android: Number(androidCount[0]?.count) || 0,

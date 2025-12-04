@@ -71,9 +71,9 @@ export interface IStorage {
   deleteUser(id: string): Promise<void>;
   
   // Pending Registration operations
-  getPendingRegistration(email: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null} | undefined>;
-  getPendingRegistrationByToken(token: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null} | undefined>;
-  createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; createdAt: string | null}>;
+  getPendingRegistration(email: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null} | undefined>;
+  getPendingRegistrationByToken(token: string, organizationId: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null} | undefined>;
+  createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date, sourcePlatform?: string, sessionId?: string): Promise<{id: number; email: string; organizationId: string; verificationToken: string; verificationExpiry: string; verified: boolean; sourcePlatform?: string | null; sessionId?: string | null; createdAt: string | null}>;
   updatePendingRegistration(email: string, organizationId: string, verified: boolean): Promise<void>;
   deletePendingRegistration(email: string, organizationId: string): Promise<void>;
   
@@ -865,7 +865,7 @@ class MemStorage implements IStorage {
     return undefined;
   }
   
-  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
+  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date, sourcePlatform?: string, sessionId?: string) {
     const key = `${email}-${organizationId}`;
     const pending = {
       id: this.nextPendingRegId++,
@@ -874,6 +874,8 @@ class MemStorage implements IStorage {
       verificationToken,
       verificationExpiry: verificationExpiry.toISOString(),
       verified: false,
+      sourcePlatform: sourcePlatform || 'web',
+      sessionId: sessionId || null,
       createdAt: new Date().toISOString()
     };
     this.pendingRegistrations.set(key, pending);
@@ -2442,7 +2444,7 @@ class DatabaseStorage implements IStorage {
     return results[0];
   }
   
-  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date) {
+  async createPendingRegistration(email: string, organizationId: string, verificationToken: string, verificationExpiry: Date, sourcePlatform?: string, sessionId?: string) {
     const results = await db.insert(schema.pendingRegistrations)
       .values({
         email,
@@ -2450,6 +2452,8 @@ class DatabaseStorage implements IStorage {
         verificationToken,
         verificationExpiry: verificationExpiry.toISOString(),
         verified: false,
+        sourcePlatform: sourcePlatform || 'web',
+        sessionId: sessionId || null,
       })
       .returning();
     return results[0];

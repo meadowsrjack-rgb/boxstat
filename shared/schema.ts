@@ -218,6 +218,7 @@ export const users = pgTable("users", {
   verificationExpiry: timestamp("verification_expiry", { mode: 'string' }),
   magicLinkToken: varchar("magic_link_token"),
   magicLinkExpiry: timestamp("magic_link_expiry", { mode: 'string' }),
+  magicLinkSourcePlatform: varchar("magic_link_source_platform"), // 'web' | 'ios' | 'android'
   googleId: varchar("google_id"),
   appleId: varchar("apple_id"),
   isActive: boolean("is_active").default(true).notNull(),
@@ -242,6 +243,8 @@ export const pendingRegistrations = pgTable("pending_registrations", {
   verificationToken: varchar("verification_token").notNull(),
   verificationExpiry: timestamp("verification_expiry", { mode: 'string' }).notNull(),
   verified: boolean().default(false).notNull(),
+  sourcePlatform: varchar("source_platform").default('web'), // 'web' | 'ios' | 'android'
+  sessionId: varchar("session_id"), // Session ID to notify when verified
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 

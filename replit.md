@@ -20,7 +20,11 @@ The backend is built with Node.js and Express.js (TypeScript, ESM). It includes 
 PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe operations. The schema supports users, teams, events, payments, facilities, and a 5-tier badge/trophy system. It includes structures for various programs, age/level divisions, and comprehensive user data fields. A dual-table structure manages player data, distinguishing between app users and Notion-synced roster data. A `playerId` field in the payments table ensures accurate per-player billing. A `pending_registrations` table prevents partial account creation during the multi-step registration process.
 
 ### Key Features & Design Decisions
-- **Authentication & Registration**: Features a required email verification, magic link, and a non-blocking registration flow using the pending registration system.
+- **Authentication & Registration**: Features a required email verification, magic link, and a non-blocking registration flow using the pending registration system. Key features include:
+  - **Session-Aware Email Verification**: When users verify their email by clicking the link, the original session (browser tab or iOS app) is notified via polling. The verify-email page shows "You can close this tab" with platform-specific instructions (iOS vs web) instead of logging in the clicked tab.
+  - **iOS App Redirect for Magic Links**: Magic links requested from the iOS app will redirect back to the iOS app via custom URL scheme (`boxstat://auth?token=...`) when clicked from email.
+  - **Source Platform Tracking**: The `pending_registrations` table tracks `sourcePlatform` (ios/web) and `sessionId` to correlate original sessions with verification clicks.
+  - **Verification Polling**: Registration flow polls `/api/auth/check-verification-status` every 3 seconds to detect when email is verified and automatically advances to step 2.
 - **Hub & Spoke Navigation**: After login, users are routed through a DashboardDispatcher that intelligently routes based on role:
   - Solo players → Player Dashboard directly
   - Parents without managed players → Parent Dashboard

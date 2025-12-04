@@ -36,11 +36,16 @@ export default function MagicLinkLogin() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          if (isIOSBrowser && data.appRedirectToken) {
+          // Check if the magic link was originally requested from iOS app
+          // OR if user is currently on iOS browser
+          const shouldShowAppRedirect = data.shouldRedirectToApp || (isIOSBrowser && data.appRedirectToken);
+          
+          if (shouldShowAppRedirect && data.appRedirectToken) {
             setAppRedirectToken(data.appRedirectToken);
             setStatus("browser_ios");
             setMessage("Login approved! Open BoxStat to continue.");
             
+            // Try to automatically open the app
             setTimeout(() => {
               window.location.href = `boxstat://auth?token=${data.appRedirectToken}`;
             }, 500);

@@ -11,7 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
 // Form schemas for each step
 const emailEntrySchema = z.object({
@@ -70,6 +71,8 @@ export default function RegistrationFlow() {
   
   const [currentStep, setCurrentStep] = useState(verifiedEmail && isVerified ? 2 : 1);
   const [emailSent, setEmailSent] = useState(false);
+  const [isPollingVerification, setIsPollingVerification] = useState(false);
+  const [verificationSessionId, setVerificationSessionId] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<{
     email?: string;
     emailCheckData?: any;
@@ -81,6 +84,47 @@ export default function RegistrationFlow() {
     email: verifiedEmail || undefined,
     players: [],
   });
+  
+  // Poll for email verification status when waiting for user to verify
+  useEffect(() => {
+    if (!emailSent || !registrationData.email || currentStep !== 1) return;
+    
+    setIsPollingVerification(true);
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        // Build query params with email and optional sessionId for correlation
+        const params = new URLSearchParams({
+          email: registrationData.email!,
+        });
+        if (verificationSessionId) {
+          params.append('sessionId', verificationSessionId);
+        }
+        
+        const response = await fetch(`/api/auth/check-verification-status?${params.toString()}`);
+        const data = await response.json();
+        
+        if (data.success && data.verified) {
+          clearInterval(pollInterval);
+          setIsPollingVerification(false);
+          toast({
+            title: "Email Verified!",
+            description: "Continuing with registration...",
+          });
+          // Move to next step
+          setCurrentStep(2);
+        }
+      } catch (error) {
+        console.error("Error checking verification status:", error);
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    // Cleanup interval on unmount or when conditions change
+    return () => {
+      clearInterval(pollInterval);
+      setIsPollingVerification(false);
+    };
+  }, [emailSent, registrationData.email, currentStep, verificationSessionId, toast]);
 
   const totalSteps = registrationData.registrationType === "my_child" ? 5 : 4;
 
@@ -214,12 +258,15 @@ export default function RegistrationFlow() {
             {/* Step 1: Email Entry */}
             {currentStep === 1 && !emailSent && (
               <EmailEntryStep
-                onSubmit={(data, emailCheckData) => {
+                onSubmit={(data, emailCheckData, sessionId) => {
                   setRegistrationData({ 
                     ...registrationData, 
                     email: data.email,
                     emailCheckData: emailCheckData 
                   });
+                  if (sessionId) {
+                    setVerificationSessionId(sessionId);
+                  }
                   setEmailSent(true);
                 }}
               />
@@ -237,8 +284,14 @@ export default function RegistrationFlow() {
                 </p>
                 <p className="text-white font-medium mb-6">{registrationData.email}</p>
                 <p className="text-gray-500 text-sm">
-                  Please click the link in your email to verify your account and continue with registration.
+                  Please click the link in your email to verify your account.
                 </p>
+                {isPollingVerification && (
+                  <div className="flex items-center justify-center gap-2 mt-4 text-gray-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Waiting for verification...</span>
+                  </div>
+                )}
                 <p className="text-gray-600 text-xs mt-4">
                   Don't see it? Check your spam folder.
                 </p>
@@ -348,7 +401,7 @@ export default function RegistrationFlow() {
 function EmailEntryStep({ 
   onSubmit 
 }: { 
-  onSubmit: (data: { email: string }, emailCheckData: any) => void 
+  onSubmit: (data: { email: string }, emailCheckData: any, sessionId?: string) => void 
 }) {
   const { toast } = useToast();
   const [emailCheckData, setEmailCheckData] = useState<any>(null);
@@ -401,6 +454,12 @@ function EmailEntryStep({
   const handleSubmit = async (data: { email: string }) => {
     const checkData = await checkEmail(data.email);
     
+    // Detect if running on native iOS app
+    const sourcePlatform = Capacitor.isNativePlatform() ? 'ios' : 'web';
+    
+    // Store sessionId for polling correlation
+    let sessionId: string | undefined;
+    
     // Send verification email immediately at step 1
     try {
       const verifyResponse = await apiRequest("/api/auth/send-verification", {
@@ -408,10 +467,12 @@ function EmailEntryStep({
         data: {
           email: data.email,
           organizationId: "default-org",
+          sourcePlatform, // Track where the request came from
         },
       });
       
       if (verifyResponse.success) {
+        sessionId = verifyResponse.sessionId;
         toast({
           title: "Verification Email Sent!",
           description: "Please check your inbox and verify your email before completing registration.",
@@ -430,7 +491,7 @@ function EmailEntryStep({
       console.error("Error sending verification:", error);
     }
     
-    onSubmit(data, checkData);
+    onSubmit(data, checkData, sessionId);
   };
 
   return (

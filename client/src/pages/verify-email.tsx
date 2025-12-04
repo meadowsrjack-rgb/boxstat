@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, XCircle, Loader2, CreditCard } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, CreditCard, Smartphone, Monitor } from "lucide-react";
 
 export default function VerifyEmail() {
   const [, setLocation] = useLocation();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
   const [stripeDataFound, setStripeDataFound] = useState(false);
+  const [hasOriginalSession, setHasOriginalSession] = useState(false);
+  const [sourcePlatform, setSourcePlatform] = useState<string>("web");
 
   useEffect(() => {
     const verifyEmail = async () => {
@@ -36,14 +38,17 @@ export default function VerifyEmail() {
           setStatus("success");
           setMessage(data.message);
           setStripeDataFound(data.stripeDataFound || false);
+          setHasOriginalSession(data.hasOriginalSession || false);
+          setSourcePlatform(data.sourcePlatform || "web");
           
-          // Get the verified user's email from the response
-          const userEmail = data.email || params.get("email");
-          
-          // Automatically redirect to registration to continue
-          setTimeout(() => {
-            setLocation(`/registration?verified=${encodeURIComponent(userEmail || "")}&continue=true`);
-          }, 2000);
+          // Only auto-redirect if there's NO original session waiting
+          // Otherwise, tell user to go back to their original session
+          if (data.shouldRedirect) {
+            const userEmail = data.email || params.get("email");
+            setTimeout(() => {
+              setLocation(`/registration?verified=${encodeURIComponent(userEmail || "")}&continue=true`);
+            }, 2000);
+          }
         } else {
           setStatus("error");
           setMessage(data.message || "Verification failed. Please try again.");
@@ -90,7 +95,24 @@ export default function VerifyEmail() {
                 </div>
               </div>
             )}
-            {status === "success" && (
+            {status === "success" && hasOriginalSession && (
+              <div className="text-center py-4">
+                <div className="flex justify-center mb-4">
+                  {sourcePlatform === 'ios' ? (
+                    <Smartphone className="h-12 w-12 text-blue-600" />
+                  ) : (
+                    <Monitor className="h-12 w-12 text-blue-600" />
+                  )}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">You can close this tab</h3>
+                <p className="text-sm text-gray-600">
+                  {sourcePlatform === 'ios' 
+                    ? "Return to the BoxStat app to continue registration."
+                    : "Return to your original browser tab to continue registration."}
+                </p>
+              </div>
+            )}
+            {status === "success" && !hasOriginalSession && (
               <div className="text-center py-4">
                 <Loader2 className="h-8 w-8 text-blue-600 animate-spin mx-auto mb-3" />
                 <p className="text-sm text-gray-600">Redirecting you to continue registration...</p>

@@ -1554,6 +1554,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(primaryEmail, organizationId);
+      if (existingUser) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "This email is already registered. Please login instead." 
+        });
+      }
+      
       // Validate all required fields
       if (!password || password.length < 8) {
         return res.status(400).json({ 

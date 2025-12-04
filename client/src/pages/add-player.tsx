@@ -364,7 +364,7 @@ function DOBStep({
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1 border-gray-600 text-gray-500 hover:bg-gray-800"
+                      className="flex-1 border-gray-600 text-gray-600 hover:bg-gray-800"
                       onClick={() => setShowPicker(false)}
                     >
                       Cancel

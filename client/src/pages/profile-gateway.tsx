@@ -143,35 +143,16 @@ export default function ProfileGateway() {
             </Card>
           ))}
 
-          {/* Empty State for Parents with No Players */}
-          {isParent && players.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-800 flex items-center justify-center">
-                <User className="w-10 h-10 text-gray-500" />
-              </div>
-              <p className="text-gray-400 mb-6">Add your first player to get started</p>
-              <Button
-                onClick={() => setLocation("/add-player")}
-                className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg"
-                data-testid="button-add-first-player-gateway"
-              >
-                <Plus className="w-6 h-6 mr-2" />
-                Add Player
-              </Button>
-            </div>
-          )}
-
-          {/* Add Player Button for Parents with Existing Players */}
-          {isParent && players.length > 0 && (
-            <Button
+          {/* Add Player Button for Parents */}
+          {isParent && (
+            <button
               onClick={() => setLocation("/add-player")}
-              variant="outline"
-              className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white flex items-center justify-center gap-2 py-6"
-              data-testid="button-add-player-gateway"
+              className="relative w-20 h-20 mx-auto flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 transition-colors group"
+              data-testid="button-add-player-icon"
             >
-              <Plus className="w-5 h-5" />
-              Add Player
-            </Button>
+              <User className="w-10 h-10 text-gray-500" />
+              <Plus className="w-6 h-6 text-white absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
+            </button>
           )}
         </div>
 

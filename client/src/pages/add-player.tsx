@@ -69,6 +69,20 @@ type Program = {
   price?: number;
   category?: string;
   pricingModel?: string;
+  requireAAUMembership?: boolean;
+  requireConcussionWaiver?: boolean;
+  requireClubAgreement?: boolean;
+  requiredWaivers?: string[];
+};
+
+type Waiver = {
+  id: string;
+  name: string;
+  title: string;
+  content: string;
+  requiresScroll?: boolean;
+  requiresCheckbox?: boolean;
+  isActive?: boolean;
 };
 
 export default function AddPlayer() {
@@ -85,12 +99,18 @@ export default function AddPlayer() {
     concussionWaiverAcknowledged?: boolean;
     clubAgreementAcknowledged?: boolean;
     packageId?: string;
+    customWaiverAcknowledgments?: Record<string, boolean>;
   }>({});
 
   // Fetch programs for step 4 (Package Selection)
   const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
     queryKey: ["/api/programs"],
     enabled: currentStep >= 4,
+  });
+
+  // Fetch custom waivers - always enabled so data is ready for step flow
+  const { data: waivers = [], isLoading: waiversLoading } = useQuery<Waiver[]>({
+    queryKey: ["/api/waivers"],
   });
 
   // Group programs by category
@@ -142,13 +162,54 @@ export default function AddPlayer() {
     },
   });
 
-  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 8));
-  const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
-
-  const progress = (currentStep / 8) * 100;
-
   // Get selected program for step 4 (used in later steps)
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
+
+  // Calculate dynamic step flow based on selected program's requirements
+  // Steps 1-4 are always fixed: Name, DOB, Gender, Package Selection
+  // Steps 5+ are dynamic based on package requirements
+  const getStepFlow = () => {
+    const baseSteps = ["name", "dob", "gender", "package"];
+    const waiverSteps: string[] = [];
+
+    if (selectedProgram) {
+      if (selectedProgram.requireAAUMembership) {
+        waiverSteps.push("aau");
+      }
+      if (selectedProgram.requireConcussionWaiver) {
+        waiverSteps.push("concussion");
+      }
+      if (selectedProgram.requireClubAgreement) {
+        waiverSteps.push("club");
+      }
+      // Add custom waivers
+      const customWaiverIds = selectedProgram.requiredWaivers || [];
+      customWaiverIds.forEach(waiverId => {
+        waiverSteps.push(`custom_${waiverId}`);
+      });
+    }
+
+    return [...baseSteps, ...waiverSteps, "payment"];
+  };
+
+  const stepFlow = getStepFlow();
+  const totalSteps = stepFlow.length;
+  const currentStepName = stepFlow[currentStep - 1] || "name";
+
+  // Get the custom waivers that are required for the selected program
+  const requiredCustomWaivers = selectedProgram?.requiredWaivers
+    ? waivers.filter(w => selectedProgram.requiredWaivers?.includes(w.id) && w.isActive)
+    : [];
+
+  // Get current custom waiver if on a custom waiver step
+  const currentCustomWaiver = currentStepName.startsWith("custom_")
+    ? waivers.find(w => w.id === currentStepName.replace("custom_", ""))
+    : null;
+
+  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, totalSteps));
+  const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
+
+  const progress = (currentStep / totalSteps) * 100;
 
   return (
     <div className="scrollable-page bg-gradient-to-b from-gray-900 to-black safe-bottom py-8 px-4 min-h-screen-safe">
@@ -159,7 +220,7 @@ export default function AddPlayer() {
               <UserPlus className="w-8 h-8" />
               Add Player
             </h1>
-            <span className="text-gray-400 text-sm">Step {currentStep} of 8</span>
+            <span className="text-gray-400 text-sm">Step {currentStep} of {totalSteps}</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
@@ -170,8 +231,8 @@ export default function AddPlayer() {
         </div>
 
         <div className="bg-gray-800/50 rounded-lg p-8 mb-8 border border-gray-700">
-          {/* Step 1: Player Name */}
-          {currentStep === 1 && (
+          {/* Player Name */}
+          {currentStepName === "name" && (
             <PlayerNameStep
               defaultValues={{
                 firstName: playerData.firstName || "",
@@ -185,8 +246,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 2: Date of Birth */}
-          {currentStep === 2 && (
+          {/* Date of Birth */}
+          {currentStepName === "dob" && (
             <DOBStep
               defaultValues={{ dateOfBirth: playerData.dateOfBirth || "" }}
               onSubmit={(data) => {
@@ -197,8 +258,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 3: Gender */}
-          {currentStep === 3 && (
+          {/* Gender */}
+          {currentStepName === "gender" && (
             <GenderStep
               defaultValues={{ gender: playerData.gender || "" }}
               onSubmit={(data) => {
@@ -209,8 +270,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 4: Package Selection */}
-          {currentStep === 4 && (
+          {/* Package Selection */}
+          {currentStepName === "package" && (
             <PackageSelectionStep
               defaultValues={{ packageId: playerData.packageId || "" }}
               programs={programs}
@@ -224,8 +285,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 5: AAU Membership */}
-          {currentStep === 5 && (
+          {/* AAU Membership (conditional) */}
+          {currentStepName === "aau" && (
             <AAUMembershipStep
               defaultValues={{
                 aauMembershipId: playerData.aauMembershipId || "",
@@ -239,8 +300,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 6: HEADSUP Concussion Waiver */}
-          {currentStep === 6 && (
+          {/* HEADSUP Concussion Waiver (conditional) */}
+          {currentStepName === "concussion" && (
             <ConcussionWaiverStep
               defaultValues={{
                 concussionWaiverAcknowledged: playerData.concussionWaiverAcknowledged || false,
@@ -253,8 +314,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 7: Club Agreement */}
-          {currentStep === 7 && (
+          {/* Club Agreement (conditional) */}
+          {currentStepName === "club" && (
             <ClubAgreementStep
               defaultValues={{
                 clubAgreementAcknowledged: playerData.clubAgreementAcknowledged || false,
@@ -267,8 +328,42 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 8: Payment Summary */}
-          {currentStep === 8 && (
+          {/* Custom Waivers (conditional) */}
+          {currentStepName.startsWith("custom_") && (
+            waiversLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-red-600" />
+                <span className="ml-3 text-gray-400">Loading waiver...</span>
+              </div>
+            ) : currentCustomWaiver ? (
+              <CustomWaiverStep
+                waiver={currentCustomWaiver}
+                defaultValue={playerData.customWaiverAcknowledgments?.[currentCustomWaiver.id] || false}
+                onSubmit={(acknowledged) => {
+                  setPlayerData({
+                    ...playerData,
+                    customWaiverAcknowledgments: {
+                      ...playerData.customWaiverAcknowledgments,
+                      [currentCustomWaiver.id]: acknowledged,
+                    },
+                  });
+                  handleNext();
+                }}
+                onBack={handleBack}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-400">Waiver not found. Please go back and try again.</p>
+                <button onClick={handleBack} className="mt-4 text-gray-400 hover:text-white" data-testid="button-back">
+                  <ChevronLeft className="w-6 h-6 inline mr-2" />
+                  Back
+                </button>
+              </div>
+            )
+          )}
+
+          {/* Payment Summary */}
+          {currentStepName === "payment" && (
             <PaymentSummaryStep
               playerData={playerData}
               selectedProgram={selectedProgram}
@@ -952,6 +1047,110 @@ function ClubAgreementStep({
         </div>
       </form>
     </Form>
+  );
+}
+
+// Custom Waiver Step - dynamically renders custom waivers from admin
+function CustomWaiverStep({
+  waiver,
+  defaultValue,
+  onSubmit,
+  onBack,
+}: {
+  waiver: Waiver;
+  defaultValue: boolean;
+  onSubmit: (acknowledged: boolean) => void;
+  onBack: () => void;
+}) {
+  const [acknowledged, setAcknowledged] = useState(defaultValue);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(!waiver.requiresScroll);
+
+  const handleScroll = (e: any) => {
+    const target = e.target;
+    const isAtBottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 50;
+    if (isAtBottom) {
+      setHasScrolledToBottom(true);
+    }
+  };
+
+  const handleSubmit = (e: any) => {
+    e.preventDefault();
+    if (waiver.requiresCheckbox && !acknowledged) {
+      return;
+    }
+    if (waiver.requiresScroll && !hasScrolledToBottom) {
+      return;
+    }
+    onSubmit(acknowledged);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center gap-3 mb-4">
+        <FileText className="w-8 h-8 text-red-500" />
+        <h2 className="text-2xl font-bold text-white">{waiver.title}</h2>
+      </div>
+      
+      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 mb-4">
+        <p className="text-gray-300 text-sm">
+          Please review the following {waiver.name.toLowerCase()} carefully before proceeding.
+        </p>
+      </div>
+      
+      <div 
+        className="bg-gray-900 border border-gray-700 rounded-lg p-4 max-h-80 overflow-y-auto text-sm text-gray-300 space-y-4"
+        onScroll={handleScroll}
+        data-testid="custom-waiver-content"
+      >
+        <div className="whitespace-pre-wrap leading-relaxed">
+          {waiver.content}
+        </div>
+      </div>
+
+      {waiver.requiresScroll && !hasScrolledToBottom && (
+        <p className="text-yellow-400 text-sm text-center">
+          Please scroll to the bottom to continue
+        </p>
+      )}
+
+      {waiver.requiresCheckbox && (
+        <div className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-700 p-4 bg-gray-800/30">
+          <Checkbox
+            checked={acknowledged}
+            onCheckedChange={(checked) => setAcknowledged(checked === true)}
+            disabled={waiver.requiresScroll && !hasScrolledToBottom}
+            data-testid="checkbox-custom-waiver"
+            className="mt-1"
+          />
+          <div className="space-y-1 leading-none">
+            <label className="text-white font-medium">
+              I have reviewed and acknowledge this {waiver.name.toLowerCase()}
+            </label>
+            <p className="text-gray-400 text-sm">
+              By checking this box, I confirm that I have read and understood the above.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-between pt-6">
+        <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button 
+          type="submit" 
+          data-testid="button-next" 
+          className={`transition-colors ${
+            (waiver.requiresCheckbox && !acknowledged) || (waiver.requiresScroll && !hasScrolledToBottom)
+              ? "text-gray-600 cursor-not-allowed"
+              : "text-gray-400 hover:text-white"
+          }`}
+          disabled={(waiver.requiresCheckbox && !acknowledged) || (waiver.requiresScroll && !hasScrolledToBottom)}
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      </div>
+    </form>
   );
 }
 

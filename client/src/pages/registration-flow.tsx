@@ -155,10 +155,10 @@ export default function RegistrationFlow() {
             description: "Welcome! Let's set up your first player...",
           });
           
-          // Redirect to profile gateway with full reload to ensure session is established
+          // Redirect to profile gateway using SPA navigation
           setTimeout(() => {
-            window.location.href = "/profile-gateway";
-          }, 1000);
+            setLocation("/profile-gateway");
+          }, 500);
         }
       } catch (loginError: any) {
         toast({

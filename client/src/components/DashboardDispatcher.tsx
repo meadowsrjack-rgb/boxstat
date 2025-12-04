@@ -37,18 +37,6 @@ export default function DashboardDispatcher() {
     const lastViewedProfile = localStorage.getItem("lastViewedProfileType");
     const lastSelectedPlayerId = localStorage.getItem("selectedPlayerId");
 
-    const clearStalePlayerSelection = () => {
-      console.log("[DashboardDispatcher] Clearing stale player selection from localStorage");
-      localStorage.removeItem("selectedPlayerId");
-      localStorage.removeItem("viewingAsParent");
-      localStorage.removeItem("lastViewedProfileType");
-    };
-
-    const isValidPlayerId = (playerId: string): boolean => {
-      if (!players || players.length === 0) return false;
-      return players.some((p: any) => p.id === playerId);
-    };
-
     const goToPlayerDashboard = (playerId: string, asParent: boolean) => {
       localStorage.setItem("selectedPlayerId", playerId);
       if (asParent) {
@@ -67,12 +55,8 @@ export default function DashboardDispatcher() {
 
     if (defaultDashboardView) {
       if (defaultDashboardView === "player" && activeProfileId) {
-        if (isValidPlayerId(activeProfileId)) {
-          goToPlayerDashboard(activeProfileId, isParent || isAdmin);
-          return;
-        } else {
-          console.log("[DashboardDispatcher] activeProfileId not found in players, going to gateway");
-        }
+        goToPlayerDashboard(activeProfileId, isParent || isAdmin);
+        return;
       } else if (defaultDashboardView === "coach" && (isCoach || isAdmin)) {
         setLocation("/coach-dashboard");
         return;
@@ -87,13 +71,8 @@ export default function DashboardDispatcher() {
 
     if (lastViewedProfile) {
       if (lastViewedProfile === "player" && lastSelectedPlayerId) {
-        if (isValidPlayerId(lastSelectedPlayerId)) {
-          goToPlayerDashboard(lastSelectedPlayerId, isParent || isAdmin);
-          return;
-        } else {
-          console.log("[DashboardDispatcher] lastSelectedPlayerId not valid, clearing stale data");
-          clearStalePlayerSelection();
-        }
+        goToPlayerDashboard(lastSelectedPlayerId, isParent || isAdmin);
+        return;
       } else if (lastViewedProfile === "coach" && (isCoach || isAdmin)) {
         setLocation("/coach-dashboard");
         return;
@@ -109,6 +88,7 @@ export default function DashboardDispatcher() {
     if (isAdmin || isCoach) {
       setLocation("/profile-gateway");
     } else if (isParent) {
+      // Always send parents to profile gateway - they'll see empty state if no players
       setLocation("/profile-gateway");
     } else if (isPlayer) {
       goToPlayerDashboard(userId, false);

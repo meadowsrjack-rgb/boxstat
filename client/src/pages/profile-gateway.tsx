@@ -152,7 +152,7 @@ export default function ProfileGateway() {
                 data-testid="button-add-player-icon"
               >
                 <User className="w-10 h-10 text-gray-500" />
-                <Plus className="w-6 h-6 text-white absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
+                <Plus className="w-6 h-6 text-gray-300 absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
               </button>
               {players.length === 0 && (
                 <p className="text-gray-400 text-center text-[12px]" data-testid="text-add-first-player">Add your first player</p>

@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, Users, ChevronRight } from "lucide-react";
+import { User, Shield, ChevronRight, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
@@ -36,7 +37,7 @@ export default function ProfileGateway() {
   const handleSelectProfile = (type: string, playerId?: string) => {
     localStorage.setItem("lastViewedProfileType", type);
     
-    if (type === "parent") {
+    if (type === "account") {
       localStorage.removeItem("selectedPlayerId");
       localStorage.removeItem("viewingAsParent");
       setLocation("/parent-dashboard");
@@ -54,6 +55,21 @@ export default function ProfileGateway() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom">
       <div className="max-w-md mx-auto pt-8">
+        {/* Account Settings Button - Top Right */}
+        {(isParent || isAdmin) && (
+          <div className="absolute top-6 right-6 safe-top">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleSelectProfile("account")}
+              className="text-gray-400 hover:text-white hover:bg-gray-800"
+              data-testid="button-account-settings"
+            >
+              <Settings className="w-6 h-6" />
+            </Button>
+          </div>
+        )}
+
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">
             Who's Using BoxStat?
@@ -62,27 +78,6 @@ export default function ProfileGateway() {
         </div>
 
         <div className="space-y-4">
-          {(isParent || isAdmin) && (
-            <Card 
-              className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
-              onClick={() => handleSelectProfile("parent")}
-              data-testid="card-parent-profile"
-            >
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">
-                    {(user as any)?.firstName} {(user as any)?.lastName}
-                  </h3>
-                  <p className="text-sm text-gray-400">Manage billing, players & settings</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-              </CardContent>
-            </Card>
-          )}
-
           {isCoach && (
             <Card 
               className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
@@ -123,9 +118,11 @@ export default function ProfileGateway() {
 
           {players.length > 0 && (
             <>
-              <div className="border-t border-gray-700 my-6 pt-4">
-                <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
-              </div>
+              {(isCoach || isAdmin) && (
+                <div className="border-t border-gray-700 my-6 pt-4">
+                  <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
+                </div>
+              )}
 
               {players.map((player: any) => (
                 <Card 

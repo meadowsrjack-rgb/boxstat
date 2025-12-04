@@ -259,6 +259,17 @@ export default function LoginPage() {
           )}
           
           <div className="space-y-4 pt-4">
+            <div className="text-center">
+              <Button
+                variant="link"
+                className="p-0 h-auto text-gray-400 hover:text-white"
+                onClick={() => setLocation("/forgot-password")}
+                data-testid="link-forgot-password"
+              >
+                Forgot your password?
+              </Button>
+            </div>
+            
             <p className="text-center text-gray-400">
               Don't have an account?{" "}
               <Button

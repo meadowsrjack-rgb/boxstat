@@ -101,6 +101,96 @@ ${DOMAIN}
   }
 }
 
+export interface SendPasswordResetParams {
+  email: string;
+  firstName: string;
+  resetToken: string;
+}
+
+export async function sendPasswordResetEmail({
+  email,
+  firstName,
+  resetToken,
+}: SendPasswordResetParams): Promise<void> {
+  const resetUrl = `https://${DOMAIN}/reset-password?token=${resetToken}`;
+  const displayName = firstName || 'there';
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Reset Your Password - BoxStat',
+      text: `Hi ${displayName},
+
+You requested to reset your password for your BoxStat account. Click the link below to create a new password:
+
+${resetUrl}
+
+This link will expire in 1 hour for security purposes.
+
+If you did not request a password reset, please disregard this email and your account will remain secure.
+
+Best regards,
+The BoxStat Team
+
+BoxStat - Sports Management Platform
+${DOMAIN}
+      `,
+      html: `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333333; background-color: #f5f5f5;">
+            <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f5f5f5;">
+              <tr>
+                <td style="padding: 40px 20px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <tr>
+                      <td style="padding: 40px 40px 30px; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0;">
+                        <img src="https://${DOMAIN}/assets/logo" alt="BoxStat Logo" style="height: 120px; width: auto; display: block; margin: 0 auto;" />
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 40px;">
+                        <h2 style="margin: 0 0 20px; font-size: 20px; font-weight: 600; color: #111827; text-align: center;">Reset Your Password</h2>
+                        <p style="margin: 0 0 20px; font-size: 16px; color: #374151;">Hi ${displayName},</p>
+                        <p style="margin: 0 0 30px; font-size: 16px; color: #374151;">You requested to reset your password for your BoxStat account. Click the button below to create a new password.</p>
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                          <tr>
+                            <td style="text-align: center; padding: 20px 0;">
+                              <a href="${resetUrl}" style="display: inline-block; background-color: #dc2626; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 14px 32px; border-radius: 6px;">Reset Password</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">If the button does not work, copy and paste this link into your browser:</p>
+                        <p style="margin: 10px 0 0; font-size: 14px; color: #6b7280; word-break: break-all;">${resetUrl}</p>
+                        <p style="margin: 30px 0 0; font-size: 14px; color: #6b7280;">This link will expire in 1 hour. If you did not request a password reset, please disregard this email.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
+                        <p style="margin: 0; font-size: 14px; color: #6b7280;">&copy; ${new Date().getFullYear()} BoxStat. All rights reserved.</p>
+                        <p style="margin: 10px 0 0; font-size: 12px; color: #9ca3af;">BoxStat Sports Management Platform</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+        </html>
+      `,
+    });
+    console.log(`Password reset email sent to ${email}`);
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw new Error('Failed to send password reset email');
+  }
+}
+
 export async function sendMagicLink({
   email,
   firstName,

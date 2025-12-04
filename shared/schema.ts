@@ -219,6 +219,8 @@ export const users = pgTable("users", {
   magicLinkToken: varchar("magic_link_token"),
   magicLinkExpiry: timestamp("magic_link_expiry", { mode: 'string' }),
   magicLinkSourcePlatform: varchar("magic_link_source_platform"), // 'web' | 'ios' | 'android'
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry", { mode: 'string' }),
   googleId: varchar("google_id"),
   appleId: varchar("apple_id"),
   isActive: boolean("is_active").default(true).notNull(),
@@ -686,6 +688,8 @@ export const insertUserSchema = z.object({
   verificationExpiry: z.date().optional(),
   magicLinkToken: z.string().optional(),
   magicLinkExpiry: z.date().optional(),
+  passwordResetToken: z.string().optional(),
+  passwordResetExpiry: z.date().optional(),
   googleId: z.string().optional(),
   appleId: z.string().optional(),
   isActive: z.boolean().default(true),

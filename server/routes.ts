@@ -825,6 +825,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // PASSWORD RESET ROUTES
+  // =============================================
+  
+  app.post('/api/auth/request-password-reset', async (req: any, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
+      
+      const user = await storage.getUserByEmail(email, "default-org");
+      
+      if (!user) {
+        return res.json({ success: true, message: "If an account exists with that email, a password reset link has been sent." });
+      }
+      
+      if (!user.verified) {
+        return res.status(403).json({ success: false, message: "Please verify your email first before resetting your password." });
+      }
+      
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpiry = new Date(Date.now() + 60 * 60 * 1000);
+      
+      await storage.updateUser(user.id, {
+        passwordResetToken: resetToken,
+        passwordResetExpiry: resetExpiry,
+      });
+      
+      await emailService.sendPasswordResetEmail({
+        email: user.email,
+        firstName: user.firstName,
+        resetToken,
+      });
+      
+      res.json({ success: true, message: "If an account exists with that email, a password reset link has been sent." });
+    } catch (error: any) {
+      console.error("Password reset request error:", error);
+      res.status(500).json({ success: false, message: "Failed to process password reset request" });
+    }
+  });
+  
+  app.post('/api/auth/reset-password', async (req: any, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ success: false, message: "Token and new password are required" });
+      }
+      
+      if (newPassword.length < 8) {
+        return res.status(400).json({ success: false, message: "Password must be at least 8 characters long" });
+      }
+      
+      const allUsers = await storage.getUsersByOrganization("default-org");
+      const user = allUsers.find(u => u.passwordResetToken === token && u.isActive !== false);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: "Invalid or expired reset link" });
+      }
+      
+      if (user.passwordResetExpiry && new Date() > new Date(user.passwordResetExpiry)) {
+        return res.status(400).json({ success: false, message: "Reset link has expired. Please request a new one." });
+      }
+      
+      const hashedPassword = hashPassword(newPassword);
+      
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        passwordResetToken: null as any,
+        passwordResetExpiry: null as any,
+      });
+      
+      res.json({ success: true, message: "Password reset successfully! You can now log in with your new password." });
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      res.status(500).json({ success: false, message: "Failed to reset password" });
+    }
+  });
+  
+  app.get('/api/auth/verify-reset-token', async (req: any, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ success: false, message: "Token is required" });
+      }
+      
+      const allUsers = await storage.getUsersByOrganization("default-org");
+      const user = allUsers.find(u => u.passwordResetToken === token && u.isActive !== false);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, valid: false, message: "Invalid or expired reset link" });
+      }
+      
+      if (user.passwordResetExpiry && new Date() > new Date(user.passwordResetExpiry)) {
+        return res.status(400).json({ success: false, valid: false, message: "Reset link has expired. Please request a new one." });
+      }
+      
+      res.json({ success: true, valid: true, email: user.email });
+    } catch (error: any) {
+      console.error("Verify reset token error:", error);
+      res.status(500).json({ success: false, valid: false, message: "Failed to verify token" });
+    }
+  });
+  
+  // =============================================
   // STRIPE PAYMENT ROUTES
   // =============================================
   

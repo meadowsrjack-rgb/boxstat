@@ -28,6 +28,8 @@ import LoginPage from "@/pages/login";
 import AddPlayer from "@/pages/add-player";
 import VerifyEmail from "@/pages/verify-email";
 import MagicLinkLogin from "@/pages/magic-link-login";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 
 import RosterManagement from "@/pages/roster-management";
 import ScheduleRequests from "@/pages/schedule-requests";
@@ -308,6 +310,8 @@ function AppRouter() {
       <Route path="/register" component={RegistrationFlow} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/magic-link-login" component={MagicLinkLogin} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/logout" component={Logout} />
       
       {/* Landing page - always accessible at root */}

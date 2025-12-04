@@ -278,6 +278,10 @@ export default function AdminDashboard() {
                 <DollarSign className="w-4 h-4 mr-2" />
                 Products
               </TabsTrigger>
+              <TabsTrigger value="waivers" data-testid="tab-waivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <FileText className="w-4 h-4 mr-2" />
+                Waivers
+              </TabsTrigger>
               <TabsTrigger value="notifications" data-testid="tab-notifications" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
@@ -336,6 +340,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="products">
             <ProductsTab organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="waivers">
+            <WaiversTab organization={organization} />
           </TabsContent>
 
           <TabsContent value="notifications">
@@ -6659,5 +6667,390 @@ function SettingsTab({ organization }: any) {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function WaiversTab({ organization }: any) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingWaiver, setEditingWaiver] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const { toast } = useToast();
+
+  const { data: waivers = [], isLoading } = useQuery({
+    queryKey: ['/api/waivers'],
+  });
+
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      title: "",
+      content: "",
+      requiresScroll: true,
+      requiresCheckbox: true,
+      checkboxLabel: "I have read and agree to the terms above",
+      isActive: true,
+    },
+  });
+
+  const createWaiver = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingWaiver) {
+        return apiRequest(`/api/waivers/${editingWaiver.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        });
+      } else {
+        return apiRequest('/api/waivers', {
+          method: 'POST',
+          body: JSON.stringify(data),
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/waivers'] });
+      setIsDialogOpen(false);
+      setEditingWaiver(null);
+      form.reset();
+      toast({
+        title: editingWaiver ? "Waiver updated" : "Waiver created",
+        description: editingWaiver ? "The waiver has been updated successfully." : "The new waiver has been created.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save waiver",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteWaiver = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/waivers/${id}`, { method: 'DELETE' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/waivers'] });
+      setDeleteConfirm(null);
+      toast({
+        title: "Waiver deleted",
+        description: "The waiver has been deleted successfully.",
+      });
+    },
+  });
+
+  const handleEdit = (waiver: any) => {
+    setEditingWaiver(waiver);
+    form.reset({
+      name: waiver.name || "",
+      title: waiver.title || "",
+      content: waiver.content || "",
+      requiresScroll: waiver.requiresScroll ?? true,
+      requiresCheckbox: waiver.requiresCheckbox ?? true,
+      checkboxLabel: waiver.checkboxLabel || "I have read and agree to the terms above",
+      isActive: waiver.isActive ?? true,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingWaiver(null);
+    form.reset({
+      name: "",
+      title: "",
+      content: "",
+      requiresScroll: true,
+      requiresCheckbox: true,
+      checkboxLabel: "I have read and agree to the terms above",
+      isActive: true,
+    });
+    setIsDialogOpen(true);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle data-testid="title-waivers">Waivers & Agreements</CardTitle>
+          <CardDescription>Create and manage waivers that can be required for products</CardDescription>
+        </div>
+        <Button onClick={handleCreate} data-testid="button-create-waiver">
+          <Plus className="w-4 h-4 mr-2" />
+          Create Waiver
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="text-center py-8 text-gray-500">Loading waivers...</div>
+        ) : waivers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No waivers created yet. Click "Create Waiver" to add your first waiver.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead>Requirements</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {waivers.map((waiver: any) => (
+                <TableRow key={waiver.id} data-testid={`row-waiver-${waiver.id}`}>
+                  <TableCell>
+                    <div className="font-medium" data-testid={`text-waiver-name-${waiver.id}`}>
+                      {waiver.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-gray-600" data-testid={`text-waiver-title-${waiver.id}`}>
+                      {waiver.title}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {waiver.requiresScroll && (
+                        <Badge variant="secondary" className="text-xs">Must Scroll</Badge>
+                      )}
+                      {waiver.requiresCheckbox && (
+                        <Badge variant="secondary" className="text-xs">Checkbox</Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={waiver.isActive ? "default" : "secondary"}
+                      data-testid={`badge-waiver-status-${waiver.id}`}
+                    >
+                      {waiver.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(waiver)}
+                        data-testid={`button-edit-waiver-${waiver.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeleteConfirm(waiver)}
+                        disabled={waiver.isBuiltIn}
+                        data-testid={`button-delete-waiver-${waiver.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle data-testid="dialog-title-waiver">
+              {editingWaiver ? "Edit Waiver" : "Create New Waiver"}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((data) => createWaiver.mutate(data))} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Internal Name *</FormLabel>
+                    <FormDescription>A short name for internal reference (e.g., "AAU Membership")</FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="e.g., Concussion Waiver"
+                        data-testid="input-waiver-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Title *</FormLabel>
+                    <FormDescription>The title shown to users during registration</FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="e.g., CDC HEADSUP Concussion Information"
+                        data-testid="input-waiver-title"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Waiver Content *</FormLabel>
+                    <FormDescription>The full text of the waiver or agreement</FormDescription>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        rows={12}
+                        placeholder="Enter the full waiver text here..."
+                        data-testid="input-waiver-content"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="requiresScroll"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Require Scrolling</FormLabel>
+                      <FormDescription>
+                        User must scroll to the bottom before they can acknowledge
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-waiver-scroll"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="requiresCheckbox"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Require Checkbox</FormLabel>
+                      <FormDescription>
+                        User must check a box to acknowledge
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-waiver-checkbox"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="checkboxLabel"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Checkbox Label</FormLabel>
+                    <FormDescription>The text shown next to the acknowledgment checkbox</FormDescription>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="I have read and agree to the terms above"
+                        data-testid="input-waiver-checkbox-label"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Active</FormLabel>
+                      <FormDescription>
+                        Only active waivers can be assigned to products
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-waiver-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  data-testid="button-cancel-waiver"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={createWaiver.isPending}
+                  data-testid="button-save-waiver"
+                >
+                  {createWaiver.isPending ? "Saving..." : (editingWaiver ? "Update Waiver" : "Create Waiver")}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Waiver</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirm?.name}"? This action cannot be undone.
+              Products using this waiver will no longer require it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-waiver">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteWaiver.mutate(deleteConfirm?.id)}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete-waiver"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 }

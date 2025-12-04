@@ -32,7 +32,7 @@ import {
   ChevronRight,
   CalendarDays,
   List,
-  Dribble,
+  Target,
   Eye,
   ArrowLeft,
   Star,
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
                 Users
               </TabsTrigger>
               <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Dribble className="w-4 h-4 mr-2" />
+                <Target className="w-4 h-4 mr-2" />
                 Teams
               </TabsTrigger>
               <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">

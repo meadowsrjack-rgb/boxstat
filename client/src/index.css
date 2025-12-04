@@ -327,38 +327,28 @@
     max-width: 320px !important;
   }
   
-  /* All columns - ensure no clipping */
+  /* All columns - fixed widths */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(1),
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(2),
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(3) {
-    min-width: 60px !important;
+    width: 80px !important;
+    min-width: 80px !important;
     flex-shrink: 0 !important;
-    overflow: visible !important;
   }
   
   /* Day column (first child) - move to middle */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(1) {
     order: 2 !important;
-    width: 40px !important;
   }
   
   /* Month column (second child) - move to left */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(2) {
     order: 1 !important;
-    width: 50px !important;
   }
   
-  /* Year column (third child) - stays right, extra width for 4 digits */
+  /* Year column (third child) - stays right */
   .date-wheel-picker-dark #pickerWrapper > div:nth-child(3) {
     order: 3 !important;
-    width: 70px !important;
-    padding-right: 16px !important;
-  }
-  
-  /* Ensure picker items don't clip text */
-  .date-wheel-picker-dark #pickerWrapper > div > div {
-    overflow: visible !important;
-    white-space: nowrap !important;
   }
   
   /* Highlight overlay - stays in place */

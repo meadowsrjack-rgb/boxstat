@@ -53,8 +53,8 @@ export default function ProfileGateway() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom">
-      <div className="max-w-md mx-auto pt-20">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col">
+      <div className="max-w-md mx-auto pt-20 flex-1">
         {/* Account Settings Button - Top Right */}
         <div className="absolute top-6 right-6 safe-top mb-20">
           <Button
@@ -145,37 +145,42 @@ export default function ProfileGateway() {
 
           {/* Add Player Button for Parents */}
           {isParent && (
-            <button
-              onClick={() => setLocation("/add-player")}
-              className="relative w-20 h-20 mx-auto flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 transition-colors group"
-              data-testid="button-add-player-icon"
-            >
-              <User className="w-10 h-10 text-gray-500" />
-              <Plus className="w-6 h-6 text-white absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
-            </button>
+            <div className="flex flex-col items-center gap-4 pt-4">
+              <button
+                onClick={() => setLocation("/add-player")}
+                className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 transition-colors group"
+                data-testid="button-add-player-icon"
+              >
+                <User className="w-10 h-10 text-gray-500" />
+                <Plus className="w-6 h-6 text-white absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
+              </button>
+              {players.length === 0 && (
+                <p className="text-gray-400 text-center" data-testid="text-add-first-player">ADD YOUR FIRST PLAYER</p>
+              )}
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="mt-8 text-center">
-          <button 
-            onClick={async () => {
-              try {
-                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-              } catch (e) {
-                // Continue with logout even if API fails
-              }
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('selectedPlayerId');
-              localStorage.removeItem('viewingAsParent');
-              localStorage.removeItem('lastViewedProfileType');
-              setLocation('/');
-            }}
-            className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-            data-testid="button-sign-out"
-          >
-            Sign Out
-          </button>
-        </div>
+      <div className="text-center pb-4">
+        <button 
+          onClick={async () => {
+            try {
+              await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (e) {
+              // Continue with logout even if API fails
+            }
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('selectedPlayerId');
+            localStorage.removeItem('viewingAsParent');
+            localStorage.removeItem('lastViewedProfileType');
+            setLocation('/');
+          }}
+          className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
+          data-testid="button-sign-out"
+        >
+          Sign Out
+        </button>
       </div>
     </div>
   );

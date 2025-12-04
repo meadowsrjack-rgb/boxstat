@@ -11,8 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2, Calendar } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
+import { DateScrollPicker } from "react-date-wheel-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Form schemas for each step
 const emailEntrySchema = z.object({
@@ -27,8 +29,8 @@ const parentInfoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Valid email is required"),
-  phoneNumber: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  phoneNumber: z.string().min(10, "Valid phone number is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
 });
 
 const playerInfoSchema = z.object({
@@ -790,19 +792,77 @@ function ParentInfoStep({
         <FormField
           control={form.control}
           name="dateOfBirth"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth</FormLabel>
-              <FormControl>
-                <Input 
-                  {...field} 
-                  type="date" 
-                  data-testid="input-parent-dob"
-                  className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500"
-                />
-              </FormControl>
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const [showPicker, setShowPicker] = useState(false);
+            const [tempDate, setTempDate] = useState<Date | undefined>(
+              field.value ? new Date(field.value) : undefined
+            );
+            
+            return (
+              <FormItem>
+                <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth *</FormLabel>
+                <FormControl>
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    data-testid="input-parent-dob"
+                    className="w-full h-12 px-4 bg-white/5 border border-white/10 text-white rounded-md flex items-center justify-between hover:bg-white/10 transition-colors"
+                  >
+                    <span className={field.value ? "text-white" : "text-gray-500"}>
+                      {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                    </span>
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                  </button>
+                </FormControl>
+                <FormMessage className="text-red-400" />
+                
+                <Dialog open={showPicker} onOpenChange={setShowPicker}>
+                  <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 flex justify-center">
+                      <DateScrollPicker
+                        onDateChange={(date) => setTempDate(date)}
+                        classNames={{
+                          pickerItem: {
+                            color: 'white',
+                            fontSize: '16px'
+                          },
+                          highlightOverlay: {
+                            borderTop: '2px solid #dc2626',
+                            borderBottom: '2px solid #dc2626'
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
+                        onClick={() => setShowPicker(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => {
+                          if (tempDate) {
+                            field.onChange(tempDate.toISOString().split('T')[0]);
+                          }
+                          setShowPicker(false);
+                        }}
+                      >
+                        Confirm
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </FormItem>
+            );
+          }}
         />
 
         <Button 
@@ -906,29 +966,86 @@ function PlayerInfoStep({
         <FormField
           control={form.control}
           name="dateOfBirth"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth</FormLabel>
-              <FormControl>
-                <Input 
-                  {...field} 
-                  type="date" 
-                  data-testid="input-player-dob"
-                  className="h-12 bg-white/5 border-white/10 text-white focus:border-red-500"
-                />
-              </FormControl>
-              {isUnderAge && (
-                <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg" data-testid="age-warning">
-                  <p className="text-sm text-yellow-400 font-medium">
-                    Players under 18 years old must have a parent or guardian register on their behalf.
-                  </p>
-                  <p className="text-xs text-yellow-500/80 mt-1">
-                    Please go back and select "I'm registering my child" to continue.
-                  </p>
-                </div>
-              )}
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const [showPicker, setShowPicker] = useState(false);
+            const [tempDate, setTempDate] = useState<Date | undefined>(
+              field.value ? new Date(field.value) : undefined
+            );
+            
+            return (
+              <FormItem>
+                <FormLabel className="text-gray-300 text-sm font-medium">Date of Birth</FormLabel>
+                <FormControl>
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(true)}
+                    data-testid="input-player-dob"
+                    className="w-full h-12 px-4 bg-white/5 border border-white/10 text-white rounded-md flex items-center justify-between hover:bg-white/10 transition-colors"
+                  >
+                    <span className={field.value ? "text-white" : "text-gray-500"}>
+                      {field.value ? new Date(field.value).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "Select date of birth"}
+                    </span>
+                    <Calendar className="w-5 h-5 text-gray-400" />
+                  </button>
+                </FormControl>
+                {isUnderAge && (
+                  <div className="mt-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg" data-testid="age-warning">
+                    <p className="text-sm text-yellow-400 font-medium">
+                      Players under 18 years old must have a parent or guardian register on their behalf.
+                    </p>
+                    <p className="text-xs text-yellow-500/80 mt-1">
+                      Please go back and select "I'm registering my child" to continue.
+                    </p>
+                  </div>
+                )}
+                
+                <Dialog open={showPicker} onOpenChange={setShowPicker}>
+                  <DialogContent className="bg-gray-900 border-gray-700 max-w-sm">
+                    <DialogHeader>
+                      <DialogTitle className="text-white text-center">Select Date of Birth</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4 flex justify-center">
+                      <DateScrollPicker
+                        onDateChange={(date) => setTempDate(date)}
+                        classNames={{
+                          pickerItem: {
+                            color: 'white',
+                            fontSize: '16px'
+                          },
+                          highlightOverlay: {
+                            borderTop: '2px solid #dc2626',
+                            borderBottom: '2px solid #dc2626'
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800"
+                        onClick={() => setShowPicker(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                        onClick={() => {
+                          if (tempDate) {
+                            field.onChange(tempDate.toISOString().split('T')[0]);
+                          }
+                          setShowPicker(false);
+                        }}
+                      >
+                        Confirm
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </FormItem>
+            );
+          }}
         />
 
         <FormField

@@ -38,7 +38,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients } from "@shared/schema";
+import { notifications, notificationRecipients, users } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -1554,9 +1554,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(primaryEmail, organizationId);
-      if (existingUser) {
+      // Check if user already exists (check ALL users including inactive ones)
+      // This is important because the database has a global unique constraint on email
+      const existingUserResults = await db.select({ id: users.id, email: users.email })
+        .from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${primaryEmail})`);
+      
+      if (existingUserResults.length > 0) {
         return res.status(400).json({ 
           success: false, 
           message: "This email is already registered. Please login instead." 

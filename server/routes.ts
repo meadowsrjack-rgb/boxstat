@@ -2413,8 +2413,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can delete users' });
     }
     
+    const userId = req.params.id;
+    
+    // Get the user being deleted
+    const user = await storage.getUser(userId);
+    
     // Soft delete: set isActive to false and clear credentials
-    await storage.updateUser(req.params.id, {
+    await storage.updateUser(userId, {
       isActive: false,
       password: null,
       verificationToken: null,
@@ -2422,6 +2427,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       magicLinkToken: null,
       magicLinkExpiry: null,
     });
+    
+    // If this is a child user (has accountHolderId), check if parent has any other active children
+    if (user?.accountHolderId) {
+      const allUsers = await storage.getUsersByOrganization(user.organizationId);
+      const activeChildren = allUsers.filter((u: any) => 
+        u.accountHolderId === user.accountHolderId && u.isActive && u.id !== userId
+      );
+      
+      // If no active children remain, deactivate the parent too
+      if (activeChildren.length === 0) {
+        await storage.updateUser(user.accountHolderId, {
+          isActive: false,
+          password: null,
+          verificationToken: null,
+          verificationExpiry: null,
+          magicLinkToken: null,
+          magicLinkExpiry: null,
+        });
+      }
+    }
+    
     res.json({ success: true });
   });
   

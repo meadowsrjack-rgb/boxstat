@@ -34,8 +34,8 @@ const genderSchema = z.object({
 });
 
 const aauMembershipSchema = z.object({
-  aauMembershipId: z.string().min(1, "AAU Membership ID is required"),
-  postalCode: z.string().min(5, "Postal code is required"),
+  aauMembershipId: z.string().optional().default(""),
+  postalCode: z.string().optional().default(""),
 });
 
 const concussionWaiverSchema = z.object({
@@ -539,11 +539,10 @@ function AAUMembershipStep({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6">
-          <h3 className="text-blue-400 font-semibold mb-2">AAU Membership ID Information</h3>
+          <h3 className="text-blue-400 font-semibold mb-2">AAU Membership ID Information (Optional)</h3>
           <p className="text-gray-300 text-sm leading-relaxed">
-            A current AAU membership is required to proceed with this registration. 
-            AAU memberships must be renewed annually. If you are uncertain of the current 
-            expiration date of your membership,{" "}
+            If you have an AAU membership, you can add it here. AAU memberships must be renewed annually. 
+            If you are uncertain of the current expiration date of your membership,{" "}
             <a 
               href="https://aausports.org/membership-lookup/" 
               target="_blank" 
@@ -569,13 +568,13 @@ function AAUMembershipStep({
           name="aauMembershipId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-400">AAU Membership ID *</FormLabel>
+              <FormLabel className="text-gray-400">AAU Membership ID</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
                   data-testid="input-aauMembershipId" 
                   className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
-                  placeholder="Enter AAU Membership ID"
+                  placeholder="(Optional) Enter AAU Membership ID"
                 />
               </FormControl>
               <FormMessage className="text-red-400" />
@@ -588,13 +587,13 @@ function AAUMembershipStep({
           name="postalCode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-gray-400">Postal Code *</FormLabel>
+              <FormLabel className="text-gray-400">Postal Code</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
                   data-testid="input-postalCode" 
                   className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
-                  placeholder="Enter postal code"
+                  placeholder="(Optional) Enter postal code"
                 />
               </FormControl>
               <FormMessage className="text-red-400" />

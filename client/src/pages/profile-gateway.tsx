@@ -56,19 +56,17 @@ export default function ProfileGateway() {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom">
       <div className="max-w-md mx-auto pt-8">
         {/* Account Settings Button - Top Right */}
-        {(isParent || isAdmin) && (
-          <div className="absolute top-6 right-6 safe-top">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleSelectProfile("account")}
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-              data-testid="button-account-settings"
-            >
-              <Settings className="w-6 h-6" />
-            </Button>
-          </div>
-        )}
+        <div className="absolute top-6 right-6 safe-top">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleSelectProfile("account")}
+            className="text-gray-400 hover:text-white hover:bg-gray-800"
+            data-testid="button-account-settings"
+          >
+            <Settings className="w-6 h-6" />
+          </Button>
+        </div>
 
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">

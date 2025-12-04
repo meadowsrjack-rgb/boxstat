@@ -6,6 +6,7 @@ import { notionService } from "./notion";
 import Stripe from "stripe";
 import * as emailService from "./email";
 import crypto from "crypto";
+import cron from "node-cron";
 import searchRoutes from "./routes/search";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
@@ -5236,6 +5237,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // =============================================
+  // SCHEDULED TASKS - Award Synchronization
+  // =============================================
+  
+  // Sync awards for all users every hour
+  cron.schedule('0 * * * *', async () => {
+    try {
+      console.log('🏆 Starting hourly award sync for all users...');
+      const allUsers = await storage.getAllUsers();
+      
+      let syncCount = 0;
+      for (const user of allUsers) {
+        try {
+          await evaluateAwardsForUser(user.id, storage);
+          syncCount++;
+        } catch (error) {
+          console.error(`Failed to sync awards for user ${user.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Award sync completed: ${syncCount}/${allUsers.length} users synced`);
+    } catch (error) {
+      console.error('Error in hourly award sync:', error);
+    }
+  });
+
   // =============================================
   // HTTP SERVER SETUP
   // =============================================

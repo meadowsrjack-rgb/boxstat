@@ -3774,8 +3774,6 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [filterPrestige, setFilterPrestige] = useState<string>("all");
   const [filterClass, setFilterClass] = useState<string>("all");
   const [filterActive, setFilterActive] = useState<string>("all");
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -3891,40 +3889,6 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       toast({ title: "Failed to update award status", variant: "destructive" });
     },
   });
-
-  const handleSyncAll = async () => {
-    if (!users || users.length === 0) {
-      toast({ title: "No users to sync", variant: "destructive" });
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncProgress({ current: 0, total: users.length });
-
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (let i = 0; i < users.length; i++) {
-      const user = users[i];
-      try {
-        await apiRequest("POST", `/api/awards/sync/${user.id}`, {});
-        successCount++;
-      } catch (error) {
-        console.error(`Failed to sync awards for user ${user.id}:`, error);
-        errorCount++;
-      }
-      setSyncProgress({ current: i + 1, total: users.length });
-    }
-
-    setIsSyncing(false);
-    queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
-    
-    toast({
-      title: "Award Sync Complete",
-      description: `Synced ${successCount} users. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
-      variant: errorCount > 0 ? "destructive" : "default",
-    });
-  };
 
   // Handle column sorting
   const handleSort = (field: string) => {
@@ -4074,24 +4038,6 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           <CardDescription>Manage trophies and badges for your organization</CardDescription>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleSyncAll}
-            disabled={isSyncing}
-            data-testid="button-sync-awards"
-          >
-            {isSyncing ? (
-              <>
-                <div className="animate-spin w-4 h-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
-                Syncing {syncProgress.current}/{syncProgress.total}...
-              </>
-            ) : (
-              <>
-                <ArrowLeftRight className="w-4 h-4 mr-2" />
-                Sync All Awards
-              </>
-            )}
-          </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {

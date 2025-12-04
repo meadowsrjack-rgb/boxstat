@@ -87,10 +87,10 @@ export default function AddPlayer() {
     packageId?: string;
   }>({});
 
-  // Fetch programs for step 7
+  // Fetch programs for step 4 (Package Selection)
   const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
     queryKey: ["/api/programs"],
-    enabled: currentStep >= 7,
+    enabled: currentStep >= 4,
   });
 
   // Group programs by category
@@ -147,7 +147,7 @@ export default function AddPlayer() {
 
   const progress = (currentStep / 8) * 100;
 
-  // Get selected program for step 7
+  // Get selected program for step 4 (used in later steps)
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
@@ -209,8 +209,23 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 4: AAU Membership */}
+          {/* Step 4: Package Selection */}
           {currentStep === 4 && (
+            <PackageSelectionStep
+              defaultValues={{ packageId: playerData.packageId || "" }}
+              programs={programs}
+              programsByCategory={programsByCategory}
+              isLoading={programsLoading}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 5: AAU Membership */}
+          {currentStep === 5 && (
             <AAUMembershipStep
               defaultValues={{
                 aauMembershipId: playerData.aauMembershipId || "",
@@ -224,8 +239,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 5: HEADSUP Concussion Waiver */}
-          {currentStep === 5 && (
+          {/* Step 6: HEADSUP Concussion Waiver */}
+          {currentStep === 6 && (
             <ConcussionWaiverStep
               defaultValues={{
                 concussionWaiverAcknowledged: playerData.concussionWaiverAcknowledged || false,
@@ -238,27 +253,12 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 6: Club Agreement */}
-          {currentStep === 6 && (
+          {/* Step 7: Club Agreement */}
+          {currentStep === 7 && (
             <ClubAgreementStep
               defaultValues={{
                 clubAgreementAcknowledged: playerData.clubAgreementAcknowledged || false,
               }}
-              onSubmit={(data) => {
-                setPlayerData({ ...playerData, ...data });
-                handleNext();
-              }}
-              onBack={handleBack}
-            />
-          )}
-
-          {/* Step 7: Package Selection */}
-          {currentStep === 7 && (
-            <PackageSelectionStep
-              defaultValues={{ packageId: playerData.packageId || "" }}
-              programs={programs}
-              programsByCategory={programsByCategory}
-              isLoading={programsLoading}
               onSubmit={(data) => {
                 setPlayerData({ ...playerData, ...data });
                 handleNext();

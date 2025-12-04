@@ -64,7 +64,7 @@ export default function ProfileGateway() {
             data-testid="button-account-settings"
           >
             <Settings className="w-12 h-12" />
-            <span className="text-lg font-semibold">Account</span>
+            <span className="font-semibold text-[14px]">ACCOUNT</span>
           </Button>
         </div>
 

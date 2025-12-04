@@ -316,25 +316,47 @@
   /* Default text color - dimmed */
   .date-wheel-picker-dark div,
   .date-wheel-picker-dark span {
-    color: rgba(255, 255, 255, 0.4) !important;
+    color: rgba(255, 255, 255, 0.35) !important;
   }
   
-  /* Selected/center items get full white */
-  .date-wheel-picker-dark [style*="opacity: 1"],
-  .date-wheel-picker-dark [style*="opacity:1"] {
+  /* The picker wrapper - reorder columns: Month(2), Day(1), Year(3) */
+  .date-wheel-picker-dark #pickerWrapper {
+    gap: 8px !important;
+  }
+  
+  /* Day column (first child) - move to middle */
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(1) {
+    order: 2 !important;
+  }
+  
+  /* Month column (second child) - move to left */
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(2) {
+    order: 1 !important;
+  }
+  
+  /* Year column (third child) - stays right */
+  .date-wheel-picker-dark #pickerWrapper > div:nth-child(3) {
+    order: 3 !important;
+  }
+  
+  /* Highlight overlay - stays in place */
+  .date-wheel-picker-dark #highlightOverlay {
+    order: 4 !important;
+  }
+  
+  /* Fix spacing - remove the inline paddingLeft and center items */
+  .date-wheel-picker-dark #pickerWrapper > div > div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    justify-content: center !important;
+  }
+  
+  /* Make selected row items much brighter - target items with high opacity */
+  .date-wheel-picker-dark #pickerWrapper > div > div[style*="opacity: 1"],
+  .date-wheel-picker-dark #pickerWrapper > div > div[style*="opacity:1"],
+  .date-wheel-picker-dark #pickerWrapper > div > div[style*="opacity: 0.9"],
+  .date-wheel-picker-dark #pickerWrapper > div > div[style*="opacity:0.9"] {
     color: #ffffff !important;
-  }
-  
-  /* Fix column spacing - add gap between day/month/year */
-  .date-wheel-picker-dark > div > div {
-    display: flex !important;
-    gap: 24px !important;
-  }
-  
-  /* Each column needs minimum width and spacing */
-  .date-wheel-picker-dark > div > div > div {
-    min-width: 60px !important;
-    text-align: center !important;
   }
 
   /* Scrollable page container - enables scrolling on desktop */

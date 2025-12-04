@@ -47,6 +47,7 @@ import ParentSettingsPage from "@/pages/parent-settings";
 import TrophiesBadges from "@/pages/trophies-badges";
 import Skills from "@/pages/skills";
 import TestRoute from "@/pages/test-route";
+import TestDatePicker from "@/pages/test-datepicker";
 import NotFound from "@/pages/not-found";
 import CreateProfile from "@/pages/create-profile";
 import SelectProfileType from "@/pages/select-profile-type";
@@ -307,6 +308,7 @@ function AppRouter() {
       <Route path="/teams" component={Teams} />
       <Route path="/registration" component={RegistrationFlow} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/test-datepicker" component={TestDatePicker} />
       <Route path="/register" component={RegistrationFlow} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/magic-link-login" component={MagicLinkLogin} />

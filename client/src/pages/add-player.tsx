@@ -44,6 +44,12 @@ const concussionWaiverSchema = z.object({
   }),
 });
 
+const clubAgreementSchema = z.object({
+  clubAgreementAcknowledged: z.boolean().refine(val => val === true, {
+    message: "You must review and accept the club agreement to continue",
+  }),
+});
+
 const packageSchema = z.object({
   packageId: z.string().min(1, "Please select a package"),
 });
@@ -53,6 +59,7 @@ type DOB = z.infer<typeof dobSchema>;
 type Gender = z.infer<typeof genderSchema>;
 type AAUMembership = z.infer<typeof aauMembershipSchema>;
 type ConcussionWaiver = z.infer<typeof concussionWaiverSchema>;
+type ClubAgreement = z.infer<typeof clubAgreementSchema>;
 type Package = z.infer<typeof packageSchema>;
 
 type Program = {
@@ -76,13 +83,14 @@ export default function AddPlayer() {
     aauMembershipId?: string;
     postalCode?: string;
     concussionWaiverAcknowledged?: boolean;
+    clubAgreementAcknowledged?: boolean;
     packageId?: string;
   }>({});
 
-  // Fetch programs for step 6
+  // Fetch programs for step 7
   const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
     queryKey: ["/api/programs"],
-    enabled: currentStep >= 6,
+    enabled: currentStep >= 7,
   });
 
   // Group programs by category
@@ -134,12 +142,12 @@ export default function AddPlayer() {
     },
   });
 
-  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 7));
+  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 8));
   const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  const progress = (currentStep / 7) * 100;
+  const progress = (currentStep / 8) * 100;
 
-  // Get selected program for step 6
+  // Get selected program for step 7
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
@@ -151,7 +159,7 @@ export default function AddPlayer() {
               <UserPlus className="w-8 h-8" />
               Add Player
             </h1>
-            <span className="text-gray-400 text-sm">Step {currentStep} of 7</span>
+            <span className="text-gray-400 text-sm">Step {currentStep} of 8</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
@@ -230,8 +238,22 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 6: Package Selection */}
+          {/* Step 6: Club Agreement */}
           {currentStep === 6 && (
+            <ClubAgreementStep
+              defaultValues={{
+                clubAgreementAcknowledged: playerData.clubAgreementAcknowledged || false,
+              }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 7: Package Selection */}
+          {currentStep === 7 && (
             <PackageSelectionStep
               defaultValues={{ packageId: playerData.packageId || "" }}
               programs={programs}
@@ -245,8 +267,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 7: Payment Summary */}
-          {currentStep === 7 && (
+          {/* Step 8: Payment Summary */}
+          {currentStep === 8 && (
             <PaymentSummaryStep
               playerData={playerData}
               selectedProgram={selectedProgram}

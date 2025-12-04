@@ -154,7 +154,7 @@ export default function ProfileGateway() {
               className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
               data-testid="button-add-player-icon"
             >
-              <UserPlus className="w-6 h-6 text-gray-500" />
+              <UserPlus className="w-8 h-8 text-gray-500" />
             </button>
           </div>
         </div>

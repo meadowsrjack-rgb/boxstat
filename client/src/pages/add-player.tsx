@@ -32,6 +32,11 @@ const genderSchema = z.object({
   }),
 });
 
+const aauMembershipSchema = z.object({
+  aauMembershipId: z.string().min(1, "AAU Membership ID is required"),
+  postalCode: z.string().min(5, "Postal code is required"),
+});
+
 const packageSchema = z.object({
   packageId: z.string().min(1, "Please select a package"),
 });
@@ -39,6 +44,7 @@ const packageSchema = z.object({
 type PlayerName = z.infer<typeof playerNameSchema>;
 type DOB = z.infer<typeof dobSchema>;
 type Gender = z.infer<typeof genderSchema>;
+type AAUMembership = z.infer<typeof aauMembershipSchema>;
 type Package = z.infer<typeof packageSchema>;
 
 type Program = {
@@ -59,6 +65,8 @@ export default function AddPlayer() {
     lastName?: string;
     dateOfBirth?: string;
     gender?: string;
+    aauMembershipId?: string;
+    postalCode?: string;
     packageId?: string;
   }>({});
 
@@ -117,10 +125,10 @@ export default function AddPlayer() {
     },
   });
 
-  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 5));
+  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 6));
   const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  const progress = (currentStep / 5) * 100;
+  const progress = (currentStep / 6) * 100;
 
   // Get selected program for step 5
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
@@ -134,7 +142,7 @@ export default function AddPlayer() {
               <UserPlus className="w-8 h-8" />
               Add Player
             </h1>
-            <span className="text-gray-400 text-sm">Step {currentStep} of 5</span>
+            <span className="text-gray-400 text-sm">Step {currentStep} of 6</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
@@ -184,8 +192,23 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 4: Package Selection */}
+          {/* Step 4: AAU Membership */}
           {currentStep === 4 && (
+            <AAUMembershipStep
+              defaultValues={{
+                aauMembershipId: playerData.aauMembershipId || "",
+                postalCode: playerData.postalCode || "",
+              }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 5: Package Selection */}
+          {currentStep === 5 && (
             <PackageSelectionStep
               defaultValues={{ packageId: playerData.packageId || "" }}
               programs={programs}
@@ -199,8 +222,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 5: Payment Summary */}
-          {currentStep === 5 && (
+          {/* Step 6: Payment Summary */}
+          {currentStep === 6 && (
             <PaymentSummaryStep
               playerData={playerData}
               selectedProgram={selectedProgram}
@@ -440,6 +463,100 @@ function GenderStep({
             </FormItem>
           )}
         />
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function AAUMembershipStep({
+  defaultValues,
+  onSubmit,
+  onBack,
+}: {
+  defaultValues: AAUMembership;
+  onSubmit: (data: AAUMembership) => void;
+  onBack: () => void;
+}) {
+  const form = useForm<AAUMembership>({
+    resolver: zodResolver(aauMembershipSchema),
+    defaultValues,
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6">
+          <h3 className="text-blue-400 font-semibold mb-2">AAU Membership ID Information</h3>
+          <p className="text-gray-300 text-sm leading-relaxed">
+            A current AAU membership is required to proceed with this registration. 
+            AAU memberships must be renewed annually. If you are uncertain of the current 
+            expiration date of your membership,{" "}
+            <a 
+              href="https://aausports.org/membership-lookup/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 underline hover:text-blue-300"
+            >
+              click here to look it up
+            </a>. 
+            To obtain a number for new players or renew a membership,{" "}
+            <a 
+              href="https://aausports.org/join-aau-2025/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 underline hover:text-blue-300"
+            >
+              click here
+            </a>.
+          </p>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="aauMembershipId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-400">AAU Membership ID *</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  data-testid="input-aauMembershipId" 
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                  placeholder="Enter AAU Membership ID"
+                />
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="postalCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-gray-400">Postal Code *</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  data-testid="input-postalCode" 
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                  placeholder="Enter postal code"
+                />
+              </FormControl>
+              <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+
         <div className="flex justify-between pt-6">
           <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
             <ChevronLeft className="w-6 h-6" />

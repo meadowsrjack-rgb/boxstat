@@ -201,6 +201,8 @@ export const users = pgTable("users", {
   height: varchar(),
   bio: text(),
   notes: text(),
+  aauMembershipId: varchar("aau_membership_id"),
+  postalCode: varchar("postal_code"),
   passcode: varchar({ length: 4 }),
   password: varchar(),
   city: varchar(),

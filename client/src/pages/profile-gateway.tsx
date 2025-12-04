@@ -148,7 +148,7 @@ export default function ProfileGateway() {
             <div className="flex flex-col items-center gap-4 pt-4">
               <button
                 onClick={() => setLocation("/add-player")}
-                className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 transition-colors group"
+                className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
                 data-testid="button-add-player-icon"
               >
                 <User className="w-10 h-10 text-gray-500" />

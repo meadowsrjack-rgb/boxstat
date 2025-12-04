@@ -256,6 +256,29 @@ export const pendingRegistrations = pgTable("pending_registrations", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
+// Waivers table (custom waivers/agreements)
+export const waivers = pgTable("waivers", {
+  id: varchar().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(), // "AAU Membership", "Concussion Waiver", etc.
+  title: varchar().notNull(), // Display title for the waiver
+  content: text().notNull(), // Full waiver/agreement text
+  requiresScroll: boolean("requires_scroll").default(true), // Must scroll to bottom
+  requiresCheckbox: boolean("requires_checkbox").default(true), // Must check acknowledgment box
+  checkboxLabel: varchar("checkbox_label").default("I have read and agree to the terms above"),
+  isBuiltIn: boolean("is_built_in").default(false), // System waivers (AAU, Concussion, Club)
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertWaiverSchema = createInsertSchema(waivers).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWaiver = z.infer<typeof insertWaiverSchema>;
+export type Waiver = typeof waivers.$inferSelect;
+
 // Programs table (packages/subscriptions)
 export const programs = pgTable("programs", {
   id: varchar().primaryKey().notNull(),
@@ -285,6 +308,7 @@ export const programs = pgTable("programs", {
   requireAAUMembership: boolean("require_aau_membership").default(false),
   requireConcussionWaiver: boolean("require_concussion_waiver").default(false),
   requireClubAgreement: boolean("require_club_agreement").default(false),
+  requiredWaivers: text("required_waivers").array().default(sql`ARRAY[]::text[]`), // Custom waiver IDs
   adminNotes: text("admin_notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),

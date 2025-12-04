@@ -20,6 +20,7 @@ import {
   type Facility,
   type MigrationLookup,
   type Subscription,
+  type Waiver,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -40,6 +41,7 @@ import {
   type InsertFacility,
   type InsertMigrationLookup,
   type InsertSubscription,
+  type InsertWaiver,
   type SelectAwardDefinition,
   type InsertAwardDefinition,
   type SelectUserAwardRecord,
@@ -148,6 +150,13 @@ export interface IStorage {
   createPayment(payment: InsertPayment): Promise<Payment>;
   updatePayment(id: string, updates: Partial<Payment>): Promise<Payment | undefined>;
   
+  // Waiver operations
+  getWaiver(id: string): Promise<Waiver | undefined>;
+  getWaiversByOrganization(organizationId: string): Promise<Waiver[]>;
+  createWaiver(waiver: InsertWaiver): Promise<Waiver>;
+  updateWaiver(id: string, updates: Partial<Waiver>): Promise<Waiver | undefined>;
+  deleteWaiver(id: string): Promise<void>;
+  
   // Program operations
   getProgram(id: string): Promise<Program | undefined>;
   getProgramsByOrganization(organizationId: string): Promise<Program[]>;
@@ -253,6 +262,7 @@ class MemStorage implements IStorage {
   private messages: Map<string, Message> = new Map();
   private payments: Map<string, Payment> = new Map();
   private programs: Map<string, Program> = new Map();
+  private waivers: Map<string, Waiver> = new Map();
   private packageSelections: Map<string, PackageSelection> = new Map();
   private divisions: Map<number, Division> = new Map();
   private skills: Map<number, Skill> = new Map();
@@ -1295,6 +1305,44 @@ class MemStorage implements IStorage {
     const updated = { ...payment, ...updates };
     this.payments.set(id, updated);
     return updated;
+  }
+  
+  // Waiver operations
+  async getWaiver(id: string): Promise<Waiver | undefined> {
+    return this.waivers.get(id);
+  }
+
+  async getWaiversByOrganization(organizationId: string): Promise<Waiver[]> {
+    return Array.from(this.waivers.values()).filter(w => w.organizationId === organizationId);
+  }
+
+  async createWaiver(waiver: InsertWaiver): Promise<Waiver> {
+    const newWaiver: Waiver = {
+      ...waiver,
+      id: `waiver-${this.generateId()}`,
+      requiresScroll: waiver.requiresScroll ?? true,
+      requiresCheckbox: waiver.requiresCheckbox ?? true,
+      checkboxLabel: waiver.checkboxLabel ?? "I have read and agree to the terms above",
+      isBuiltIn: waiver.isBuiltIn ?? false,
+      isActive: waiver.isActive ?? true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.waivers.set(newWaiver.id, newWaiver);
+    return newWaiver;
+  }
+
+  async updateWaiver(id: string, updates: Partial<Waiver>): Promise<Waiver | undefined> {
+    const waiver = this.waivers.get(id);
+    if (!waiver) return undefined;
+    
+    const updated = { ...waiver, ...updates, updatedAt: new Date().toISOString() };
+    this.waivers.set(id, updated);
+    return updated;
+  }
+
+  async deleteWaiver(id: string): Promise<void> {
+    this.waivers.delete(id);
   }
   
   // Program operations
@@ -3090,6 +3138,71 @@ class DatabaseStorage implements IStorage {
     
     if (results.length === 0) return undefined;
     return this.mapDbPaymentToPayment(results[0]);
+  }
+
+  // Waiver operations
+  async getWaiver(id: string): Promise<Waiver | undefined> {
+    const results = await db.select().from(schema.waivers).where(eq(schema.waivers.id, id));
+    if (results.length === 0) return undefined;
+    return results[0] as Waiver;
+  }
+
+  async getWaiversByOrganization(organizationId: string): Promise<Waiver[]> {
+    const results = await db.select().from(schema.waivers)
+      .where(eq(schema.waivers.organizationId, organizationId));
+    return results as Waiver[];
+  }
+
+  async createWaiver(waiver: InsertWaiver): Promise<Waiver> {
+    const id = `waiver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    
+    const dbWaiver = {
+      id,
+      organizationId: waiver.organizationId,
+      name: waiver.name,
+      title: waiver.title,
+      content: waiver.content,
+      requiresScroll: waiver.requiresScroll ?? true,
+      requiresCheckbox: waiver.requiresCheckbox ?? true,
+      checkboxLabel: waiver.checkboxLabel ?? "I have read and agree to the terms above",
+      isBuiltIn: waiver.isBuiltIn ?? false,
+      isActive: waiver.isActive ?? true,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const results = await db.insert(schema.waivers).values(dbWaiver).returning();
+    return results[0] as Waiver;
+  }
+
+  async updateWaiver(id: string, updates: Partial<Waiver>): Promise<Waiver | undefined> {
+    const dbUpdates: any = {
+      name: updates.name,
+      title: updates.title,
+      content: updates.content,
+      requiresScroll: updates.requiresScroll,
+      requiresCheckbox: updates.requiresCheckbox,
+      checkboxLabel: updates.checkboxLabel,
+      isActive: updates.isActive,
+      updatedAt: new Date().toISOString(),
+    };
+
+    Object.keys(dbUpdates).forEach(key => {
+      if (dbUpdates[key] === undefined) delete dbUpdates[key];
+    });
+
+    const results = await db.update(schema.waivers)
+      .set(dbUpdates)
+      .where(eq(schema.waivers.id, id))
+      .returning();
+    
+    if (results.length === 0) return undefined;
+    return results[0] as Waiver;
+  }
+
+  async deleteWaiver(id: string): Promise<void> {
+    await db.delete(schema.waivers).where(eq(schema.waivers.id, id));
   }
 
   // Program operations (placeholders - no database table yet)

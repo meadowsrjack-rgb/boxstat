@@ -4234,6 +4234,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // WAIVER ROUTES
+  // =============================================
+  
+  app.get('/api/waivers', async (req: any, res) => {
+    const organizationId = req.user?.organizationId || 'default-org';
+    const waivers = await storage.getWaiversByOrganization(organizationId);
+    res.json(waivers);
+  });
+  
+  app.get('/api/waivers/:id', async (req: any, res) => {
+    const waiver = await storage.getWaiver(req.params.id);
+    if (!waiver) {
+      return res.status(404).json({ message: 'Waiver not found' });
+    }
+    res.json(waiver);
+  });
+  
+  app.post('/api/waivers', requireAuth, async (req: any, res) => {
+    const { role, organizationId } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can create waivers' });
+    }
+    
+    const waiverData = {
+      ...req.body,
+      organizationId,
+    };
+    const waiver = await storage.createWaiver(waiverData);
+    res.json(waiver);
+  });
+  
+  app.patch('/api/waivers/:id', requireAuth, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can update waivers' });
+    }
+    
+    const updated = await storage.updateWaiver(req.params.id, req.body);
+    res.json(updated);
+  });
+  
+  app.delete('/api/waivers/:id', requireAuth, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can delete waivers' });
+    }
+    
+    await storage.deleteWaiver(req.params.id);
+    res.json({ success: true });
+  });
+
+  // =============================================
   // PROGRAM ROUTES
   // =============================================
   

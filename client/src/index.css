@@ -313,10 +313,10 @@
     background-color: transparent !important;
   }
   
-  /* Default text color - dimmed */
+  /* Default text color */
   .date-wheel-picker-dark div,
   .date-wheel-picker-dark span {
-    color: rgba(255, 255, 255, 0.35) !important;
+    color: #d1d1d1 !important;
   }
   
   /* The picker wrapper - reorder columns: Month(2), Day(1), Year(3) */

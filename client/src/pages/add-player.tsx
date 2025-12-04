@@ -7,7 +7,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -125,94 +124,93 @@ export default function AddPlayer() {
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
-    <div className="scrollable-page bg-gray-50 safe-bottom py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="w-6 h-6" />
+    <div className="scrollable-page bg-gradient-to-b from-gray-900 to-black safe-bottom py-8 px-4 min-h-screen-safe">
+      <div className="max-w-2xl mx-auto pt-8">
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-4xl font-bold text-white flex items-center gap-3">
+              <UserPlus className="w-8 h-8" />
               Add Player
-            </CardTitle>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <p className="text-sm text-gray-600 mt-2">
-              Step {currentStep} of 5
-            </p>
-          </CardHeader>
-          <CardContent>
-            {/* Step 1: Player Name */}
-            {currentStep === 1 && (
-              <PlayerNameStep
-                defaultValues={{
-                  firstName: playerData.firstName || "",
-                  lastName: playerData.lastName || "",
-                }}
-                onSubmit={(data) => {
-                  setPlayerData({ ...playerData, ...data });
-                  handleNext();
-                }}
-                onBack={() => setLocation("/unified-account")}
-              />
-            )}
+            </h1>
+            <span className="text-gray-400 text-sm">Step {currentStep} of 5</span>
+          </div>
+          <div className="w-full bg-gray-800 rounded-full h-2">
+            <div
+              className="bg-red-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
 
-            {/* Step 2: Date of Birth */}
-            {currentStep === 2 && (
-              <DOBStep
-                defaultValues={{ dateOfBirth: playerData.dateOfBirth || "" }}
-                onSubmit={(data) => {
-                  setPlayerData({ ...playerData, ...data });
-                  handleNext();
-                }}
-                onBack={handleBack}
-              />
-            )}
+        <div className="bg-gray-800/50 rounded-lg p-8 mb-8 border border-gray-700">
+          {/* Step 1: Player Name */}
+          {currentStep === 1 && (
+            <PlayerNameStep
+              defaultValues={{
+                firstName: playerData.firstName || "",
+                lastName: playerData.lastName || "",
+              }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={() => setLocation("/profile-gateway")}
+            />
+          )}
 
-            {/* Step 3: Gender */}
-            {currentStep === 3 && (
-              <GenderStep
-                defaultValues={{ gender: playerData.gender || "" }}
-                onSubmit={(data) => {
-                  setPlayerData({ ...playerData, ...data });
-                  handleNext();
-                }}
-                onBack={handleBack}
-              />
-            )}
+          {/* Step 2: Date of Birth */}
+          {currentStep === 2 && (
+            <DOBStep
+              defaultValues={{ dateOfBirth: playerData.dateOfBirth || "" }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
 
-            {/* Step 4: Package Selection */}
-            {currentStep === 4 && (
-              <PackageSelectionStep
-                defaultValues={{ packageId: playerData.packageId || "" }}
-                programs={programs}
-                programsByCategory={programsByCategory}
-                isLoading={programsLoading}
-                onSubmit={(data) => {
-                  setPlayerData({ ...playerData, ...data });
-                  handleNext();
-                }}
-                onBack={handleBack}
-              />
-            )}
+          {/* Step 3: Gender */}
+          {currentStep === 3 && (
+            <GenderStep
+              defaultValues={{ gender: playerData.gender || "" }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
 
-            {/* Step 5: Payment Summary */}
-            {currentStep === 5 && (
-              <PaymentSummaryStep
-                playerData={playerData}
-                selectedProgram={selectedProgram}
-                onSubmit={() => {
-                  const finalData = { ...playerData };
-                  addPlayerMutation.mutate(finalData);
-                }}
-                onBack={handleBack}
-                isSubmitting={addPlayerMutation.isPending}
-              />
-            )}
-          </CardContent>
-        </Card>
+          {/* Step 4: Package Selection */}
+          {currentStep === 4 && (
+            <PackageSelectionStep
+              defaultValues={{ packageId: playerData.packageId || "" }}
+              programs={programs}
+              programsByCategory={programsByCategory}
+              isLoading={programsLoading}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 5: Payment Summary */}
+          {currentStep === 5 && (
+            <PaymentSummaryStep
+              playerData={playerData}
+              selectedProgram={selectedProgram}
+              onSubmit={() => {
+                const finalData = { ...playerData };
+                addPlayerMutation.mutate(finalData);
+              }}
+              onBack={handleBack}
+              isSubmitting={addPlayerMutation.isPending}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -4763,10 +4763,10 @@ function ProductsTab({ organization }: any) {
       stripePriceId: z.string().optional(),
       stripeProductId: z.string().optional(),
       tags: z.array(z.string()).default([]),
-      eventTypes: z.array(z.string()).default([]),
-      coverageScope: z.array(z.string()).default([]),
+      requireAAUMembership: z.boolean().default(false),
+      requireConcussionWaiver: z.boolean().default(false),
+      requireClubAgreement: z.boolean().default(false),
       autoAssignPlayers: z.boolean().default(false),
-      linkedAwards: z.array(z.string()).default([]),
       adminNotes: z.string().optional(),
       isActive: z.boolean().default(true),
     })),
@@ -4787,10 +4787,10 @@ function ProductsTab({ organization }: any) {
       stripePriceId: "",
       stripeProductId: "",
       tags: [],
-      eventTypes: [],
-      coverageScope: [],
+      requireAAUMembership: false,
+      requireConcussionWaiver: false,
+      requireClubAgreement: false,
       autoAssignPlayers: false,
-      linkedAwards: [],
       adminNotes: "",
       isActive: true,
     },
@@ -4858,10 +4858,10 @@ function ProductsTab({ organization }: any) {
       stripePriceId: pkg.stripePriceId || "",
       stripeProductId: pkg.stripeProductId || "",
       tags: pkg.tags || [],
-      eventTypes: pkg.eventTypes || [],
-      coverageScope: pkg.coverageScope || [],
+      requireAAUMembership: pkg.requireAAUMembership || false,
+      requireConcussionWaiver: pkg.requireConcussionWaiver || false,
+      requireClubAgreement: pkg.requireClubAgreement || false,
       autoAssignPlayers: pkg.autoAssignPlayers || false,
-      linkedAwards: pkg.linkedAwards || [],
       adminNotes: pkg.adminNotes || "",
       isActive: pkg.isActive,
     });
@@ -4887,10 +4887,10 @@ function ProductsTab({ organization }: any) {
       stripePriceId: "",
       stripeProductId: "",
       tags: [],
-      eventTypes: [],
-      coverageScope: [],
+      requireAAUMembership: false,
+      requireConcussionWaiver: false,
+      requireClubAgreement: false,
       autoAssignPlayers: false,
-      linkedAwards: [],
       adminNotes: "",
       isActive: true,
     });
@@ -4941,7 +4941,7 @@ function ProductsTab({ organization }: any) {
                 <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Billing</TableHead>
-                <TableHead>Coverage</TableHead>
+                <TableHead>Waivers</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -4979,15 +4979,17 @@ function ProductsTab({ organization }: any) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {(pkg.coverageScope || []).slice(0, 2).map((scope: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          {scope}
-                        </Badge>
-                      ))}
-                      {(pkg.coverageScope || []).length > 2 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{(pkg.coverageScope || []).length - 2}
-                        </Badge>
+                      {pkg.requireAAUMembership && (
+                        <Badge variant="secondary" className="text-xs">AAU</Badge>
+                      )}
+                      {pkg.requireConcussionWaiver && (
+                        <Badge variant="secondary" className="text-xs">Concussion</Badge>
+                      )}
+                      {pkg.requireClubAgreement && (
+                        <Badge variant="secondary" className="text-xs">Club</Badge>
+                      )}
+                      {!pkg.requireAAUMembership && !pkg.requireConcussionWaiver && !pkg.requireClubAgreement && (
+                        <span className="text-gray-400 text-xs">None</span>
                       )}
                     </div>
                   </TableCell>
@@ -5377,107 +5379,113 @@ function ProductsTab({ organization }: any) {
                 />
               </div>
 
-              {/* Coverage & Access */}
+              {/* Tags */}
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormDescription>Categorize this package</FormDescription>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["Youth Club", "Skills", "FNH", "Camp", "Uniform", "Add-On"].map((tag) => (
+                        <div key={tag} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={(field.value as string[] || []).includes(tag)}
+                            onCheckedChange={(checked) => {
+                              const current = (field.value as string[]) || [];
+                              if (checked) {
+                                field.onChange([...current, tag]);
+                              } else {
+                                field.onChange(current.filter((t: string) => t !== tag));
+                              }
+                            }}
+                            data-testid={`checkbox-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                          />
+                          <Label className="text-sm font-normal">{tag}</Label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Waivers & Agreements */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Coverage & Access</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Waivers & Agreements</h3>
+                <p className="text-sm text-gray-500">Select which waivers and agreements are required for this package</p>
                 
                 <FormField
                   control={form.control}
-                  name="eventTypes"
+                  name="requireAAUMembership"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Covers Event Types</FormLabel>
-                      <FormDescription>Which event types does this package grant access to?</FormDescription>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {["Practice", "Game", "Skills", "FNH", "Camp"].map((type) => (
-                          <div key={type} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(field.value as string[] || []).includes(type)}
-                              onCheckedChange={(checked) => {
-                                const current = (field.value as string[]) || [];
-                                if (checked) {
-                                  field.onChange([...current, type]);
-                                } else {
-                                  field.onChange(current.filter((t: string) => t !== type));
-                                }
-                              }}
-                              data-testid={`checkbox-event-type-${type.toLowerCase()}`}
-                            />
-                            <Label className="text-sm font-normal">{type}</Label>
-                          </div>
-                        ))}
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">AAU Membership</FormLabel>
+                        <FormDescription>
+                          Require players to provide AAU membership information
+                        </FormDescription>
                       </div>
-                      <FormMessage />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-require-aau"
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
 
                 <FormField
                   control={form.control}
-                  name="coverageScope"
+                  name="requireConcussionWaiver"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Coverage Scope</FormLabel>
-                      <FormDescription>Which age divisions does this package apply to?</FormDescription>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {["All", "U10", "U12", "U14", "U16", "U18"].map((scope) => (
-                          <div key={scope} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(field.value as string[] || []).includes(scope)}
-                              onCheckedChange={(checked) => {
-                                const current = (field.value as string[]) || [];
-                                if (checked) {
-                                  field.onChange([...current, scope]);
-                                } else {
-                                  field.onChange(current.filter((s: string) => s !== scope));
-                                }
-                              }}
-                              data-testid={`checkbox-coverage-${scope.toLowerCase()}`}
-                            />
-                            <Label className="text-sm font-normal">{scope}</Label>
-                          </div>
-                        ))}
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">HEADSUP Concussion Waiver</FormLabel>
+                        <FormDescription>
+                          Require acknowledgment of CDC HEADSUP concussion information
+                        </FormDescription>
                       </div>
-                      <FormMessage />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-require-concussion"
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
 
                 <FormField
                   control={form.control}
-                  name="tags"
+                  name="requireClubAgreement"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tags</FormLabel>
-                      <FormDescription>Categorize this package</FormDescription>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {["Youth Club", "Skills", "FNH", "Camp", "Uniform", "Add-On"].map((tag) => (
-                          <div key={tag} className="flex items-center space-x-2">
-                            <Checkbox
-                              checked={(field.value as string[] || []).includes(tag)}
-                              onCheckedChange={(checked) => {
-                                const current = (field.value as string[]) || [];
-                                if (checked) {
-                                  field.onChange([...current, tag]);
-                                } else {
-                                  field.onChange(current.filter((t: string) => t !== tag));
-                                }
-                              }}
-                              data-testid={`checkbox-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
-                            />
-                            <Label className="text-sm font-normal">{tag}</Label>
-                          </div>
-                        ))}
+                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Club Team Agreement</FormLabel>
+                        <FormDescription>
+                          Require acceptance of UYP Club Team Experience agreement
+                        </FormDescription>
                       </div>
-                      <FormMessage />
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-require-club-agreement"
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Automation & Awards */}
+              {/* Automation */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Automation & Awards</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Automation</h3>
                 
                 <FormField
                   control={form.control}
@@ -5497,41 +5505,6 @@ function ProductsTab({ organization }: any) {
                           data-testid="switch-auto-assign"
                         />
                       </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="linkedAwards"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Linked Awards (Optional)</FormLabel>
-                      <FormDescription>Awards earned automatically for completing this package</FormDescription>
-                      {awards && awards.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {awards.slice(0, 10).map((award: any) => (
-                            <div key={award.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                checked={(field.value as string[] || []).includes(award.id)}
-                                onCheckedChange={(checked) => {
-                                  const current = (field.value as string[]) || [];
-                                  if (checked) {
-                                    field.onChange([...current, award.id]);
-                                  } else {
-                                    field.onChange(current.filter((id: string) => id !== award.id));
-                                  }
-                                }}
-                                data-testid={`checkbox-award-${award.id}`}
-                              />
-                              <Label className="text-sm font-normal">{award.name}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-gray-500 mt-2">No awards available. Create awards first.</p>
-                      )}
-                      <FormMessage />
                     </FormItem>
                   )}
                 />

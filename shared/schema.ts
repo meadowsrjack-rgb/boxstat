@@ -282,7 +282,9 @@ export const programs = pgTable("programs", {
   coverageScope: text("coverage_scope").array().default(sql`ARRAY[]::text[]`), // ["U10", "U12", "U14"] or ["All"]
   ageGroups: text("age_groups").array().default(sql`ARRAY[]::text[]`), // DEPRECATED: backwards compat
   autoAssignPlayers: boolean("auto_assign_players").default(false),
-  linkedAwards: text("linked_awards").array().default(sql`ARRAY[]::text[]`), // Award IDs
+  requireAAUMembership: boolean("require_aau_membership").default(false),
+  requireConcussionWaiver: boolean("require_concussion_waiver").default(false),
+  requireClubAgreement: boolean("require_club_agreement").default(false),
   adminNotes: text("admin_notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),

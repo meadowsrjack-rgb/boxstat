@@ -203,6 +203,8 @@ export const users = pgTable("users", {
   notes: text(),
   aauMembershipId: varchar("aau_membership_id"),
   postalCode: varchar("postal_code"),
+  concussionWaiverAcknowledged: boolean("concussion_waiver_acknowledged").default(false),
+  concussionWaiverDate: timestamp("concussion_waiver_date", { mode: 'string' }),
   passcode: varchar({ length: 4 }),
   password: varchar(),
   city: varchar(),

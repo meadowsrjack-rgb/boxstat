@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, Calendar, FileText, ExternalLink, AlertTriangle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DateScrollPicker } from "react-date-wheel-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -37,6 +38,12 @@ const aauMembershipSchema = z.object({
   postalCode: z.string().min(5, "Postal code is required"),
 });
 
+const concussionWaiverSchema = z.object({
+  concussionWaiverAcknowledged: z.boolean().refine(val => val === true, {
+    message: "You must acknowledge the concussion waiver to continue",
+  }),
+});
+
 const packageSchema = z.object({
   packageId: z.string().min(1, "Please select a package"),
 });
@@ -45,6 +52,7 @@ type PlayerName = z.infer<typeof playerNameSchema>;
 type DOB = z.infer<typeof dobSchema>;
 type Gender = z.infer<typeof genderSchema>;
 type AAUMembership = z.infer<typeof aauMembershipSchema>;
+type ConcussionWaiver = z.infer<typeof concussionWaiverSchema>;
 type Package = z.infer<typeof packageSchema>;
 
 type Program = {
@@ -67,13 +75,14 @@ export default function AddPlayer() {
     gender?: string;
     aauMembershipId?: string;
     postalCode?: string;
+    concussionWaiverAcknowledged?: boolean;
     packageId?: string;
   }>({});
 
-  // Fetch programs for step 4
+  // Fetch programs for step 6
   const { data: programs = [], isLoading: programsLoading } = useQuery<Program[]>({
     queryKey: ["/api/programs"],
-    enabled: currentStep >= 4,
+    enabled: currentStep >= 6,
   });
 
   // Group programs by category
@@ -125,12 +134,12 @@ export default function AddPlayer() {
     },
   });
 
-  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 6));
+  const handleNext = () => setCurrentStep((prev) => Math.min(prev + 1, 7));
   const handleBack = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
-  const progress = (currentStep / 6) * 100;
+  const progress = (currentStep / 7) * 100;
 
-  // Get selected program for step 5
+  // Get selected program for step 6
   const selectedProgram = programs.find(p => p.id === playerData.packageId);
 
   return (
@@ -142,7 +151,7 @@ export default function AddPlayer() {
               <UserPlus className="w-8 h-8" />
               Add Player
             </h1>
-            <span className="text-gray-400 text-sm">Step {currentStep} of 6</span>
+            <span className="text-gray-400 text-sm">Step {currentStep} of 7</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
@@ -207,8 +216,22 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 5: Package Selection */}
+          {/* Step 5: HEADSUP Concussion Waiver */}
           {currentStep === 5 && (
+            <ConcussionWaiverStep
+              defaultValues={{
+                concussionWaiverAcknowledged: playerData.concussionWaiverAcknowledged || false,
+              }}
+              onSubmit={(data) => {
+                setPlayerData({ ...playerData, ...data });
+                handleNext();
+              }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Step 6: Package Selection */}
+          {currentStep === 6 && (
             <PackageSelectionStep
               defaultValues={{ packageId: playerData.packageId || "" }}
               programs={programs}
@@ -222,8 +245,8 @@ export default function AddPlayer() {
             />
           )}
 
-          {/* Step 6: Payment Summary */}
-          {currentStep === 6 && (
+          {/* Step 7: Payment Summary */}
+          {currentStep === 7 && (
             <PaymentSummaryStep
               playerData={playerData}
               selectedProgram={selectedProgram}
@@ -553,6 +576,133 @@ function AAUMembershipStep({
                 />
               </FormControl>
               <FormMessage className="text-red-400" />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-between pt-6">
+          <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button type="submit" data-testid="button-next" className="text-gray-400 hover:text-white transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+function ConcussionWaiverStep({
+  defaultValues,
+  onSubmit,
+  onBack,
+}: {
+  defaultValues: { concussionWaiverAcknowledged: boolean };
+  onSubmit: (data: ConcussionWaiver) => void;
+  onBack: () => void;
+}) {
+  const form = useForm<ConcussionWaiver>({
+    resolver: zodResolver(concussionWaiverSchema),
+    defaultValues: { concussionWaiverAcknowledged: defaultValues.concussionWaiverAcknowledged },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="flex items-center gap-3 mb-4">
+          <AlertTriangle className="w-8 h-8 text-yellow-500" />
+          <h2 className="text-2xl font-bold text-white">HEADSUP Concussion Waiver</h2>
+        </div>
+        
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-6">
+          <h3 className="text-yellow-400 font-semibold mb-3 flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Required Reading
+          </h3>
+          <p className="text-gray-300 text-sm leading-relaxed mb-4">
+            Before registering your athlete, you must review the CDC's HEADSUP Concussion information. 
+            Please read the following documents carefully:
+          </p>
+          
+          <div className="space-y-3">
+            <a 
+              href="https://cdn2.sportngin.com/attachments/document/2d0e-2478722/Parent_Athlete_Info_Sheet_2.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 rounded-lg p-3 transition-colors group"
+              data-testid="link-parent-info-sheet"
+            >
+              <FileText className="w-5 h-5 text-red-500" />
+              <div className="flex-1">
+                <span className="text-white font-medium group-hover:text-red-400 transition-colors">Parent/Athlete Information Sheet</span>
+                <p className="text-gray-400 text-xs">Learn about concussion signs, symptoms, and what to do if one occurs</p>
+              </div>
+              <ExternalLink className="w-4 h-4 text-gray-500" />
+            </a>
+            
+            <a 
+              href="https://cdn3.sportngin.com/attachments/document/3830-2478723/Fact_Sheet_For_Athletes_2.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 bg-gray-800 hover:bg-gray-700 rounded-lg p-3 transition-colors group"
+              data-testid="link-athlete-fact-sheet"
+            >
+              <FileText className="w-5 h-5 text-red-500" />
+              <div className="flex-1">
+                <span className="text-white font-medium group-hover:text-red-400 transition-colors">Fact Sheet For Athletes</span>
+                <p className="text-gray-400 text-xs">Information specifically for athletes about recognizing concussions</p>
+              </div>
+              <ExternalLink className="w-4 h-4 text-gray-500" />
+            </a>
+          </div>
+        </div>
+
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+          <h4 className="text-white font-medium mb-3">Key Points to Remember:</h4>
+          <ul className="text-gray-300 text-sm space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-red-500 mt-1">•</span>
+              A concussion is a brain injury that affects how the brain works
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-500 mt-1">•</span>
+              All concussions are serious and can occur in any sport
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-500 mt-1">•</span>
+              Athletes should report concussion symptoms immediately
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-red-500 mt-1">•</span>
+              Athletes must be cleared by a healthcare provider before returning to play
+            </li>
+          </ul>
+        </div>
+
+        <FormField
+          control={form.control}
+          name="concussionWaiverAcknowledged"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg border border-gray-700 p-4 bg-gray-800/30">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="checkbox-concussion-waiver"
+                  className="mt-1"
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel className="text-white font-medium">
+                  I acknowledge that I have read and understand the HEADSUP Concussion information
+                </FormLabel>
+                <p className="text-gray-400 text-sm">
+                  By checking this box, I confirm that I have reviewed the concussion awareness materials 
+                  and understand the risks associated with sports-related head injuries.
+                </p>
+                <FormMessage className="text-red-400" />
+              </div>
             </FormItem>
           )}
         />

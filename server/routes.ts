@@ -2066,7 +2066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, packageId } = req.body;
+      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, packageId } = req.body;
       
       // Validate required fields
       if (!firstName || !lastName) {
@@ -2114,6 +2114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gender: gender || null,
         aauMembershipId: aauMembershipId || null,
         postalCode: postalCode || null,
+        concussionWaiverAcknowledged: concussionWaiverAcknowledged || false,
+        concussionWaiverDate: concussionWaiverAcknowledged ? new Date().toISOString() : null,
         accountHolderId: id,
         packageSelected: packageId,
         teamAssignmentStatus: "pending",

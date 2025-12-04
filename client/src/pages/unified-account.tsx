@@ -688,7 +688,6 @@ export default function UnifiedAccount() {
 
         </div>
       </div>
-
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Announcement Banner */}
@@ -723,7 +722,7 @@ export default function UnifiedAccount() {
           <TabsContent value="home" className="space-y-6">
             {/* Player Cards Section */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">My Players</h2>
+              <h2 className="text-2xl font-bold mb-4">Players</h2>
 
               {players.length === 0 ? (
                 <Card>
@@ -1156,7 +1155,6 @@ export default function UnifiedAccount() {
           </TabsContent>
         </Tabs>
       </div>
-
       {/* PIN Dialog */}
       <PINDialog
         open={pinDialogOpen}
@@ -1166,7 +1164,6 @@ export default function UnifiedAccount() {
         title="Set Lock PIN"
         description={`Create a 4-digit PIN to lock this device to ${players.find((p: any) => p.id === playerToLock)?.firstName}'s dashboard`}
       />
-
       {/* Event Detail Modal */}
       {selectedChildForModal && (
         <>

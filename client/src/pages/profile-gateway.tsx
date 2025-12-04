@@ -32,7 +32,6 @@ export default function ProfileGateway() {
   const userRole = (user as any)?.role;
   const isCoach = userRole === "coach" || userRole === "admin";
   const isAdmin = userRole === "admin";
-  const isParent = userRole === "parent";
 
   const handleSelectProfile = (type: string, playerId?: string) => {
     localStorage.setItem("lastViewedProfileType", type);
@@ -54,25 +53,30 @@ export default function ProfileGateway() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col">
-      <div className="max-w-md mx-auto pt-20 flex-1">
-        {/* Account Settings Button - Top Right */}
-        <div className="absolute top-6 right-6 safe-top mb-20">
-          <Button
-            variant="ghost"
-            onClick={() => handleSelectProfile("account")}
-            className="bg-[#293845c2] text-gray-400 hover:text-white hover:bg-gray-800 flex items-center gap-2"
-            data-testid="button-account-settings"
-          >
-            <Settings className="w-12 h-12" />
-            <span className="text-lg font-semibold">Account</span>
-          </Button>
-        </div>
-
+      <div className="max-w-md mx-auto pt-12 flex-1">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
         </div>
 
         <div className="space-y-4">
+          {/* Account Card - styled like other profiles */}
+          <Card 
+            className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
+            onClick={() => handleSelectProfile("account")}
+            data-testid="card-account-profile"
+          >
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <Settings className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white">Account</h3>
+                <p className="text-sm text-gray-400">Settings & billing</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+            </CardContent>
+          </Card>
+
           {isCoach && (
             <Card 
               className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
@@ -143,21 +147,19 @@ export default function ProfileGateway() {
             </Card>
           ))}
 
-          {/* Add Player Button for Parents */}
-          {isParent && (
-            <div className="flex flex-col items-center gap-4 pt-4">
-              <button
-                onClick={() => setLocation("/add-player")}
-                className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
-                data-testid="button-add-player-icon"
-              >
-                <User className="w-10 h-10 text-gray-500" />
-              </button>
-              {players.length === 0 && (
-                <p className="text-gray-400 text-center text-[12px]" data-testid="text-add-first-player">Add your first player</p>
-              )}
-            </div>
-          )}
+          {/* Add Player Button - always visible */}
+          <div className="flex flex-col items-center gap-4 pt-4">
+            <button
+              onClick={() => setLocation("/add-player")}
+              className="relative w-20 h-20 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 hover:ring-2 hover:ring-gray-600 transition-all group"
+              data-testid="button-add-player-icon"
+            >
+              <User className="w-10 h-10 text-gray-500" />
+            </button>
+            {players.length === 0 && (
+              <p className="text-gray-400 text-center text-[12px]" data-testid="text-add-first-player">Add your first player</p>
+            )}
+          </div>
         </div>
       </div>
       <div className="text-center pb-4">

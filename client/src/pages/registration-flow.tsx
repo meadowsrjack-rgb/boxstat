@@ -152,12 +152,12 @@ export default function RegistrationFlow() {
         if (loginResponse.success) {
           toast({
             title: "Registration Complete!",
-            description: "Welcome! Redirecting to your account...",
+            description: "Welcome! Let's set up your first player...",
           });
           
-          // Redirect to account page with full reload to ensure session is established
+          // Redirect to profile gateway with full reload to ensure session is established
           setTimeout(() => {
-            window.location.href = "/account";
+            window.location.href = "/profile-gateway";
           }, 1000);
         }
       } catch (loginError: any) {

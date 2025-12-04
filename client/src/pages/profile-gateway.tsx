@@ -111,51 +111,68 @@ export default function ProfileGateway() {
             </Card>
           )}
 
-          {players.length > 0 && (
-            <>
-              {(isCoach || isAdmin) && (
-                <div className="border-t border-gray-700 my-6 pt-4">
-                  <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
+          {/* Player Profiles Section */}
+          {(isCoach || isAdmin) && players.length > 0 && (
+            <div className="border-t border-gray-700 my-6 pt-4">
+              <h2 className="text-sm font-medium text-gray-400 mb-4 px-1">PLAYER PROFILES</h2>
+            </div>
+          )}
+
+          {players.map((player: any) => (
+            <Card 
+              key={player.id}
+              className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
+              onClick={() => handleSelectProfile("player", player.id)}
+              data-testid={`card-player-${player.id}`}
+            >
+              <CardContent className="p-4 flex items-center gap-4">
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
+                    {player.firstName?.[0]}{player.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white">
+                    {player.firstName} {player.lastName}
+                  </h3>
+                  <p className="text-sm text-gray-400">Player Dashboard</p>
                 </div>
-              )}
+                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+              </CardContent>
+            </Card>
+          ))}
 
-              {players.map((player: any) => (
-                <Card 
-                  key={player.id}
-                  className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
-                  onClick={() => handleSelectProfile("player", player.id)}
-                  data-testid={`card-player-${player.id}`}
-                >
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
-                        {player.firstName?.[0]}{player.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white">
-                        {player.firstName} {player.lastName}
-                      </h3>
-                      <p className="text-sm text-gray-400">Player Dashboard</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                  </CardContent>
-                </Card>
-              ))}
+          {/* Empty State for Parents with No Players */}
+          {isParent && players.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-800 flex items-center justify-center">
+                <User className="w-10 h-10 text-gray-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">No Players Yet</h3>
+              <p className="text-gray-400 mb-6">Add your first player to get started</p>
+              <Button
+                onClick={() => setLocation("/add-player")}
+                className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-lg"
+                data-testid="button-add-first-player-gateway"
+              >
+                <Plus className="w-6 h-6 mr-2" />
+                Add Player
+              </Button>
+            </div>
+          )}
 
-              {isParent && (
-                <Button
-                  onClick={() => setLocation("/add-player")}
-                  variant="outline"
-                  className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white flex items-center justify-center gap-2 py-6"
-                  data-testid="button-add-player-gateway"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add Player
-                </Button>
-              )}
-            </>
+          {/* Add Player Button for Parents with Existing Players */}
+          {isParent && players.length > 0 && (
+            <Button
+              onClick={() => setLocation("/add-player")}
+              variant="outline"
+              className="w-full border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white flex items-center justify-center gap-2 py-6"
+              data-testid="button-add-player-gateway"
+            >
+              <Plus className="w-5 h-5" />
+              Add Player
+            </Button>
           )}
         </div>
 

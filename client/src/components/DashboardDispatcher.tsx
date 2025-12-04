@@ -87,10 +87,9 @@ export default function DashboardDispatcher() {
 
     if (isAdmin || isCoach) {
       setLocation("/profile-gateway");
-    } else if (isParent && hasManagedPlayers) {
+    } else if (isParent) {
+      // Always send parents to profile gateway - they'll see empty state if no players
       setLocation("/profile-gateway");
-    } else if (isParent && !hasManagedPlayers) {
-      goToParentDashboard();
     } else if (isPlayer) {
       goToPlayerDashboard(userId, false);
     } else {

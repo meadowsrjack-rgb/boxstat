@@ -155,13 +155,12 @@ export default function ProfileGateway() {
                 <Plus className="w-6 h-6 text-white absolute bottom-0 right-0 bg-red-600 rounded-full p-1" />
               </button>
               {players.length === 0 && (
-                <p className="text-gray-400 text-center" data-testid="text-add-first-player">ADD YOUR FIRST PLAYER</p>
+                <p className="text-gray-400 text-center text-[12px]" data-testid="text-add-first-player">Add your first player</p>
               )}
             </div>
           )}
         </div>
       </div>
-
       <div className="text-center pb-4">
         <button 
           onClick={async () => {

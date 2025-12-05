@@ -1551,24 +1551,6 @@ function HRTab({
         </CardContent>
       </Card>
 
-      <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <h3 className="text-md font-bold text-gray-900 mb-3">Announcements</h3>
-          {announcements?.length ? (
-            <div className="space-y-3">
-              {announcements.map((a) => (
-                <div key={a.id} className="p-3 rounded-lg border" data-testid={`announcement-${a.id}`}>
-                  <div className="text-sm font-semibold text-gray-900">{a.title}</div>
-                  <div className="text-[11px] text-gray-500 mb-1">{a.createdAt ? format(new Date(a.createdAt), "MMM d, yyyy") : ""}</div>
-                  <div className="text-sm text-gray-700 whitespace-pre-wrap">{a.body}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">No announcements yet.</div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

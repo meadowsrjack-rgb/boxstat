@@ -104,62 +104,16 @@ export default function PlayerCard({
   });
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
-  // Get player profile - try to get from /api/profile if it's a profile ID, otherwise from /api/players
-  const isProfileId = playerId.startsWith('profile-');
-  
-  const { data: profileData, isLoading: profileLoading } = useQuery<Profile>({
+  // Get player profile - all user IDs in this app are profile IDs (no 'profile-' prefix needed)
+  const { data: profileData, isLoading: loading } = useQuery<Profile>({
     queryKey: [`/api/profile/${playerId}`],
-    enabled: isOpen && !!playerId && isProfileId,
+    enabled: isOpen && !!playerId,
   });
 
-  const { data: playerData, isLoading: playerLoading } = useQuery<any>({
-    queryKey: [`/api/players/${playerId}/profile`],
-    enabled: isOpen && !!playerId && !isProfileId,
-  });
+  const playerProfile: Profile | undefined = profileData;
 
-  // Convert player data to Profile format if needed
-  const playerProfile: Profile | undefined = isProfileId 
-    ? profileData 
-    : playerData ? {
-        id: playerData.id || playerId,
-        accountId: playerId,
-        profileType: 'player' as const,
-        firstName: playerData.first_name,
-        lastName: playerData.last_name,
-        profileImageUrl: playerData.profile_image_url,
-        phoneNumber: playerData.phone_number,
-        dateOfBirth: playerData.dateOfBirth,
-        emergencyContact: playerData.emergency_contact,
-        emergencyPhone: playerData.emergency_phone,
-        address: playerData.city,
-        medicalInfo: playerData.medical_info,
-        allergies: playerData.allergies,
-        schoolGrade: playerData.schoolGrade,
-        position: playerData.position,
-        jerseyNumber: playerData.jerseyNumber,
-        teamId: playerData.team_id?.toString() || null,
-        age: playerData.age,
-        height: playerData.height,
-        city: playerData.city,
-        coachingExperience: null,
-        yearsExperience: null,
-        bio: null,
-        previousTeams: null,
-        playingExperience: null,
-        philosophy: null,
-        occupation: null,
-        workPhone: null,
-        relationship: null,
-        isVerified: false,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      } : undefined;
-
-  const loading = isProfileId ? profileLoading : playerLoading;
-
-  // Get the account ID for queries (use playerProfile.accountId if available, otherwise use playerId if it's an account ID)
-  const accountIdForQueries = playerProfile?.accountId || (!isProfileId ? playerId : null);
+  // Get the account ID for queries - use the playerId directly as it IS the account/profile ID
+  const accountIdForQueries = playerProfile?.id || playerId;
 
   // Get team info
   const { data: teamInfo } = useQuery<TeamInfo>({

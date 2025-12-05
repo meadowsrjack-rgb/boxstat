@@ -17,7 +17,35 @@ The frontend uses React 18 with TypeScript and Vite, styled with Radix UI, shadc
 The backend is built with Node.js and Express.js (TypeScript, ESM). It includes a custom email/password authentication system with verification and magic links, utilizing a pending registration system. Session management uses persistent Express sessions with PostgreSQL storage. CORS is configured for mobile apps and web browsers. Stripe handles payment processing, and WebSockets provide real-time features. APIs are RESTful.
 
 ### Database
-PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe operations. The schema supports users, teams, events, payments, facilities, and a 5-tier badge/trophy system. It includes structures for various programs, age/level divisions, and comprehensive user data fields. A dual-table structure manages player data, distinguishing between app users and Notion-synced roster data. A `playerId` field in the payments table ensures accurate per-player billing. A `pending_registrations` table prevents partial account creation during the multi-step registration process.
+PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe operations. The schema has been restructured to align with admin dashboard tabs for better organization:
+
+**Core Tables:**
+- `users`: Multi-role architecture (player, parent, coach, admin sharing same email) with profile gateway routing
+- `teams`, `team_memberships`: Team management with role-based assignments (head_coach, assistant_coach, manager, player)
+- `facilities`: Training and game locations with geocoding support
+- `events`, `event_targets`: Events with normalized targeting (teams, roles, programs, divisions, specific users)
+- `payments`: Stripe integration with per-player billing and various billing models
+
+**Waiver System:**
+- `waivers`: Base waiver definitions
+- `waiver_versions`: Versioned waiver content with publish workflow
+- `waiver_signatures`: User signatures with status tracking (valid/superseded/revoked) - publishing new version automatically supersedes existing signatures
+
+**Product & Enrollment System:**
+- `programs`, `packages`: Reusable program and package definitions
+- `product_enrollments`: Consolidated enrollment tracking with legacy migration support via metadata field
+
+**Notification System:**
+- `notifications`: Unified notification storage with multi-type support (announcement, notification, message)
+- `notification_templates`: Reusable templates with variable placeholders
+- `notification_topics`: Categorization and subscription control for notifications
+- `messages`: Team-specific chat messages (separate from notifications)
+
+**Additional Tables:**
+- `pending_registrations`: Multi-step registration flow with session/platform tracking
+- `migration_lookup`, `subscriptions`: Legacy UYP subscription migration support
+- `badges`, `trophies`, `trophy_assignments`: 5-tier achievement system
+- `age_divisions`, `levels`, `coaches`: Program configuration and coach profiles
 
 ### Key Features & Design Decisions
 - **Authentication & Registration**: Features a required email verification, magic link, and a non-blocking registration flow using the pending registration system. Key features include:

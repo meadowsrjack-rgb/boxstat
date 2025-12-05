@@ -2534,6 +2534,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(updated);
   });
   
+  // Add a new role profile for an existing account
+  app.post('/api/users/:userId/add-role', requireAuth, async (req: any, res) => {
+    const { role: adminRole, organizationId } = req.user;
+    if (adminRole !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can add roles' });
+    }
+    
+    const { userId } = req.params;
+    const { role: newRole, firstName, lastName } = req.body;
+    
+    // Validate role
+    const validRoles = ['player', 'parent', 'coach', 'admin'];
+    if (!validRoles.includes(newRole)) {
+      return res.status(400).json({ message: 'Invalid role. Must be one of: player, parent, coach, admin' });
+    }
+    
+    try {
+      // Get the target user (should be an account holder)
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Determine the account holder ID
+      // If target user IS an account holder, use their ID
+      // Otherwise, use their accountHolderId
+      const accountHolderId = targetUser.accountHolderId || targetUser.id;
+      const accountHolder = targetUser.accountHolderId 
+        ? await storage.getUser(targetUser.accountHolderId) 
+        : targetUser;
+      
+      if (!accountHolder) {
+        return res.status(404).json({ message: 'Account holder not found' });
+      }
+      
+      // Get all existing profiles for this account
+      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const existingProfiles = allUsers.filter((u: any) => 
+        u.id === accountHolderId || u.accountHolderId === accountHolderId
+      );
+      
+      // Check if this role already exists for this account
+      const roleExists = existingProfiles.some((u: any) => u.role === newRole);
+      if (roleExists) {
+        return res.status(400).json({ 
+          message: `This account already has a ${newRole} profile` 
+        });
+      }
+      
+      // Generate unique ID for new profile
+      const newId = `${newRole}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      
+      // Create the new role profile with the same email
+      const newProfile = await storage.createUser({
+        id: newId,
+        organizationId: accountHolder.organizationId,
+        email: accountHolder.email,
+        role: newRole,
+        firstName: firstName || accountHolder.firstName,
+        lastName: lastName || accountHolder.lastName,
+        accountHolderId: accountHolderId,
+        hasRegistered: true,
+        verified: true,
+        isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
+      });
+      
+      res.json({ 
+        success: true, 
+        message: `${newRole} profile created successfully`,
+        profile: newProfile 
+      });
+    } catch (error: any) {
+      console.error('Error adding role:', error);
+      res.status(500).json({ message: 'Failed to add role', error: error.message });
+    }
+  });
+  
   app.delete('/api/users/:id', requireAuth, async (req: any, res) => {
     const { role, organizationId } = req.user;
     if (role !== 'admin') {

@@ -47,6 +47,7 @@ import {
   AlertTriangle,
   LogOut,
   FileText,
+  UserPlus,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -520,6 +521,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [detailTab, setDetailTab] = useState("team");
   const [showDobPicker, setShowDobPicker] = useState(false);
+  const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
+  const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("");
   const tableRef = useDragScroll();
 
   // Fetch user evaluations - only when viewing user in performance tab
@@ -612,6 +615,21 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     onError: (_error, _variables) => {
       setUpdatingUserId(null);
       toast({ title: "Failed to update user", variant: "destructive" });
+    },
+  });
+
+  const addRole = useMutation({
+    mutationFn: async ({ userId, role, firstName, lastName }: { userId: string; role: string; firstName?: string; lastName?: string }) => {
+      return await apiRequest("POST", `/api/users/${userId}/add-role`, { role, firstName, lastName });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: data.message || "Role added successfully" });
+      setShowAddRoleDialog(false);
+      setSelectedRoleToAdd("");
+    },
+    onError: (error: any) => {
+      toast({ title: error?.message || "Failed to add role", variant: "destructive" });
     },
   });
 
@@ -1411,6 +1429,16 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       )}
                     </div>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddRoleDialog(true)}
+                    className="flex items-center gap-2"
+                    data-testid="button-add-role"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Role
+                  </Button>
                 </div>
               </div>
 
@@ -1708,6 +1736,76 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </div>
               )}
               </div>
+
+              {/* Add Role Dialog */}
+              <Dialog open={showAddRoleDialog} onOpenChange={setShowAddRoleDialog}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Add Role Profile</DialogTitle>
+                    <DialogDescription>
+                      Create a new role profile for {viewingUser.firstName} {viewingUser.lastName}. 
+                      This will create a separate user record with the same email but a different role.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Select Role</Label>
+                      <Select value={selectedRoleToAdd} onValueChange={setSelectedRoleToAdd}>
+                        <SelectTrigger data-testid="select-role-to-add">
+                          <SelectValue placeholder="Choose a role..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {['player', 'parent', 'coach', 'admin']
+                            .filter(role => {
+                              const accountHolderId = viewingUser.accountHolderId || viewingUser.id;
+                              const existingRoles = users
+                                .filter((u: any) => u.id === accountHolderId || u.accountHolderId === accountHolderId)
+                                .map((u: any) => u.role);
+                              return !existingRoles.includes(role);
+                            })
+                            .map(role => (
+                              <SelectItem key={role} value={role} className="capitalize">
+                                {role.charAt(0).toUpperCase() + role.slice(1)}
+                              </SelectItem>
+                            ))
+                          }
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
+                      <p className="font-medium mb-1">What this does:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs">
+                        <li>Creates a new user record with a unique ID</li>
+                        <li>Uses the same email: {viewingUser.email}</li>
+                        <li>Links to the same account holder</li>
+                        <li>User can switch between roles in Profile Gateway</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowAddRoleDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        if (selectedRoleToAdd) {
+                          const accountHolderId = viewingUser.accountHolderId || viewingUser.id;
+                          addRole.mutate({ 
+                            userId: accountHolderId, 
+                            role: selectedRoleToAdd,
+                            firstName: viewingUser.firstName,
+                            lastName: viewingUser.lastName
+                          });
+                        }
+                      }}
+                      disabled={!selectedRoleToAdd || addRole.isPending}
+                      data-testid="button-confirm-add-role"
+                    >
+                      {addRole.isPending ? "Adding..." : "Add Role"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </>
           )}
         </DialogContent>

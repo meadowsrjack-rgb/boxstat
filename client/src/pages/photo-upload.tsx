@@ -27,10 +27,14 @@ export default function PhotoUploadPage() {
       // Use fetch directly for multipart/form-data uploads
       // apiRequest doesn't handle FormData properly
       const token = localStorage.getItem('authToken');
+      console.log('📷 Photo upload - token:', token ? token.substring(0, 30) + '...' : 'NULL');
+      
       const headers: HeadersInit = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+      
+      console.log('📷 Photo upload - headers:', JSON.stringify(headers));
       
       const response = await fetch('/api/upload-profile-photo', {
         method: 'POST',
@@ -39,8 +43,11 @@ export default function PhotoUploadPage() {
         credentials: 'include',
       });
       
+      console.log('📷 Photo upload - response status:', response.status);
+      
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+        console.log('📷 Photo upload - error:', error);
         throw new Error(error.error || 'Upload failed');
       }
       

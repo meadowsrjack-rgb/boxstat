@@ -3,8 +3,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
@@ -51,8 +57,45 @@ export default function ProfileGateway() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // Continue with logout even if API fails
+    }
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('selectedPlayerId');
+    localStorage.removeItem('viewingAsParent');
+    localStorage.removeItem('lastViewedProfileType');
+    setLocation('/');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col">
+      {/* Settings gear icon in top right */}
+      <div className="absolute top-6 right-6 safe-top">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="p-2 text-gray-500 hover:text-gray-300 transition-colors"
+              data-testid="button-settings-menu"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+            <DropdownMenuItem 
+              onClick={handleSignOut}
+              className="text-gray-300 hover:text-white hover:bg-gray-700 cursor-pointer"
+              data-testid="menu-item-sign-out"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="max-w-md mx-auto pt-12 flex-1">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
@@ -158,26 +201,6 @@ export default function ProfileGateway() {
             </button>
           </div>
         </div>
-      </div>
-      <div className="text-center pb-4">
-        <button 
-          onClick={async () => {
-            try {
-              await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            } catch (e) {
-              // Continue with logout even if API fails
-            }
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('selectedPlayerId');
-            localStorage.removeItem('viewingAsParent');
-            localStorage.removeItem('lastViewedProfileType');
-            setLocation('/');
-          }}
-          className="text-gray-500 hover:text-gray-300 text-sm transition-colors"
-          data-testid="button-sign-out"
-        >
-          Sign Out
-        </button>
       </div>
     </div>
   );

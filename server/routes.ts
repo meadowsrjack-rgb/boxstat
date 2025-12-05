@@ -2100,8 +2100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Create player email (temporary/unique email pattern)
-      const playerEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${Date.now()}@temp.com`;
+      // Use parent's email for child player (they share the same account email)
+      const playerEmail = user.email;
       
       // Create child player user with PENDING payment status
       const playerUser = await storage.createUser({

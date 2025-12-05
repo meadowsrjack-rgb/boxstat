@@ -1870,7 +1870,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, or, sql } from "drizzle-orm";
+import { eq, and, gte, or, sql, isNull } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -1878,12 +1878,13 @@ class DatabaseStorage implements IStorage {
 
   // Initialize test users for development
   async initializeTestUsers(): Promise<void> {
-    try {
-      // Check if admin user already exists
-      const existingAdmin = await this.getUserByEmail("admin@example.com", this.defaultOrgId);
-      
-      if (!existingAdmin) {
-        // Create admin user with pre-verified status
+    // Check if admin user already exists (direct query to avoid any filter issues)
+    const adminResults = await db.select().from(schema.users).where(
+      eq(schema.users.email, "admin@example.com")
+    );
+    
+    if (adminResults.length === 0) {
+      try {
         await this.createUser({
           organizationId: this.defaultOrgId,
           email: "admin@example.com",
@@ -1902,13 +1903,21 @@ class DatabaseStorage implements IStorage {
           yearsActive: 0,
         });
         console.log('✅ Created pre-verified admin user: admin@example.com');
+      } catch (error: any) {
+        // Ignore duplicate key errors - user already exists
+        if (error?.code !== '23505') {
+          console.error('Error creating admin user:', error);
+        }
       }
+    }
 
-      // Check if test user already exists
-      const existingUser = await this.getUserByEmail("test@example.com", this.defaultOrgId);
-      
-      if (!existingUser) {
-        // Create test user with pre-verified status
+    // Check if test user already exists (direct query)
+    const testResults = await db.select().from(schema.users).where(
+      eq(schema.users.email, "test@example.com")
+    );
+    
+    if (testResults.length === 0) {
+      try {
         await this.createUser({
           organizationId: this.defaultOrgId,
           email: "test@example.com",
@@ -1916,7 +1925,7 @@ class DatabaseStorage implements IStorage {
           role: "parent",
           firstName: "Test",
           lastName: "User",
-          verified: true, // Pre-verified for easy testing
+          verified: true,
           isActive: true,
           hasRegistered: true,
           awards: [],
@@ -1927,9 +1936,12 @@ class DatabaseStorage implements IStorage {
           yearsActive: 0,
         });
         console.log('✅ Created pre-verified test user: test@example.com');
+      } catch (error: any) {
+        // Ignore duplicate key errors - user already exists
+        if (error?.code !== '23505') {
+          console.error('Error creating test user:', error);
+        }
       }
-    } catch (error) {
-      console.error('Error initializing test users:', error);
     }
   }
   
@@ -2309,10 +2321,19 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUserByEmail(email: string, organizationId: string): Promise<User | undefined> {
+    // Only return parent/account holder accounts (account_holder_id IS NULL or empty)
+    // Child player profiles share the parent's email but shouldn't be returned for auth
+    // Strict organizationId filter for tenant isolation - coalesce to default-org
+    const effectiveOrgId = organizationId || 'default-org';
     const results = await db.select().from(schema.users).where(
       and(
         eq(schema.users.email, email),
-        eq(schema.users.isActive, true)
+        eq(schema.users.isActive, true),
+        eq(schema.users.organizationId, effectiveOrgId),
+        or(
+          isNull(schema.users.accountHolderId),
+          eq(schema.users.accountHolderId, '')
+        )
       )
     );
     if (results.length === 0) return undefined;

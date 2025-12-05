@@ -239,9 +239,10 @@ export const users = pgTable("users", {
   yearsActive: integer("years_active").default(0),
   lastLogin: timestamp("last_login", { mode: 'string' }),
   defaultDashboardView: varchar("default_dashboard_view"),
-}, (table) => [
-  unique("users_email_unique").on(table.email),
-]);
+});
+// NOTE: Email uniqueness is enforced via a partial unique index in the database
+// Only parent/account holder accounts (account_holder_id IS NULL) require unique emails
+// Child player profiles can share the parent's email
 
 // Pending Registrations table (email verifications not yet completed)
 export const pendingRegistrations = pgTable("pending_registrations", {

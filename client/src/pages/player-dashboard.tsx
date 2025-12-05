@@ -1406,6 +1406,17 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 </div>
               )}
 
+              {/* UYP Ranking Percentile */}
+              <div className="px-2">
+                <div className="max-w-[340px] mx-auto">
+                  <SkillBar 
+                    label="UYP RANKING PERCENTILE"  
+                    value={overallSkillScore} 
+                    onClick={() => setLocation("/skills")} 
+                  />
+                </div>
+              </div>
+
               {/* Trophies & Badges */}
               <div className="p-2">
                 <div 
@@ -1414,18 +1425,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                   data-testid="trophy-rings-clickable"
                 >
                   <UypTrophyRings data={ringsData} size={109} stroke={8} />
-                </div>
-              </div>
-
-
-              {/* Overall Skills Assessment */}
-              <div className="px-2">
-                <div className="max-w-[340px] mx-auto">
-                  <SkillBar 
-                    label="UYP RANKING PERCENTILE"  
-                    value={overallSkillScore} 
-                    onClick={() => setLocation("/skills")} 
-                  />
                 </div>
               </div>
             </div>

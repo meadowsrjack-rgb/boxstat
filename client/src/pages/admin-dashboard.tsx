@@ -611,9 +611,15 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       // Invalidate user-specific queries for real-time updates in player dashboard
       queryClient.invalidateQueries({ queryKey: ["/api/users", variables.id, "team"] });
       queryClient.invalidateQueries({ queryKey: ["/api/profile", variables.id] });
+      // Invalidate coach teams if teamIds were updated (for coach dashboard)
+      if (variables.teamIds) {
+        queryClient.invalidateQueries({ queryKey: [`/api/coaches/${variables.id}/teams`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/coaches/${variables.id}/players`] });
+      }
       // Invalidate events queries if team/division changed
-      if (variables.teamId || variables.divisionId) {
+      if (variables.teamId || variables.divisionId || variables.teamIds) {
         queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       }
       setUpdatingUserId(null);
       // Only show toast and close dialog if updating from edit dialog (more than just isActive)

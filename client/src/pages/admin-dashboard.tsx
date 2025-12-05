@@ -1386,553 +1386,329 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       </CardContent>
       {/* User Detail View Dialog */}
       <Dialog open={!!viewingUser} onOpenChange={(open) => !open && setViewingUser(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0 flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-            <DialogTitle>
-              User Details: {viewingUser?.firstName} {viewingUser?.lastName}
-            </DialogTitle>
-          </DialogHeader>
-          
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden p-0 flex flex-col">
           {viewingUser && (
-            <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-              {/* Sidebar Navigation */}
-              <div className="w-full md:w-48 border-b md:border-b-0 md:border-r bg-gray-50 flex-shrink-0 md:overflow-y-auto">
-                <nav className="flex md:flex-col overflow-x-auto md:overflow-x-visible" role="tablist">
-                  <button
-                    role="tab"
-                    aria-selected={detailTab === "team"}
-                    aria-controls="team-panel"
-                    onClick={() => setDetailTab("team")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "team"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-team-info"
-                  >
-                    🏀 <span className="hidden md:inline">Team Info</span>
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={detailTab === "billing"}
-                    aria-controls="billing-panel"
-                    onClick={() => setDetailTab("billing")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "billing"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-billing"
-                  >
-                    💳 <span className="hidden md:inline">Billing</span>
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={detailTab === "performance"}
-                    aria-controls="performance-panel"
-                    onClick={() => setDetailTab("performance")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "performance"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-performance"
-                  >
-                    📈 <span className="hidden md:inline">Performance</span>
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={detailTab === "notes"}
-                    aria-controls="notes-panel"
-                    onClick={() => setDetailTab("notes")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "notes"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-notes"
-                  >
-                    🩺 <span className="hidden md:inline">Admin Notes</span>
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={detailTab === "system"}
-                    aria-controls="system-panel"
-                    onClick={() => setDetailTab("system")}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
-                      detailTab === "system"
-                        ? "bg-white text-red-600 border-l-4 border-red-600 md:border-l-4 md:border-t-0"
-                        : "text-gray-700 hover:bg-gray-100"
-                    }`}
-                    data-testid="tab-system"
-                  >
-                    ⚙️ <span className="hidden md:inline">System Meta</span>
-                  </button>
+            <>
+              {/* Header with user info */}
+              <div className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white text-xl font-semibold">
+                    {viewingUser.firstName?.charAt(0)}{viewingUser.lastName?.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      {viewingUser.firstName} {viewingUser.lastName}
+                    </h2>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-sm text-gray-500">{viewingUser.email}</span>
+                      <Badge variant={viewingUser.role === "admin" ? "default" : "secondary"} className="capitalize">
+                        {viewingUser.role}
+                      </Badge>
+                      {viewingUser.isActive !== false ? (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500">Inactive</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tab Navigation */}
+              <div className="border-b px-6 flex-shrink-0">
+                <nav className="flex gap-1" role="tablist">
+                  {[
+                    { id: "team", label: "Profile" },
+                    { id: "billing", label: "Billing" },
+                    { id: "performance", label: "Performance" },
+                    { id: "notes", label: "Notes" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      role="tab"
+                      aria-selected={detailTab === tab.id}
+                      onClick={() => setDetailTab(tab.id)}
+                      className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+                        detailTab === tab.id
+                          ? "text-red-600"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                      data-testid={`tab-${tab.id}`}
+                    >
+                      {tab.label}
+                      {detailTab === tab.id && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />
+                      )}
+                    </button>
+                  ))}
                 </nav>
               </div>
 
               {/* Content Area */}
               <div className="flex-1 overflow-y-auto p-6">
 
-              {/* Team Info Tab */}
+              {/* Profile Tab */}
               {detailTab === "team" && (
-                <div role="tabpanel" id="team-panel" aria-labelledby="team-tab" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Role</Label>
-                    <div>
-                      <Badge variant={viewingUser.role === "admin" ? "default" : "secondary"}>
-                        {viewingUser.role}
-                      </Badge>
+                <div role="tabpanel" id="team-panel" className="space-y-6">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Team</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-team">
+                        {teams.find((t: any) => t.id === Number(viewingUser.teamId))?.name || "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Division</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-division">
+                        {divisions.find((d: any) => d.id === Number(viewingUser.divisionId))?.name || "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Program</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-program">{viewingUser.program || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Position</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-position">{viewingUser.position || "—"}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Height</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-height">
+                        {viewingUser.heightIn ? `${Math.floor(viewingUser.heightIn / 12)}'${viewingUser.heightIn % 12}"` : "—"}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Guardian</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-guardian">
+                        {viewingUser.guardianId ? users.find((u: any) => u.id === viewingUser.guardianId)?.firstName + " " + users.find((u: any) => u.id === viewingUser.guardianId)?.lastName : "—"}
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Organization</Label>
-                    <p className="text-sm" data-testid="text-user-organization">
-                      {organization?.name || "-"}
-                    </p>
+
+                  {/* Bio */}
+                  {viewingUser.bio && (
+                    <div className="pt-4 border-t">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Bio</p>
+                      <p className="text-sm text-gray-700 leading-relaxed" data-testid="text-user-bio">{viewingUser.bio}</p>
+                    </div>
+                  )}
+
+                  {/* System Info */}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Account Details</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-400 text-xs">User ID</p>
+                        <p className="font-mono text-xs text-gray-600" data-testid="text-user-id">{viewingUser.id}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Last Login</p>
+                        <p className="text-gray-600" data-testid="text-last-login">
+                          {viewingUser.lastLogin ? new Date(viewingUser.lastLogin).toLocaleDateString() : "Never"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Created</p>
+                        <p className="text-gray-600" data-testid="text-created-at">
+                          {viewingUser.createdAt ? new Date(viewingUser.createdAt).toLocaleDateString() : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs">Verified</p>
+                        <p className="text-gray-600">{viewingUser.verified ? "Yes" : "No"}</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Program</Label>
-                    <p className="text-sm" data-testid="text-user-program">{viewingUser.program || "-"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Team</Label>
-                    <p className="text-sm" data-testid="text-user-team">
-                      {teams.find((t: any) => t.id === Number(viewingUser.teamId))?.name || "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Division</Label>
-                    <p className="text-sm" data-testid="text-user-division">
-                      {divisions.find((d: any) => d.id === Number(viewingUser.divisionId))?.name || "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Position</Label>
-                    <p className="text-sm" data-testid="text-user-position">{viewingUser.position || "-"}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Height</Label>
-                    <p className="text-sm" data-testid="text-user-height">
-                      {viewingUser.heightIn ? `${Math.floor(viewingUser.heightIn / 12)}'${viewingUser.heightIn % 12}" (${viewingUser.heightIn}in)` : "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Guardian</Label>
-                    <p className="text-sm" data-testid="text-user-guardian">
-                      {viewingUser.guardianId ? users.find((u: any) => u.id === viewingUser.guardianId)?.firstName + " " + users.find((u: any) => u.id === viewingUser.guardianId)?.lastName : "-"}
-                    </p>
-                  </div>
-                </div>
-                {viewingUser.bio && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Bio</Label>
-                    <p className="text-sm p-3 bg-gray-50 rounded" data-testid="text-user-bio">{viewingUser.bio}</p>
-                  </div>
-                )}
                 </div>
               )}
 
               {/* Billing Tab */}
               {detailTab === "billing" && (
-                <div role="tabpanel" id="billing-panel" aria-labelledby="billing-tab" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Stripe Customer ID</Label>
-                    <p className="text-sm font-mono text-xs" data-testid="text-user-stripe-id">
-                      {viewingUser.stripeCustomerId || "-"}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Packages</Label>
-                    <p className="text-sm" data-testid="text-user-packages">
-                      {viewingUser.packages?.join(", ") || "-"}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-gray-600">Active Products</Label>
-                  {viewingUser.products && Array.isArray(viewingUser.products) && viewingUser.products.length > 0 ? (
-                    <div className="space-y-2">
-                      {viewingUser.products.map((product: any, index: number) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded border" data-testid={`product-${index}`}>
-                          <p className="text-sm font-medium">{typeof product === 'string' ? product : product.name || 'Unknown Product'}</p>
-                        </div>
-                      ))}
+                <div role="tabpanel" id="billing-panel" className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Stripe Customer ID</p>
+                      <p className="text-sm font-mono text-gray-900" data-testid="text-user-stripe-id">
+                        {viewingUser.stripeCustomerId || "—"}
+                      </p>
                     </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No active products</p>
-                  )}
-                </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Packages</p>
+                      <p className="text-sm text-gray-900" data-testid="text-user-packages">
+                        {viewingUser.packages?.join(", ") || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Active Products</p>
+                    {viewingUser.products && Array.isArray(viewingUser.products) && viewingUser.products.length > 0 ? (
+                      <div className="space-y-2">
+                        {viewingUser.products.map((product: any, index: number) => (
+                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg" data-testid={`product-${index}`}>
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <p className="text-sm font-medium text-gray-900">{typeof product === 'string' ? product : product.name || 'Unknown Product'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No active products</p>
+                    )}
+                  </div>
                 </div>
               )}
 
               {/* Performance Tab */}
               {detailTab === "performance" && (
-                <div role="tabpanel" id="performance-panel" aria-labelledby="performance-tab" className="space-y-6">
-                {/* Stats Cards Grid */}
-                <div className="grid grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Total Practices</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-total-practices">
-                          {viewingUser.totalPractices || 0}
-                        </p>
+                <div role="tabpanel" id="performance-panel" className="space-y-6">
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                    {[
+                      { label: "Practices", value: viewingUser.totalPractices || 0, testId: "stat-total-practices" },
+                      { label: "Games", value: viewingUser.totalGames || 0, testId: "stat-total-games" },
+                      { label: "Check-ins", value: viewingUser.consecutiveCheckins || 0, testId: "stat-consecutive-checkins" },
+                      { label: "Videos", value: viewingUser.videosCompleted || 0, testId: "stat-videos-completed" },
+                      { label: "Years", value: viewingUser.yearsActive || 0, testId: "stat-years-active" },
+                      { label: "Skill", value: viewingUser.skill || "—", testId: "stat-skill-level" },
+                    ].map((stat) => (
+                      <div key={stat.label} className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-2xl font-bold text-gray-900" data-testid={stat.testId}>{stat.value}</p>
+                        <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Total Games</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-total-games">
-                          {viewingUser.totalGames || 0}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Consecutive Check-ins</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-consecutive-checkins">
-                          {viewingUser.consecutiveCheckins || 0}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Videos Completed</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-videos-completed">
-                          {viewingUser.videosCompleted || 0}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Years Active</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-years-active">
-                          {viewingUser.yearsActive || 0}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Skill Level</p>
-                        <p className="text-3xl font-bold mt-2" data-testid="stat-skill-level">
-                          {viewingUser.skill || "-"}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    ))}
+                  </div>
 
-                {/* Skills Assessment Section */}
-                <Card data-testid="section-skills-assessment">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Star className="w-5 h-5" />
-                      Skills Assessment
-                    </CardTitle>
-                    <CardDescription>Player evaluations and skill ratings by coaches</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  {/* Skills Assessment */}
+                  <div className="pt-4 border-t" data-testid="section-skills-assessment">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">Skill Assessments</p>
                     {evaluationsLoading ? (
                       <div className="space-y-3">
-                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
-                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
-                        <div className="h-16 bg-gray-200 rounded animate-pulse" />
+                        <div className="h-16 bg-gray-100 rounded-lg animate-pulse" />
+                        <div className="h-16 bg-gray-100 rounded-lg animate-pulse" />
                       </div>
                     ) : evaluationsError ? (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error loading evaluations</AlertTitle>
-                        <AlertDescription>Failed to load skill assessments. Please try again.</AlertDescription>
-                      </Alert>
+                      <p className="text-sm text-red-500">Failed to load assessments</p>
                     ) : userEvaluations.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Star className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p>No skill assessments recorded</p>
-                      </div>
+                      <p className="text-sm text-gray-400">No skill assessments recorded</p>
                     ) : (
-                      <Accordion type="single" collapsible className="w-full">
+                      <div className="space-y-3">
                         {userEvaluations.map((evaluation: any, index: number) => {
                           const coach = users.find((u: any) => u.id === evaluation.coachId);
                           const evaluationDate = evaluation.createdAt ? new Date(evaluation.createdAt) : null;
-                          
                           return (
-                            <AccordionItem key={evaluation.id || index} value={`evaluation-${index}`} data-testid={`evaluation-${index}`}>
-                              <AccordionTrigger className="hover:no-underline">
-                                <div className="flex items-center justify-between w-full pr-4">
-                                  <div className="flex items-center gap-3">
-                                    <Badge variant="outline">
-                                      {evaluation.quarter || 'Q1'}
-                                    </Badge>
-                                    <div className="text-left">
-                                      <p className="font-semibold">
-                                        {coach ? `${coach.firstName} ${coach.lastName}` : 'Unknown Coach'}
-                                      </p>
-                                      <p className="text-sm text-gray-500">
-                                        {evaluationDate ? format(evaluationDate, 'MMM d, yyyy') : 'Date unknown'}
-                                      </p>
+                            <Accordion key={evaluation.id || index} type="single" collapsible>
+                              <AccordionItem value={`eval-${index}`} className="border rounded-lg px-4" data-testid={`evaluation-${index}`}>
+                                <AccordionTrigger className="hover:no-underline py-3">
+                                  <div className="flex items-center gap-3 text-left">
+                                    <Badge variant="outline" className="text-xs">{evaluation.quarter || 'Q1'}</Badge>
+                                    <div>
+                                      <p className="font-medium text-sm">{coach ? `${coach.firstName} ${coach.lastName}` : 'Coach'}</p>
+                                      <p className="text-xs text-gray-400">{evaluationDate ? format(evaluationDate, 'MMM d, yyyy') : ''}</p>
                                     </div>
                                   </div>
-                                  {evaluation.scores && (
-                                    <div className="text-sm text-gray-600">
-                                      {Object.keys(evaluation.scores).length} categories
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  {evaluation.scores && Object.keys(evaluation.scores).length > 0 && (
+                                    <div className="grid grid-cols-2 gap-2 py-3">
+                                      {Object.entries(evaluation.scores).map(([category, score]: [string, any]) => (
+                                        <div key={category} className="flex justify-between items-center text-sm">
+                                          <span className="text-gray-600 capitalize">{category.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                          <Badge variant={score >= 4 ? "default" : "secondary"} className="text-xs">{score}/5</Badge>
+                                        </div>
+                                      ))}
                                     </div>
-                                  )}
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="pt-4">
-                                  {evaluation.scores && Object.keys(evaluation.scores).length > 0 ? (
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow>
-                                          <TableHead>Skill Category</TableHead>
-                                          <TableHead className="text-right">Score</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {Object.entries(evaluation.scores).map(([category, score]: [string, any]) => (
-                                          <TableRow key={category}>
-                                            <TableCell className="font-medium capitalize">
-                                              {category.replace(/([A-Z])/g, ' $1').trim()}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                              <Badge variant={score >= 4 ? "default" : score >= 3 ? "secondary" : "outline"}>
-                                                {score}/5
-                                              </Badge>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  ) : (
-                                    <p className="text-sm text-gray-500 text-center py-4">No scores available</p>
                                   )}
                                   {evaluation.notes && (
-                                    <div className="mt-4 p-3 bg-gray-50 rounded">
-                                      <p className="text-sm font-semibold text-gray-700 mb-1">Coach Notes:</p>
-                                      <p className="text-sm text-gray-600">{evaluation.notes}</p>
-                                    </div>
+                                    <p className="text-sm text-gray-600 bg-gray-50 rounded p-3 mt-2">{evaluation.notes}</p>
                                   )}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
                           );
                         })}
-                      </Accordion>
+                      </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
 
-                {/* Awards Section */}
-                <Card data-testid="section-user-awards">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Trophy className="w-5 h-5" />
-                      Awards & Achievements
-                    </CardTitle>
-                    <CardDescription>Badges and trophies earned by this player</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                  {/* Awards */}
+                  <div className="pt-4 border-t" data-testid="section-user-awards">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-4">Awards & Achievements</p>
                     {awardsLoading ? (
-                      <div className="space-y-4">
-                        <div className="h-32 bg-gray-200 rounded animate-pulse" />
-                        <div className="h-32 bg-gray-200 rounded animate-pulse" />
-                      </div>
+                      <div className="h-24 bg-gray-100 rounded-lg animate-pulse" />
                     ) : awardsError ? (
-                      <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error loading awards</AlertTitle>
-                        <AlertDescription>Failed to load awards and achievements. Please try again.</AlertDescription>
-                      </Alert>
+                      <p className="text-sm text-red-500">Failed to load awards</p>
                     ) : !userAwards || ((!userAwards.badges || userAwards.badges.length === 0) && (!userAwards.trophies || userAwards.trophies.length === 0)) ? (
-                      <div className="text-center py-8 text-gray-500">
-                        <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p>No awards earned yet</p>
-                      </div>
+                      <p className="text-sm text-gray-400">No awards earned yet</p>
                     ) : (
-                      <div className="space-y-6">
-                        {/* Badges Section */}
+                      <div className="space-y-4">
                         {userAwards.badges && userAwards.badges.length > 0 && (
-                          <div>
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                              <Award className="w-5 h-5" />
-                              Badges
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                              {userAwards.badges.map((badge: any) => (
-                                <Card key={badge.id} className="p-4 hover:shadow-lg transition-shadow" data-testid={`award-${badge.id}`}>
-                                  <div className="text-center space-y-2">
-                                    {badge.imageUrl && (
-                                      <img 
-                                        src={badge.imageUrl} 
-                                        alt={badge.name}
-                                        className="w-16 h-16 mx-auto object-contain"
-                                      />
-                                    )}
-                                    <p className="font-semibold text-sm">{badge.name}</p>
-                                    {badge.tier && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        {badge.tier}
-                                      </Badge>
-                                    )}
-                                    {badge.earnedAt && (
-                                      <p className="text-xs text-gray-500">
-                                        {format(new Date(badge.earnedAt), 'MMM d, yyyy')}
-                                      </p>
-                                    )}
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
+                          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                            {userAwards.badges.map((badge: any) => (
+                              <div key={badge.id} className="text-center p-3 bg-gray-50 rounded-lg" data-testid={`award-${badge.id}`}>
+                                {badge.imageUrl && <img src={badge.imageUrl} alt={badge.name} className="w-10 h-10 mx-auto object-contain" />}
+                                <p className="text-xs font-medium mt-2 truncate">{badge.name}</p>
+                              </div>
+                            ))}
                           </div>
                         )}
-
-                        {/* Trophies Section */}
                         {userAwards.trophies && userAwards.trophies.length > 0 && (
-                          <div>
-                            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                              <Trophy className="w-5 h-5" />
-                              Trophies
-                            </h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                              {userAwards.trophies.map((trophy: any) => (
-                                <Card key={trophy.id} className="p-4 hover:shadow-lg transition-shadow" data-testid={`award-${trophy.id}`}>
-                                  <div className="text-center space-y-2">
-                                    {trophy.imageUrl && (
-                                      <img 
-                                        src={trophy.imageUrl} 
-                                        alt={trophy.name}
-                                        className="w-16 h-16 mx-auto object-contain"
-                                      />
-                                    )}
-                                    <p className="font-semibold text-sm">{trophy.name}</p>
-                                    {trophy.tier && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        {trophy.tier}
-                                      </Badge>
-                                    )}
-                                    {trophy.earnedAt && (
-                                      <p className="text-xs text-gray-500">
-                                        {format(new Date(trophy.earnedAt), 'MMM d, yyyy')}
-                                      </p>
-                                    )}
-                                  </div>
-                                </Card>
-                              ))}
-                            </div>
+                          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                            {userAwards.trophies.map((trophy: any) => (
+                              <div key={trophy.id} className="text-center p-3 bg-amber-50 rounded-lg" data-testid={`award-${trophy.id}`}>
+                                {trophy.imageUrl && <img src={trophy.imageUrl} alt={trophy.name} className="w-10 h-10 mx-auto object-contain" />}
+                                <p className="text-xs font-medium mt-2 truncate">{trophy.name}</p>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
                 </div>
               )}
 
-              {/* Admin Notes Tab */}
+              {/* Notes Tab */}
               {detailTab === "notes" && (
-                <div role="tabpanel" id="notes-panel" aria-labelledby="notes-tab" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Emergency Contact</Label>
+                <div role="tabpanel" id="notes-panel" className="space-y-6">
+                  {/* Emergency Contact */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Emergency Contact</p>
                     {viewingUser.emergencyContactJson ? (
-                      <Card className="p-4" data-testid="emergency-contact-info">
-                        <pre className="text-sm whitespace-pre-wrap">
-                          {JSON.stringify(viewingUser.emergencyContactJson, null, 2)}
-                        </pre>
-                      </Card>
-                    ) : (
-                      <p className="text-sm text-gray-500">No emergency contact information</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-gray-600">Admin Notes (Internal)</Label>
-                    {viewingUser.notes ? (
-                      <Card className="p-4 bg-yellow-50 border-yellow-200" data-testid="admin-notes">
-                        <p className="text-sm whitespace-pre-wrap">{viewingUser.notes}</p>
-                      </Card>
-                    ) : (
-                      <p className="text-sm text-gray-500">No admin notes</p>
-                    )}
-                  </div>
-                </div>
-                </div>
-              )}
-
-              {/* System Meta Tab */}
-              {detailTab === "system" && (
-                <div role="tabpanel" id="system-panel" aria-labelledby="system-tab" className="space-y-4">
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="system-info">
-                    <AccordionTrigger>System Information</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="grid grid-cols-2 gap-4 p-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">User ID</Label>
-                          <p className="text-sm font-mono text-xs" data-testid="text-user-id">{viewingUser.id}</p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">Active Status</Label>
-                          <div>
-                            <Badge variant={viewingUser.isActive !== false ? "default" : "secondary"}>
-                              {viewingUser.isActive !== false ? "Active" : "Inactive"}
-                            </Badge>
+                      <div className="bg-gray-50 rounded-lg p-4" data-testid="emergency-contact-info">
+                        {typeof viewingUser.emergencyContactJson === 'object' ? (
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            {Object.entries(viewingUser.emergencyContactJson).map(([key, value]: [string, any]) => (
+                              <div key={key}>
+                                <p className="text-gray-400 text-xs capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                                <p className="text-gray-900">{value || "—"}</p>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">Last Login</Label>
-                          <p className="text-sm" data-testid="text-last-login">
-                            {viewingUser.lastLogin 
-                              ? new Date(viewingUser.lastLogin).toLocaleString()
-                              : "Never"}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">Created At</Label>
-                          <p className="text-sm" data-testid="text-created-at">
-                            {viewingUser.createdAt 
-                              ? new Date(viewingUser.createdAt).toLocaleString()
-                              : "-"}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">Updated At</Label>
-                          <p className="text-sm" data-testid="text-updated-at">
-                            {viewingUser.updatedAt 
-                              ? new Date(viewingUser.updatedAt).toLocaleString()
-                              : "-"}
-                          </p>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-sm font-semibold text-gray-600">Verified</Label>
-                          <div>
-                            <Badge variant={viewingUser.verified ? "default" : "secondary"}>
-                              {viewingUser.verified ? "Verified" : "Not Verified"}
-                            </Badge>
-                          </div>
-                        </div>
+                        ) : (
+                          <p className="text-sm text-gray-700">{String(viewingUser.emergencyContactJson)}</p>
+                        )}
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                    ) : (
+                      <p className="text-sm text-gray-400">No emergency contact on file</p>
+                    )}
+                  </div>
+
+                  {/* Admin Notes */}
+                  <div className="pt-4 border-t">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Internal Notes</p>
+                    {viewingUser.notes ? (
+                      <div className="bg-amber-50 border border-amber-100 rounded-lg p-4" data-testid="admin-notes">
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{viewingUser.notes}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No admin notes</p>
+                    )}
+                  </div>
                 </div>
               )}
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

@@ -2633,9 +2633,15 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                             checked={isOnTeam}
                             onCheckedChange={async (checked) => {
                               try {
-                                await apiRequest("PATCH", `/api/users/${player.id}`, {
-                                  teamId: checked ? selectedTeam.id : null
-                                });
+                                if (checked) {
+                                  await apiRequest("POST", `/api/teams/${selectedTeam.id}/assign-player`, {
+                                    playerId: player.id
+                                  });
+                                } else {
+                                  await apiRequest("POST", `/api/teams/${selectedTeam.id}/remove-player`, {
+                                    playerId: player.id
+                                  });
+                                }
                                 queryClient.invalidateQueries({ queryKey: ["/api/users"] });
                                 queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
                                 toast({ 

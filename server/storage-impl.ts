@@ -2349,13 +2349,41 @@ class DatabaseStorage implements IStorage {
 
   async getUsersByTeam(teamId: string): Promise<User[]> {
     const teamIdNum = parseInt(teamId);
-    const results = await db.select().from(schema.users).where(
+    
+    // First get users from team_memberships table (new system, active only)
+    const membershipUserIds = await db.select({ profileId: schema.teamMemberships.profileId })
+      .from(schema.teamMemberships)
+      .where(
+        and(
+          eq(schema.teamMemberships.teamId, teamIdNum),
+          eq(schema.teamMemberships.status, 'active')
+        )
+      );
+    
+    // Also get users from legacy teamId field
+    const legacyResults = await db.select().from(schema.users).where(
       and(
         eq(schema.users.teamId, teamIdNum),
         eq(schema.users.isActive, true)
       )
     );
-    return results.map(user => this.mapDbUserToUser(user));
+    
+    // Combine user IDs from both sources
+    const allUserIds = new Set<string>();
+    membershipUserIds.forEach(m => allUserIds.add(m.profileId));
+    legacyResults.forEach(u => allUserIds.add(u.id));
+    
+    if (allUserIds.size === 0) return [];
+    
+    // Fetch all unique users
+    const users = await db.select().from(schema.users).where(
+      and(
+        sql`${schema.users.id} IN (${sql.join([...allUserIds].map(id => sql`${id}`), sql`, `)})`,
+        eq(schema.users.isActive, true)
+      )
+    );
+    
+    return users.map(user => this.mapDbUserToUser(user));
   }
 
   async getUsersByRole(organizationId: string, role: string): Promise<User[]> {
@@ -2563,13 +2591,38 @@ class DatabaseStorage implements IStorage {
   }
 
   async getTeamsByCoach(coachId: string): Promise<Team[]> {
-    const results = await db.select().from(schema.teams).where(
+    // First get teams from the new team_memberships table (active only)
+    const membershipTeamIds = await db.select({ teamId: schema.teamMemberships.teamId })
+      .from(schema.teamMemberships)
+      .where(
+        and(
+          eq(schema.teamMemberships.profileId, coachId),
+          eq(schema.teamMemberships.status, 'active'),
+          sql`${schema.teamMemberships.role} IN ('coach', 'assistant_coach')`
+        )
+      );
+    
+    // Also check legacy fields for backwards compatibility
+    const legacyResults = await db.select().from(schema.teams).where(
       or(
         eq(schema.teams.coachId, coachId),
         sql`${coachId} = ANY(${schema.teams.assistantCoachIds})`
       )
     );
-    return results.map(team => this.mapDbTeamToTeam(team));
+    
+    // Combine team IDs from both sources
+    const allTeamIds = new Set<number>();
+    membershipTeamIds.forEach(m => allTeamIds.add(m.teamId));
+    legacyResults.forEach(t => allTeamIds.add(t.id));
+    
+    if (allTeamIds.size === 0) return [];
+    
+    // Fetch all unique teams
+    const teams = await db.select().from(schema.teams).where(
+      sql`${schema.teams.id} IN (${sql.join([...allTeamIds].map(id => sql`${id}`), sql`, `)})`
+    );
+    
+    return teams.map(team => this.mapDbTeamToTeam(team));
   }
 
   async createTeam(team: InsertTeam): Promise<Team> {

@@ -39,7 +39,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients, users } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -2535,7 +2535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
     
-    // If updating a coach's teamIds, also update the team records
+    // If updating a coach's teamIds, also update the team records and team_memberships
     if (updateData.teamIds !== undefined) {
       const user = await storage.getUser(userId);
       console.log(`[PATCH] User role: ${user?.role}, teamIds to set:`, updateData.teamIds);
@@ -2554,11 +2554,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           console.log(`[PATCH] Team ${teamIdNum} "${team.name}": inNew=${isInNewTeams}, isHead=${isCurrentlyHead}, isAssistant=${isCurrentlyAssistant}`);
           
-          if (isInNewTeams && !isCurrentlyHead && !isCurrentlyAssistant) {
-            // Add coach to this team as assistant (since head coach might already exist)
-            const updatedAssistantIds = [...(team.assistantCoachIds || []), userId];
-            console.log(`[PATCH] Adding coach to team ${teamIdNum} as assistant:`, updatedAssistantIds);
-            await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
+          if (isInNewTeams) {
+            if (isCurrentlyHead) {
+              // Coach is already head coach - ensure team_memberships has correct entry
+              console.log(`[PATCH] Coach is head of team ${teamIdNum}, ensuring team_memberships entry`);
+              await db.insert(teamMemberships)
+                .values({
+                  teamId: teamIdNum,
+                  profileId: userId,
+                  role: 'coach',
+                  status: 'active',
+                })
+                .onConflictDoUpdate({
+                  target: [teamMemberships.teamId, teamMemberships.profileId],
+                  set: { status: 'active', role: 'coach' },
+                });
+            } else if (isCurrentlyAssistant) {
+              // Coach is already assistant - ensure team_memberships has correct entry
+              console.log(`[PATCH] Coach is assistant of team ${teamIdNum}, ensuring team_memberships entry`);
+              await db.insert(teamMemberships)
+                .values({
+                  teamId: teamIdNum,
+                  profileId: userId,
+                  role: 'assistant_coach',
+                  status: 'active',
+                })
+                .onConflictDoUpdate({
+                  target: [teamMemberships.teamId, teamMemberships.profileId],
+                  set: { status: 'active', role: 'assistant_coach' },
+                });
+            } else {
+              // Add coach to this team as assistant (since head coach might already exist)
+              const updatedAssistantIds = [...(team.assistantCoachIds || []), userId];
+              console.log(`[PATCH] Adding coach to team ${teamIdNum} as assistant:`, updatedAssistantIds);
+              await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
+              
+              // Also add to team_memberships table
+              await db.insert(teamMemberships)
+                .values({
+                  teamId: teamIdNum,
+                  profileId: userId,
+                  role: 'assistant_coach',
+                  status: 'active',
+                })
+                .onConflictDoUpdate({
+                  target: [teamMemberships.teamId, teamMemberships.profileId],
+                  set: { status: 'active', role: 'assistant_coach' },
+                });
+            }
           } else if (!isInNewTeams && (isCurrentlyHead || isCurrentlyAssistant)) {
             // Remove coach from this team
             if (isCurrentlyHead) {
@@ -2570,6 +2613,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               console.log(`[PATCH] Removing coach as assistant from team ${teamIdNum}:`, updatedAssistantIds);
               await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
             }
+            
+            // Mark membership as inactive instead of deleting
+            await db.update(teamMemberships)
+              .set({ status: 'inactive' })
+              .where(
+                and(
+                  eq(teamMemberships.teamId, teamIdNum),
+                  eq(teamMemberships.profileId, userId)
+                )
+              );
           }
         }
       }
@@ -2772,7 +2825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get all teams for a user (supports multiple team assignments)
+  // Get all teams for a user (supports multiple team assignments via team_memberships)
   app.get('/api/users/:userId/teams', requireAuth, async (req: any, res) => {
     try {
       const { userId } = req.params;
@@ -2794,27 +2847,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Unauthorized to view this user\'s teams' });
       }
       
-      // Get team IDs from both teamId and teamIds fields
-      const teamIdSet = new Set<number>();
-      if (user.teamId) {
-        const teamIdNum = typeof user.teamId === 'string' ? parseInt(user.teamId) : user.teamId;
-        if (!isNaN(teamIdNum)) teamIdSet.add(teamIdNum);
-      }
-      if (user.teamIds && Array.isArray(user.teamIds)) {
-        for (const id of user.teamIds) {
-          const teamIdNum = typeof id === 'string' ? parseInt(id) : id;
-          if (!isNaN(teamIdNum)) teamIdSet.add(teamIdNum);
-        }
-      }
+      // Query team_memberships table for this user's teams
+      const memberships = await db
+        .select({
+          teamId: teamMemberships.teamId,
+          role: teamMemberships.role,
+          status: teamMemberships.status,
+        })
+        .from(teamMemberships)
+        .where(eq(teamMemberships.profileId, userId));
       
-      if (teamIdSet.size === 0) {
+      if (memberships.length === 0) {
+        // Fallback to legacy teamId field for backwards compatibility
+        if (user.teamId) {
+          const team = await storage.getTeam(String(user.teamId));
+          if (team) {
+            return res.json([{
+              id: team.id,
+              name: team.name,
+              ageGroup: team.divisionId ? `Division ${team.divisionId}` : 'N/A',
+              program: team.programType || 'N/A',
+              color: '#d82428',
+            }]);
+          }
+        }
         return res.json([]);
       }
       
-      // Fetch all teams
+      // Fetch all teams from memberships
       const teams = await Promise.all(
-        Array.from(teamIdSet).map(async (teamId) => {
-          const team = await storage.getTeam(String(teamId));
+        memberships.map(async (m) => {
+          const team = await storage.getTeam(String(m.teamId));
           if (!team) return null;
           return {
             id: team.id,
@@ -2822,6 +2885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ageGroup: team.divisionId ? `Division ${team.divisionId}` : 'N/A',
             program: team.programType || 'N/A',
             color: '#d82428',
+            membershipRole: m.role,
           };
         })
       );
@@ -2911,7 +2975,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins and coaches can update teams' });
     }
     
-    const updated = await storage.updateTeam(req.params.id, req.body);
+    const teamId = parseInt(req.params.id);
+    const updateData = req.body;
+    
+    // Get current team state to detect changes
+    const currentTeam = await storage.getTeam(req.params.id);
+    
+    // Update the team in storage
+    const updated = await storage.updateTeam(req.params.id, updateData);
+    
+    // Get the FINAL state of the team after update for syncing memberships
+    const finalTeam = await storage.getTeam(req.params.id);
+    const finalCoachId = finalTeam?.coachId;
+    const finalAssistantIds = finalTeam?.assistantCoachIds || [];
+    
+    // Handle head coach changes - mark old coach as inactive if coach changed
+    if (updateData.coachId !== undefined && currentTeam?.coachId && currentTeam.coachId !== finalCoachId) {
+      await db.update(teamMemberships)
+        .set({ status: 'inactive' })
+        .where(
+          and(
+            eq(teamMemberships.teamId, teamId),
+            eq(teamMemberships.profileId, currentTeam.coachId),
+            eq(teamMemberships.role, 'coach')
+          )
+        );
+    }
+    
+    // Always ensure head coach membership is active if there is a coachId
+    // This runs on EVERY team update to ensure consistency
+    if (finalCoachId) {
+      await db.insert(teamMemberships)
+        .values({
+          teamId,
+          profileId: finalCoachId,
+          role: 'coach',
+          status: 'active',
+        })
+        .onConflictDoUpdate({
+          target: [teamMemberships.teamId, teamMemberships.profileId],
+          set: { status: 'active', role: 'coach' },
+        });
+    }
+    
+    // Handle assistant coach changes only when assistantCoachIds is in the payload
+    if (updateData.assistantCoachIds !== undefined) {
+      const oldAssistantIds = currentTeam?.assistantCoachIds || [];
+      const newAssistantIdsSet = new Set(finalAssistantIds);
+      
+      // Upsert ALL assistants in the final array (reactivates previously inactive ones)
+      for (const assistantId of finalAssistantIds) {
+        await db.insert(teamMemberships)
+          .values({
+            teamId,
+            profileId: assistantId,
+            role: 'assistant_coach',
+            status: 'active',
+          })
+          .onConflictDoUpdate({
+            target: [teamMemberships.teamId, teamMemberships.profileId],
+            set: { status: 'active', role: 'assistant_coach' },
+          });
+      }
+      
+      // Mark removed assistants as inactive
+      for (const oldAssistantId of oldAssistantIds) {
+        if (!newAssistantIdsSet.has(oldAssistantId)) {
+          await db.update(teamMemberships)
+            .set({ status: 'inactive' })
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamId),
+                eq(teamMemberships.profileId, oldAssistantId),
+                eq(teamMemberships.role, 'assistant_coach')
+              )
+            );
+        }
+      }
+    }
+    
     res.json(updated);
   });
   
@@ -2999,11 +3141,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assign a player to a team
+  // Assign a player to a team (uses team_memberships table)
   app.post('/api/teams/:teamId/assign-player', requireAuth, async (req: any, res) => {
     try {
       const { teamId } = req.params;
-      const { playerId } = req.body;
+      const { playerId, role: memberRole = 'player' } = req.body;
       const { role } = req.user;
 
       // Only coaches and admins can assign players
@@ -3033,10 +3175,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Team not found' });
       }
 
-      // Update the player's teamId (teamId is stored as integer in DB)
+      // Add to team_memberships table (upsert to handle existing memberships)
+      await db.insert(teamMemberships)
+        .values({
+          teamId: teamIdNum,
+          profileId: playerId,
+          role: memberRole,
+          status: 'active',
+          jerseyNumber: player.jerseyNumber,
+          position: player.position,
+        })
+        .onConflictDoUpdate({
+          target: [teamMemberships.teamId, teamMemberships.profileId],
+          set: { status: 'active', role: memberRole },
+        });
+      
+      // Also update legacy teamId field for backwards compatibility
       const updatedPlayer = await storage.updateUser(playerId, { teamId: teamIdNum } as any);
       
-      console.log(`Assigned player ${playerId} to team ${teamId}`);
+      console.log(`Assigned player ${playerId} to team ${teamId} via team_memberships`);
       res.json({ success: true, player: updatedPlayer });
     } catch (error: any) {
       console.error('Error assigning player to team:', error);
@@ -3044,7 +3201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Remove a player from a team
+  // Remove a player from a team (uses team_memberships table)
   app.post('/api/teams/:teamId/remove-player', requireAuth, async (req: any, res) => {
     try {
       const { teamId } = req.params;
@@ -3077,13 +3234,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Cannot remove players from other organizations' });
       }
 
-      // Update the player's teamId to null (remove from team)
-      // We don't check if player.teamId === teamIdNum because:
-      // 1. The roster display might include players from Notion who don't have teamId set
-      // 2. Setting teamId to null is a safe idempotent operation
+      // Remove from team_memberships table
+      await db.delete(teamMemberships)
+        .where(
+          and(
+            eq(teamMemberships.teamId, teamIdNum),
+            eq(teamMemberships.profileId, playerId)
+          )
+        );
+      
+      // Also clear legacy teamId field for backwards compatibility
       const updatedPlayer = await storage.updateUser(playerId, { teamId: null } as any);
       
-      console.log(`Removed player ${playerId} from team ${teamId}`);
+      console.log(`Removed player ${playerId} from team ${teamId} via team_memberships`);
       res.json({ success: true, player: updatedPlayer });
     } catch (error: any) {
       console.error('Error removing player from team:', error);

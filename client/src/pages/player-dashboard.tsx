@@ -1259,12 +1259,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                               className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
                               style={{ color: "#d82428" }}
                             >
-                              <Cake className="h-4 w-4" />
+                              <Target className="h-4 w-4" />
                             </span>
-                            <span>AGE</span>
+                            <span>DIVISION</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.age || <span className="text-gray-400 text-sm">Not set</span>}
+                            {userTeam?.divisionId ? userTeam.divisionId : <span className="text-gray-400 text-sm">Not assigned</span>}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

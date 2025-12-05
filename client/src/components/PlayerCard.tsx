@@ -31,8 +31,8 @@ interface PlayerCardProps {
 
 interface Profile {
   id: string;
-  accountId: string;
-  profileType: 'player' | 'parent' | 'coach';
+  organizationId?: string;
+  role?: 'player' | 'parent' | 'coach' | 'admin';
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
@@ -47,22 +47,22 @@ interface Profile {
   position: string | null;
   jerseyNumber: number | null;
   teamId: string | null;
-  age: number | null;
+  age: string | number | null;
   height: string | null;
   city: string | null;
-  coachingExperience: string | null;
-  yearsExperience: number | null;
-  bio: string | null;
-  previousTeams: string | null;
-  playingExperience: string | null;
-  philosophy: string | null;
-  occupation: string | null;
-  workPhone: string | null;
-  relationship: string | null;
-  isVerified: boolean;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  coachingExperience?: string | null;
+  yearsExperience?: number | null;
+  bio?: string | null;
+  previousTeams?: string | null;
+  playingExperience?: string | null;
+  philosophy?: string | null;
+  occupation?: string | null;
+  workPhone?: string | null;
+  relationship?: string | null;
+  isVerified?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface TeamInfo {
@@ -107,6 +107,21 @@ export default function PlayerCard({
   // Get player profile - all user IDs in this app are profile IDs (no 'profile-' prefix needed)
   const { data: profileData, isLoading: loading } = useQuery<Profile>({
     queryKey: [`/api/profile/${playerId}`],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/profile/${playerId}`, {
+        headers,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch profile: ${res.status}`);
+      }
+      return res.json();
+    },
     enabled: isOpen && !!playerId,
   });
 

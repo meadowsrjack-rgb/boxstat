@@ -2167,6 +2167,35 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       )}
                     />
 
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="season"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Season</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Winter 2025" data-testid="input-team-season" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="organization"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Club/Brand</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Basketball Academy" data-testid="input-team-organization" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
                     <FormField
                       control={form.control}
                       name="location"

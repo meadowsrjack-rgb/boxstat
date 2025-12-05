@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, ShieldEllipsis } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, UserStar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -110,7 +110,7 @@ export default function ProfileGateway() {
           >
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                <ShieldEllipsis className="w-8 h-8 text-white" />
+                <UserStar className="w-8 h-8 text-white" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white">Account</h3>

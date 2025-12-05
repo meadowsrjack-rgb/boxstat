@@ -358,6 +358,39 @@ export const teams = pgTable("teams", {
   }),
 ]);
 
+// Team Memberships table (replaces teamId/teamIds array columns)
+export const teamMemberships = pgTable("team_memberships", {
+  id: serial().primaryKey().notNull(),
+  teamId: integer("team_id").notNull(),
+  profileId: varchar("profile_id").notNull(), // User ID (player or coach)
+  role: varchar().notNull().default('player'), // 'player', 'coach', 'assistant_coach', 'manager'
+  status: varchar().default('active'), // 'active', 'inactive', 'pending'
+  jerseyNumber: integer("jersey_number"),
+  position: varchar(),
+  joinedAt: timestamp("joined_at", { mode: 'string' }).defaultNow(),
+  leftAt: timestamp("left_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.teamId],
+    foreignColumns: [teams.id],
+    name: "team_memberships_team_id_fkey"
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.profileId],
+    foreignColumns: [users.id],
+    name: "team_memberships_profile_id_fkey"
+  }).onDelete("cascade"),
+  unique("team_memberships_team_profile").on(table.teamId, table.profileId),
+]);
+
+export const insertTeamMembershipSchema = createInsertSchema(teamMemberships).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTeamMembership = z.infer<typeof insertTeamMembershipSchema>;
+export type TeamMembership = typeof teamMemberships.$inferSelect;
+
 // Events table
 export const events = pgTable("events", {
   id: serial().primaryKey().notNull(),

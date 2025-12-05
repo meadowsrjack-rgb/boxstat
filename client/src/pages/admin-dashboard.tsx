@@ -2169,20 +2169,6 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
 
                     <FormField
                       control={form.control}
-                      name="organization"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Club/Brand</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Basketball Academy" data-testid="input-team-organization" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="location"
                       render={({ field }) => (
                         <FormItem>

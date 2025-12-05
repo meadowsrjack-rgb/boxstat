@@ -53,7 +53,6 @@ import TeamChat from "@/components/TeamChat";
 import LeadEvaluationForm from "@/components/LeadEvaluationForm";
 import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, TEAM_TROPHIES, COACH_AWARDS, type PlayerLite, type EvalScores, type Quarter, type SkillCategoryName } from "@/components/CoachAwardDialogs";
 import { NotificationBell } from "@/components/NotificationBell";
-import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 /* =================== Types =================== */
 
@@ -425,10 +424,6 @@ export default function CoachDashboard() {
 
       {/* Main */}
       <main className="max-w-md mx-auto">
-        {/* Announcement Banner */}
-        <div className="px-6 pt-4">
-          <AnnouncementBanner />
-        </div>
         {/* Avatar header */}
         <div className="px-6 py-6 text-center">
           <div className="flex justify-center mb-2">

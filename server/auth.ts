@@ -3,6 +3,13 @@ import jwt from "jsonwebtoken";
 
 // Hybrid authentication middleware - accepts EITHER session OR JWT token
 export const requireAuth: RequestHandler = (req: any, res, next) => {
+  // Debug logging for photo upload troubleshooting
+  if (req.path.includes('upload')) {
+    console.log('🔐 Auth Debug - Path:', req.path);
+    console.log('🔐 Auth Debug - Authorization header:', req.headers.authorization ? 'Present' : 'MISSING');
+    console.log('🔐 Auth Debug - Session userId:', req.session?.userId || 'NONE');
+  }
+  
   // First, try JWT authentication (for mobile apps)
   const auth = req.headers.authorization;
   if (auth && auth.startsWith("Bearer ")) {
@@ -25,6 +32,9 @@ export const requireAuth: RequestHandler = (req: any, res, next) => {
       }
     } catch (err: any) {
       // JWT invalid, fall through to session check
+      if (req.path.includes('upload')) {
+        console.log('🔐 Auth Debug - JWT Error:', err.message);
+      }
     }
   }
   

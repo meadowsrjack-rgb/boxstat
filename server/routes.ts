@@ -2525,12 +2525,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.patch('/api/users/:id', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
+    const { role, organizationId } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can update users' });
     }
     
-    const updated = await storage.updateUser(req.params.id, req.body);
+    const userId = req.params.id;
+    const updateData = req.body;
+    
+    // If updating a coach's teamIds, also update the team records
+    if (updateData.teamIds !== undefined) {
+      const user = await storage.getUser(userId);
+      if (user && user.role === 'coach') {
+        const newTeamIds = updateData.teamIds || [];
+        const allTeams = await storage.getTeamsByOrganization(organizationId);
+        
+        // For each team in the organization, update coach assignments
+        for (const team of allTeams) {
+          const teamIdNum = team.id;
+          const isInNewTeams = newTeamIds.includes(teamIdNum);
+          const isCurrentlyHead = team.coachId === userId;
+          const isCurrentlyAssistant = team.assistantCoachIds?.includes(userId) || false;
+          
+          if (isInNewTeams && !isCurrentlyHead && !isCurrentlyAssistant) {
+            // Add coach to this team as assistant (since head coach might already exist)
+            const updatedAssistantIds = [...(team.assistantCoachIds || []), userId];
+            await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
+          } else if (!isInNewTeams && (isCurrentlyHead || isCurrentlyAssistant)) {
+            // Remove coach from this team
+            if (isCurrentlyHead) {
+              await storage.updateTeam(String(teamIdNum), { coachId: null });
+            }
+            if (isCurrentlyAssistant) {
+              const updatedAssistantIds = (team.assistantCoachIds || []).filter((id: string) => id !== userId);
+              await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
+            }
+          }
+        }
+      }
+    }
+    
+    const updated = await storage.updateUser(userId, updateData);
     res.json(updated);
   });
   

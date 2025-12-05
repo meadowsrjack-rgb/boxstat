@@ -1272,9 +1272,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('firstName')}
                   data-testid="sort-firstName"
-                >
-                  👤 First Name
-                </TableHead>
+                >First Name</TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('lastName')}

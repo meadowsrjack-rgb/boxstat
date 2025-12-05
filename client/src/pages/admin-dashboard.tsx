@@ -240,7 +240,7 @@ export default function AdminDashboard() {
               <NotificationBell />
               <Button 
                 onClick={() => setActiveTab("settings")} 
-                variant="outline"
+                variant="ghost"
                 size="icon"
                 data-testid="button-settings"
                 title="Settings"

@@ -1,4 +1,4 @@
-// Photo upload with auth fix - v2
+// Photo upload with auth fix - v3
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +6,49 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Upload, ArrowLeft, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+// Helper function to upload photo with auth
+async function uploadPhotoWithAuth(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('photo', file);
+  
+  // Get token fresh at upload time
+  const token = localStorage.getItem('authToken');
+  console.log('📷 UPLOAD v3 - Token exists:', !!token);
+  
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    console.log('📷 UPLOAD v3 - Authorization header set');
+  } else {
+    console.log('📷 UPLOAD v3 - NO TOKEN FOUND!');
+  }
+  
+  console.log('📷 UPLOAD v3 - Making fetch request...');
+  
+  const response = await fetch('/api/upload-profile-photo', {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+  });
+  
+  console.log('📷 UPLOAD v3 - Response status:', response.status);
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+    console.log('📷 UPLOAD v3 - Error:', error);
+    throw new Error(error.error || 'Upload failed');
+  }
+  
+  return response.json();
+}
+
 export default function PhotoUploadPage() {
+  console.log('📷 PhotoUploadPage v3 RENDERING');
+  
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -19,50 +58,6 @@ export default function PhotoUploadPage() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('photo', file);
-      
-      // Use fetch directly for multipart/form-data uploads
-      // apiRequest doesn't handle FormData properly
-      const token = localStorage.getItem('authToken');
-      console.log('📷 Photo upload - token:', token ? token.substring(0, 30) + '...' : 'NULL');
-      
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      console.log('📷 Photo upload - headers:', JSON.stringify(headers));
-      
-      const response = await fetch('/api/upload-profile-photo', {
-        method: 'POST',
-        headers,
-        body: formData,
-        credentials: 'include',
-      });
-      
-      console.log('📷 Photo upload - response status:', response.status);
-      
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({ error: 'Upload failed' }));
-        console.log('📷 Photo upload - error:', error);
-        throw new Error(error.error || 'Upload failed');
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Profile photo updated successfully!" });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setLocation("/player-dashboard");
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to upload photo. Please try again." });
-    }
-  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -83,10 +78,19 @@ export default function PhotoUploadPage() {
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (selectedFile) {
       setIsUploading(true);
-      uploadMutation.mutate(selectedFile);
+      try {
+        await uploadPhotoWithAuth(selectedFile);
+        toast({ title: "Success", description: "Profile photo updated successfully!" });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        setLocation("/player-dashboard");
+      } catch (error: any) {
+        toast({ title: "Error", description: error.message || "Failed to upload photo. Please try again." });
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 

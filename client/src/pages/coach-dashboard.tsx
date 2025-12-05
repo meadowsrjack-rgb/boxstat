@@ -93,6 +93,9 @@ type CoachPaySummary = {
 export default function CoachDashboard() {
   const { user } = useAuth();
   const currentUser = user as UserType | null;
+  
+  // For multi-role accounts, use the activeProfileId (coach profile) instead of the logged-in user ID
+  const coachProfileId = (user as any)?.activeProfileId || currentUser?.id;
   const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "pay" | "hr">(() => {
     if (typeof window === "undefined") return "calendar";
     const stored = localStorage.getItem("coachDashboardTab");
@@ -165,10 +168,16 @@ export default function CoachDashboard() {
 
   // Query for coach's assigned teams
   const { data: assignedTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup: string}>>({
-    queryKey: [`/api/coaches/${currentUser?.id}/teams`],
-    enabled: !!currentUser?.id,
+    queryKey: [`/api/coaches/${coachProfileId}/teams`],
+    enabled: !!coachProfileId,
     queryFn: async () => {
-      const res = await fetch(`/api/coaches/${currentUser?.id}/teams`, { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/coaches/${coachProfileId}/teams`, { 
+        credentials: "include",
+        headers 
+      });
       if (!res.ok) return [];
       return res.json();
     },
@@ -178,7 +187,10 @@ export default function CoachDashboard() {
   const { data: allTeams = [] } = useQuery<Array<{id: string; name: string; ageGroup?: string}>>({
     queryKey: ["/api/search/teams"],
     queryFn: async () => {
-      const res = await fetch("/api/search/teams", { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/search/teams", { credentials: "include", headers });
       if (!res.ok) return [];
       const data = await res.json();
       return data.teams || [];
@@ -199,10 +211,16 @@ export default function CoachDashboard() {
 
   // Query for all players from coach's assigned teams
   const { data: assignedPlayers = [] } = useQuery({
-    queryKey: [`/api/coaches/${currentUser?.id}/players`],
-    enabled: !!currentUser?.id,
+    queryKey: [`/api/coaches/${coachProfileId}/players`],
+    enabled: !!coachProfileId,
     queryFn: async () => {
-      const res = await fetch(`/api/coaches/${currentUser?.id}/players`, { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/coaches/${coachProfileId}/players`, { 
+        credentials: "include",
+        headers 
+      });
       if (!res.ok) return [];
       return res.json();
     },
@@ -222,7 +240,10 @@ export default function CoachDashboard() {
   const { data: coachEvents = [] as UypEvent[] } = useQuery<UypEvent[]>({
     queryKey: ["/api/coach/events"],
     queryFn: async () => {
-      const res = await fetch("/api/coach/events", { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/coach/events", { credentials: "include", headers });
       if (!res.ok) return [] as UypEvent[];
       return res.json();
     },
@@ -291,7 +312,7 @@ export default function CoachDashboard() {
         queryClient.invalidateQueries({ queryKey: ["/api/evaluations"] });
         queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
         // Also invalidate the players list to update evaluation displays
-        queryClient.invalidateQueries({ queryKey: ["/api/coaches", currentUser?.id, "players"] });
+        queryClient.invalidateQueries({ queryKey: [`/api/coaches/${coachProfileId}/players`] });
       }
       setEvalOpen(false);
       setScores({});

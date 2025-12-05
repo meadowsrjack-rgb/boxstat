@@ -280,6 +280,73 @@ export const insertWaiverSchema = createInsertSchema(waivers).omit({
 export type InsertWaiver = z.infer<typeof insertWaiverSchema>;
 export type Waiver = typeof waivers.$inferSelect;
 
+// Waiver Versions table (tracks version history of waivers)
+export const waiverVersions = pgTable("waiver_versions", {
+  id: serial().primaryKey().notNull(),
+  waiverId: varchar("waiver_id").notNull(),
+  version: integer().notNull().default(1),
+  title: varchar().notNull(),
+  content: text().notNull(),
+  requiresScroll: boolean("requires_scroll").default(true),
+  requiresCheckbox: boolean("requires_checkbox").default(true),
+  checkboxLabel: varchar("checkbox_label").default("I have read and agree to the terms above"),
+  isActive: boolean("is_active").default(false).notNull(), // Only one version active at a time
+  publishedAt: timestamp("published_at", { mode: 'string' }),
+  publishedBy: varchar("published_by"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.waiverId],
+    foreignColumns: [waivers.id],
+    name: "waiver_versions_waiver_id_fkey"
+  }).onDelete("cascade"),
+]);
+
+export const insertWaiverVersionSchema = createInsertSchema(waiverVersions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWaiverVersion = z.infer<typeof insertWaiverVersionSchema>;
+export type WaiverVersion = typeof waiverVersions.$inferSelect;
+
+// Waiver Signatures table (tracks user signatures on waiver versions)
+export const waiverSignatures = pgTable("waiver_signatures", {
+  id: serial().primaryKey().notNull(),
+  waiverVersionId: integer("waiver_version_id").notNull(),
+  profileId: varchar("profile_id").notNull(), // The user who signed (player profile)
+  signedBy: varchar("signed_by").notNull(), // Who actually signed (could be parent for minor)
+  signedAt: timestamp("signed_at", { mode: 'string' }).defaultNow().notNull(),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  metadata: jsonb(), // Additional context (e.g., registration flow, renewal)
+  status: varchar().default('valid').notNull(), // 'valid', 'superseded', 'revoked'
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.waiverVersionId],
+    foreignColumns: [waiverVersions.id],
+    name: "waiver_signatures_waiver_version_id_fkey"
+  }).onDelete("cascade"),
+  foreignKey({
+    columns: [table.profileId],
+    foreignColumns: [users.id],
+    name: "waiver_signatures_profile_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.signedBy],
+    foreignColumns: [users.id],
+    name: "waiver_signatures_signed_by_fkey"
+  }),
+]);
+
+export const insertWaiverSignatureSchema = createInsertSchema(waiverSignatures).omit({
+  id: true,
+  signedAt: true,
+  createdAt: true,
+});
+export type InsertWaiverSignature = z.infer<typeof insertWaiverSignatureSchema>;
+export type WaiverSignature = typeof waiverSignatures.$inferSelect;
+
 // Programs table (packages/subscriptions)
 export const programs = pgTable("programs", {
   id: varchar().primaryKey().notNull(),
@@ -314,6 +381,49 @@ export const programs = pgTable("programs", {
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
+
+// Product Enrollments table (tracks who is enrolled in which products/programs)
+export const productEnrollments = pgTable("product_enrollments", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  programId: varchar("program_id").notNull(), // References programs table
+  accountHolderId: varchar("account_holder_id").notNull(), // The parent/purchaser
+  profileId: varchar("profile_id"), // The player enrolled (null for family-wide)
+  status: varchar().notNull().default('active'), // 'active', 'expired', 'cancelled', 'pending'
+  source: varchar().default('direct'), // 'direct', 'migration', 'gift', 'promo'
+  paymentId: varchar("payment_id"), // Reference to the payment that created this enrollment
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // For recurring enrollments
+  startDate: timestamp("start_date", { mode: 'string' }).defaultNow(),
+  endDate: timestamp("end_date", { mode: 'string' }), // For time-limited enrollments
+  autoRenew: boolean("auto_renew").default(true),
+  metadata: jsonb().default('{}'), // Additional enrollment data
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.programId],
+    foreignColumns: [programs.id],
+    name: "product_enrollments_program_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.accountHolderId],
+    foreignColumns: [users.id],
+    name: "product_enrollments_account_holder_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.profileId],
+    foreignColumns: [users.id],
+    name: "product_enrollments_profile_id_fkey"
+  }),
+]);
+
+export const insertProductEnrollmentSchema = createInsertSchema(productEnrollments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertProductEnrollment = z.infer<typeof insertProductEnrollmentSchema>;
+export type ProductEnrollment = typeof productEnrollments.$inferSelect;
 
 // Divisions table (defined before teams for FK reference)
 export const divisions = pgTable("divisions", {
@@ -423,6 +533,29 @@ export const events = pgTable("events", {
   createdBy: varchar("created_by"),
   status: varchar().default('active'), // active, cancelled, completed, draft
 });
+
+// Event Targets table (normalized targeting for events)
+export const eventTargets = pgTable("event_targets", {
+  id: serial().primaryKey().notNull(),
+  eventId: integer("event_id").notNull(),
+  targetType: varchar("target_type").notNull(), // 'team', 'role', 'program', 'division', 'user'
+  targetId: varchar("target_id").notNull(), // ID of the target (team ID, role name, program ID, etc.)
+  targetScope: varchar("target_scope").notNull().default('visibility'), // 'visibility' or 'assignment'
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.eventId],
+    foreignColumns: [events.id],
+    name: "event_targets_event_id_fkey"
+  }).onDelete("cascade"),
+]);
+
+export const insertEventTargetSchema = createInsertSchema(eventTargets).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEventTarget = z.infer<typeof insertEventTargetSchema>;
+export type EventTarget = typeof eventTargets.$inferSelect;
 
 // Attendances table
 export const attendances = pgTable("attendances", {
@@ -669,6 +802,50 @@ export const notificationPreferences = pgTable("notification_preferences", {
   quietHoursEnd: varchar("quiet_hours_end").default("07:00"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
+
+// Notification Templates table (reusable notification content)
+export const notificationTemplates = pgTable("notification_templates", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(), // Internal name for template
+  slug: varchar().notNull(), // Unique identifier for referencing
+  title: varchar().notNull(), // Template title with placeholders
+  message: text().notNull(), // Template message with placeholders
+  types: text("types").array().default(sql`ARRAY['notification']::text[]`),
+  defaultChannels: text("default_channels").array().default(sql`ARRAY['in_app']::text[]`),
+  variables: text("variables").array().default(sql`ARRAY[]::text[]`), // Available template variables
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertNotificationTemplate = z.infer<typeof insertNotificationTemplateSchema>;
+export type NotificationTemplate = typeof notificationTemplates.$inferSelect;
+
+// Notification Topics table (categorization and subscription control)
+export const notificationTopics = pgTable("notification_topics", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  name: varchar().notNull(),
+  slug: varchar().notNull(),
+  description: text(),
+  category: varchar(), // 'event', 'payment', 'team', 'achievement', 'system'
+  isSubscribable: boolean("is_subscribable").default(true), // Can users opt out?
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertNotificationTopicSchema = createInsertSchema(notificationTopics).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertNotificationTopic = z.infer<typeof insertNotificationTopicSchema>;
+export type NotificationTopic = typeof notificationTopics.$inferSelect;
 
 // Push Subscriptions table
 export const pushSubscriptions = pgTable("push_subscriptions", {

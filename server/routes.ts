@@ -39,8 +39,8 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients, users, teamMemberships } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { notifications, notificationRecipients, users, teamMemberships, waivers, waiverVersions, waiverSignatures, productEnrollments, programs } from "@shared/schema";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
 
@@ -4668,6 +4668,267 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================
+  // WAIVER VERSION ROUTES
+  // =============================================
+
+  // Get all versions for a waiver
+  app.get('/api/waivers/:waiverId/versions', requireAuth, async (req: any, res) => {
+    const versions = await db.select()
+      .from(waiverVersions)
+      .where(eq(waiverVersions.waiverId, req.params.waiverId))
+      .orderBy(desc(waiverVersions.version));
+    res.json(versions);
+  });
+
+  // Get active version of a waiver
+  app.get('/api/waivers/:waiverId/active-version', async (req: any, res) => {
+    const [version] = await db.select()
+      .from(waiverVersions)
+      .where(
+        and(
+          eq(waiverVersions.waiverId, req.params.waiverId),
+          eq(waiverVersions.isActive, true)
+        )
+      )
+      .limit(1);
+    
+    if (!version) {
+      return res.status(404).json({ message: 'No active version found' });
+    }
+    res.json(version);
+  });
+
+  // Create a new version (draft)
+  app.post('/api/waivers/:waiverId/versions', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can create waiver versions' });
+    }
+
+    // Get the latest version number
+    const [latestVersion] = await db.select({ maxVersion: sql<number>`MAX(version)` })
+      .from(waiverVersions)
+      .where(eq(waiverVersions.waiverId, req.params.waiverId));
+
+    const newVersion = (latestVersion?.maxVersion || 0) + 1;
+
+    const [version] = await db.insert(waiverVersions)
+      .values({
+        waiverId: req.params.waiverId,
+        version: newVersion,
+        title: req.body.title,
+        content: req.body.content,
+        requiresScroll: req.body.requiresScroll ?? true,
+        requiresCheckbox: req.body.requiresCheckbox ?? true,
+        checkboxLabel: req.body.checkboxLabel,
+        isActive: false, // Draft by default
+      })
+      .returning();
+
+    res.json(version);
+  });
+
+  // Publish a version (makes it active, deactivates others, supersedes old signatures)
+  app.post('/api/waivers/:waiverId/versions/:versionId/publish', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can publish waiver versions' });
+    }
+
+    const versionId = parseInt(req.params.versionId);
+    const waiverId = req.params.waiverId;
+
+    // Get all version IDs for this waiver (to mark their signatures as superseded)
+    const allVersions = await db.select({ id: waiverVersions.id })
+      .from(waiverVersions)
+      .where(eq(waiverVersions.waiverId, waiverId));
+    
+    const allVersionIds = allVersions.map(v => v.id);
+
+    // Mark all existing signatures for this waiver as superseded
+    // (users will need to re-sign the new version)
+    if (allVersionIds.length > 0) {
+      await db.update(waiverSignatures)
+        .set({ status: 'superseded' })
+        .where(
+          and(
+            inArray(waiverSignatures.waiverVersionId, allVersionIds),
+            eq(waiverSignatures.status, 'valid')
+          )
+        );
+    }
+
+    // Deactivate all versions of this waiver
+    await db.update(waiverVersions)
+      .set({ isActive: false })
+      .where(eq(waiverVersions.waiverId, waiverId));
+
+    // Activate this version
+    const [publishedVersion] = await db.update(waiverVersions)
+      .set({ 
+        isActive: true, 
+        publishedAt: new Date().toISOString(),
+        publishedBy: userId,
+      })
+      .where(eq(waiverVersions.id, versionId))
+      .returning();
+
+    res.json(publishedVersion);
+  });
+
+  // =============================================
+  // WAIVER SIGNATURE ROUTES
+  // =============================================
+
+  // Get signatures for a profile
+  app.get('/api/profiles/:profileId/waiver-signatures', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    const profileId = req.params.profileId;
+
+    // Users can view their own or their children's signatures
+    // Admins can view anyone's
+    if (role !== 'admin') {
+      const profile = await storage.getUser(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: 'Profile not found' });
+      }
+      const isOwnProfile = profile.id === userId;
+      const isChildProfile = profile.accountHolderId === userId || profile.parentId === userId;
+      if (!isOwnProfile && !isChildProfile) {
+        return res.status(403).json({ message: 'Not authorized to view these signatures' });
+      }
+    }
+
+    const signatures = await db.select({
+      signature: waiverSignatures,
+      version: waiverVersions,
+      waiver: waivers,
+    })
+      .from(waiverSignatures)
+      .innerJoin(waiverVersions, eq(waiverSignatures.waiverVersionId, waiverVersions.id))
+      .innerJoin(waivers, eq(waiverVersions.waiverId, waivers.id))
+      .where(
+        and(
+          eq(waiverSignatures.profileId, profileId),
+          eq(waiverSignatures.status, 'valid')
+        )
+      );
+
+    res.json(signatures);
+  });
+
+  // Sign a waiver (create signature)
+  app.post('/api/waiver-signatures', requireAuth, async (req: any, res) => {
+    const { id: userId } = req.user;
+    const { waiverVersionId, profileId, metadata } = req.body;
+
+    // Verify user can sign for this profile
+    const profile = await storage.getUser(profileId);
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    const isOwnProfile = profile.id === userId;
+    const isChildProfile = profile.accountHolderId === userId || profile.parentId === userId;
+    if (!isOwnProfile && !isChildProfile) {
+      return res.status(403).json({ message: 'Not authorized to sign for this profile' });
+    }
+
+    // Mark any existing signatures for the same waiver as superseded
+    const [version] = await db.select()
+      .from(waiverVersions)
+      .where(eq(waiverVersions.id, waiverVersionId));
+
+    if (version) {
+      // Get all version IDs for this waiver
+      const allVersions = await db.select({ id: waiverVersions.id })
+        .from(waiverVersions)
+        .where(eq(waiverVersions.waiverId, version.waiverId));
+      
+      const allVersionIds = allVersions.map(v => v.id);
+
+      // Mark old signatures as superseded
+      if (allVersionIds.length > 0) {
+        await db.update(waiverSignatures)
+          .set({ status: 'superseded' })
+          .where(
+            and(
+              eq(waiverSignatures.profileId, profileId),
+              inArray(waiverSignatures.waiverVersionId, allVersionIds),
+              eq(waiverSignatures.status, 'valid')
+            )
+          );
+      }
+    }
+
+    // Create new signature
+    const [signature] = await db.insert(waiverSignatures)
+      .values({
+        waiverVersionId,
+        profileId,
+        signedBy: userId,
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        metadata: metadata || {},
+        status: 'valid',
+      })
+      .returning();
+
+    res.json(signature);
+  });
+
+  // Check if profile has signed required waivers
+  app.get('/api/profiles/:profileId/waiver-status', requireAuth, async (req: any, res) => {
+    const profileId = req.params.profileId;
+    const organizationId = req.user?.organizationId || 'default-org';
+
+    // Get all active waiver versions for the organization
+    const activeWaivers = await db.select({
+      waiver: waivers,
+      version: waiverVersions,
+    })
+      .from(waivers)
+      .innerJoin(waiverVersions, eq(waivers.id, waiverVersions.waiverId))
+      .where(
+        and(
+          eq(waivers.organizationId, organizationId),
+          eq(waivers.isActive, true),
+          eq(waiverVersions.isActive, true)
+        )
+      );
+
+    // Get profile's valid signatures
+    const signatures = await db.select()
+      .from(waiverSignatures)
+      .where(
+        and(
+          eq(waiverSignatures.profileId, profileId),
+          eq(waiverSignatures.status, 'valid')
+        )
+      );
+
+    const signedVersionIds = new Set(signatures.map(s => s.waiverVersionId));
+
+    const waiverStatus = activeWaivers.map(({ waiver, version }) => ({
+      waiverId: waiver.id,
+      waiverName: waiver.name,
+      versionId: version.id,
+      versionNumber: version.version,
+      isSigned: signedVersionIds.has(version.id),
+      isRequired: waiver.isBuiltIn, // Built-in waivers are required
+    }));
+
+    const allRequiredSigned = waiverStatus
+      .filter(w => w.isRequired)
+      .every(w => w.isSigned);
+
+    res.json({
+      waivers: waiverStatus,
+      allRequiredSigned,
+    });
+  });
+
+  // =============================================
   // PROGRAM ROUTES
   // =============================================
   
@@ -4707,6 +4968,167 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     await storage.deleteProgram(req.params.id);
     res.json({ success: true });
+  });
+
+  // =============================================
+  // PRODUCT ENROLLMENT ROUTES
+  // =============================================
+
+  // Get all enrollments for a profile
+  app.get('/api/profiles/:profileId/enrollments', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    const profileId = req.params.profileId;
+
+    // Users can view their own or their children's enrollments
+    if (role !== 'admin') {
+      const profile = await storage.getUser(profileId);
+      if (!profile) {
+        return res.status(404).json({ message: 'Profile not found' });
+      }
+      const isOwnProfile = profile.id === userId;
+      const isChildProfile = profile.accountHolderId === userId || profile.parentId === userId;
+      if (!isOwnProfile && !isChildProfile) {
+        return res.status(403).json({ message: 'Not authorized to view these enrollments' });
+      }
+    }
+
+    const enrollments = await db.select({
+      enrollment: productEnrollments,
+      program: programs,
+    })
+      .from(productEnrollments)
+      .leftJoin(programs, eq(productEnrollments.programId, programs.id))
+      .where(eq(productEnrollments.profileId, profileId));
+
+    res.json(enrollments);
+  });
+
+  // Get all enrollments for an account holder (parent)
+  app.get('/api/accounts/:accountHolderId/enrollments', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    const accountHolderId = req.params.accountHolderId;
+
+    // Users can only view their own account enrollments
+    if (role !== 'admin' && accountHolderId !== userId) {
+      return res.status(403).json({ message: 'Not authorized to view these enrollments' });
+    }
+
+    const enrollments = await db.select({
+      enrollment: productEnrollments,
+      program: programs,
+    })
+      .from(productEnrollments)
+      .leftJoin(programs, eq(productEnrollments.programId, programs.id))
+      .where(eq(productEnrollments.accountHolderId, accountHolderId));
+
+    res.json(enrollments);
+  });
+
+  // Create an enrollment (admin only for now)
+  app.post('/api/enrollments', requireAuth, async (req: any, res) => {
+    const { role, organizationId, id: userId } = req.user;
+    
+    const {
+      programId,
+      accountHolderId,
+      profileId,
+      status = 'active',
+      source = 'direct',
+      paymentId,
+      stripeSubscriptionId,
+      startDate,
+      endDate,
+      autoRenew = true,
+      metadata = {},
+    } = req.body;
+
+    // Non-admins can only create enrollments for themselves
+    if (role !== 'admin' && accountHolderId !== userId) {
+      return res.status(403).json({ message: 'Not authorized to create enrollment for another user' });
+    }
+
+    const [enrollment] = await db.insert(productEnrollments)
+      .values({
+        organizationId: organizationId || 'default-org',
+        programId,
+        accountHolderId: accountHolderId || userId,
+        profileId,
+        status,
+        source,
+        paymentId,
+        stripeSubscriptionId,
+        startDate: startDate || new Date().toISOString(),
+        endDate,
+        autoRenew,
+        metadata,
+      })
+      .returning();
+
+    res.json(enrollment);
+  });
+
+  // Update an enrollment
+  app.patch('/api/enrollments/:id', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    const enrollmentId = parseInt(req.params.id);
+
+    // Get the enrollment first
+    const [existingEnrollment] = await db.select()
+      .from(productEnrollments)
+      .where(eq(productEnrollments.id, enrollmentId));
+
+    if (!existingEnrollment) {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    // Non-admins can only update their own enrollments
+    if (role !== 'admin' && existingEnrollment.accountHolderId !== userId) {
+      return res.status(403).json({ message: 'Not authorized to update this enrollment' });
+    }
+
+    const updateData: any = {};
+    if (req.body.status !== undefined) updateData.status = req.body.status;
+    if (req.body.profileId !== undefined) updateData.profileId = req.body.profileId;
+    if (req.body.autoRenew !== undefined) updateData.autoRenew = req.body.autoRenew;
+    if (req.body.endDate !== undefined) updateData.endDate = req.body.endDate;
+    if (req.body.metadata !== undefined) updateData.metadata = req.body.metadata;
+    updateData.updatedAt = new Date().toISOString();
+
+    const [updated] = await db.update(productEnrollments)
+      .set(updateData)
+      .where(eq(productEnrollments.id, enrollmentId))
+      .returning();
+
+    res.json(updated);
+  });
+
+  // Cancel an enrollment
+  app.post('/api/enrollments/:id/cancel', requireAuth, async (req: any, res) => {
+    const { role, id: userId } = req.user;
+    const enrollmentId = parseInt(req.params.id);
+
+    const [existingEnrollment] = await db.select()
+      .from(productEnrollments)
+      .where(eq(productEnrollments.id, enrollmentId));
+
+    if (!existingEnrollment) {
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    if (role !== 'admin' && existingEnrollment.accountHolderId !== userId) {
+      return res.status(403).json({ message: 'Not authorized to cancel this enrollment' });
+    }
+
+    const [cancelled] = await db.update(productEnrollments)
+      .set({ 
+        status: 'cancelled',
+        autoRenew: false,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(productEnrollments.id, enrollmentId))
+      .returning();
+
+    res.json(cancelled);
   });
   
   // =============================================

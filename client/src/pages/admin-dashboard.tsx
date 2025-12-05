@@ -1064,35 +1064,37 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
-                    <Select 
-                      value={selectedDivision || editingUser.divisionId || "none"}
-                      onValueChange={(value) => {
-                        const actualValue = value === "none" ? "" : value;
-                        const selectedDivisionObj = divisions?.find((d: any) => d.id === actualValue);
-                        const divisionName = selectedDivisionObj?.name || "";
-                        setSelectedDivision(actualValue);
-                        setEditingUser({
-                          ...editingUser, 
-                          division: divisionName,
-                          divisionId: actualValue
-                        });
-                      }}
-                    >
-                      <SelectTrigger id="edit-division" data-testid="select-edit-division">
-                        <SelectValue placeholder="Select a division" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {divisions?.map((division: any) => (
-                          <SelectItem key={division.id} value={division.id}>
-                            {division.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {editingUser.role !== 'coach' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
+                      <Select 
+                        value={selectedDivision || editingUser.divisionId || "none"}
+                        onValueChange={(value) => {
+                          const actualValue = value === "none" ? "" : value;
+                          const selectedDivisionObj = divisions?.find((d: any) => d.id === actualValue);
+                          const divisionName = selectedDivisionObj?.name || "";
+                          setSelectedDivision(actualValue);
+                          setEditingUser({
+                            ...editingUser, 
+                            division: divisionName,
+                            divisionId: actualValue
+                          });
+                        }}
+                      >
+                        <SelectTrigger id="edit-division" data-testid="select-edit-division">
+                          <SelectValue placeholder="Select a division" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {divisions?.map((division: any) => (
+                            <SelectItem key={division.id} value={division.id}>
+                              {division.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   
                   {editingUser.role === 'coach' && (
                     <div className="space-y-2">
@@ -1198,37 +1200,41 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </Dialog>
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-position" data-testid="label-edit-position">Position</Label>
-                    <Select 
-                      value={editingUser.position || "none"}
-                      onValueChange={(value) => setEditingUser({...editingUser, position: value === "none" ? "" : value})}
-                    >
-                      <SelectTrigger id="edit-position" data-testid="select-edit-position">
-                        <SelectValue placeholder="Select position" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        <SelectItem value="PG">PG - Point Guard</SelectItem>
-                        <SelectItem value="SG">SG - Shooting Guard</SelectItem>
-                        <SelectItem value="SF">SF - Small Forward</SelectItem>
-                        <SelectItem value="PF">PF - Power Forward</SelectItem>
-                        <SelectItem value="C">C - Center</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {editingUser.role !== 'coach' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-position" data-testid="label-edit-position">Position</Label>
+                      <Select 
+                        value={editingUser.position || "none"}
+                        onValueChange={(value) => setEditingUser({...editingUser, position: value === "none" ? "" : value})}
+                      >
+                        <SelectTrigger id="edit-position" data-testid="select-edit-position">
+                          <SelectValue placeholder="Select position" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="PG">PG - Point Guard</SelectItem>
+                          <SelectItem value="SG">SG - Shooting Guard</SelectItem>
+                          <SelectItem value="SF">SF - Small Forward</SelectItem>
+                          <SelectItem value="PF">PF - Power Forward</SelectItem>
+                          <SelectItem value="C">C - Center</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-height-in" data-testid="label-edit-height-in">Height (inches)</Label>
-                    <Input 
-                      id="edit-height-in"
-                      type="number"
-                      value={editingUser.heightIn || ""}
-                      onChange={(e) => setEditingUser({...editingUser, heightIn: parseInt(e.target.value) || null})}
-                      data-testid="input-edit-height-in"
-                      placeholder="e.g., 72 for 6'0&quot;"
-                    />
-                  </div>
+                  {editingUser.role !== 'coach' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-height-in" data-testid="label-edit-height-in">Height (inches)</Label>
+                      <Input 
+                        id="edit-height-in"
+                        type="number"
+                        value={editingUser.heightIn || ""}
+                        onChange={(e) => setEditingUser({...editingUser, heightIn: parseInt(e.target.value) || null})}
+                        data-testid="input-edit-height-in"
+                        placeholder="e.g., 72 for 6'0&quot;"
+                      />
+                    </div>
+                  )}
                   
                   <div className="space-y-2">
                     <Label htmlFor="edit-notes" data-testid="label-edit-notes">Admin Notes</Label>

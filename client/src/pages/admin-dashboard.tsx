@@ -238,9 +238,14 @@ export default function AdminDashboard() {
             </div>
             <div className="flex gap-3">
               <NotificationBell />
-              <Button onClick={() => setActiveTab("settings")} variant="outline" data-testid="button-settings">
-                <Settings className="w-4 h-4 mr-2" />
-                Settings
+              <Button 
+                onClick={() => setActiveTab("settings")} 
+                variant="outline"
+                size="icon"
+                data-testid="button-settings"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -351,6 +356,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="notifications">
             <NotificationsTab notifications={notifications} users={users} teams={teams} divisions={divisions} organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <SettingsTab organization={organization} />
           </TabsContent>
         </Tabs>
       </div>

@@ -94,8 +94,28 @@ export default function CoachDashboard() {
   const { user } = useAuth();
   const currentUser = user as UserType | null;
   
-  // For multi-role accounts, use the activeProfileId (coach profile) instead of the logged-in user ID
-  const coachProfileId = (user as any)?.activeProfileId || currentUser?.id;
+  // For multi-role accounts (e.g., admin viewing coach dashboard), find the coach profile
+  const { data: linkedProfiles = [] } = useQuery<Array<{id: string; role: string; firstName: string; lastName: string}>>({
+    queryKey: [`/api/users/${currentUser?.id}/linked-profiles`],
+    enabled: !!currentUser?.id && currentUser?.role !== 'coach',
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`/api/users/${currentUser?.id}/linked-profiles`, { 
+        credentials: "include", 
+        headers 
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+  
+  // Use the coach profile if user is admin/parent with a coach profile, otherwise use current user
+  const coachProfile = linkedProfiles.find(p => p.role === 'coach');
+  const coachProfileId = currentUser?.role === 'coach' 
+    ? currentUser?.id 
+    : (coachProfile?.id || (user as any)?.activeProfileId || currentUser?.id);
   const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "pay" | "hr">(() => {
     if (typeof window === "undefined") return "calendar";
     const stored = localStorage.getItem("coachDashboardTab");

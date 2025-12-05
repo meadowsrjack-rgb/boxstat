@@ -377,8 +377,8 @@ function EnhancedPlayerCard({
     localStorage.getItem("deviceLockedToPlayer") === player.id
   );
   
-  const { data: teamData } = useQuery<any>({
-    queryKey: [`/api/users/${player.id}/team`],
+  const { data: teamsData = [] } = useQuery<Array<{id: number; name: string; ageGroup: string; program: string}>>({
+    queryKey: [`/api/users/${player.id}/teams`],
     enabled: !!player.id,
   });
 
@@ -441,12 +441,12 @@ function EnhancedPlayerCard({
             </div>
             
             <div className="flex items-center gap-2 mt-0.5">
-              {teamData?.name && (
+              {teamsData.length > 0 && (
                 <span className="text-xs text-gray-500 truncate">
-                  {teamData.name}
+                  {teamsData.map(t => t.name).join(', ')}
                 </span>
               )}
-              {teamData?.name && <span className="text-gray-300">•</span>}
+              {teamsData.length > 0 && <span className="text-gray-300">•</span>}
               <div className="flex items-center gap-1">
                 <span className={`h-1.5 w-1.5 rounded-full ${statusColor}`} data-testid={`status-indicator-${player.id}`}></span>
                 <span className="text-xs text-gray-500" data-testid={`status-label-${player.id}`}>{statusLabel}</span>

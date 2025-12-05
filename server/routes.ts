@@ -2723,7 +2723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get user's team information
+  // Get user's team information (returns single team for backward compatibility)
   app.get('/api/users/:userId/team', requireAuth, async (req: any, res) => {
     try {
       const { userId } = req.params;
@@ -2769,6 +2769,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching user team:', error);
       res.status(500).json({ message: 'Failed to fetch user team' });
+    }
+  });
+  
+  // Get all teams for a user (supports multiple team assignments)
+  app.get('/api/users/:userId/teams', requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: requesterId, organizationId: requesterOrgId, role: requesterRole } = req.user;
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Authorization check
+      const isSameUser = requesterId === userId;
+      const isSameOrg = requesterOrgId === user.organizationId;
+      const isAdmin = requesterRole === 'admin';
+      const isCoach = requesterRole === 'coach';
+      
+      if (!isSameUser && !isSameOrg && !isAdmin && !isCoach) {
+        return res.status(403).json({ message: 'Unauthorized to view this user\'s teams' });
+      }
+      
+      // Get team IDs from both teamId and teamIds fields
+      const teamIdSet = new Set<number>();
+      if (user.teamId) {
+        const teamIdNum = typeof user.teamId === 'string' ? parseInt(user.teamId) : user.teamId;
+        if (!isNaN(teamIdNum)) teamIdSet.add(teamIdNum);
+      }
+      if (user.teamIds && Array.isArray(user.teamIds)) {
+        for (const id of user.teamIds) {
+          const teamIdNum = typeof id === 'string' ? parseInt(id) : id;
+          if (!isNaN(teamIdNum)) teamIdSet.add(teamIdNum);
+        }
+      }
+      
+      if (teamIdSet.size === 0) {
+        return res.json([]);
+      }
+      
+      // Fetch all teams
+      const teams = await Promise.all(
+        Array.from(teamIdSet).map(async (teamId) => {
+          const team = await storage.getTeam(String(teamId));
+          if (!team) return null;
+          return {
+            id: team.id,
+            name: team.name,
+            ageGroup: team.divisionId ? `Division ${team.divisionId}` : 'N/A',
+            program: team.programType || 'N/A',
+            color: '#d82428',
+          };
+        })
+      );
+      
+      res.json(teams.filter(t => t !== null));
+    } catch (error: any) {
+      console.error('Error fetching user teams:', error);
+      res.status(500).json({ message: 'Failed to fetch user teams' });
+    }
+  });
+  
+  // Get linked profiles for a user (other roles with same email)
+  app.get('/api/users/:userId/linked-profiles', requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { organizationId } = req.user;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Find all users with the same email in the same organization
+      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const linkedProfiles = allUsers.filter(u => 
+        u.email === user.email && u.id !== userId
+      ).map(u => ({
+        id: u.id,
+        role: u.role,
+        firstName: u.firstName,
+        lastName: u.lastName,
+      }));
+      
+      res.json(linkedProfiles);
+    } catch (error: any) {
+      console.error('Error fetching linked profiles:', error);
+      res.status(500).json({ message: 'Failed to fetch linked profiles' });
     }
   });
   

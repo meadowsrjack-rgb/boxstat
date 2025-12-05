@@ -185,15 +185,6 @@ export default function CoachDashboard() {
     },
   });
 
-  // Query for database teams (for coach to join)
-  const { data: databaseTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup?: string}>>({
-    queryKey: ["/api/teams"],
-    queryFn: async () => {
-      const res = await fetch("/api/teams", { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
 
   // Query for selected team data (when filtering)
   const { data: filteredTeam } = useQuery<CoachTeam | null>({
@@ -552,7 +543,6 @@ export default function CoachDashboard() {
               roster={combinedRoster}
               assignedTeams={assignedTeams}
               allTeams={allTeams}
-              databaseTeams={databaseTeams}
               selectedTeamFilter={selectedTeamFilter}
               onTeamFilterChange={setSelectedTeamFilter}
 
@@ -706,7 +696,6 @@ function RosterTab({
   roster,
   assignedTeams,
   allTeams,
-  databaseTeams,
   selectedTeamFilter,
   onTeamFilterChange,
   onEvaluate,
@@ -718,7 +707,6 @@ function RosterTab({
   roster: any[];
   assignedTeams: Array<{id: number; name: string; ageGroup: string}>;
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
-  databaseTeams: Array<{id: number; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
   onTeamFilterChange: (filter: 'my-team' | number) => void;
   onEvaluate: (p: PlayerLite) => void;
@@ -834,36 +822,6 @@ function RosterTab({
     },
   });
 
-  // Selected team for dropdown
-  const [selectedTeamToAdd, setSelectedTeamToAdd] = useState<string>("");
-
-  // Join team mutation
-  const joinTeamMutation = useMutation({
-    mutationFn: async (teamId: number) => {
-      const res = await fetch(`/api/coaches/${currentUser?.id}/teams/${teamId}/join`, {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to join team");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/coaches/${currentUser?.id}/teams`] });
-      setSelectedTeamToAdd(""); // Reset dropdown
-      toast({ title: "Success", description: "Team added successfully!" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
-  // Get available teams from database (teams the coach hasn't joined yet)
-  const availableTeams = databaseTeams.filter(
-    (team) => !assignedTeams.some((assigned) => assigned.id === team.id)
-  );
 
   // Show team list if no team is selected
   if (!selectedTeamId) {
@@ -897,42 +855,7 @@ function RosterTab({
           </div>
         ) : (
           <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded-lg">
-            You haven't added any teams yet. Use the dropdown below to add a team.
-          </div>
-        )}
-
-        {/* Add a Team Dropdown */}
-        {availableTeams.length > 0 && (
-          <div className="mt-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">Add a Team</h3>
-            <Select 
-              value={selectedTeamToAdd}
-              onValueChange={(value) => {
-                setSelectedTeamToAdd(value);
-                joinTeamMutation.mutate(parseInt(value));
-              }}
-              data-testid="select-add-team"
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a team to add..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTeams.map((team) => (
-                  <SelectItem 
-                    key={team.id} 
-                    value={team.id.toString()}
-                    data-testid={`select-item-team-${team.id}`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="font-medium">{team.name}</span>
-                      <span className="text-sm text-gray-500 ml-2">
-                        {team.ageGroup}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            No teams assigned yet. An admin will assign you to teams.
           </div>
         )}
       </div>

@@ -434,7 +434,7 @@ export default function PlayerCard({
             <div className="px-2 pb-6">
               <div className="max-w-[340px] mx-auto">
                 <SkillBar 
-                  label="OVERALL SKILLS ASSESSMENT"  
+                  label="UYP RANKING PERCENTILE"  
                   value={overallSkillScore} 
                 />
               </div>

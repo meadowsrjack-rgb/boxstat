@@ -1422,7 +1422,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
               <div className="px-2">
                 <div className="max-w-[340px] mx-auto">
                   <SkillBar 
-                    label="OVERALL SKILLS ASSESSMENT"  
+                    label="UYP RANKING PERCENTILE"  
                     value={overallSkillScore} 
                     onClick={() => setLocation("/skills")} 
                   />

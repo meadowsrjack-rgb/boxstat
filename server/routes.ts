@@ -2533,12 +2533,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const userId = req.params.id;
     const updateData = req.body;
     
+    console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
+    
     // If updating a coach's teamIds, also update the team records
     if (updateData.teamIds !== undefined) {
       const user = await storage.getUser(userId);
+      console.log(`[PATCH] User role: ${user?.role}, teamIds to set:`, updateData.teamIds);
+      
       if (user && user.role === 'coach') {
         const newTeamIds = updateData.teamIds || [];
         const allTeams = await storage.getTeamsByOrganization(organizationId);
+        console.log(`[PATCH] Found ${allTeams.length} teams in org, syncing coach ${userId} to teams:`, newTeamIds);
         
         // For each team in the organization, update coach assignments
         for (const team of allTeams) {
@@ -2547,17 +2552,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const isCurrentlyHead = team.coachId === userId;
           const isCurrentlyAssistant = team.assistantCoachIds?.includes(userId) || false;
           
+          console.log(`[PATCH] Team ${teamIdNum} "${team.name}": inNew=${isInNewTeams}, isHead=${isCurrentlyHead}, isAssistant=${isCurrentlyAssistant}`);
+          
           if (isInNewTeams && !isCurrentlyHead && !isCurrentlyAssistant) {
             // Add coach to this team as assistant (since head coach might already exist)
             const updatedAssistantIds = [...(team.assistantCoachIds || []), userId];
+            console.log(`[PATCH] Adding coach to team ${teamIdNum} as assistant:`, updatedAssistantIds);
             await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
           } else if (!isInNewTeams && (isCurrentlyHead || isCurrentlyAssistant)) {
             // Remove coach from this team
             if (isCurrentlyHead) {
+              console.log(`[PATCH] Removing coach as head from team ${teamIdNum}`);
               await storage.updateTeam(String(teamIdNum), { coachId: null });
             }
             if (isCurrentlyAssistant) {
               const updatedAssistantIds = (team.assistantCoachIds || []).filter((id: string) => id !== userId);
+              console.log(`[PATCH] Removing coach as assistant from team ${teamIdNum}:`, updatedAssistantIds);
               await storage.updateTeam(String(teamIdNum), { assistantCoachIds: updatedAssistantIds });
             }
           }
@@ -2566,6 +2576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     const updated = await storage.updateUser(userId, updateData);
+    console.log(`[PATCH] User ${userId} updated successfully`);
     res.json(updated);
   });
   

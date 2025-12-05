@@ -770,7 +770,11 @@ function RosterTab({
     queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"],
     enabled: !!selectedTeamId,
     queryFn: async () => {
-      const res = await fetch(`/api/teams/${selectedTeamId}/roster-with-notion`, { credentials: "include" });
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`/api/teams/${selectedTeamId}/roster-with-notion`, { 
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!res.ok) return [];
       return res.json();
     },
@@ -783,8 +787,10 @@ function RosterTab({
       return;
     }
     try {
+      const token = localStorage.getItem('authToken');
       const res = await fetch(`/api/search/players?q=${encodeURIComponent(query)}`, {
         credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
         const data = await res.json();

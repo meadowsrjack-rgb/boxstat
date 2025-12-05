@@ -7,7 +7,6 @@ import { Camera, Upload, ArrowLeft, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 export default function PhotoUploadPage() {
   const { user } = useAuth();
@@ -25,10 +24,27 @@ export default function PhotoUploadPage() {
       const formData = new FormData();
       formData.append('photo', file);
       
-      return apiRequest('/api/upload-profile-photo', {
+      // Use fetch directly for multipart/form-data uploads
+      // apiRequest doesn't handle FormData properly
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch('/api/upload-profile-photo', {
         method: 'POST',
-        data: formData,
+        headers,
+        body: formData,
+        credentials: 'include',
       });
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Profile photo updated successfully!" });

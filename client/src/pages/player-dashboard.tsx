@@ -43,6 +43,7 @@ import {
   Hash,
   Users,
   Copy,
+  Target,
 } from "lucide-react";
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";

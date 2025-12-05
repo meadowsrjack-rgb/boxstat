@@ -335,6 +335,12 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     refetchInterval: false,
   });
 
+  // Fetch divisions for lookup
+  const { data: divisions = [] } = useQuery<any[]>({
+    queryKey: ["/api/divisions"],
+    staleTime: 30 * 60 * 1000,
+  });
+
   // Fetch events (backend filters based on user's role, team membership, and child profile)
   // Priority: activeProfile (from localStorage) > currentChildProfile (from device config)
   const childProfileId = activeProfile?.id || currentChildProfile?.id;
@@ -1265,7 +1271,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                             <span>DIVISION</span>
                           </div>
                           <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {userTeam?.divisionId ? userTeam.divisionId : <span className="text-gray-400 text-sm">Not assigned</span>}
+                            {userTeam?.divisionId ? (
+                              divisions.find((d: any) => d.id === userTeam.divisionId)?.name || userTeam.divisionId
+                            ) : (
+                              <span className="text-gray-400 text-sm">Not assigned</span>
+                            )}
                           </div>
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>

@@ -5685,9 +5685,30 @@ function DivisionsTab({ divisions, teams, organization }: any) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Age Range</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="e.g., 10-12, U14, 6th-8th" data-testid="input-division-agerange" />
-                      </FormControl>
+                      <Select value={field.value || ""} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-division-agerange">
+                            <SelectValue placeholder="Select age range" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="4-5 years">4-5 years</SelectItem>
+                          <SelectItem value="5-6 years">5-6 years</SelectItem>
+                          <SelectItem value="6-7 years">6-7 years</SelectItem>
+                          <SelectItem value="7-8 years">7-8 years</SelectItem>
+                          <SelectItem value="8-9 years">8-9 years</SelectItem>
+                          <SelectItem value="9-10 years">9-10 years</SelectItem>
+                          <SelectItem value="10-11 years">10-11 years</SelectItem>
+                          <SelectItem value="11-12 years">11-12 years</SelectItem>
+                          <SelectItem value="12-13 years">12-13 years</SelectItem>
+                          <SelectItem value="13-14 years">13-14 years</SelectItem>
+                          <SelectItem value="14-15 years">14-15 years</SelectItem>
+                          <SelectItem value="15-16 years">15-16 years</SelectItem>
+                          <SelectItem value="16-17 years">16-17 years</SelectItem>
+                          <SelectItem value="17-18 years">17-18 years</SelectItem>
+                          <SelectItem value="18+ years">18+ years</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

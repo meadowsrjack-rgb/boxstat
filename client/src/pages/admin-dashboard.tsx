@@ -2067,7 +2067,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Team Name *</FormLabel>
+                          <FormLabel>Name *</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Thunder U12" data-testid="input-team-name" />
                           </FormControl>
@@ -2616,7 +2616,6 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
           </div>
         </CardContent>
       </Card>
-
       {/* Roster Management Dialog */}
       {selectedTeam && (
         <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>

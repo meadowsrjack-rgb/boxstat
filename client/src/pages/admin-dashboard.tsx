@@ -2081,7 +2081,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       name="programType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Program Type</FormLabel>
+                          <FormLabel>Type</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger data-testid="select-team-program-type">

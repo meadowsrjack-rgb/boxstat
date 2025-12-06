@@ -1397,6 +1397,7 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Program = Product;
 export type InsertProgram = InsertProduct;
 export const insertProgramSchema = insertProductSchema;
+export const programs = products; // Table alias for backwards compatibility
 
 // =============================================
 // Package Selection Schema (Family Registration)

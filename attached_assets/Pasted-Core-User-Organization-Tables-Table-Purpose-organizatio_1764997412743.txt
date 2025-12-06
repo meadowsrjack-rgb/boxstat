@@ -1,0 +1,119 @@
+Core User & Organization Tables
+Table
+Purpose
+organizations
+Your sports organization settings - name, logo, colors, sport type, features
+users
+All user profiles - players, parents, coaches, admins. Includes contact info, team assignments, payment status, authentication
+pending_registrations
+Temporary records for users mid-registration (before email verified)
+
+
+Team & Division Tables
+Table
+Purpose
+teams
+Team info - name, coach, division, roster size, schedule
+team_memberships
+Links players/coaches to teams with their role and status
+divisions
+Age groups/divisions - name, age range, linked teams
+
+
+Events & Attendance
+Table
+Purpose
+events
+Practices, games, training sessions - time, location, check-in settings
+event_targets
+Who events are assigned to (teams, roles, divisions)
+event_windows
+RSVP/check-in time windows for events
+attendances
+Check-in records with timestamps and GPS coordinates
+rsvp_responses
+Player/parent RSVP responses for events
+facilities
+Locations for events with addresses and coordinates
+
+
+Payments & Products
+Table
+Purpose
+products
+Products/packages you sell - pricing, billing model, requirements
+product_enrollments
+Who has purchased what, subscription status
+payments
+Payment transactions - amount, status, Stripe info
+subscriptions
+Subscription management for recurring payments
+migration_lookup
+Legacy subscription data for migrating from old systems
+
+
+Waivers & Compliance
+Table
+Purpose
+waivers
+Waiver definitions - name, content, requirements
+waiver_versions
+Version history of waivers (for tracking changes)
+waiver_signatures
+Who signed which waiver and when
+
+
+Awards & Recognition
+Table
+Purpose
+awards
+Awards definitions - name, image, criteria
+user_awards
+Awards earned by users
+award_definitions
+Trophy/award definitions with trigger conditions
+user_awards
+Awards given to users with date and notes
+
+
+Skills & Evaluations
+Table
+Purpose
+skills
+Individual skill scores by category
+evaluations
+Quarterly skill evaluations with scores and notes
+
+
+Notifications & Messaging
+Table
+Purpose
+notifications
+Announcements and notifications sent to users
+notification_recipients
+Tracks who received/read each notification
+notification_preferences
+User settings for what notifications they want
+notification_templates
+Reusable notification templates
+notification_topics
+Categories for organizing notifications
+push_subscriptions
+Device tokens for push notifications (web, iOS, Android)
+announcements
+Team announcements
+messages
+Team chat messages
+
+
+Chat System
+Table
+Purpose
+chat_rooms
+Chat room definitions (team chats, etc.)
+chat_members
+Who's in each chat room
+chat_messages
+Individual chat messages
+
+

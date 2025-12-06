@@ -2890,12 +2890,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Unauthorized to view this user\'s team' });
       }
       
-      if (!user.teamId) {
+      let teamId = user.teamId;
+      
+      // If user.teamId is not set, check team_memberships table as fallback
+      if (!teamId) {
+        const activeMembership = await db.select({ teamId: teamMemberships.teamId })
+          .from(teamMemberships)
+          .where(
+            and(
+              eq(teamMemberships.profileId, userId),
+              eq(teamMemberships.status, 'active')
+            )
+          )
+          .limit(1);
+        
+        if (activeMembership.length > 0) {
+          teamId = activeMembership[0].teamId;
+        }
+      }
+      
+      if (!teamId) {
         return res.json(null);
       }
       
       // Get the team details - ensure teamId is converted to string
-      const teamIdString = String(user.teamId);
+      const teamIdString = String(teamId);
       const team = await storage.getTeam(teamIdString);
       
       if (!team) {

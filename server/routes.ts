@@ -2504,7 +2504,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
     const users = await storage.getUsersByOrganization(organizationId);
-    res.json(users);
+    
+    // Separate players from non-players
+    const players = users.filter((u: any) => u.role === 'player');
+    const nonPlayers = users.filter((u: any) => u.role !== 'player');
+    
+    // Fetch status tags for all players in a single bulk query
+    const playerIds = players.map((p: any) => p.id);
+    let statusTagsMap = new Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>();
+    
+    try {
+      statusTagsMap = await storage.getPlayerStatusTagsBulk(playerIds);
+    } catch (error) {
+      console.error('Error fetching bulk status tags:', error);
+    }
+    
+    // Enrich players with status tags from the bulk result
+    const enrichedPlayers = players.map((player: any) => {
+      const statusTag = statusTagsMap.get(player.id) || { tag: player.paymentStatus === 'pending' ? 'payment_due' : 'none' };
+      return {
+        ...player,
+        statusTag: statusTag.tag || 'none',
+        remainingCredits: statusTag.remainingCredits,
+        lowBalance: statusTag.lowBalance,
+      };
+    });
+    
+    // Add explicit null statusTag to non-players for consistent sorting
+    const enrichedNonPlayers = nonPlayers.map((user: any) => ({
+      ...user,
+      statusTag: null,
+    }));
+    
+    // Combine and return all users
+    res.json([...enrichedNonPlayers, ...enrichedPlayers]);
   });
   
   app.get('/api/users/role/:role', requireAuth, async (req: any, res) => {

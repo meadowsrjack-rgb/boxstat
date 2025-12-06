@@ -1361,6 +1361,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('statusTag')}
+                  data-testid="sort-statusTag"
+                >
+                  Status
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('isActive')}
                   data-testid="sort-isActive"
                 >
@@ -1380,6 +1387,33 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>
                       <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.role === "player" && user.statusTag && user.statusTag !== "none" ? (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            user.statusTag === "payment_due" 
+                              ? "bg-red-500/20 border-red-500/50 text-red-600" 
+                              : user.statusTag === "low_balance" 
+                              ? "bg-amber-500/20 border-amber-500/50 text-amber-600" 
+                              : user.statusTag === "club_member" 
+                              ? "bg-green-500/20 border-green-500/50 text-green-600" 
+                              : user.statusTag === "pack_holder" 
+                              ? "bg-blue-500/20 border-blue-500/50 text-blue-600" 
+                              : ""
+                          }`}
+                          data-testid={`badge-status-${user.id}`}
+                        >
+                          {user.statusTag === "payment_due" ? "Payment Due" 
+                            : user.statusTag === "low_balance" ? "Low Balance" 
+                            : user.statusTag === "club_member" ? "Club Member" 
+                            : user.statusTag === "pack_holder" ? "Pack Holder" 
+                            : "-"}
+                        </Badge>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Switch

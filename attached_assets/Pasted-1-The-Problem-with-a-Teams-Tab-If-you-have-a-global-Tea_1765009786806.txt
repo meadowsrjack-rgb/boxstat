@@ -1,0 +1,65 @@
+1. The Problem with a "Teams" Tab
+
+If you have a global "Teams" tab, it confuses the users who are in programs that don't look like teams.
+
+Youth Club clearly has teams like "10u Black" and "12u Red".
+
+Skills Academy has skill levels like "Rookies" or "Elite".
+
+Private Training likely has no teams at all.
+
+If a user in "Private Training" clicks a "Teams" tab, they will see an empty screen or irrelevant lists of 10u teams.
+
+2. The Smarter Solution: "Parent & Child"
+
+Keep Programs as your main tab. Think of "Teams" and "Groups" as children of those programs. They are technically the same thing: Sub-Groups.
+
+Parent: Program (e.g., Youth Club) → Child: Team (e.g., 10u Black)
+
+Parent: Program (e.g., Skills Academy) → Child: Group (e.g., Rookies)
+
+3. How to display it in the App (Dynamic Labels)
+
+In your database, you can call them all Groups or Cohorts. But in the App UI, change the label based on the Program Type:
+
+If user clicks "Youth Club": Title the list "Select your Team".
+
+List: 10u Black, 12u Red, etc.
+
+If user clicks "Skills Academy": Title the list "Select your Level".
+
+List: Rookies, Intermediate, Elite.
+
+If user clicks "Private Training": Skip the list entirely. Go straight to booking coaches.
+
+Summary
+
+Don't make "Teams" a top-level tab next to "Programs." Do make "Teams" a step inside the "Youth Club" program page.
+
+How to handle "Multiple Teams" (The Logic)
+
+A player might be in the 10u Black team (Club) AND the Rookies group (Skills Academy). You don't want "Rookies" to look like a "Team" with a roster.
+
+You need a "Social Toggle" in your database for each Program.
+
+Program: Youth Club
+
+Has Teams? YES
+
+Show Roster? YES
+
+Enable Chat? YES
+
+Result: Player sees "10u Black" badge, Roster button, and Chat button.
+
+Program: Skills Academy
+
+Has Teams? NO (It has levels)
+
+Show Roster? NO (Privacy—don't show random classmates)
+
+Enable Chat? MAYBE (Or restricted to Coach Announcements only)
+
+Result: Player sees "Rookies" badge, but no Roster button.
+
+make sure this is reflected in player dashboard

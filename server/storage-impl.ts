@@ -247,6 +247,7 @@ export interface IStorage {
   getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]>;
   deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined>;
   getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
+  getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
 }
 
 // =============================================
@@ -1896,6 +1897,18 @@ class MemStorage implements IStorage {
     // For MemStorage, without product enrollments data, return 'none' for other cases
     return { tag: 'none' };
   }
+  
+  async getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>> {
+    const result = new Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>();
+    
+    // MemStorage uses simple loop since it's in-memory anyway
+    for (const playerId of playerIds) {
+      const tag = await this.getPlayerStatusTag(playerId);
+      result.set(playerId, tag);
+    }
+    
+    return result;
+  }
 }
 
 // =============================================
@@ -1903,7 +1916,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, or, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, or, sql, isNull, inArray } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -4099,6 +4112,98 @@ class DatabaseStorage implements IStorage {
     }
     
     return { tag: 'none' };
+  }
+  
+  async getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>> {
+    const result = new Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>();
+    
+    if (playerIds.length === 0) {
+      return result;
+    }
+    
+    // Get all players' payment status in one query
+    const players = await db.select({
+      id: schema.users.id,
+      paymentStatus: schema.users.paymentStatus,
+    })
+    .from(schema.users)
+    .where(inArray(schema.users.id, playerIds));
+    
+    const playersMap = new Map(players.map(p => [p.id, p.paymentStatus]));
+    
+    // Get all enrollments for all players in one query (matching single-player query structure)
+    const allEnrollments = await db.select({
+      enrollment: schema.productEnrollments,
+      product: schema.products,
+    })
+    .from(schema.productEnrollments)
+    .leftJoin(schema.products, eq(schema.productEnrollments.programId, schema.products.id))
+    .where(
+      and(
+        inArray(schema.productEnrollments.profileId, playerIds),
+        eq(schema.productEnrollments.status, 'active')
+      )
+    );
+    
+    // Group enrollments by player
+    const enrollmentsByPlayer = new Map<string, Array<{enrollment: typeof schema.productEnrollments.$inferSelect, product: typeof schema.products.$inferSelect | null}>>();
+    for (const row of allEnrollments) {
+      const profileId = row.enrollment.profileId;
+      if (!enrollmentsByPlayer.has(profileId)) {
+        enrollmentsByPlayer.set(profileId, []);
+      }
+      enrollmentsByPlayer.get(profileId)!.push(row);
+    }
+    
+    // Calculate status tag for each player
+    for (const playerId of playerIds) {
+      const paymentStatus = playersMap.get(playerId);
+      
+      // Priority 1: Payment Due
+      if (paymentStatus === 'pending' || paymentStatus === 'overdue') {
+        result.set(playerId, { tag: 'payment_due' });
+        continue;
+      }
+      
+      const playerEnrollments = enrollmentsByPlayer.get(playerId) || [];
+      let hasSubscription = false;
+      let totalCredits = 0;
+      let hasLowBalance = false;
+      
+      for (const { enrollment, product } of playerEnrollments) {
+        const accessTag = product?.accessTag;
+        if (accessTag === 'club_member') {
+          hasSubscription = true;
+        } else if (accessTag === 'pack_holder' && enrollment.remainingCredits) {
+          totalCredits += enrollment.remainingCredits;
+          if (enrollment.remainingCredits > 0 && enrollment.remainingCredits < 3) {
+            hasLowBalance = true;
+          }
+        }
+      }
+      
+      // Priority 2: Low Balance
+      if (hasLowBalance) {
+        result.set(playerId, { tag: 'low_balance', remainingCredits: totalCredits, lowBalance: true });
+        continue;
+      }
+      
+      // Priority 3: Club Member
+      if (hasSubscription) {
+        result.set(playerId, { tag: 'club_member' });
+        continue;
+      }
+      
+      // Priority 4: Pack Holder
+      if (totalCredits > 0) {
+        result.set(playerId, { tag: 'pack_holder', remainingCredits: totalCredits });
+        continue;
+      }
+      
+      result.set(playerId, { tag: 'none' });
+    }
+    
+    return result;
   }
 
   // Helper mapping functions

@@ -1,0 +1,99 @@
+remove the "Teams" tab from the main navigation.
+
+Here is the best-practice architecture for Admin Dashboard:
+
+1. The New Hierarchy (Clean & Logical)
+
+Instead of two separate tabs, you merge them into one "Programs" hub.
+
+Tab: Programs (Main View)
+
+Click: "Youth Club" (Drill down)
+
+Sub-Tab A: Overview (Description, Dates, Cover Photo)
+
+Sub-Tab B: Teams/Groups (Create "10u Black", Manage Rosters here)
+
+Sub-Tab C: Product Settings (Price, Subscription rules)
+
+2. How to Handle "Program = Product"
+
+Since every program is something you sell, you shouldn't split the "Money" logic from the "Basketball" logic. Keep them together in the Product Settings sub-tab mentioned above.
+
+Inside the "Youth Club" program dashboard, you would have a settings panel like this:
+
+Pricing Model: [ Dropdown: Subscription / One-Time ]
+
+Price: $150
+
+Billing Frequency: Monthly
+
+Sku/Stripe ID: youth_club_monthly
+
+This is the standard "LMS" (Learning Management System) pattern used by platforms like Teachable or Kajabi: The Course is the Product.
+
+3. The Risk: "Where is Johnny?"
+
+The only downside to removing the global "Teams" tab is that it becomes harder to find a specific player if you don't know which team they are on.
+
+The Solution: Add a global "All Players" or "Directory" tab.
+
+This is just a master list of every human in your system.
+
+You search "Johnny", click his name, and his profile tells you: "Active in Youth Club (10u Black)".
+
+Summary Checklist for your Dev:
+
+[ ] Delete Teams from the left sidebar.
+
+[ ] Add a Teams & Rosters tab inside the generic "Program Details" view.
+
+[ ] Add a Pricing tab inside the "Program Details" view to manage the subscription settings.
+
+[ ] Ensure the global search bar can find a player and link you directly to their team roster.
+
+
+
+Do not delete the Products tab.
+
+You are confusing Services (Programs) with Goods (Uniforms). They behave differently in your database, so they need separate homes in your Admin Dashboard.
+
+The Fix: Rename "Products" to "Store"
+
+Since you sell physical items (Uniforms) that don't have rosters or schedules, you need a dedicated place for them.
+
+1. The "Programs" Tab (Services)
+
+What lives here: Club Membership, Skills Academy, Training Packs.
+
+Key Data: Rosters, Schedules, Recurring Billing, Attendance.
+
+Logic: "People paying for Access."
+
+2. The "Store" Tab (Goods)
+
+What lives here: Uniforms, Hoodies, Water Bottles, Equipment.
+
+Key Data: Inventory (Sizes S/M/L), Shipping/Pickup status, One-time cost.
+
+Logic: "People paying for Things."
+
+How to link them (The "Required" Logic)
+
+The reason you felt they were related is that a player needs a uniform to be in the program. You should handle this with a dependency, not by merging the tabs.
+
+In your "Program Settings" (inside the Programs tab): Add a field called "Required Gear".
+
+Select Product: [Dropdown pulls from Store tab] → "Official Team Uniform 2025"
+
+Action: When a parent registers for the "Youth Club" program, the app automatically adds the "Official Team Uniform" to their cart before checkout.
+
+Summary of what to add to New Admin Sidebar
+
+Programs (Manage Teams & Rosters)
+
+Store (Manage Uniforms & Inventory) ← Renamed from Products
+
+Players (Directory of all users)
+
+Financials (Income from both Programs and Store)

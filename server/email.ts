@@ -3,7 +3,18 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = 'BoxStat <onboarding@boxstat.app>';
-const DOMAIN = 'boxstat.app';
+
+// Use environment-aware domain for email links
+function getDomain(): string {
+  // In development, use the Replit dev domain
+  if (process.env.NODE_ENV === 'development' && process.env.REPLIT_DEV_DOMAIN) {
+    return process.env.REPLIT_DEV_DOMAIN;
+  }
+  // In production or if no dev domain, use the production domain
+  return 'boxstat.app';
+}
+
+const DOMAIN = getDomain();
 
 export interface SendVerificationEmailParams {
   email: string;

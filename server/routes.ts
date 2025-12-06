@@ -2732,44 +2732,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Get all children of this user (if parent account)
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      const childUsers = allUsers.filter((u: any) => u.accountHolderId === userId);
+      const deletedIds = new Set<string>();
       
-      // Hard delete all child profiles first
-      for (const child of childUsers) {
-        // Delete pending registration for child email
-        if (child.email) {
-          await storage.deletePendingRegistration(child.email, child.organizationId);
-        }
-        await storage.deleteUser(child.id);
-      }
+      // Find ALL profiles with the same email (complete account deletion)
+      const sameEmailUsers = user.email 
+        ? allUsers.filter((u: any) => u.email?.toLowerCase() === user.email?.toLowerCase())
+        : [user];
       
-      // Delete pending registration for this user's email
-      if (user.email) {
-        await storage.deletePendingRegistration(user.email, user.organizationId);
-      }
-      
-      // If this is a child user, check if parent should also be deleted
-      if (user.accountHolderId) {
-        const remainingChildren = allUsers.filter((u: any) => 
-          u.accountHolderId === user.accountHolderId && u.id !== userId
-        );
+      // Delete all profiles with the same email and their children
+      for (const emailUser of sameEmailUsers) {
+        if (deletedIds.has(emailUser.id)) continue;
         
-        // If no children remain, delete the parent too
-        if (remainingChildren.length === 0) {
-          const parent = await storage.getUser(user.accountHolderId);
-          if (parent?.email) {
-            await storage.deletePendingRegistration(parent.email, parent.organizationId);
+        // Get all children of this user
+        const childUsers = allUsers.filter((u: any) => u.accountHolderId === emailUser.id);
+        
+        // Delete all child profiles first
+        for (const child of childUsers) {
+          if (deletedIds.has(child.id)) continue;
+          if (child.email) {
+            await storage.deletePendingRegistration(child.email, child.organizationId);
           }
-          await storage.deleteUser(user.accountHolderId);
+          await storage.deleteUser(child.id);
+          deletedIds.add(child.id);
         }
+        
+        // Delete pending registration for this user's email
+        if (emailUser.email) {
+          await storage.deletePendingRegistration(emailUser.email, emailUser.organizationId);
+        }
+        
+        // Delete the user
+        await storage.deleteUser(emailUser.id);
+        deletedIds.add(emailUser.id);
       }
       
-      // Hard delete the user
-      await storage.deleteUser(userId);
-      
-      res.json({ success: true });
+      res.json({ success: true, deletedCount: deletedIds.size });
     } catch (error: any) {
       console.error('Error deleting user:', error);
       res.status(500).json({ message: 'Failed to delete user', error: error.message });

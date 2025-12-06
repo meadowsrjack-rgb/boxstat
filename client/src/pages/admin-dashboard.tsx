@@ -196,9 +196,10 @@ export default function AdminDashboard() {
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
-  // Accounts are primary account holders (no accountHolderId), Users includes all profiles
+  // Accounts = unique emails (distinct registered people), Users = all profiles including linked ones
+  const uniqueEmails = new Set(users.map((u: any) => u.email?.toLowerCase()).filter(Boolean));
   const stats = {
-    totalAccounts: users.filter((u: any) => !u.accountHolderId).length,
+    totalAccounts: uniqueEmails.size,
     totalUsers: users.length,
     totalCoaches: users.filter((u: any) => u.role === "coach").length,
     totalPlayers: users.filter((u: any) => u.role === "player").length,

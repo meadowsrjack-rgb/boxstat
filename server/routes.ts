@@ -2025,11 +2025,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       players = [user];
     }
     
-    // Fetch active subscriptions for each player with defensive error handling
+    // Fetch active subscriptions and status tags for each player with defensive error handling
     const playersWithSubscriptions = await Promise.all(
       players.map(async (player: any) => {
         try {
           const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
+          const statusTag = await storage.getPlayerStatusTag(player.id);
           return {
             ...player,
             activeSubscriptions: (subscriptions || []).map(s => ({
@@ -2037,12 +2038,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               productName: s.productName,
               status: s.status,
             })),
+            statusTag: statusTag.tag,
+            remainingCredits: statusTag.remainingCredits,
+            lowBalance: statusTag.lowBalance,
           };
         } catch (error) {
           console.error(`Error fetching subscriptions for player ${player.id}:`, error);
           return {
             ...player,
             activeSubscriptions: [],
+            statusTag: player.paymentStatus === 'pending' ? 'payment_due' : 'none',
           };
         }
       })
@@ -3752,6 +3757,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const attendance = await storage.createAttendance(attendanceData);
+      
+      // Credit deduction for pack holders
+      try {
+        if (attendanceData.userId) {
+          // Get player's active enrollments with remaining credits
+          const enrollments = await storage.getActiveEnrollmentsWithCredits(attendanceData.userId);
+          
+          // Find an enrollment with remaining credits (pack_holder type)
+          const enrollmentWithCredits = enrollments.find((e: any) => 
+            e.remainingCredits && e.remainingCredits > 0
+          );
+          
+          if (enrollmentWithCredits) {
+            // Deduct one credit
+            await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
+            console.log(`💳 Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for user ${attendanceData.userId}`);
+          }
+        }
+      } catch (creditError: any) {
+        // Log error but don't fail the attendance creation
+        console.error('⚠️ Credit deduction failed (non-fatal):', creditError.message);
+      }
       
       // Award engine integration - update tracking and evaluate awards
       try {

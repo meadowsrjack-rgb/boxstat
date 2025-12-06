@@ -4690,6 +4690,8 @@ function ProductsTab({ organization }: any) {
       requireClubAgreement: z.boolean().default(false),
       requiredWaivers: z.array(z.string()).default([]),
       autoAssignPlayers: z.boolean().default(false),
+      accessTag: z.string().optional(),
+      sessionCount: z.number().optional(),
       adminNotes: z.string().optional(),
       isActive: z.boolean().default(true),
     })),
@@ -4715,12 +4717,15 @@ function ProductsTab({ organization }: any) {
       requireClubAgreement: false,
       requiredWaivers: [],
       autoAssignPlayers: false,
+      accessTag: "",
+      sessionCount: undefined,
       adminNotes: "",
       isActive: true,
     },
   });
 
   const selectedType = form.watch("type");
+  const selectedAccessTag = form.watch("accessTag");
   const allowInstallments = form.watch("allowInstallments");
   const price = form.watch("price");
   const installments = form.watch("installments");
@@ -4787,6 +4792,8 @@ function ProductsTab({ organization }: any) {
       requireClubAgreement: pkg.requireClubAgreement || false,
       requiredWaivers: pkg.requiredWaivers || [],
       autoAssignPlayers: pkg.autoAssignPlayers || false,
+      accessTag: pkg.accessTag || "",
+      sessionCount: pkg.sessionCount || undefined,
       adminNotes: pkg.adminNotes || "",
       isActive: pkg.isActive,
     });
@@ -4816,6 +4823,8 @@ function ProductsTab({ organization }: any) {
       requireConcussionWaiver: false,
       requireClubAgreement: false,
       autoAssignPlayers: false,
+      accessTag: "",
+      sessionCount: undefined,
       adminNotes: "",
       isActive: true,
     });
@@ -5146,6 +5155,56 @@ function ProductsTab({ organization }: any) {
                           />
                         </FormControl>
                         <FormDescription>Expiration period for one-time passes</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Player Status Tag */}
+                <FormField
+                  control={form.control}
+                  name="accessTag"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Player Status Tag</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ""} data-testid="select-access-tag">
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tag this product gives" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="club_member">Club Member (for subscriptions)</SelectItem>
+                          <SelectItem value="pack_holder">Pack Holder (for session packs)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>What status tag does this product give to players?</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Session Count for Pack Holder */}
+                {selectedAccessTag === "pack_holder" && (
+                  <FormField
+                    control={form.control}
+                    name="sessionCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of Sessions</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="10"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                            value={field.value || ""}
+                            data-testid="input-session-count"
+                          />
+                        </FormControl>
+                        <FormDescription>How many sessions/credits does this pack include?</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

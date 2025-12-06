@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, AlertCircle } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -168,46 +168,72 @@ export default function ProfileGateway() {
           )}
 
           {players.map((player: any) => {
-            const isPending = player.paymentStatus === "pending";
+            const statusTag = player.statusTag || (player.paymentStatus === "pending" ? "payment_due" : "none");
+            
+            const getTagConfig = (tag: string) => {
+              switch (tag) {
+                case "payment_due":
+                  return { 
+                    label: "Payment Due", 
+                    className: "bg-red-500/20 border-red-500/50 text-red-400",
+                    description: "Payment required"
+                  };
+                case "low_balance":
+                  return { 
+                    label: "Low Balance", 
+                    className: "bg-amber-500/20 border-amber-500/50 text-amber-400",
+                    description: `${player.remainingCredits || 0} credits remaining`
+                  };
+                case "club_member":
+                  return { 
+                    label: "Club Member", 
+                    className: "bg-green-500/20 border-green-500/50 text-green-400",
+                    description: "Active subscription"
+                  };
+                case "pack_holder":
+                  return { 
+                    label: "Pack Holder", 
+                    className: "bg-blue-500/20 border-blue-500/50 text-blue-400",
+                    description: `${player.remainingCredits || 0} credits remaining`
+                  };
+                default:
+                  return null;
+              }
+            };
+            
+            const tagConfig = getTagConfig(statusTag);
             
             return (
               <Card 
                 key={player.id}
-                className={`bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group ${isPending ? 'border-amber-500/50' : ''}`}
+                className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
                 onClick={() => handleSelectProfile("player", player.id)}
                 data-testid={`card-player-${player.id}`}
               >
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="relative">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
-                        {player.firstName?.[0]}{player.lastName?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    {isPending && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
-                        <AlertCircle className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
+                      {player.firstName?.[0]}{player.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="text-lg font-semibold text-white">
                         {player.firstName} {player.lastName}
                       </h3>
-                      {isPending && (
+                      {tagConfig && (
                         <Badge 
                           variant="outline" 
-                          className="bg-amber-500/20 border-amber-500/50 text-xs text-[#d90000]"
-                          data-testid={`badge-not-active-${player.id}`}
+                          className={`text-xs ${tagConfig.className}`}
+                          data-testid={`badge-status-${player.id}`}
                         >
-                          Not Active
+                          {tagConfig.label}
                         </Badge>
                       )}
                     </div>
                     <p className="text-sm text-gray-400">
-                      {isPending ? "Registration incomplete" : "Player Dashboard"}
+                      {tagConfig ? tagConfig.description : "Player Dashboard"}
                     </p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />

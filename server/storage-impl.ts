@@ -242,6 +242,11 @@ export interface IStorage {
   createSubscription(data: InsertSubscription): Promise<SelectSubscription>;
   assignSubscriptionToPlayer(subscriptionId: number, playerId: string): Promise<SelectSubscription | undefined>;
   updateSubscription(id: number, updates: Partial<Subscription>): Promise<SelectSubscription | undefined>;
+  
+  // Credit/Enrollment operations
+  getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]>;
+  deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined>;
+  getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
 }
 
 // =============================================
@@ -1862,6 +1867,34 @@ class MemStorage implements IStorage {
       return updated as SelectSubscription;
     }
     return undefined;
+  }
+  
+  // Credit/Enrollment operations (MemStorage uses basic implementation based on user data)
+  async getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]> {
+    // MemStorage doesn't track product enrollments - return empty
+    return [];
+  }
+  
+  async deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined> {
+    // MemStorage doesn't track product enrollments
+    return undefined;
+  }
+  
+  async getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}> {
+    // MemStorage uses only user paymentStatus for status tag determination
+    const player = await this.getUser(playerId);
+    
+    if (!player) {
+      return { tag: 'none' };
+    }
+    
+    // Priority 1: Payment Due
+    if (player.paymentStatus === 'pending' || player.paymentStatus === 'overdue') {
+      return { tag: 'payment_due' };
+    }
+    
+    // For MemStorage, without product enrollments data, return 'none' for other cases
+    return { tag: 'none' };
   }
 }
 
@@ -3971,6 +4004,101 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.subscriptions.id, id))
       .returning();
     return results[0] || undefined;
+  }
+  
+  // Credit/Enrollment operations
+  async getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]> {
+    const results = await db.select().from(schema.productEnrollments)
+      .where(
+        and(
+          eq(schema.productEnrollments.profileId, playerId),
+          eq(schema.productEnrollments.status, 'active')
+        )
+      );
+    return results as ProductEnrollment[];
+  }
+  
+  async deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined> {
+    // First get current credits
+    const enrollment = await db.select().from(schema.productEnrollments)
+      .where(eq(schema.productEnrollments.id, enrollmentId));
+    
+    if (!enrollment[0] || !enrollment[0].remainingCredits || enrollment[0].remainingCredits <= 0) {
+      return undefined;
+    }
+    
+    // Deduct one credit
+    const results = await db.update(schema.productEnrollments)
+      .set({
+        remainingCredits: enrollment[0].remainingCredits - 1,
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(schema.productEnrollments.id, enrollmentId))
+      .returning();
+    
+    return results[0] as ProductEnrollment || undefined;
+  }
+  
+  async getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}> {
+    // Get player to check payment status
+    const player = await this.getUser(playerId);
+    
+    if (!player) {
+      return { tag: 'none' };
+    }
+    
+    // Priority 1: Payment Due
+    if (player.paymentStatus === 'pending' || player.paymentStatus === 'overdue') {
+      return { tag: 'payment_due' };
+    }
+    
+    // Get active enrollments with their products
+    const enrollments = await db.select({
+      enrollment: schema.productEnrollments,
+      product: schema.products,
+    })
+    .from(schema.productEnrollments)
+    .leftJoin(schema.products, eq(schema.productEnrollments.programId, schema.products.id))
+    .where(
+      and(
+        eq(schema.productEnrollments.profileId, playerId),
+        eq(schema.productEnrollments.status, 'active')
+      )
+    );
+    
+    let hasSubscription = false;
+    let totalCredits = 0;
+    let hasLowBalance = false;
+    
+    for (const { enrollment, product } of enrollments) {
+      const accessTag = product?.accessTag;
+      
+      if (accessTag === 'club_member') {
+        hasSubscription = true;
+      } else if (accessTag === 'pack_holder' && enrollment.remainingCredits) {
+        totalCredits += enrollment.remainingCredits;
+        if (enrollment.remainingCredits > 0 && enrollment.remainingCredits < 3) {
+          hasLowBalance = true;
+        }
+      }
+    }
+    
+    // Priority 2: Low Balance (any pack with < 3 credits remaining takes priority)
+    if (hasLowBalance) {
+      return { tag: 'low_balance', remainingCredits: totalCredits, lowBalance: true };
+    }
+    
+    // Priority 3: Club Member (active subscription)
+    if (hasSubscription) {
+      return { tag: 'club_member' };
+    }
+    
+    // Priority 4: Pack Holder (has credits but no subscription)
+    if (totalCredits > 0) {
+      return { tag: 'pack_holder', remainingCredits: totalCredits };
+    }
+    
+    return { tag: 'none' };
   }
 
   // Helper mapping functions

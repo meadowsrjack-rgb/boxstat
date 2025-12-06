@@ -377,6 +377,8 @@ export const products = pgTable("products", {
   requireConcussionWaiver: boolean("require_concussion_waiver").default(false),
   requireClubAgreement: boolean("require_club_agreement").default(false),
   requiredWaivers: text("required_waivers").array().default(sql`ARRAY[]::text[]`), // Custom waiver IDs
+  accessTag: varchar("access_tag"), // "club_member" (subscription), "pack_holder" (one-time with credits)
+  sessionCount: integer("session_count"), // Number of sessions/credits for one-time packs
   adminNotes: text("admin_notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -396,6 +398,8 @@ export const productEnrollments = pgTable("product_enrollments", {
   startDate: timestamp("start_date", { mode: 'string' }).defaultNow(),
   endDate: timestamp("end_date", { mode: 'string' }), // For time-limited enrollments
   autoRenew: boolean("auto_renew").default(true),
+  totalCredits: integer("total_credits"), // Initial credits from product sessionCount
+  remainingCredits: integer("remaining_credits"), // Credits left after check-ins
   metadata: jsonb().default('{}'), // Additional enrollment data
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
@@ -1359,6 +1363,8 @@ export interface Product {
   ageGroups?: string[]; // DEPRECATED: Use "coverageScope" instead. Kept for backwards compatibility
   autoAssignPlayers?: boolean; // Auto-mark players active when purchased
   linkedAwards?: string[]; // Award IDs earned automatically for completing this package
+  accessTag?: string; // "club_member" (subscription), "pack_holder" (one-time with credits)
+  sessionCount?: number; // Number of sessions/credits for one-time packs
   adminNotes?: string; // Internal notes not shown to users
   isActive: boolean;
   createdAt: Date;
@@ -1387,6 +1393,8 @@ export const insertProductSchema = z.object({
   ageGroups: z.array(z.string()).default([]), // DEPRECATED
   autoAssignPlayers: z.boolean().default(false),
   linkedAwards: z.array(z.string()).default([]),
+  accessTag: z.string().optional(), // "club_member" or "pack_holder"
+  sessionCount: z.number().optional(), // Number of sessions for one-time packs
   adminNotes: z.string().optional(),
   isActive: z.boolean().default(true),
 });

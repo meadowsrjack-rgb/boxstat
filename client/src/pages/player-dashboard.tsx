@@ -331,11 +331,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
   const { data: userTeam } = useQuery<Team>({
     queryKey: ["/api/users", userIdForTeam, "team"],
     enabled: !!userIdForTeam,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchInterval: false,
   });
 
   // Fetch divisions for lookup
@@ -1981,6 +1976,15 @@ function TeamBlock() {
     queryKey: ["/api/users", userIdForPrograms, "program-memberships"],
     enabled: !!userIdForPrograms,
   });
+  
+  // Fetch direct team assignment (fallback for when no program enrollments exist)
+  const { data: directTeam } = useQuery<Team>({
+    queryKey: ["/api/users", userIdForPrograms, "team"],
+    enabled: !!userIdForPrograms,
+  });
+  
+  // Check if the user has any teams shown via program memberships
+  const hasTeamsInPrograms = programMemberships.some(m => m.teams && m.teams.length > 0);
 
   return (
     <div className="space-y-6" data-testid="team-block">
@@ -1990,7 +1994,7 @@ function TeamBlock() {
         
         {isLoadingPrograms ? (
           <div className="text-sm text-gray-500">Loading programs...</div>
-        ) : programMemberships.length === 0 ? (
+        ) : programMemberships.length === 0 && !directTeam ? (
           <div className="text-sm text-gray-500 mb-4" data-testid="text-no-programs">
             No programs enrolled yet. Contact your organization to get started!
           </div>
@@ -2004,6 +2008,30 @@ function TeamBlock() {
                 onPlayerSelect={setSelectedPlayerId}
               />
             ))}
+            
+            {/* Show direct team assignment if user has a team but no program enrollments or no teams in programs */}
+            {directTeam && !hasTeamsInPrograms && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4" data-testid="direct-team-card">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">My Team</h3>
+                    <p className="text-sm text-gray-500">Direct team assignment</p>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <Shirt className="w-4 h-4 text-red-600" />
+                    <span className="font-medium text-gray-900">{directTeam.name}</span>
+                  </div>
+                  {directTeam.divisionId && (
+                    <p className="text-sm text-gray-500 mt-1">Division {directTeam.divisionId}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

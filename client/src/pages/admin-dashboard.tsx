@@ -2682,6 +2682,9 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                                 queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
                                 queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "team"] });
                                 queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "teams"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/users", player.id, "program-memberships"] });
+                                queryClient.invalidateQueries({ queryKey: [`/api/profile/${player.id}`] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/profile", player.id] });
                                 toast({ 
                                   title: checked 
                                     ? `Added ${player.firstName} ${player.lastName} to ${selectedTeam.name}`

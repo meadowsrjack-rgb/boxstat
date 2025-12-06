@@ -176,7 +176,7 @@ export default function ProfileGateway() {
                   return { 
                     label: "Payment Due", 
                     className: "bg-red-500/20 border-red-500/50 text-red-400",
-                    description: "Payment required"
+                    description: "Player dashboard"
                   };
                 case "low_balance":
                   return { 

@@ -195,6 +195,7 @@ export default function AdminProgramDetail() {
       season: teamForm.season || undefined,
       notes: teamForm.notes || undefined,
       active: true,
+      assistantCoachIds: [],
     });
   };
 

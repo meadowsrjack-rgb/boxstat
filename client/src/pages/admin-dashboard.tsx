@@ -2058,7 +2058,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Create New Team</DialogTitle>
+                  <DialogTitle>Create New Program</DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit((data) => createTeam.mutate(data))} className="space-y-4">

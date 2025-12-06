@@ -32,8 +32,8 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
 - `waiver_signatures`: User signatures with status tracking (valid/superseded/revoked) - publishing new version automatically supersedes existing signatures
 
 **Product & Enrollment System:**
-- `programs`, `packages`: Reusable program and package definitions
-- `product_enrollments`: Consolidated enrollment tracking with legacy migration support via metadata field
+- `programs`, `packages/products`: Reusable program and package definitions with `accessTag` (club_member/pack_holder/none) and `sessionCount` for credit-based products
+- `product_enrollments`: Consolidated enrollment tracking with `remainingCredits` and `totalCredits` for credit-based access, and legacy migration support via metadata field
 
 **Notification System:**
 - `notifications`: Unified notification storage with multi-type support (announcement, notification, message)
@@ -58,6 +58,11 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
   - Parents without managed players → Parent Dashboard
   - Parents with managed players, coaches, admins → Profile Gateway ("Who's watching?" screen)
   - Profile Gateway shows role-specific cards with account holder name, Coach View, Admin View, and player profile cards
+  - **Player Status Tags**: Dynamic status badges on player cards with priority ordering:
+    - "Payment Due" (red) - payment pending/overdue
+    - "Low Balance" (amber) - less than 3 pack credits remaining
+    - "Club Member" (green) - active subscription
+    - "Pack Holder" (blue) - has credits but no subscription
   - Respects backend-stored preferences (activeProfileId, defaultDashboardView) and remembers last viewed profile via localStorage
   - "Switch Profile" button on dashboards returns to Profile Gateway
 - **User & Player Management**: Supports single parent accounts with linked child profiles, a Dual Mode System (Parent/Player) secured by PIN, and a Parental Device Lock feature. Player profiles require verification and completion to become public, with profile photo uploads.

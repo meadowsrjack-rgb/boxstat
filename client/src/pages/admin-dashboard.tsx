@@ -2053,7 +2053,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
               <DialogTrigger asChild>
                 <Button data-testid="button-create-team" className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Team
+                  Program
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto">

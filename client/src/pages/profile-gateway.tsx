@@ -114,7 +114,9 @@ export default function ProfileGateway() {
                 <Crown className="w-8 h-8 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">Account</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  {(user as any)?.firstName} {(user as any)?.lastName}
+                </h3>
                 <p className="text-sm text-gray-400">Settings & billing</p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />

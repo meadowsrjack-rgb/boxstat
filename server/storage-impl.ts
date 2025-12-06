@@ -3999,6 +3999,7 @@ class DatabaseStorage implements IStorage {
       guardianId: dbUser.guardianId,
       packageSelected: undefined,
       teamAssignmentStatus: undefined,
+      paymentStatus: dbUser.paymentStatus,
       hasRegistered: Boolean(dbUser.hasRegistered),
       teamId: dbUser.teamId?.toString(),
       jerseyNumber: dbUser.jerseyNumber,

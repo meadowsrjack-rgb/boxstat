@@ -614,7 +614,10 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       // Invalidate user-specific queries for real-time updates in player dashboard
       queryClient.invalidateQueries({ queryKey: ["/api/users", variables.id, "team"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", variables.id, "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", variables.id, "program-memberships"] });
       queryClient.invalidateQueries({ queryKey: ["/api/profile", variables.id] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${variables.id}`] });
       // Invalidate coach teams if teamIds were updated (for coach dashboard)
       if (variables.teamIds) {
         queryClient.invalidateQueries({ queryKey: [`/api/coaches/${variables.id}/teams`] });

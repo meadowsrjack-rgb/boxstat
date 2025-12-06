@@ -25,6 +25,8 @@ type Props = {
   radiusMeters?: number; // default 200
   onCheckedIn?: () => void;
   openQr?: () => void; // open QR scanner modal
+  checkinOpenTime?: Date; // Configured check-in open time
+  checkinCloseTime?: Date; // Configured check-in close time
 };
 
 export default function CheckInButton({ 
@@ -32,15 +34,24 @@ export default function CheckInButton({
   userId, 
   radiusMeters = 200, 
   onCheckedIn, 
-  openQr 
+  openQr,
+  checkinOpenTime,
+  checkinCloseTime 
 }: Props) {
   const { coords, loading, error, getOnce } = useGeo(true);
   const [distance, setDistance] = useState<number | null>(null);
   const [autoLocationAttempted, setAutoLocationAttempted] = useState(false);
   const { toast } = useToast();
 
-  // Check if event is within time window (15 min before to 30 min after start)
-  const timeOk = withinWindow(event.startTime, event.endTime);
+  // Check if event is within time window using configured times or defaults
+  const timeOk = useMemo(() => {
+    const now = Date.now();
+    if (checkinOpenTime && checkinCloseTime) {
+      return now >= checkinOpenTime.getTime() && now <= checkinCloseTime.getTime();
+    }
+    // Fallback to old behavior if no times provided
+    return withinWindow(event.startTime, event.endTime);
+  }, [checkinOpenTime, checkinCloseTime, event.startTime, event.endTime]);
 
   // Automatically get location when time window opens
   useEffect(() => {
@@ -253,7 +264,13 @@ export default function CheckInButton({
       {/* Status messages */}
       {!timeOk && (
         <p className="text-sm text-muted-foreground" data-testid="text-time-window-info">
-          Check-in opens 30 minutes before event start and closes 30 minutes after.
+          {checkinOpenTime && checkinCloseTime ? (
+            <>
+              Check-in opens {checkinOpenTime.toLocaleString()} and closes {checkinCloseTime.toLocaleString()}.
+            </>
+          ) : (
+            <>Check-in opens 3 hours before event start.</>
+          )}
         </p>
       )}
       

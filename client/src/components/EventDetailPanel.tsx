@@ -47,6 +47,41 @@ export default function EventDetailPanel({
     enabled: open && !!event,
   });
 
+  // Fetch event windows for check-in timing
+  const { data: eventWindows = [] } = useQuery<any[]>({
+    queryKey: ['/api/events', event?.id, 'windows'],
+    enabled: open && !!event?.id,
+  });
+
+  // Calculate check-in window times
+  const checkinTimes = useMemo(() => {
+    if (!event) return { open: undefined, close: undefined };
+    
+    const eventStart = new Date(event.startTime);
+    const farFuture = new Date(eventStart.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+    
+    const checkinOpenWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'open');
+    const checkinCloseWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'close');
+    
+    const offsetFromStart = (base: Date, amount: number, unit: string, direction: string) => {
+      const multiplier = direction === 'before' ? -1 : 1;
+      let ms = amount;
+      if (unit === 'minutes') ms *= 60 * 1000;
+      else if (unit === 'hours') ms *= 60 * 60 * 1000;
+      else if (unit === 'days') ms *= 24 * 60 * 60 * 1000;
+      return new Date(base.getTime() + multiplier * ms);
+    };
+    
+    return {
+      open: checkinOpenWindow
+        ? offsetFromStart(eventStart, checkinOpenWindow.amount, checkinOpenWindow.unit, checkinOpenWindow.direction)
+        : new Date(eventStart.getTime() - 3 * 60 * 60 * 1000), // Default 3 hours before
+      close: checkinCloseWindow
+        ? offsetFromStart(eventStart, checkinCloseWindow.amount, checkinCloseWindow.unit, checkinCloseWindow.direction)
+        : farFuture,
+    };
+  }, [event, eventWindows]);
+
   const hasRsvp = useMemo(() => {
     if (!event) return false;
     return rsvps.some(r => r.eventId?.toString() === event.id?.toString() && r.userId === userId);
@@ -229,6 +264,8 @@ export default function EventDetailPanel({
                 userId={userId} 
                 onCheckedIn={handleCheckedIn}
                 openQr={() => setQrOpen(true)}
+                checkinOpenTime={checkinTimes.open}
+                checkinCloseTime={checkinTimes.close}
               />
             </div>
           </div>

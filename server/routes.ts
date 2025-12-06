@@ -2571,6 +2571,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
     
+    // If updating a player's teamId, also update team_memberships
+    if (updateData.teamId !== undefined) {
+      const user = await storage.getUser(userId);
+      if (user && (user.role === 'player' || user.role === 'parent')) {
+        // Coerce teamId to number (Select components may send strings)
+        const newTeamId = updateData.teamId ? parseInt(String(updateData.teamId), 10) : null;
+        const oldTeamId = user.teamId ? parseInt(String(user.teamId), 10) : null;
+        
+        // Update the updateData to use the normalized number
+        if (newTeamId !== null) {
+          updateData.teamId = newTeamId;
+        }
+        
+        // Mark old team membership as inactive if changing teams
+        if (oldTeamId && oldTeamId !== newTeamId) {
+          console.log(`[PATCH] Marking player ${userId} as inactive on old team ${oldTeamId}`);
+          try {
+            await db.update(teamMemberships)
+              .set({ status: 'inactive' })
+              .where(
+                and(
+                  eq(teamMemberships.teamId, oldTeamId),
+                  eq(teamMemberships.profileId, userId)
+                )
+              );
+          } catch (err) {
+            console.log(`[PATCH] No existing membership to deactivate for team ${oldTeamId}`);
+          }
+        }
+        
+        // Add to new team if specified - verify team exists first
+        if (newTeamId) {
+          const teamExists = await storage.getTeam(String(newTeamId));
+          if (teamExists) {
+            console.log(`[PATCH] Adding player ${userId} to team ${newTeamId}`);
+            try {
+              await db.insert(teamMemberships)
+                .values({
+                  teamId: newTeamId,
+                  profileId: userId,
+                  role: 'player',
+                  status: 'active',
+                })
+                .onConflictDoUpdate({
+                  target: [teamMemberships.teamId, teamMemberships.profileId],
+                  set: { status: 'active', role: 'player' },
+                });
+            } catch (err) {
+              console.error(`[PATCH] Failed to add player to team_memberships:`, err);
+            }
+          } else {
+            console.warn(`[PATCH] Team ${newTeamId} does not exist, skipping team_memberships insert`);
+          }
+        }
+      }
+    }
+    
     // If updating a coach's teamIds, also update the team records and team_memberships
     if (updateData.teamIds !== undefined) {
       const user = await storage.getUser(userId);

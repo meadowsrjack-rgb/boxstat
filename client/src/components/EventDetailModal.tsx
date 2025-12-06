@@ -206,12 +206,12 @@ export default function EventDetailModal({
     if (!windows.length || !event) {
       // No windows configured - use sensible defaults
       // RSVP: Opens 3 days before, never closes (far future date)
-      // Check-in: Opens 30 min before, never closes (far future date)
+      // Check-in: Opens 3 hours before (matches withinWindow default), never closes
       const farFuture = new Date(new Date(event?.startTime || Date.now()).getTime() + 100 * 365 * 24 * 60 * 60 * 1000); // 100 years from event
       return {
         rsvpOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 3 * 24 * 60 * 60 * 1000),
         rsvpClose: farFuture,
-        checkinOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 30 * 60 * 1000),
+        checkinOpen: new Date(new Date(event?.startTime || Date.now()).getTime() - 3 * 60 * 60 * 1000), // 3 hours before
         checkinClose: farFuture,
       };
     }
@@ -283,7 +283,7 @@ export default function EventDetailModal({
   const handleCheckInClick = async () => {
     // Admin and coach can bypass location check
     if (userRole === 'admin' || userRole === 'coach') {
-      checkInMutation.mutate();
+      checkInMutation.mutate(undefined);
       return;
     }
 

@@ -2343,7 +2343,8 @@ class DatabaseStorage implements IStorage {
   }
 
   async getUsersByOrganization(organizationId: string): Promise<User[]> {
-    const results = await db.select().from(schema.users).where(eq(schema.users.isActive, true));
+    // Return ALL users (active and inactive) so admin dashboard shows complete user list
+    const results = await db.select().from(schema.users).where(eq(schema.users.organizationId, organizationId));
     return results.map(user => this.mapDbUserToUser(user));
   }
 

@@ -43,7 +43,6 @@ import {
   Check,
   X,
   UserPlus,
-  UserMinus,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay, isAfter, startOfDay } from "date-fns";
@@ -781,8 +780,6 @@ function RosterTab({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
-  const [playerToRemove, setPlayerToRemove] = useState<{id: string; name: string} | null>(null);
 
   // Fetch roster for selected team (includes all Notion players)
   const { data: teamRoster = [] } = useQuery<any[]>({
@@ -868,44 +865,6 @@ function RosterTab({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
-
-  // Remove player from team mutation
-  const removePlayerMutation = useMutation({
-    mutationFn: async (playerId: string) => {
-      const token = localStorage.getItem('authToken');
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const res = await fetch(`/api/teams/${selectedTeamId}/remove-player`, {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify({ playerId }),
-      });
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Failed to remove player");
-      }
-      return res.json();
-    },
-    onSuccess: (data, playerId) => {
-      // Invalidate roster queries so the team list updates
-      queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      // Invalidate the specific player's profile so their card and dashboard updates
-      queryClient.invalidateQueries({ queryKey: [`/api/profile/${playerId}`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/team`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users", playerId, "team"] });
-      // Invalidate admin dashboard user list
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
-      toast({ title: "Success", description: "Player removed from team" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
 
   // Show team list if no team is selected
   if (!selectedTeamId) {
@@ -1064,33 +1023,6 @@ function RosterTab({
         <TeamChat teamId={selectedTeamId} currentProfileId={currentUser?.id} />
       </div>
 
-      {/* Remove Player Confirmation Dialog */}
-      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
-        <AlertDialogContent data-testid="dialog-remove-player-confirm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Player from Team?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove <strong>{playerToRemove?.name}</strong> from this team? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-remove">Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (playerToRemove) {
-                  removePlayerMutation.mutate(playerToRemove.id);
-                  setRemoveDialogOpen(false);
-                  setPlayerToRemove(null);
-                }
-              }}
-              className="bg-red-600 hover:bg-red-700"
-              data-testid="button-confirm-remove"
-            >
-              Remove Player
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

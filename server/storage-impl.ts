@@ -3384,6 +3384,16 @@ class DatabaseStorage implements IStorage {
       subgroupLabel: program.subgroupLabel ?? 'Team',
       rosterVisibility: program.rosterVisibility ?? 'members',
       chatMode: program.chatMode ?? 'two_way',
+      // Programs vs Store separation
+      productCategory: program.productCategory ?? 'service',
+      coverImageUrl: program.coverImageUrl,
+      requiredGearProductIds: program.requiredGearProductIds ?? [],
+      seasonStartDate: program.seasonStartDate,
+      seasonEndDate: program.seasonEndDate,
+      // Store-specific fields
+      inventorySizes: program.inventorySizes ?? [],
+      inventoryCount: program.inventoryCount,
+      shippingRequired: program.shippingRequired ?? false,
       createdAt: now,
     };
 
@@ -3421,6 +3431,16 @@ class DatabaseStorage implements IStorage {
       subgroupLabel: updates.subgroupLabel,
       rosterVisibility: updates.rosterVisibility,
       chatMode: updates.chatMode,
+      // Programs vs Store separation
+      productCategory: updates.productCategory,
+      coverImageUrl: updates.coverImageUrl,
+      requiredGearProductIds: updates.requiredGearProductIds,
+      seasonStartDate: updates.seasonStartDate,
+      seasonEndDate: updates.seasonEndDate,
+      // Store-specific fields
+      inventorySizes: updates.inventorySizes,
+      inventoryCount: updates.inventoryCount,
+      shippingRequired: updates.shippingRequired,
     };
 
     // Remove undefined values
@@ -4561,6 +4581,21 @@ class DatabaseStorage implements IStorage {
       adminNotes: dbProgram.adminNotes,
       isActive: dbProgram.isActive ?? true,
       createdAt: new Date(dbProgram.createdAt),
+      // Social toggle fields
+      hasSubgroups: dbProgram.hasSubgroups ?? true,
+      subgroupLabel: dbProgram.subgroupLabel ?? 'Team',
+      rosterVisibility: dbProgram.rosterVisibility ?? 'members',
+      chatMode: dbProgram.chatMode ?? 'two_way',
+      // Programs vs Store separation
+      productCategory: dbProgram.productCategory ?? 'service',
+      coverImageUrl: dbProgram.coverImageUrl,
+      requiredGearProductIds: dbProgram.requiredGearProductIds || [],
+      seasonStartDate: dbProgram.seasonStartDate,
+      seasonEndDate: dbProgram.seasonEndDate,
+      // Store-specific fields
+      inventorySizes: dbProgram.inventorySizes || [],
+      inventoryCount: dbProgram.inventoryCount,
+      shippingRequired: dbProgram.shippingRequired ?? false,
     };
   }
 }

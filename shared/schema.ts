@@ -387,6 +387,16 @@ export const products = pgTable("products", {
   subgroupLabel: varchar("subgroup_label").default('Team'), // Dynamic label: "Team", "Level", "Group"
   rosterVisibility: varchar("roster_visibility").default('members'), // 'public', 'members', 'hidden'
   chatMode: varchar("chat_mode").default('two_way'), // 'disabled', 'announcements', 'two_way'
+  // New fields for Programs vs Store separation
+  productCategory: varchar("product_category").default('service'), // 'service' (Programs) or 'goods' (Store)
+  coverImageUrl: varchar("cover_image_url"), // Cover photo for program overview
+  requiredGearProductIds: text("required_gear_product_ids").array().default(sql`ARRAY[]::text[]`), // Store product IDs required for this program
+  seasonStartDate: timestamp("season_start_date", { mode: 'string' }), // Program season start
+  seasonEndDate: timestamp("season_end_date", { mode: 'string' }), // Program season end
+  // Store-specific fields (for physical goods)
+  inventorySizes: text("inventory_sizes").array().default(sql`ARRAY[]::text[]`), // Available sizes: ["S", "M", "L", "XL"]
+  inventoryCount: integer("inventory_count"), // Current stock count
+  shippingRequired: boolean("shipping_required").default(false), // Does this item need shipping?
 });
 
 // Product Enrollments table (tracks who is enrolled in which products/programs)
@@ -1381,6 +1391,21 @@ export interface Product {
   adminNotes?: string; // Internal notes not shown to users
   isActive: boolean;
   createdAt: Date;
+  // Social toggle fields for programs
+  hasSubgroups?: boolean; // Does this program have teams/groups?
+  subgroupLabel?: string; // Dynamic label: "Team", "Level", "Group"
+  rosterVisibility?: string; // 'public', 'members', 'hidden'
+  chatMode?: string; // 'disabled', 'announcements', 'two_way'
+  // Programs vs Store separation
+  productCategory?: string; // 'service' (Programs) or 'goods' (Store)
+  coverImageUrl?: string; // Cover photo for program overview
+  requiredGearProductIds?: string[]; // Store product IDs required for this program
+  seasonStartDate?: string; // Program season start
+  seasonEndDate?: string; // Program season end
+  // Store-specific fields (for physical goods)
+  inventorySizes?: string[]; // Available sizes: ["S", "M", "L", "XL"]
+  inventoryCount?: number; // Current stock count
+  shippingRequired?: boolean; // Does this item need shipping?
 }
 
 export const insertProductSchema = z.object({
@@ -1410,6 +1435,21 @@ export const insertProductSchema = z.object({
   sessionCount: z.number().optional(), // Number of sessions for one-time packs
   adminNotes: z.string().optional(),
   isActive: z.boolean().default(true),
+  // Social toggle fields for programs
+  hasSubgroups: z.boolean().default(true),
+  subgroupLabel: z.string().default('Team'),
+  rosterVisibility: z.string().default('members'),
+  chatMode: z.string().default('two_way'),
+  // Programs vs Store separation
+  productCategory: z.string().default('service'), // 'service' or 'goods'
+  coverImageUrl: z.string().optional(),
+  requiredGearProductIds: z.array(z.string()).default([]),
+  seasonStartDate: z.string().optional(),
+  seasonEndDate: z.string().optional(),
+  // Store-specific fields
+  inventorySizes: z.array(z.string()).default([]),
+  inventoryCount: z.number().optional(),
+  shippingRequired: z.boolean().default(false),
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;

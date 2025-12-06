@@ -13,6 +13,7 @@ import Landing from "@/pages/landing";
 import AccountSetup from "@/pages/account-setup";
 import PlayerDashboard from "@/pages/player-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminProgramDetail from "@/pages/admin-program-detail";
 import CoachDashboard from "@/pages/coach-dashboard";
 import SearchPage from "@/pages/search";
 import TeamDetailPage from "@/pages/team-detail";
@@ -136,6 +137,7 @@ const ProtectedDashboardDispatcher = () => <ProtectedRoute component={DashboardD
 const ProtectedAddPlayer = () => <ProtectedRoute component={AddPlayer} />;
 const ProtectedPlayerDashboard = () => <ProtectedRoute component={PlayerDashboard} />;
 const ProtectedAdminDashboard = () => <ProtectedRoute component={AdminDashboard} />;
+const ProtectedAdminProgramDetail = () => <ProtectedRoute component={AdminProgramDetail} />;
 const ProtectedCoachDashboard = () => <ProtectedRoute component={CoachDashboard} />;
 const ProtectedProfile = () => <ProtectedRoute component={Profile} />;
 const ProtectedSettingsPage = () => <ProtectedRoute component={SettingsPage} />;
@@ -329,6 +331,7 @@ function AppRouter() {
       <Route path="/dashboard" component={DashboardRoute} />
       <Route path="/player-dashboard" component={ProtectedPlayerDashboard} />
       <Route path="/admin-dashboard" component={ProtectedAdminDashboard} />
+      <Route path="/admin/programs/:programId" component={ProtectedAdminProgramDetail} />
       <Route path="/coach-dashboard" component={ProtectedCoachDashboard} />
       <Route path="/admin" component={ProtectedAdminDashboard} />
       

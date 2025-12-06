@@ -50,6 +50,7 @@ import {
   FileText,
   UserPlus,
   UserCircle,
+  ShoppingBag,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -274,10 +275,6 @@ export default function AdminDashboard() {
                 <Layers className="w-4 h-4 mr-2" />
                 Programs
               </TabsTrigger>
-              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Target className="w-4 h-4 mr-2" />
-                Teams
-              </TabsTrigger>
               <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Calendar className="w-4 h-4 mr-2" />
                 Events
@@ -286,9 +283,9 @@ export default function AdminDashboard() {
                 <Trophy className="w-4 h-4 mr-2" />
                 Awards
               </TabsTrigger>
-              <TabsTrigger value="products" data-testid="tab-products" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Products
+              <TabsTrigger value="store" data-testid="tab-store" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Store
               </TabsTrigger>
               <TabsTrigger value="waivers" data-testid="tab-waivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <FileText className="w-4 h-4 mr-2" />
@@ -345,10 +342,6 @@ export default function AdminDashboard() {
             <ProgramsTab programs={programs} teams={teams} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="teams">
-            <TeamsTab teams={teams} users={users} divisions={divisions} programs={programs} organization={organization} />
-          </TabsContent>
-
           <TabsContent value="events">
             <EventsTab events={events} teams={teams} programs={programs} organization={organization} currentUser={currentUser} />
           </TabsContent>
@@ -357,8 +350,8 @@ export default function AdminDashboard() {
             <AwardsTab awardDefinitions={awardDefinitions} users={users} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="products">
-            <ProductsTab organization={organization} />
+          <TabsContent value="store">
+            <StoreTab organization={organization} />
           </TabsContent>
 
           <TabsContent value="waivers">
@@ -4681,8 +4674,8 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   );
 }
 
-// Products Tab - Package/Subscription Management
-function ProductsTab({ organization }: any) {
+// Store Tab - Physical Goods/Inventory Management
+function StoreTab({ organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<any>(null);
@@ -5782,9 +5775,14 @@ function ProductsTab({ organization }: any) {
 // Programs Tab Component - Manages programs with social settings
 function ProgramsTab({ programs, teams, organization }: any) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const tableRef = useDragScroll();
+
+  const handleViewProgram = (programId: string) => {
+    navigate(`/admin/programs/${programId}`);
+  };
 
   const form = useForm({
     defaultValues: {
@@ -6047,10 +6045,10 @@ function ProgramsTab({ programs, teams, organization }: any) {
               {programs.map((program: any) => {
                 const programTeams = getTeamsForProgram(program.id);
                 return (
-                  <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
+                  <TableRow key={program.id} data-testid={`row-program-${program.id}`} className="cursor-pointer hover:bg-gray-50" onClick={() => handleViewProgram(program.id)}>
                     <TableCell className="font-medium" data-testid={`text-program-name-${program.id}`}>
                       <div>
-                        <div>{program.name}</div>
+                        <div className="text-blue-600 hover:underline">{program.name}</div>
                         {program.description && (
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">{program.description}</div>
                         )}
@@ -6097,7 +6095,16 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewProgram(program.id)}
+                          data-testid={`button-view-program-${program.id}`}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Manage
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

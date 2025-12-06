@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ArrowLeft, Settings, Users, DollarSign, Image, Calendar, Edit, Trash2, Plus, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,10 +19,15 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Program, Team, InsertTeam } from "@shared/schema";
 
 export default function AdminProgramDetail() {
-  const [, params] = useRoute("/admin/programs/:programId");
+  const [, params] = useRoute("/admin/programs/:programId*");
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const programId = params?.programId;
+  // Remove trailing characters from programId if it has a wildcard match
+  // Also handle the case where wouter adds extra path segments
+  const rawProgramId = params?.programId;
+  const programId = rawProgramId?.split('/')[0] || rawProgramId;
+  
+  console.log('AdminProgramDetail - rawProgramId:', rawProgramId, 'programId:', programId);
 
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditingOverview, setIsEditingOverview] = useState(false);

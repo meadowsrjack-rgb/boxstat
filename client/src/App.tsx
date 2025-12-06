@@ -331,7 +331,7 @@ function AppRouter() {
       <Route path="/dashboard" component={DashboardRoute} />
       <Route path="/player-dashboard" component={ProtectedPlayerDashboard} />
       <Route path="/admin-dashboard" component={ProtectedAdminDashboard} />
-      <Route path="/admin/programs/:programId" component={ProtectedAdminProgramDetail} />
+      <Route path="/admin/programs/:programId*" component={ProtectedAdminProgramDetail} />
       <Route path="/coach-dashboard" component={ProtectedCoachDashboard} />
       <Route path="/admin" component={ProtectedAdminDashboard} />
       

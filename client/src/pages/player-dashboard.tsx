@@ -1844,10 +1844,10 @@ function TeamBlock() {
         />
       </div>
 
-      {/* Team Chat Section */}
+      {/* Team Chat */}
       {userTeam && (
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-chat">Team Chat</h3>
+          <h4 className="font-semibold text-gray-900 mb-2" data-testid="text-team-chat">Team Chat</h4>
           <TeamChat 
             teamId={Number(userTeam.id)}
             currentProfileId={displayProfile?.id}

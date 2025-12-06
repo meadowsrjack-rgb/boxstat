@@ -49,6 +49,7 @@ import {
   LogOut,
   FileText,
   UserPlus,
+  UserCircle,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -195,7 +196,9 @@ export default function AdminDashboard() {
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
+  // Accounts are primary account holders (no accountHolderId), Users includes all profiles
   const stats = {
+    totalAccounts: users.filter((u: any) => !u.accountHolderId).length,
     totalUsers: users.length,
     totalCoaches: users.filter((u: any) => u.role === "coach").length,
     totalPlayers: users.filter((u: any) => u.role === "player").length,
@@ -299,7 +302,14 @@ export default function AdminDashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <StatCard
+                title="Total Accounts"
+                value={stats.totalAccounts}
+                icon={<UserCircle className="w-6 h-6" />}
+                subtitle="Primary account holders"
+                testId="stat-total-accounts"
+              />
               <StatCard
                 title="Total Users"
                 value={stats.totalUsers}

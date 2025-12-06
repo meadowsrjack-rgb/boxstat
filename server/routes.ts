@@ -2813,8 +2813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: team.id,
         name: team.name,
+        divisionId: team.divisionId, // Include divisionId for division lookup
         ageGroup: team.divisionId ? `Division ${team.divisionId}` : 'N/A',
+        programType: team.programType || 'N/A',
         program: team.programType || 'N/A',
+        coachId: team.coachId,
         color: '#d82428', // Default UYP red
       });
     } catch (error: any) {

@@ -1280,27 +1280,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
                         </motion.div>
 
-                        <motion.div
-                          initial={{ y: 12, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.10, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                            <span
-                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                              style={{ color: "#d82428" }}
-                            >
-                              <Shirt className="h-4 w-4" />
-                            </span>
-                            <span>TEAM</span>
-                          </div>
-                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {userTeam?.name || <span className="text-gray-400 text-sm">Not assigned</span>}
-                          </div>
-                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                        </motion.div>
-                      </div>
+                        </div>
                     </div>
                 </motion.section>
               </div>

@@ -305,9 +305,14 @@ export default function CoachDashboard() {
       if (!selectedPlayer) throw new Error("No player selected");
       const payload = { playerId: selectedPlayer.id, quarter, year, scores };
       console.log("Evaluation payload:", payload);
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/coach/evaluations`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify(payload),
       });
@@ -323,16 +328,20 @@ export default function CoachDashboard() {
       // Invalidate ALL caches for the evaluated player
       if (selectedPlayer) {
         queryClient.invalidateQueries({ queryKey: querySaveKey });
-        // Unified account page uses this string template format
+        // Player dashboard and PlayerCard uses these formats
         queryClient.invalidateQueries({ queryKey: [`/api/players/${selectedPlayer.id}/latest-evaluation`] });
-        // Player dashboard uses this array format
         queryClient.invalidateQueries({ queryKey: ["/api/players", selectedPlayer.id, "latest-evaluation"] });
-        // Admin dashboard and unified account page
+        // Admin dashboard
         queryClient.invalidateQueries({ queryKey: ["/api/coach/evaluations"] });
         queryClient.invalidateQueries({ queryKey: ["/api/evaluations"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/evaluations", selectedPlayer.id] });
         queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
-        // Also invalidate the players list to update evaluation displays
+        // Coach players list
         queryClient.invalidateQueries({ queryKey: [`/api/coaches/${coachProfileId}/players`] });
+        // Player profile for updated skill display
+        queryClient.invalidateQueries({ queryKey: [`/api/profile/${selectedPlayer.id}`] });
+        // Admin users list to refresh skill data globally
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       }
       setEvalOpen(false);
       setScores({});
@@ -344,9 +353,14 @@ export default function CoachDashboard() {
   const awardMutation = useMutation({
     mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
       if (!selectedPlayer) throw new Error("No player selected");
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/coach/award`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ playerId: selectedPlayer.id, awardId, category: kind }),
       });
@@ -360,9 +374,8 @@ export default function CoachDashboard() {
       toast({ title: "Award given" });
       // Invalidate ALL caches for the awarded player's awards
       if (selectedPlayer) {
-        // Unified account page uses this format
+        // Player dashboard and unified account page formats
         queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/awards`] });
-        // Player dashboard uses this format
         queryClient.invalidateQueries({ queryKey: ["/api/users", selectedPlayer.id, "awards"] });
         // Legacy endpoints
         queryClient.invalidateQueries({ queryKey: [`/api/users/${selectedPlayer.id}/badges`] });
@@ -372,6 +385,12 @@ export default function CoachDashboard() {
         queryClient.invalidateQueries({ queryKey: ["/api/user-awards", selectedPlayer.id] });
         // Account players query (for unified account page player cards)
         queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+        // Player profile for updated award display
+        queryClient.invalidateQueries({ queryKey: [`/api/profile/${selectedPlayer.id}`] });
+        // Admin dashboard user list for global update
+        queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+        // Award definitions list
+        queryClient.invalidateQueries({ queryKey: ["/api/award-definitions"] });
       }
       setAwardsOpen(false);
       setSelectedPlayer(null);
@@ -814,9 +833,14 @@ function RosterTab({
   // Assign player to team mutation
   const assignPlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/teams/${selectedTeamId}/assign-player`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ playerId }),
       });
@@ -830,8 +854,12 @@ function RosterTab({
       // Invalidate roster queries so the team list updates
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      // Invalidate the specific player's profile so their card updates
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
+      // Invalidate the specific player's profile so their card and dashboard updates
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${playerId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/team`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", playerId, "team"] });
+      // Invalidate admin dashboard user list
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       setSearchQuery("");
       setSearchResults([]);
       toast({ title: "Success", description: "Player assigned to team" });
@@ -844,9 +872,14 @@ function RosterTab({
   // Remove player from team mutation
   const removePlayerMutation = useMutation({
     mutationFn: async (playerId: string) => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`/api/teams/${selectedTeamId}/remove-player`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ playerId }),
       });
@@ -860,8 +893,12 @@ function RosterTab({
       // Invalidate roster queries so the team list updates
       queryClient.invalidateQueries({ queryKey: ["/api/teams", selectedTeamId, "roster-with-notion"] });
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
-      // Invalidate the specific player's profile so their card updates
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/profile`] });
+      // Invalidate the specific player's profile so their card and dashboard updates
+      queryClient.invalidateQueries({ queryKey: [`/api/profile/${playerId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/team`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", playerId, "team"] });
+      // Invalidate admin dashboard user list
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({ title: "Success", description: "Player removed from team" });
     },
     onError: (error: any) => {

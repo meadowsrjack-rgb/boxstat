@@ -81,12 +81,13 @@ router.get("/teams", requireAuth, async (req: any, res) => {
     }
     
     const sql = `
-      SELECT t.id, t.name, t.age_group, t.color, t.coach_id,
+      SELECT t.id, t.name, d.name as age_group, t.coach_id,
              COUNT(u.id) as roster_count
       FROM teams t
+      LEFT JOIN divisions d ON d.id = t.division_id
       LEFT JOIN users u ON u.team_id = t.id AND u.role = 'player'
       WHERE ${where}
-      GROUP BY t.id, t.name, t.age_group, t.color, t.coach_id
+      GROUP BY t.id, t.name, d.name, t.coach_id
       ORDER BY t.name
       LIMIT 50;
     `;
@@ -107,7 +108,6 @@ router.get("/teams", requireAuth, async (req: any, res) => {
         id: team.id.toString(),
         name: team.name,
         age_group: team.age_group,
-        color: team.color,
         roster_count: parseInt(team.roster_count) || 0,
         roster: rosterResult.rows.map(p => ({
           id: p.id,
@@ -130,9 +130,12 @@ router.get("/teams/:teamId", requireAuth, async (req: any, res) => {
   try {
     const teamId = parseInt(req.params.teamId, 10);
     
-    // Get team info
+    // Get team info with division name as age_group
     const teamResult = await pool.query(
-      `SELECT id, name, age_group, color FROM teams WHERE id = $1`,
+      `SELECT t.id, t.name, d.name as age_group 
+       FROM teams t 
+       LEFT JOIN divisions d ON d.id = t.division_id
+       WHERE t.id = $1`,
       [teamId]
     );
     
@@ -156,8 +159,7 @@ router.get("/teams/:teamId", requireAuth, async (req: any, res) => {
       team: {
         id: team.id,
         name: team.name,
-        age_group: team.age_group,
-        color: team.color
+        age_group: team.age_group
       },
       roster: rosterResult.rows.map((p: any) => ({
         name: `${p.first_name} ${p.last_name}`.trim(),

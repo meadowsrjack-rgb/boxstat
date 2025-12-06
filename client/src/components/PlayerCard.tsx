@@ -104,61 +104,73 @@ export default function PlayerCard({
   });
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
+  // Helper to make authenticated fetch requests
+  const authFetch = async (url: string) => {
+    const token = localStorage.getItem('authToken');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const res = await fetch(url, {
+      headers,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      if (res.status === 403 || res.status === 404) {
+        return null; // Return null for auth/not found errors instead of throwing
+      }
+      throw new Error(`Failed to fetch: ${res.status}`);
+    }
+    return res.json();
+  };
+
   // Get player profile - all user IDs in this app are profile IDs (no 'profile-' prefix needed)
-  const { data: profileData, isLoading: loading } = useQuery<Profile>({
+  const { data: profileData, isLoading: loading } = useQuery<Profile | null>({
     queryKey: [`/api/profile/${playerId}`],
-    queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const headers: Record<string, string> = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const res = await fetch(`/api/profile/${playerId}`, {
-        headers,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch profile: ${res.status}`);
-      }
-      return res.json();
-    },
+    queryFn: () => authFetch(`/api/profile/${playerId}`),
     enabled: isOpen && !!playerId,
   });
 
-  const playerProfile: Profile | undefined = profileData;
+  const playerProfile: Profile | undefined = profileData || undefined;
 
   // Get the account ID for queries - use the playerId directly as it IS the account/profile ID
   const accountIdForQueries = playerProfile?.id || playerId;
 
   // Get team info
-  const { data: teamInfo } = useQuery<TeamInfo>({
+  const { data: teamInfo } = useQuery<TeamInfo | null>({
     queryKey: [`/api/users/${accountIdForQueries}/team`],
+    queryFn: () => authFetch(`/api/users/${accountIdForQueries}/team`),
     enabled: isOpen && !!accountIdForQueries,
   });
 
   // Get player awards summary
-  const { data: awardsSummary } = useQuery<AwardsSummary>({
+  const { data: awardsSummary } = useQuery<AwardsSummary | null>({
     queryKey: [`/api/users/${accountIdForQueries}/awards`],
+    queryFn: () => authFetch(`/api/users/${accountIdForQueries}/awards`),
     enabled: isOpen && !!accountIdForQueries,
   });
 
   // Get player's latest skill evaluation
   const { data: latestEvaluation } = useQuery({
     queryKey: [`/api/players/${playerId}/latest-evaluation`],
+    queryFn: () => authFetch(`/api/players/${playerId}/latest-evaluation`),
     enabled: isOpen && !!playerId,
   });
 
   // Get available awards for coaches to give
   const { data: availableAwards } = useQuery({
     queryKey: ['/api/admin/badges'],
+    queryFn: () => authFetch('/api/admin/badges'),
     enabled: isCoach && showAwardDialog,
   });
 
   // Get all teams for team assignment
-  const { data: allTeams = [] } = useQuery<{ id: number; name: string; ageGroup: string }[]>({
+  const { data: teamsData } = useQuery<{ id: number; name: string; ageGroup: string }[] | null>({
     queryKey: ['/api/teams'],
+    queryFn: () => authFetch('/api/teams'),
     enabled: isCoach && isOpen,
   });
+  const allTeams = teamsData || [];
 
   const getPlayerInitials = (profile: Profile) => {
     return `${profile.firstName?.charAt(0) || ''}${profile.lastName?.charAt(0) || ''}`.toUpperCase();
@@ -237,12 +249,32 @@ export default function PlayerCard({
     prospect: 0,
   };
 
-  if (loading || !playerProfile) {
+  // Show loading spinner only while actually loading
+  if (loading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show error state when profile is not available (403/404)
+  if (!playerProfile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Player Profile</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-gray-400 mb-3" />
+            <p className="text-gray-600">Player profile is not available</p>
+            <p className="text-sm text-gray-500 mt-1">You may not have permission to view this profile.</p>
+            <Button variant="outline" className="mt-4" onClick={onClose}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>

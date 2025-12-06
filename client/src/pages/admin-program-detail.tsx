@@ -19,15 +19,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Program, Team, InsertTeam } from "@shared/schema";
 
 export default function AdminProgramDetail() {
-  const [, params] = useRoute("/admin/programs/:programId*");
+  const params = useParams<{ programId: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  // Remove trailing characters from programId if it has a wildcard match
-  // Also handle the case where wouter adds extra path segments
-  const rawProgramId = params?.programId;
-  const programId = rawProgramId?.split('/')[0] || rawProgramId;
-  
-  console.log('AdminProgramDetail - rawProgramId:', rawProgramId, 'programId:', programId);
+  const programId = params.programId;
 
   const [activeTab, setActiveTab] = useState("overview");
   const [isEditingOverview, setIsEditingOverview] = useState(false);

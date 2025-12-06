@@ -270,13 +270,13 @@ export default function AdminDashboard() {
                 <Users className="w-4 h-4 mr-2" />
                 Users
               </TabsTrigger>
-              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Target className="w-4 h-4 mr-2" />
+              <TabsTrigger value="programs" data-testid="tab-programs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Layers className="w-4 h-4 mr-2" />
                 Programs
               </TabsTrigger>
-              <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
-                <Layers className="w-4 h-4 mr-2" />
-                Divisions
+              <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Target className="w-4 h-4 mr-2" />
+                Teams
               </TabsTrigger>
               <TabsTrigger value="events" data-testid="tab-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Calendar className="w-4 h-4 mr-2" />
@@ -341,12 +341,12 @@ export default function AdminDashboard() {
             <UsersTab users={users} teams={teams} programs={programs} divisions={divisions} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="teams">
-            <TeamsTab teams={teams} users={users} divisions={divisions} organization={organization} />
+          <TabsContent value="programs">
+            <ProgramsTab programs={programs} teams={teams} organization={organization} />
           </TabsContent>
 
-          <TabsContent value="divisions">
-            <DivisionsTab divisions={divisions} users={users} teams={teams} organization={organization} />
+          <TabsContent value="teams">
+            <TeamsTab teams={teams} users={users} divisions={divisions} programs={programs} organization={organization} />
           </TabsContent>
 
           <TabsContent value="events">
@@ -1882,7 +1882,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
 }
 
 // Teams Tab - Full Implementation
-function TeamsTab({ teams, users, divisions, organization }: any) {
+function TeamsTab({ teams, users, divisions, programs, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
@@ -1898,6 +1898,7 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
     defaultValues: {
       organizationId: organization?.id || "",
       name: "",
+      programId: "",
       programType: "",
       divisionId: undefined as number | undefined,
       coachId: "",
@@ -2052,8 +2053,8 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Program Management</CardTitle>
-            <CardDescription>Create programs, manage rosters, and assign coaches</CardDescription>
+            <CardTitle>Team Management</CardTitle>
+            <CardDescription>Create teams, manage rosters, and assign coaches</CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -2087,12 +2088,12 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
               <DialogTrigger asChild>
                 <Button data-testid="button-create-team" className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Program
+                  Team
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Create New Program</DialogTitle>
+                  <DialogTitle>Create New Team</DialogTitle>
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit((data) => createTeam.mutate(data))} className="space-y-4">
@@ -2101,9 +2102,9 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Name *</FormLabel>
+                          <FormLabel>Team Name *</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Thunder U12" data-testid="input-team-name" />
+                            <Input {...field} placeholder="High School Black" data-testid="input-team-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -2112,25 +2113,25 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                     
                     <FormField
                       control={form.control}
-                      name="programType"
+                      name="programId"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <FormLabel>Program *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
-                              <SelectTrigger data-testid="select-team-program-type">
-                                <SelectValue placeholder="Select program type" />
+                              <SelectTrigger data-testid="select-team-program">
+                                <SelectValue placeholder="Select a program" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="Team">Team</SelectItem>
-                              <SelectItem value="Skills">Skills</SelectItem>
-                              <SelectItem value="FNH">FNH</SelectItem>
-                              <SelectItem value="Camp">Camp</SelectItem>
-                              <SelectItem value="Training">Training</SelectItem>
-                              <SelectItem value="Special">Special</SelectItem>
+                              {(programs || []).map((program: any) => (
+                                <SelectItem key={program.id} value={program.id}>
+                                  {program.name}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>Teams belong to a program</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -2153,13 +2154,14 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">None</SelectItem>
-                              {divisions.map((division: any) => (
+                              {(divisions || []).map((division: any) => (
                                 <SelectItem key={division.id} value={division.id.toString()}>
                                   {division.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          <FormDescription>Optional age division</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -2566,31 +2568,31 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Team Name</TableHead>
-                  <TableHead>Program Type</TableHead>
+                  <TableHead>Program</TableHead>
                   <TableHead>Division</TableHead>
                   <TableHead>Coach</TableHead>
-                  <TableHead>Season</TableHead>
                   <TableHead>Roster</TableHead>
-                  <TableHead>Active</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {teams.map((team: any) => {
                   const coach = users.find((u: any) => u.id === team.coachId);
-                  const division = divisions.find((d: any) => d.id === team.divisionId);
+                  const division = (divisions || []).find((d: any) => d.id === team.divisionId);
+                  const program = (programs || []).find((p: any) => p.id === team.programId);
                   return (
                     <TableRow key={team.id} data-testid={`row-team-${team.id}`}>
                       <TableCell className="font-medium" data-testid={`text-team-name-${team.id}`}>
                         {team.name}
                       </TableCell>
-                      <TableCell data-testid={`text-program-type-${team.id}`}>
-                        {team.programType ? (
+                      <TableCell data-testid={`text-program-${team.id}`}>
+                        {program ? (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                            {team.programType}
+                            {program.name}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-gray-400">No program</span>
                         )}
                       </TableCell>
                       <TableCell data-testid={`text-division-${team.id}`}>
@@ -2598,9 +2600,6 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
                       </TableCell>
                       <TableCell data-testid={`text-coach-${team.id}`}>
                         {coach ? `${coach.firstName} ${coach.lastName}` : "Unassigned"}
-                      </TableCell>
-                      <TableCell data-testid={`text-season-${team.id}`}>
-                        {team.season || "-"}
                       </TableCell>
                       <TableCell data-testid={`text-roster-${team.id}`}>
                         {team.rosterCount || 0}
@@ -5780,7 +5779,362 @@ function ProductsTab({ organization }: any) {
   );
 }
 
-// Divisions Tab Component
+// Programs Tab Component - Manages programs with social settings
+function ProgramsTab({ programs, teams, organization }: any) {
+  const { toast } = useToast();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProgram, setEditingProgram] = useState<any>(null);
+  const tableRef = useDragScroll();
+
+  const form = useForm({
+    defaultValues: {
+      organizationId: organization?.id || "",
+      name: "",
+      description: "",
+      type: "Program",
+      hasSubgroups: true,
+      subgroupLabel: "Team",
+      rosterVisibility: "members",
+      chatMode: "two_way",
+      isActive: true,
+    },
+  });
+
+  const createProgram = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingProgram) {
+        return await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, data);
+      }
+      return await apiRequest("POST", "/api/programs", {
+        ...data,
+        organizationId: organization?.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: editingProgram ? "Program updated successfully" : "Program created successfully" });
+      setIsDialogOpen(false);
+      setEditingProgram(null);
+      form.reset();
+    },
+    onError: () => {
+      toast({ title: "Failed to save program", variant: "destructive" });
+    },
+  });
+
+  const deleteProgram = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/programs/${id}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      toast({ title: "Program deleted successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete program", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (program: any) => {
+    setEditingProgram(program);
+    form.reset({
+      organizationId: program.organizationId,
+      name: program.name,
+      description: program.description || "",
+      type: program.type || "Program",
+      hasSubgroups: program.hasSubgroups ?? true,
+      subgroupLabel: program.subgroupLabel || "Team",
+      rosterVisibility: program.rosterVisibility || "members",
+      chatMode: program.chatMode || "two_way",
+      isActive: program.isActive ?? true,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingProgram(null);
+      form.reset();
+    }
+  };
+
+  const getTeamsForProgram = (programId: string) => {
+    return teams.filter((t: any) => t.programId === programId);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Manage Programs</CardTitle>
+          <CardDescription>Create and manage programs with teams/groups and social settings</CardDescription>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-create-program">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Program
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createProgram.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="High School Club" data-testid="input-program-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Competitive basketball program for high school players" data-testid="input-program-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium mb-3">Social Settings</h4>
+                  
+                  <FormField
+                    control={form.control}
+                    name="hasSubgroups"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0 mb-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-has-subgroups"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Has Teams/Groups</FormLabel>
+                        <FormDescription className="!mt-0 ml-2 text-xs">
+                          Enable if this program has subgroups like teams or levels
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch("hasSubgroups") && (
+                    <FormField
+                      control={form.control}
+                      name="subgroupLabel"
+                      render={({ field }) => (
+                        <FormItem className="mb-3">
+                          <FormLabel>Subgroup Label</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-subgroup-label">
+                                <SelectValue placeholder="Select label" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Team">Team (e.g., Youth Club)</SelectItem>
+                              <SelectItem value="Level">Level (e.g., Skills Academy)</SelectItem>
+                              <SelectItem value="Group">Group (e.g., Private Training)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="rosterVisibility"
+                    render={({ field }) => (
+                      <FormItem className="mb-3">
+                        <FormLabel>Roster Visibility</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-roster-visibility">
+                              <SelectValue placeholder="Select visibility" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="public">Public - Anyone can see roster</SelectItem>
+                            <SelectItem value="members">Members Only - Only program members</SelectItem>
+                            <SelectItem value="hidden">Hidden - No roster visible</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="chatMode"
+                    render={({ field }) => (
+                      <FormItem className="mb-3">
+                        <FormLabel>Chat Mode</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-chat-mode">
+                              <SelectValue placeholder="Select chat mode" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="two_way">Two-Way Chat - Everyone can send messages</SelectItem>
+                            <SelectItem value="announcements">Announcements Only - Coaches only</SelectItem>
+                            <SelectItem value="disabled">Disabled - No chat</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="isActive"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-program-active"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Active Program</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit" className="w-full" disabled={createProgram.isPending} data-testid="button-submit-program">
+                  {createProgram.isPending ? "Saving..." : editingProgram ? "Update Program" : "Create Program"}
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <div ref={tableRef} className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Subgroup Type</TableHead>
+                <TableHead>Teams</TableHead>
+                <TableHead>Roster</TableHead>
+                <TableHead>Chat</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {programs.map((program: any) => {
+                const programTeams = getTeamsForProgram(program.id);
+                return (
+                  <TableRow key={program.id} data-testid={`row-program-${program.id}`}>
+                    <TableCell className="font-medium" data-testid={`text-program-name-${program.id}`}>
+                      <div>
+                        <div>{program.name}</div>
+                        {program.description && (
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">{program.description}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {program.hasSubgroups ? (
+                        <Badge variant="outline">{program.subgroupLabel || "Team"}</Badge>
+                      ) : (
+                        <span className="text-gray-400 text-sm">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {programTeams.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {programTeams.slice(0, 3).map((t: any) => (
+                            <Badge key={t.id} variant="secondary" className="text-xs">
+                              {t.name}
+                            </Badge>
+                          ))}
+                          {programTeams.length > 3 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{programTeams.length - 3} more
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No teams</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={program.rosterVisibility === 'hidden' ? 'secondary' : 'outline'}>
+                        {program.rosterVisibility || 'members'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={program.chatMode === 'disabled' ? 'secondary' : 'outline'}>
+                        {program.chatMode === 'two_way' ? '2-Way' : program.chatMode === 'announcements' ? 'Announce' : 'Off'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={program.isActive ? "default" : "secondary"}>
+                        {program.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(program)}
+                          data-testid={`button-edit-program-${program.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteProgram.mutate(program.id)}
+                          data-testid={`button-delete-program-${program.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {programs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    No programs yet. Create your first program to get started.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Divisions Tab Component (kept for reference, no longer shown in tabs)
 function DivisionsTab({ divisions, teams, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);

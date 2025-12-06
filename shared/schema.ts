@@ -975,6 +975,7 @@ export interface Team {
   id: number;
   organizationId?: string;
   name: string;
+  programId?: string;
   programType?: string;
   divisionId?: number;
   coachId?: string;
@@ -993,6 +994,7 @@ export interface Team {
 export const insertTeamSchema = z.object({
   organizationId: z.string().optional(),
   name: z.string().min(1),
+  programId: z.string().optional(),
   programType: z.string().optional(),
   divisionId: z.number().optional(),
   coachId: z.string().optional(),

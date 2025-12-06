@@ -934,6 +934,7 @@ class MemStorage implements IStorage {
       id,
       organizationId: team.organizationId,
       name: team.name,
+      programId: team.programId,
       programType: team.programType,
       divisionId: team.divisionId,
       coachId: team.coachId,
@@ -2684,6 +2685,7 @@ class DatabaseStorage implements IStorage {
     const dbTeam = {
       organizationId: team.organizationId,
       name: team.name,
+      programId: team.programId,
       programType: team.programType,
       divisionId: team.divisionId,
       coachId: team.coachId && team.coachId.trim() !== '' ? team.coachId : null,
@@ -2708,6 +2710,7 @@ class DatabaseStorage implements IStorage {
     const dbUpdates: any = {
       organizationId: updates.organizationId,
       name: updates.name,
+      programId: updates.programId,
       programType: updates.programType,
       divisionId: updates.divisionId,
       coachId: updates.coachId !== undefined ? (updates.coachId && updates.coachId.trim() !== '' ? updates.coachId : null) : undefined,
@@ -4284,6 +4287,7 @@ class DatabaseStorage implements IStorage {
       id: dbTeam.id,
       organizationId: dbTeam.organizationId || this.defaultOrgId,
       name: dbTeam.name,
+      programId: dbTeam.programId,
       programType: dbTeam.programType,
       divisionId: dbTeam.divisionId,
       coachId: dbTeam.coachId,

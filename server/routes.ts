@@ -1748,16 +1748,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           accountHolderId = primaryUser.id;
           
-          // Create player profiles for children with unique emails
+          // Create player profiles for children - no email needed
+          // Child players are managed through parent's account
           const createdPlayers = [];
           for (const player of players) {
-            // Use timestamp + random suffix to ensure uniqueness
-            const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-            const playerEmail = `${player.firstName.toLowerCase()}.${player.lastName.toLowerCase()}.${uniqueSuffix}@child.boxstat.app`;
-            
             const playerUser = await storage.createUser({
               organizationId,
-              email: playerEmail,
+              email: null as any, // Child players don't need email - managed through parent account
               role: "player",
               firstName: player.firstName,
               lastName: player.lastName,
@@ -2100,15 +2097,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Generate unique email for child player to avoid unique constraint violations
-      // Child players get a unique generated email while parent's email is used for account management
-      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-      const playerEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${uniqueSuffix}@child.boxstat.app`;
+      // Child players don't need their own email - they're managed through parent's account
+      // The unique email constraint only applies to parent accounts (account_holder_id IS NULL)
       
       // Create child player user with PENDING payment status
       const playerUser = await storage.createUser({
         organizationId: user.organizationId,
-        email: playerEmail,
+        email: null as any, // Child players don't need email - managed through parent account
         role: "player",
         firstName,
         lastName,

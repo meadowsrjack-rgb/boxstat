@@ -91,7 +91,13 @@ export default function EventDetailModal({
   const { data: windows = [] } = useQuery<EventWindow[]>({
     queryKey: ['/api/event-windows/event', event?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/event-windows/event/${event?.id}`);
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/event-windows/event/${event?.id}`, {
+        headers,
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Failed to fetch event windows');
       return response.json();
     },
@@ -101,7 +107,13 @@ export default function EventDetailModal({
   const { data: rsvps = [] } = useQuery<RsvpResponse[]>({
     queryKey: ['/api/rsvp/event', event?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/rsvp/event/${event?.id}`);
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/rsvp/event/${event?.id}`, {
+        headers,
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Failed to fetch RSVPs');
       return response.json();
     },
@@ -111,7 +123,13 @@ export default function EventDetailModal({
   const { data: attendances = [] } = useQuery<Attendance[]>({
     queryKey: ['/api/attendances', event?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/attendances/${event?.id}`);
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/attendances/${event?.id}`, {
+        headers,
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Failed to fetch attendances');
       return response.json();
     },
@@ -121,7 +139,13 @@ export default function EventDetailModal({
   const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ['/api/events', event?.id, 'participants'],
     queryFn: async () => {
-      const response = await fetch(`/api/events/${event?.id}/participants`);
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/events/${event?.id}/participants`, {
+        headers,
+        credentials: 'include',
+      });
       if (!response.ok) throw new Error('Failed to fetch participants');
       return response.json();
     },
@@ -138,6 +162,8 @@ export default function EventDetailModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
       toast({ title: 'RSVP Updated', description: 'Your response has been recorded.' });
     },
     onError: (error: any) => {
@@ -162,6 +188,8 @@ export default function EventDetailModal({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       toast({ title: 'Checked In', description: 'You have been checked in successfully!' });
     },
     onError: (error: any) => {

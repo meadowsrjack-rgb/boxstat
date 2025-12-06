@@ -2740,6 +2740,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
+  const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
 
   // Fetch users and divisions for the multi-select
   const { data: allUsers = [] } = useQuery<any[]>({
@@ -2765,7 +2767,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     description: z.string().optional(),
-    targetType: z.enum(["all", "user", "team", "division"]),
+    targetType: z.enum(["all", "user", "team", "division", "program", "role"]),
   });
 
   const form = useForm({
@@ -2804,6 +2806,12 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       } else if (targetType === 'division') {
         assignTo = { divisions: selectedDivisions.map(String) };
         visibility = { divisions: selectedDivisions.map(String) };
+      } else if (targetType === 'program') {
+        assignTo = { programs: selectedPrograms.map(String) };
+        visibility = { programs: selectedPrograms.map(String) };
+      } else if (targetType === 'role') {
+        assignTo = { roles: selectedRoles };
+        visibility = { roles: selectedRoles };
       }
       
       console.log('Event form data before submission:', { type, targetType, assignTo, ...rest });
@@ -2838,6 +2846,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
       setSelectedUsers([]);
       setSelectedTeams([]);
       setSelectedDivisions([]);
+      setSelectedPrograms([]);
+      setSelectedRoles([]);
     },
     onError: () => {
       toast({ title: "Failed to create event", variant: "destructive" });
@@ -3188,6 +3198,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                           setSelectedUsers([]);
                           setSelectedTeams([]);
                           setSelectedDivisions([]);
+                          setSelectedPrograms([]);
+                          setSelectedRoles([]);
                         }} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-event-target">
@@ -3196,8 +3208,10 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="all">Everyone</SelectItem>
-                            <SelectItem value="user">Specific User(s)</SelectItem>
+                            <SelectItem value="program">Program(s)</SelectItem>
                             <SelectItem value="team">Team(s)</SelectItem>
+                            <SelectItem value="user">Specific User(s)</SelectItem>
+                            <SelectItem value="role">Role(s)</SelectItem>
                             <SelectItem value="division">Division(s)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -3284,6 +3298,60 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                         ))}
                       </div>
                       <p className="text-xs text-gray-500">{selectedDivisions.length} division(s) selected</p>
+                    </div>
+                  )}
+                  
+                  {String(form.watch("targetType")) === "program" && (
+                    <div className="space-y-2">
+                      <Label>Select Programs</Label>
+                      <div className="border rounded-md p-3 max-h-60 overflow-y-auto space-y-2">
+                        {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
+                          <div key={program.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedPrograms.includes(String(program.id))}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedPrograms([...selectedPrograms, String(program.id)]);
+                                } else {
+                                  setSelectedPrograms(selectedPrograms.filter(id => id !== String(program.id)));
+                                }
+                              }}
+                              data-testid={`checkbox-program-${program.id}`}
+                            />
+                            <label className="text-sm cursor-pointer">
+                              {program.name}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{selectedPrograms.length} program(s) selected</p>
+                    </div>
+                  )}
+                  
+                  {String(form.watch("targetType")) === "role" && (
+                    <div className="space-y-2">
+                      <Label>Select Roles</Label>
+                      <div className="border rounded-md p-3 space-y-2">
+                        {["player", "parent", "coach", "admin"].map((role) => (
+                          <div key={role} className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={selectedRoles.includes(role)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedRoles([...selectedRoles, role]);
+                                } else {
+                                  setSelectedRoles(selectedRoles.filter(r => r !== role));
+                                }
+                              }}
+                              data-testid={`checkbox-role-${role}`}
+                            />
+                            <label className="text-sm cursor-pointer capitalize">
+                              {role}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500">{selectedRoles.length} role(s) selected</p>
                     </div>
                   )}
                   <FormField
@@ -3416,13 +3484,15 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Everyone</SelectItem>
-                        <SelectItem value="team">Specific Team</SelectItem>
                         <SelectItem value="program">Specific Program</SelectItem>
+                        <SelectItem value="team">Specific Team</SelectItem>
+                        <SelectItem value="user">Specific User</SelectItem>
                         <SelectItem value="role">Specific Role</SelectItem>
+                        <SelectItem value="division">Specific Division</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  {(editingEvent.targetType === "team" || editingEvent.targetType === "program" || editingEvent.targetType === "role") && (
+                  {editingEvent.targetType === "team" && (
                     <div className="space-y-2">
                       <Label htmlFor="edit-event-targetId">Select Team</Label>
                       <Select
@@ -3440,9 +3510,90 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500">
-                        {editingEvent.targetType === "team" ? "Choose which team this event is for" : ""}
-                      </p>
+                      <p className="text-xs text-gray-500">Choose which team this event is for</p>
+                    </div>
+                  )}
+                  {editingEvent.targetType === "program" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-programId">Select Program</Label>
+                      <Select
+                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
+                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
+                      >
+                        <SelectTrigger id="edit-event-programId" data-testid="select-edit-event-programId">
+                          <SelectValue placeholder="Choose a program" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {programs.filter((p: any) => p.isActive && p.productCategory === 'service').map((program: any) => (
+                            <SelectItem key={program.id} value={String(program.id)}>
+                              {program.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Choose which program this event is for</p>
+                    </div>
+                  )}
+                  {editingEvent.targetType === "role" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-roleId">Select Role</Label>
+                      <Select
+                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
+                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
+                      >
+                        <SelectTrigger id="edit-event-roleId" data-testid="select-edit-event-roleId">
+                          <SelectValue placeholder="Choose a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="player">Player</SelectItem>
+                          <SelectItem value="parent">Parent</SelectItem>
+                          <SelectItem value="coach">Coach</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Choose which role this event is for</p>
+                    </div>
+                  )}
+                  {editingEvent.targetType === "user" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-userId">Select User</Label>
+                      <Select
+                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
+                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
+                      >
+                        <SelectTrigger id="edit-event-userId" data-testid="select-edit-event-userId">
+                          <SelectValue placeholder="Choose a user" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allUsers.filter((u: any) => u.isActive).map((user: any) => (
+                            <SelectItem key={user.id} value={String(user.id)}>
+                              {user.firstName} {user.lastName} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Choose which user this event is for</p>
+                    </div>
+                  )}
+                  {editingEvent.targetType === "division" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-event-divisionId">Select Division</Label>
+                      <Select
+                        value={editingEvent.targetId ? String(editingEvent.targetId) : ""}
+                        onValueChange={(value) => setEditingEvent({...editingEvent, targetId: value})}
+                      >
+                        <SelectTrigger id="edit-event-divisionId" data-testid="select-edit-event-divisionId">
+                          <SelectValue placeholder="Choose a division" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {divisions.filter((d: any) => d.isActive).map((division: any) => (
+                            <SelectItem key={division.id} value={String(division.id)}>
+                              {division.name} {division.ageRange ? `(${division.ageRange})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500">Choose which division this event is for</p>
                     </div>
                   )}
                   <div className="space-y-2">

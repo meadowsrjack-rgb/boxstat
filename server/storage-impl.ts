@@ -2496,6 +2496,8 @@ class DatabaseStorage implements IStorage {
       emergencyPhone: updates.emergencyPhone,
       medicalInfo: updates.medicalInfo,
       allergies: updates.allergies,
+      passwordResetToken: updates.passwordResetToken,
+      passwordResetExpiry: updates.passwordResetExpiry instanceof Date ? updates.passwordResetExpiry.toISOString() : updates.passwordResetExpiry,
       updatedAt: new Date().toISOString(),
     };
 
@@ -4017,6 +4019,8 @@ class DatabaseStorage implements IStorage {
       verificationExpiry: dbUser.verificationExpiry ? new Date(dbUser.verificationExpiry) : undefined,
       magicLinkToken: dbUser.magicLinkToken,
       magicLinkExpiry: dbUser.magicLinkExpiry ? new Date(dbUser.magicLinkExpiry) : undefined,
+      passwordResetToken: dbUser.passwordResetToken,
+      passwordResetExpiry: dbUser.passwordResetExpiry ? new Date(dbUser.passwordResetExpiry) : undefined,
       googleId: dbUser.googleId,
       appleId: dbUser.appleId,
       isActive: Boolean(dbUser.isActive),

@@ -2451,6 +2451,7 @@ class DatabaseStorage implements IStorage {
       appleId: user.appleId,
       isActive: user.isActive ?? true,
       hasRegistered: user.hasRegistered ?? false,
+      paymentStatus: user.paymentStatus,
       awards: user.awards || [],
       totalPractices: user.totalPractices || 0,
       totalGames: user.totalGames || 0,

@@ -3,7 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -165,30 +166,54 @@ export default function ProfileGateway() {
             </div>
           )}
 
-          {players.map((player: any) => (
-            <Card 
-              key={player.id}
-              className="bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group"
-              onClick={() => handleSelectProfile("player", player.id)}
-              data-testid={`card-player-${player.id}`}
-            >
-              <CardContent className="p-4 flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
-                  <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
-                    {player.firstName?.[0]}{player.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">
-                    {player.firstName} {player.lastName}
-                  </h3>
-                  <p className="text-sm text-gray-400">Player Dashboard</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-              </CardContent>
-            </Card>
-          ))}
+          {players.map((player: any) => {
+            const isPending = player.paymentStatus === "pending";
+            
+            return (
+              <Card 
+                key={player.id}
+                className={`bg-gray-800/50 border-gray-700 hover:bg-gray-800 transition-all cursor-pointer group ${isPending ? 'border-amber-500/50' : ''}`}
+                onClick={() => handleSelectProfile("player", player.id)}
+                data-testid={`card-player-${player.id}`}
+              >
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="relative">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+                      <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white text-xl font-bold">
+                        {player.firstName?.[0]}{player.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isPending && (
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+                        <AlertCircle className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-white">
+                        {player.firstName} {player.lastName}
+                      </h3>
+                      {isPending && (
+                        <Badge 
+                          variant="outline" 
+                          className="bg-amber-500/20 text-amber-400 border-amber-500/50 text-xs"
+                          data-testid={`badge-not-active-${player.id}`}
+                        >
+                          Not Active
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-400">
+                      {isPending ? "Registration incomplete" : "Player Dashboard"}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* Add Player Button - always visible */}
           <div className="flex flex-col items-center gap-4 pt-4">

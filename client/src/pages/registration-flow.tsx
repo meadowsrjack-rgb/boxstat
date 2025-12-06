@@ -141,6 +141,7 @@ export default function RegistrationFlow() {
       // Auto-login the user using the password from variables
       const { password } = variables;
       const email = variables.data.email;
+      const registrationType = variables.data.registrationType;
       
       try {
         const loginResponse = await apiRequest("/api/auth/login", {
@@ -152,14 +153,25 @@ export default function RegistrationFlow() {
         });
         
         if (loginResponse.success) {
+          // Store JWT token for mobile authentication (like login page does)
+          if (loginResponse.token) {
+            localStorage.setItem('authToken', loginResponse.token);
+          }
+          
+          // Different message based on registration type
+          const description = registrationType === "my_child"
+            ? "Your player profiles have been created. Next, complete their registration."
+            : "Welcome! Add yourself as a player to get started.";
+          
           toast({
             title: "Registration Complete!",
-            description: "Welcome! Let's set up your first player...",
+            description,
           });
           
-          // Redirect to profile gateway using SPA navigation
+          // Force page reload to ensure fresh auth state (like login page does)
+          // This prevents cached user data from previous sessions
           setTimeout(() => {
-            setLocation("/profile-gateway");
+            window.location.href = "/profile-gateway";
           }, 500);
         }
       } catch (loginError: any) {
@@ -167,7 +179,7 @@ export default function RegistrationFlow() {
           title: "Registration Successful!",
           description: "Please login to access your account.",
         });
-        setLocation("/login");
+        window.location.href = "/login";
       }
     },
     onError: (error: any) => {

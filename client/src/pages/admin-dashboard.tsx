@@ -4728,6 +4728,11 @@ function ProductsTab({ organization }: any) {
       sessionCount: z.number().optional(),
       adminNotes: z.string().optional(),
       isActive: z.boolean().default(true),
+      // Social toggle settings for program-based team/group management
+      hasSubgroups: z.boolean().default(true),
+      subgroupLabel: z.string().default("Team"),
+      rosterVisibility: z.string().default("members"),
+      chatMode: z.string().default("two_way"),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
@@ -4755,6 +4760,11 @@ function ProductsTab({ organization }: any) {
       sessionCount: undefined,
       adminNotes: "",
       isActive: true,
+      // Social toggle defaults
+      hasSubgroups: true,
+      subgroupLabel: "Team",
+      rosterVisibility: "members",
+      chatMode: "two_way",
     },
   });
 
@@ -4830,6 +4840,11 @@ function ProductsTab({ organization }: any) {
       sessionCount: pkg.sessionCount || undefined,
       adminNotes: pkg.adminNotes || "",
       isActive: pkg.isActive,
+      // Social toggle settings
+      hasSubgroups: pkg.hasSubgroups ?? true,
+      subgroupLabel: pkg.subgroupLabel || "Team",
+      rosterVisibility: pkg.rosterVisibility || "members",
+      chatMode: pkg.chatMode || "two_way",
     });
     setIsDialogOpen(true);
   };
@@ -4861,6 +4876,11 @@ function ProductsTab({ organization }: any) {
       sessionCount: undefined,
       adminNotes: "",
       isActive: true,
+      // Social toggle defaults
+      hasSubgroups: true,
+      subgroupLabel: "Team",
+      rosterVisibility: "members",
+      chatMode: "two_way",
     });
     setIsDialogOpen(true);
   };
@@ -5582,6 +5602,111 @@ function ProductsTab({ organization }: any) {
                   </FormItem>
                 )}
               />
+
+              {/* Social Settings Section */}
+              <div className="space-y-4 pt-4 border-t">
+                <div className="text-sm font-medium text-gray-700">Team/Group Settings</div>
+                <p className="text-xs text-gray-500">Configure how teams or groups work within this program</p>
+                
+                {/* Has Subgroups Toggle */}
+                <FormField
+                  control={form.control}
+                  name="hasSubgroups"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-sm">Enable Teams/Groups</FormLabel>
+                        <FormDescription className="text-xs">
+                          Does this program have teams, levels, or groups?
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-has-subgroups"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Subgroup Label */}
+                <FormField
+                  control={form.control}
+                  name="subgroupLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Group Label</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-subgroup-label">
+                            <SelectValue placeholder="Select label" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Team">Team (e.g., 10u Black)</SelectItem>
+                          <SelectItem value="Level">Level (e.g., Rookies, Elite)</SelectItem>
+                          <SelectItem value="Group">Group (e.g., Session A)</SelectItem>
+                          <SelectItem value="Class">Class (e.g., Beginners)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>What to call subdivisions in this program</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Roster Visibility */}
+                <FormField
+                  control={form.control}
+                  name="rosterVisibility"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Roster Visibility</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-roster-visibility">
+                            <SelectValue placeholder="Select visibility" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="public">Public - Anyone can see roster</SelectItem>
+                          <SelectItem value="members">Members Only - Only team members see roster</SelectItem>
+                          <SelectItem value="hidden">Hidden - No roster shown to players</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Control who can see the team/group roster</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Chat Mode */}
+                <FormField
+                  control={form.control}
+                  name="chatMode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Chat Mode</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-chat-mode">
+                            <SelectValue placeholder="Select chat mode" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="two_way">Full Chat - Everyone can send messages</SelectItem>
+                          <SelectItem value="announcements">Announcements Only - Only coaches can post</SelectItem>
+                          <SelectItem value="disabled">Disabled - No chat for this program</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Control chat features for teams/groups</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               {/* Active Status */}
               <FormField

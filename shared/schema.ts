@@ -382,6 +382,11 @@ export const products = pgTable("products", {
   adminNotes: text("admin_notes"),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  // Social toggle fields for program-based team/group management
+  hasSubgroups: boolean("has_subgroups").default(true), // Does this program have teams/groups?
+  subgroupLabel: varchar("subgroup_label").default('Team'), // Dynamic label: "Team", "Level", "Group"
+  rosterVisibility: varchar("roster_visibility").default('members'), // 'public', 'members', 'hidden'
+  chatMode: varchar("chat_mode").default('two_way'), // 'disabled', 'announcements', 'two_way'
 });
 
 // Product Enrollments table (tracks who is enrolled in which products/programs)
@@ -441,12 +446,13 @@ export const divisions = pgTable("divisions", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
-// Teams table
+// Teams table (can represent teams, groups, levels depending on parent program)
 export const teams = pgTable("teams", {
   id: serial().primaryKey().notNull(),
   organizationId: varchar("organization_id"),
   name: varchar().notNull(),
-  programType: varchar("program_type"),
+  programId: varchar("program_id"), // Links team/group to parent program
+  programType: varchar("program_type"), // DEPRECATED: use programId instead
   divisionId: integer("division_id"),
   coachId: varchar("coach_id"),
   assistantCoachIds: varchar("assistant_coach_ids").array().default(sql`ARRAY[]::varchar[]`),
@@ -460,6 +466,11 @@ export const teams = pgTable("teams", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [
+  foreignKey({
+    columns: [table.programId],
+    foreignColumns: [products.id],
+    name: "teams_program_id_fkey"
+  }),
   foreignKey({
     columns: [table.divisionId],
     foreignColumns: [divisions.id],

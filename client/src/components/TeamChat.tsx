@@ -20,6 +20,7 @@ interface TeamChatProps {
   teamName?: string;
   className?: string;
   currentProfileId?: string;
+  readOnly?: boolean; // When true, hides message input (for announcements-only mode)
 }
 
 interface TeamMessageWithSender {
@@ -40,7 +41,7 @@ interface TeamMessageWithSender {
 
 const MESSAGES_PER_PAGE = 10;
 
-export default function TeamChat({ teamId, teamName, className, currentProfileId }: TeamChatProps) {
+export default function TeamChat({ teamId, teamName, className, currentProfileId, readOnly = false }: TeamChatProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [visibleCount, setVisibleCount] = useState(MESSAGES_PER_PAGE);
@@ -283,31 +284,34 @@ export default function TeamChat({ teamId, teamName, className, currentProfileId
         )}
       </div>
 
-      <div className="flex items-center gap-2 mt-3">
-        <Input
-          type="text"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={sendMessageMutation.isPending || !user}
-          className="flex-1 bg-white rounded-full px-4"
-          data-testid="input-message"
-        />
-        <Button
-          onClick={handleSendMessage}
-          disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
-          size="icon"
-          className="bg-red-600 hover:bg-red-700 rounded-full h-10 w-10"
-          data-testid="button-send-message"
-        >
-          {sendMessageMutation.isPending ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
+      {/* Message input - hidden in readOnly mode (announcements only) */}
+      {!readOnly && (
+        <div className="flex items-center gap-2 mt-3">
+          <Input
+            type="text"
+            placeholder="Type a message..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={sendMessageMutation.isPending || !user}
+            className="flex-1 bg-white rounded-full px-4"
+            data-testid="input-message"
+          />
+          <Button
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim() || sendMessageMutation.isPending || !user}
+            size="icon"
+            className="bg-red-600 hover:bg-red-700 rounded-full h-10 w-10"
+            data-testid="button-send-message"
+          >
+            {sendMessageMutation.isPending ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      )}
       
       <div className="h-6" />
     </div>

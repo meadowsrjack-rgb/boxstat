@@ -5029,6 +5029,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true });
   });
 
+  // Get a single program with its social settings
+  app.get('/api/programs/:id', async (req: any, res) => {
+    try {
+      const program = await storage.getProgram(req.params.id);
+      if (!program) {
+        return res.status(404).json({ message: 'Program not found' });
+      }
+      res.json(program);
+    } catch (error: any) {
+      console.error('Error fetching program:', error);
+      res.status(500).json({ message: 'Failed to fetch program' });
+    }
+  });
+
+  // Get subgroups (teams/levels/groups) for a specific program
+  app.get('/api/programs/:programId/subgroups', async (req: any, res) => {
+    try {
+      const { programId } = req.params;
+      
+      // Get the program to check if it has subgroups
+      const program = await storage.getProgram(programId);
+      if (!program) {
+        return res.status(404).json({ message: 'Program not found' });
+      }
+      
+      // If program doesn't have subgroups, return empty array
+      if (program.hasSubgroups === false) {
+        return res.json({ 
+          program,
+          subgroups: [],
+          subgroupLabel: program.subgroupLabel || 'Team'
+        });
+      }
+      
+      // Get teams/groups linked to this program
+      const subgroups = await db.select()
+        .from(teams)
+        .where(eq(teams.programId, programId));
+      
+      res.json({
+        program,
+        subgroups,
+        subgroupLabel: program.subgroupLabel || 'Team'
+      });
+    } catch (error: any) {
+      console.error('Error fetching program subgroups:', error);
+      res.status(500).json({ message: 'Failed to fetch program subgroups' });
+    }
+  });
+
+  // Get player's program memberships with social settings and team info
+  app.get('/api/users/:userId/program-memberships', requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { id: requesterId, role: requesterRole } = req.user;
+      
+      // Authorization: users can view their own or admins/coaches can view any
+      const isOwnProfile = requesterId === userId;
+      const isAdminOrCoach = requesterRole === 'admin' || requesterRole === 'coach';
+      
+      // Also allow parents to view their children's memberships
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      const isParent = user.parentId === requesterId || user.accountHolderId === requesterId;
+      
+      if (!isOwnProfile && !isAdminOrCoach && !isParent) {
+        return res.status(403).json({ message: 'Not authorized to view these memberships' });
+      }
+      
+      // Get enrollments with product/program info
+      const enrollments = await db.select({
+        enrollment: productEnrollments,
+        product: products,
+      })
+        .from(productEnrollments)
+        .leftJoin(products, eq(productEnrollments.programId, products.id))
+        .where(
+          and(
+            eq(productEnrollments.profileId, userId),
+            eq(productEnrollments.status, 'active')
+          )
+        );
+      
+      // Get team memberships for this user
+      const userTeamMemberships = await db.select({
+        membership: teamMemberships,
+        team: teams,
+      })
+        .from(teamMemberships)
+        .leftJoin(teams, eq(teamMemberships.teamId, teams.id))
+        .where(
+          and(
+            eq(teamMemberships.profileId, userId),
+            eq(teamMemberships.status, 'active')
+          )
+        );
+      
+      // Get all team IDs the user is a member of (teams.id is serial/integer)
+      const userTeamIds = userTeamMemberships
+        .map(({ team }) => team?.id)
+        .filter((id): id is number => !!id);
+      
+      // Fetch all members for all teams the user is in (for roster display)
+      let allTeamMembers: Array<{membership: typeof teamMemberships.$inferSelect, user: typeof users.$inferSelect | null}> = [];
+      if (userTeamIds.length > 0) {
+        allTeamMembers = await db.select({
+          membership: teamMemberships,
+          user: users,
+        })
+          .from(teamMemberships)
+          .leftJoin(users, eq(teamMemberships.profileId, users.id))
+          .where(
+            and(
+              inArray(teamMemberships.teamId, userTeamIds),
+              eq(teamMemberships.status, 'active')
+            )
+          );
+      }
+      
+      // Build response combining enrollments with team info, social settings, and members
+      const memberships = enrollments.map(({ enrollment, product }) => {
+        // Find teams linked to this program
+        const programTeams = userTeamMemberships.filter(
+          ({ team }) => team?.programId === enrollment.programId
+        );
+        
+        return {
+          enrollmentId: enrollment.id,
+          programId: enrollment.programId,
+          programName: product?.name || 'Unknown Program',
+          programType: product?.type,
+          // Social settings from program
+          hasSubgroups: product?.hasSubgroups ?? true,
+          subgroupLabel: product?.subgroupLabel || 'Team',
+          rosterVisibility: product?.rosterVisibility || 'members',
+          chatMode: product?.chatMode || 'two_way',
+          // Enrollment details
+          status: enrollment.status,
+          remainingCredits: enrollment.remainingCredits,
+          totalCredits: enrollment.totalCredits,
+          // Team/group assignments within this program, with member data
+          teams: programTeams.map(({ membership, team }) => {
+            // Get members for this team
+            const teamMembers = allTeamMembers
+              .filter(m => m.membership.teamId === team?.id)
+              .map(({ membership: m, user }) => ({
+                id: user?.id,
+                name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email,
+                role: m.role,
+                profilePic: user?.profilePic,
+              }));
+            
+            return {
+              teamId: team?.id,
+              teamName: team?.name,
+              memberRole: membership.role,
+              coachId: team?.coachId,
+              members: teamMembers,
+            };
+          }),
+        };
+      });
+      
+      res.json(memberships);
+    } catch (error: any) {
+      console.error('Error fetching program memberships:', error);
+      res.status(500).json({ message: 'Failed to fetch program memberships' });
+    }
+  });
+
   // =============================================
   // PRODUCT ENROLLMENT ROUTES
   // =============================================

@@ -25,6 +25,7 @@ import {
   User,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Calendar as CalendarIcon,
   MessageCircle,
   Send,
@@ -44,6 +45,8 @@ import {
   Users,
   Copy,
   Target,
+  Dumbbell,
+  Trophy,
 } from "lucide-react";
 import NotificationCenter from "@/components/NotificationCenter";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -1676,12 +1679,288 @@ function PriceCard({ title, priceLine, cta, badge }: { title: string; priceLine:
   );
 }
 
+// Type for program membership response
+interface ProgramMembership {
+  enrollmentId: number;
+  programId: string;
+  programName: string;
+  programType: string | null;
+  hasSubgroups: boolean;
+  subgroupLabel: string;
+  rosterVisibility: string;
+  chatMode: string;
+  status: string;
+  remainingCredits: number | null;
+  totalCredits: number | null;
+  teams: Array<{
+    teamId: number | null;  // teams.id is serial (integer)
+    teamName: string | null;
+    memberRole: string;
+    coachId: string | null;
+    members?: Array<{
+      id: string | undefined;
+      name: string | undefined;
+      role: string;
+      profilePic: string | null | undefined;
+    }>;
+  }>;
+}
+
+// Individual program card with its subgroups
+function ProgramCard({ 
+  membership, 
+  displayProfileId,
+  onPlayerSelect 
+}: { 
+  membership: ProgramMembership;
+  displayProfileId: string | undefined;
+  onPlayerSelect: (playerId: string) => void;
+}) {
+  const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
+  
+  // Get icon based on program type or name
+  const getProgramIcon = () => {
+    const name = membership.programName.toLowerCase();
+    if (name.includes('club') || name.includes('youth')) return <Shirt className="h-6 w-6 text-red-600" />;
+    if (name.includes('skill') || name.includes('training')) return <Dumbbell className="h-6 w-6 text-blue-600" />;
+    if (name.includes('private') || name.includes('coach')) return <Users className="h-6 w-6 text-green-600" />;
+    return <Trophy className="h-6 w-6 text-red-600" />;
+  };
+  
+  const getSubgroupColor = () => {
+    const label = membership.subgroupLabel.toLowerCase();
+    if (label === 'team') return 'bg-red-100 text-red-700';
+    if (label === 'level') return 'bg-blue-100 text-blue-700';
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  return (
+    <Card className="border-0 shadow-sm mb-4" data-testid={`program-card-${membership.programId}`}>
+      <CardContent className="p-4">
+        {/* Program Header */}
+        <div className="flex items-start space-x-4 mb-4">
+          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+            {getProgramIcon()}
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-gray-900" data-testid={`text-program-name-${membership.programId}`}>
+              {membership.programName}
+            </h3>
+            {membership.programType && (
+              <p className="text-sm text-gray-600">{membership.programType}</p>
+            )}
+            {membership.remainingCredits !== null && (
+              <div className="text-xs text-gray-500 mt-1">
+                {membership.remainingCredits} of {membership.totalCredits} credits remaining
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Subgroups (Teams/Levels/Groups) - only show if program has subgroups */}
+        {membership.hasSubgroups && membership.teams.length > 0 && (
+          <div className="space-y-3">
+            <div className="text-sm font-medium text-gray-700">
+              Your {membership.subgroupLabel}{membership.teams.length > 1 ? 's' : ''}:
+            </div>
+            {membership.teams.map((team) => (
+              <SubgroupCard
+                key={team.teamId}
+                team={team}
+                membership={membership}
+                displayProfileId={displayProfileId}
+                isExpanded={expandedTeamId === team.teamId}
+                onToggle={() => setExpandedTeamId(expandedTeamId === team.teamId ? null : team.teamId)}
+                onPlayerSelect={onPlayerSelect}
+                subgroupColor={getSubgroupColor()}
+              />
+            ))}
+          </div>
+        )}
+        
+        {/* No subgroups message */}
+        {membership.hasSubgroups && membership.teams.length === 0 && (
+          <div className="text-sm text-gray-500 italic">
+            No {membership.subgroupLabel.toLowerCase()} assigned yet
+          </div>
+        )}
+        
+        {/* Programs without subgroups (like Private Training) - show program-level info */}
+        {!membership.hasSubgroups && (
+          <div className="space-y-4">
+            <div className="text-sm text-gray-600">
+              This program does not have {membership.subgroupLabel.toLowerCase()}s.
+            </div>
+            
+            {/* Credits info for pack holders */}
+            {membership.totalCredits && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="font-medium">Credits:</span>
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                  {membership.remainingCredits ?? 0} / {membership.totalCredits}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Individual subgroup (team/level/group) card with expandable roster and chat
+function SubgroupCard({
+  team,
+  membership,
+  displayProfileId,
+  isExpanded,
+  onToggle,
+  onPlayerSelect,
+  subgroupColor,
+}: {
+  team: ProgramMembership['teams'][0];
+  membership: ProgramMembership;
+  displayProfileId: string | undefined;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onPlayerSelect: (playerId: string) => void;
+  subgroupColor: string;
+}) {
+  // Visibility checks from program social settings
+  const showRoster = membership.rosterVisibility !== 'hidden';
+  const showChat = membership.chatMode !== 'disabled';
+  
+  // Use members data from the program-memberships response (already fetched)
+  // This avoids an extra API call for roster data
+  const teamMembers = team.members || [];
+  
+  // Fetch coach info only when expanded and we have a coach
+  const { data: coachInfo } = useQuery<any>({
+    queryKey: ["/api/users", team.coachId],
+    enabled: isExpanded && !!team.coachId,
+  });
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden" data-testid={`subgroup-${team.teamId}`}>
+      {/* Subgroup Header - clickable to expand */}
+      <div 
+        className="p-3 bg-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-100"
+        onClick={onToggle}
+        data-testid={`subgroup-header-${team.teamId}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-1 text-xs font-medium rounded ${subgroupColor}`}>
+            {team.teamName}
+          </span>
+          {team.coachId && (
+            <span className="text-xs text-gray-500">
+              with Coach
+            </span>
+          )}
+        </div>
+        <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+      </div>
+      
+      {/* Expanded Content */}
+      {isExpanded && (
+        <div className="p-3 space-y-4">
+          {/* Roster Section - only if visible */}
+          {showRoster && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2" data-testid={`roster-title-${team.teamId}`}>
+                {membership.subgroupLabel} Roster
+              </h4>
+              {teamMembers.length === 0 && !coachInfo ? (
+                <div className="text-sm text-gray-500">No members yet.</div>
+              ) : (
+                <div className="max-h-48 overflow-y-auto space-y-2">
+                  {/* Coach Entry */}
+                  {coachInfo && (
+                    <div className="flex items-center gap-2 p-2 bg-red-50 rounded">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={coachInfo.profileImageUrl} />
+                        <AvatarFallback className="text-xs bg-red-600 text-white">
+                          {coachInfo.firstName?.[0]}{coachInfo.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {coachInfo.firstName} {coachInfo.lastName}
+                          <span className="ml-2 px-1.5 py-0.5 text-xs bg-red-600 text-white rounded">COACH</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Member Entries (from program-memberships response) */}
+                  {teamMembers.map((member: any, index: number) => {
+                    const memberKey = member.id || `member-${index}`;
+                    const memberName = member.name || 'Unknown';
+                    const initials = memberName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+                    const isCoach = member.role === 'coach' || member.role === 'head_coach' || member.role === 'assistant_coach';
+                    
+                    // Skip coaches in member list (already shown above)
+                    if (isCoach) return null;
+                    
+                    return (
+                      <div 
+                        key={memberKey}
+                        className={`flex items-center gap-2 p-2 rounded ${
+                          member.id ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60'
+                        }`}
+                        onClick={() => member.id && onPlayerSelect(member.id)}
+                        data-testid={`roster-member-${memberKey}`}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={member.profilePic} />
+                          <AvatarFallback className="text-xs bg-red-100 text-red-600">
+                            {initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-900">{memberName}</span>
+                          {member.role && member.role !== 'player' && (
+                            <span className="text-xs text-gray-400 ml-1">({member.role})</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Chat Section - only if enabled */}
+          {showChat && team.teamId && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2" data-testid={`chat-title-${team.teamId}`}>
+                {membership.chatMode === 'announcements' ? 'Announcements' : `${membership.subgroupLabel} Chat`}
+              </h4>
+              <TeamChat 
+                teamId={Number(team.teamId)}
+                currentProfileId={displayProfileId}
+                readOnly={membership.chatMode === 'announcements'}
+              />
+            </div>
+          )}
+          
+          {/* Message if no roster or chat visible */}
+          {!showRoster && !showChat && (
+            <div className="text-sm text-gray-500 italic">
+              Roster and chat are not available for this {membership.subgroupLabel.toLowerCase()}.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TeamBlock() {
   const { user } = useAuth();
   const currentUser = user as UserType;
   const { currentChildProfile } = useAppMode();
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const { toast } = useToast();
   
   // Fetch active profile from localStorage (same as main dashboard)
   const localSelectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
@@ -1695,145 +1974,39 @@ function TeamBlock() {
   const displayProfile = activeProfile || currentUser;
   
   // Use child profile ID if viewing as child, otherwise use current user ID
-  // Priority: activeProfile (from localStorage) > currentChildProfile (from device config) > currentUser
-  const userIdForTeam = activeProfile?.id || currentChildProfile?.id || currentUser.id;
+  const userIdForPrograms = activeProfile?.id || currentChildProfile?.id || currentUser.id;
   
-  const { data: userTeam } = useQuery<Team>({
-    queryKey: ["/api/users", userIdForTeam, "team"],
-    enabled: !!userIdForTeam,
-  });
-  
-  // Fetch team roster with Notion data (includes players without app accounts)
-  const { data: teamPlayers = [], isLoading: isLoadingRoster } = useQuery<any[]>({
-    queryKey: ["/api/teams", userTeam?.id, "roster-with-notion"],
-    enabled: !!userTeam?.id,
-  });
-  
-  // Fetch coach information
-  const { data: coachInfo } = useQuery<any>({
-    queryKey: ["/api/users", userTeam?.coachId],
-    enabled: !!userTeam?.coachId,
+  // Fetch program memberships with social settings
+  const { data: programMemberships = [], isLoading: isLoadingPrograms } = useQuery<ProgramMembership[]>({
+    queryKey: ["/api/users", userIdForPrograms, "program-memberships"],
+    enabled: !!userIdForPrograms,
   });
 
   return (
     <div className="space-y-6" data-testid="team-block">
-      {/* Current Team Section */}
+      {/* Programs Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4" data-testid="text-my-team">My Team</h2>
-        {userTeam ? (
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start space-x-4">
-                <div className="w-16 h-16 bg-red-100 rounded-lg flex items-center justify-center">
-                  <Shirt className="h-8 w-8 text-red-600" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg" data-testid="text-team-name">{userTeam.name}</h3>
-                  {userTeam.programType && <p className="text-sm text-gray-600 mb-2" data-testid="text-team-age-group">{userTeam.programType}</p>}
-                  {coachInfo && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <UserCheck className="h-4 w-4" />
-                      <span data-testid="text-coach-name">Coach: {coachInfo.firstName} {coachInfo.lastName}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <h2 className="text-xl font-bold text-gray-900 mb-4" data-testid="text-my-programs">My Programs</h2>
+        
+        {isLoadingPrograms ? (
+          <div className="text-sm text-gray-500">Loading programs...</div>
+        ) : programMemberships.length === 0 ? (
+          <div className="text-sm text-gray-500 mb-4" data-testid="text-no-programs">
+            No programs enrolled yet. Contact your organization to get started!
+          </div>
         ) : (
-          <div className="text-sm text-gray-500 mb-4" data-testid="text-no-team">No team assigned yet. Search for teams below!</div>
+          <div className="space-y-4">
+            {programMemberships.map((membership) => (
+              <ProgramCard
+                key={membership.enrollmentId}
+                membership={membership}
+                displayProfileId={displayProfile?.id}
+                onPlayerSelect={setSelectedPlayerId}
+              />
+            ))}
+          </div>
         )}
       </div>
-      
-      {/* Team Roster Section */}
-      {userTeam && (
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4" data-testid="text-team-roster">Team Roster</h3>
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-0">
-              {isLoadingRoster ? (
-                <div className="p-6 text-center text-sm text-gray-500">
-                  Loading roster...
-                </div>
-              ) : teamPlayers.length === 0 ? (
-                <div className="p-6 text-center text-sm text-gray-500">
-                  No players on this team yet.
-                </div>
-              ) : (
-                <div className="max-h-64 overflow-y-auto">
-                  {/* Coach Entry - Always at the top */}
-                  {coachInfo && (
-                    <div 
-                      className="p-3 border-b border-gray-200 bg-red-50 flex items-center justify-between"
-                      data-testid="coach-roster-entry"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={coachInfo.profileImageUrl} />
-                          <AvatarFallback className="text-xs bg-red-600 text-white">
-                            {coachInfo.firstName?.[0]}{coachInfo.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-semibold text-gray-900 flex items-center gap-2" data-testid="text-coach-roster-name">
-                            {coachInfo.firstName} {coachInfo.lastName}
-                            <span className="px-2 py-0.5 text-xs font-medium bg-red-600 text-white rounded">COACH</span>
-                          </div>
-                          <div className="text-xs text-gray-600">
-                            Team Coach
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Player Entries */}
-                  {teamPlayers.map((player: any, index: number) => {
-                    const playerKey = player.appAccountId || player.notionId || `player-${index}`;
-                    const playerName = player.name || `${player.firstName} ${player.lastName}`;
-                    const initials = player.firstName?.[0] && player.lastName?.[0] 
-                      ? `${player.firstName[0]}${player.lastName[0]}`
-                      : playerName.split(' ').map((n: string) => n[0]).join('').substring(0, 2);
-                    
-                    return (
-                      <div 
-                        key={playerKey} 
-                        className={`p-3 border-b border-gray-100 last:border-b-0 flex items-center justify-between ${
-                          player.hasAppAccount ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60'
-                        }`}
-                        onClick={() => player.hasAppAccount && setSelectedPlayerId(player.appAccountId)}
-                        data-testid={`player-roster-${playerKey}`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={player.profileImageUrl} />
-                            <AvatarFallback className="text-xs bg-red-100 text-red-600">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-gray-900 flex items-center gap-2" data-testid={`text-player-name-${playerKey}`}>
-                              {playerName}
-                              {!player.hasAppAccount && (
-                                <span className="text-xs text-gray-400 font-normal">(No app)</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {player.position || "Player"}
-                              {player.jerseyNumber != null ? ` • #${player.jerseyNumber}` : ""}
-                              {player.grade ? ` • ${player.grade}` : ""}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Player Search Section */}
       <div>
@@ -1843,17 +2016,6 @@ function TeamBlock() {
           placeholder="Search for players and teams..."
         />
       </div>
-
-      {/* Team Chat */}
-      {userTeam && (
-        <div>
-          <h4 className="font-semibold text-gray-900 mb-2" data-testid="text-team-chat">Team Chat</h4>
-          <TeamChat 
-            teamId={Number(userTeam.id)}
-            currentProfileId={displayProfile?.id}
-          />
-        </div>
-      )}
 
       {/* Player Card Modal */}
       {selectedPlayerId && (

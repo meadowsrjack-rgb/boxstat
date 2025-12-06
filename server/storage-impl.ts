@@ -1371,6 +1371,11 @@ class MemStorage implements IStorage {
       linkedAwards: program.linkedAwards ?? [],
       autoAssignPlayers: program.autoAssignPlayers ?? false,
       isActive: program.isActive ?? true,
+      // Social toggle fields
+      hasSubgroups: program.hasSubgroups ?? true,
+      subgroupLabel: program.subgroupLabel ?? 'Team',
+      rosterVisibility: program.rosterVisibility ?? 'members',
+      chatMode: program.chatMode ?? 'two_way',
       createdAt: new Date(),
     };
     this.programs.set(newProgram.id, newProgram);
@@ -3371,6 +3376,11 @@ class DatabaseStorage implements IStorage {
       linkedAwards: program.linkedAwards ?? [],
       adminNotes: program.adminNotes,
       isActive: program.isActive ?? true,
+      // Social toggle fields
+      hasSubgroups: program.hasSubgroups ?? true,
+      subgroupLabel: program.subgroupLabel ?? 'Team',
+      rosterVisibility: program.rosterVisibility ?? 'members',
+      chatMode: program.chatMode ?? 'two_way',
       createdAt: now,
     };
 
@@ -3403,6 +3413,11 @@ class DatabaseStorage implements IStorage {
       linkedAwards: updates.linkedAwards,
       adminNotes: updates.adminNotes,
       isActive: updates.isActive,
+      // Social toggle fields
+      hasSubgroups: updates.hasSubgroups,
+      subgroupLabel: updates.subgroupLabel,
+      rosterVisibility: updates.rosterVisibility,
+      chatMode: updates.chatMode,
     };
 
     // Remove undefined values

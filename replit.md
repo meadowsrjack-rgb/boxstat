@@ -34,6 +34,7 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM for type-safe op
 **Product & Enrollment System:**
 - `programs`, `packages/products`: Reusable program and package definitions with `accessTag` (club_member/pack_holder/none) and `sessionCount` for credit-based products
 - `product_enrollments`: Consolidated enrollment tracking with `remainingCredits` and `totalCredits` for credit-based access, and legacy migration support via metadata field
+- **Program-Team Hierarchy**: Teams are now children of programs via `teams.programId` foreign key. Programs define social settings (hasSubgroups, subgroupLabel, rosterVisibility, chatMode) that control how teams/groups display in player dashboards. Dynamic labels support "Team" (Youth Club), "Level" (Skills Academy), "Group" (Private Training) terminology.
 
 **Notification System:**
 - `notifications`: Unified notification storage with multi-type support (announcement, notification, message)

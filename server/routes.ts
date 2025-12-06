@@ -2100,8 +2100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Use parent's email for child player (they share the same account email)
-      const playerEmail = user.email;
+      // Generate unique email for child player to avoid unique constraint violations
+      // Child players get a unique generated email while parent's email is used for account management
+      const uniqueSuffix = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      const playerEmail = `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${uniqueSuffix}@child.boxstat.app`;
       
       // Create child player user with PENDING payment status
       const playerUser = await storage.createUser({

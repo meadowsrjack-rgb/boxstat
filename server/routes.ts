@@ -39,7 +39,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients, users, teamMemberships, waivers, waiverVersions, waiverSignatures, productEnrollments, programs } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, waivers, waiverVersions, waiverSignatures, productEnrollments, products } from "@shared/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -4992,10 +4992,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const enrollments = await db.select({
       enrollment: productEnrollments,
-      program: programs,
+      product: products,
     })
       .from(productEnrollments)
-      .leftJoin(programs, eq(productEnrollments.programId, programs.id))
+      .leftJoin(products, eq(productEnrollments.programId, products.id))
       .where(eq(productEnrollments.profileId, profileId));
 
     res.json(enrollments);
@@ -5013,10 +5013,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const enrollments = await db.select({
       enrollment: productEnrollments,
-      program: programs,
+      product: products,
     })
       .from(productEnrollments)
-      .leftJoin(programs, eq(productEnrollments.programId, programs.id))
+      .leftJoin(products, eq(productEnrollments.programId, products.id))
       .where(eq(productEnrollments.accountHolderId, accountHolderId));
 
     res.json(enrollments);

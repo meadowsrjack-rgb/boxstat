@@ -347,8 +347,8 @@ export const insertWaiverSignatureSchema = createInsertSchema(waiverSignatures).
 export type InsertWaiverSignature = z.infer<typeof insertWaiverSignatureSchema>;
 export type WaiverSignature = typeof waiverSignatures.$inferSelect;
 
-// Programs table (packages/subscriptions)
-export const programs = pgTable("programs", {
+// Products table (packages/subscriptions)
+export const products = pgTable("products", {
   id: varchar().primaryKey().notNull(),
   organizationId: varchar("organization_id").notNull(),
   name: varchar().notNull(),
@@ -402,7 +402,7 @@ export const productEnrollments = pgTable("product_enrollments", {
 }, (table) => [
   foreignKey({
     columns: [table.programId],
-    foreignColumns: [programs.id],
+    foreignColumns: [products.id],
     name: "product_enrollments_program_id_fkey"
   }),
   foreignKey({
@@ -582,8 +582,8 @@ export const facilities = pgTable("facilities", {
   createdBy: varchar("created_by"),
 });
 
-// Badges table
-export const badges = pgTable("badges", {
+// Awards table (renamed from badges)
+export const awards = pgTable("awards", {
   id: serial().primaryKey().notNull(),
   name: varchar().notNull(),
   description: text(),
@@ -597,8 +597,11 @@ export const badges = pgTable("badges", {
   category: varchar(),
   type: varchar(),
 }, (table) => [
-  unique("badges_slug_key").on(table.slug),
+  unique("awards_slug_key").on(table.slug),
 ]);
+
+// Backwards compatibility alias
+export const badges = awards;
 
 // User Badges table
 export const userBadges = pgTable("user_badges", {
@@ -1332,7 +1335,7 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 // Program Schema (Configurable Programs)
 // =============================================
 
-export interface Program {
+export interface Product {
   id: string;
   organizationId: string;
   name: string;
@@ -1361,7 +1364,7 @@ export interface Program {
   createdAt: Date;
 }
 
-export const insertProgramSchema = z.object({
+export const insertProductSchema = z.object({
   organizationId: z.string(),
   name: z.string().min(1),
   slug: z.string().optional(),
@@ -1388,7 +1391,12 @@ export const insertProgramSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-export type InsertProgram = z.infer<typeof insertProgramSchema>;
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+// Backwards compatibility aliases
+export type Program = Product;
+export type InsertProgram = InsertProduct;
+export const insertProgramSchema = insertProductSchema;
 
 // =============================================
 // Package Selection Schema (Family Registration)

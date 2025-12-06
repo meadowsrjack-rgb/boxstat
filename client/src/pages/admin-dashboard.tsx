@@ -272,7 +272,7 @@ export default function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="teams" data-testid="tab-teams" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Target className="w-4 h-4 mr-2" />
-                Teams
+                Programs
               </TabsTrigger>
               <TabsTrigger value="divisions" data-testid="tab-divisions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Layers className="w-4 h-4 mr-2" />
@@ -2018,8 +2018,8 @@ function TeamsTab({ teams, users, divisions, organization }: any) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Team Management</CardTitle>
-            <CardDescription>Create teams, manage rosters, and assign coaches</CardDescription>
+            <CardTitle>Program Management</CardTitle>
+            <CardDescription>Create programs, manage rosters, and assign coaches</CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>

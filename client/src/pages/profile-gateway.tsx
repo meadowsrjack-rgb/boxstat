@@ -200,7 +200,7 @@ export default function ProfileGateway() {
                       {isPending && (
                         <Badge 
                           variant="outline" 
-                          className="bg-amber-500/20 text-amber-400 border-amber-500/50 text-xs"
+                          className="bg-amber-500/20 border-amber-500/50 text-xs text-[#d90000]"
                           data-testid={`badge-not-active-${player.id}`}
                         >
                           Not Active

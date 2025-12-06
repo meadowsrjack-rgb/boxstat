@@ -2425,6 +2425,7 @@ class DatabaseStorage implements IStorage {
     
     const dbUser = {
       id,
+      organizationId: user.organizationId || 'default-org',
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,

@@ -2308,11 +2308,9 @@ class DatabaseStorage implements IStorage {
 
   // User operations
   async getUser(id: string): Promise<User | undefined> {
+    // Return user regardless of isActive status - caller decides if they need to check
     const results = await db.select().from(schema.users).where(
-      and(
-        eq(schema.users.id, id),
-        eq(schema.users.isActive, true)
-      )
+      eq(schema.users.id, id)
     );
     if (results.length === 0) return undefined;
     

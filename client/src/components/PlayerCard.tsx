@@ -229,21 +229,21 @@ export default function PlayerCard({
       )
     : 0;
 
-  // Prepare rings data for trophy display
+  // Prepare rings data for trophy display (each needs earned/total format)
   const ringsData = awardsSummary ? {
-    trophies: awardsSummary.trophiesCount || 0,
-    hallOfFame: awardsSummary.hallOfFameBadgesCount || 0,
-    superstar: awardsSummary.superstarBadgesCount || 0,
-    allStar: awardsSummary.allStarBadgesCount || 0,
-    starter: awardsSummary.starterBadgesCount || 0,
-    prospect: awardsSummary.prospectBadgesCount || 0,
+    trophies: { earned: awardsSummary.trophiesCount || 0, total: 10 },
+    hallOfFame: { earned: awardsSummary.hallOfFameBadgesCount || 0, total: 10 },
+    superstar: { earned: awardsSummary.superstarBadgesCount || 0, total: 10 },
+    allStar: { earned: awardsSummary.allStarBadgesCount || 0, total: 10 },
+    starter: { earned: awardsSummary.starterBadgesCount || 0, total: 10 },
+    prospect: { earned: awardsSummary.prospectBadgesCount || 0, total: 10 },
   } : {
-    trophies: 0,
-    hallOfFame: 0,
-    superstar: 0,
-    allStar: 0,
-    starter: 0,
-    prospect: 0,
+    trophies: { earned: 0, total: 10 },
+    hallOfFame: { earned: 0, total: 10 },
+    superstar: { earned: 0, total: 10 },
+    allStar: { earned: 0, total: 10 },
+    starter: { earned: 0, total: 10 },
+    prospect: { earned: 0, total: 10 },
   };
 
   // Show loading spinner only while actually loading
@@ -337,7 +337,7 @@ export default function PlayerCard({
                   >
                     {getPlayerFullName(playerProfile)}
                     {playerProfile.jerseyNumber && (
-                      <span className="ml-2 text-2xl font-bold text-gray-600">#{playerProfile.jerseyNumber}</span>
+                      <span className="ml-2 text-gray-600">#{playerProfile.jerseyNumber}</span>
                     )}
                   </h1>
 

@@ -1043,11 +1043,11 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
             </div>
           )}
 
-          {/* Event Detail Modal */}
+          {/* Event Detail Modal - always use 'player' role in player dashboard context */}
           <EventDetailModal
             event={selectedEvent}
             userId={activeProfile?.id || currentChildProfile?.id || currentUser.id}
-            userRole={currentUser.role as 'admin' | 'coach' | 'player' | 'parent'}
+            userRole="player"
             open={eventDetailOpen}
             onOpenChange={setEventDetailOpen}
           />

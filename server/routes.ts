@@ -3719,12 +3719,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/coach/events', requireAuth, async (req: any, res) => {
     const { organizationId, id: userId, role } = req.user;
     
+    console.log('🏀 COACH EVENTS DEBUG - Start');
+    console.log('  Coach userId:', userId);
+    console.log('  Coach role:', role);
+    
     // Only coaches can access this endpoint
     if (role !== 'coach') {
       return res.status(403).json({ message: 'Only coaches can access this endpoint' });
     }
     
     const allEvents = await storage.getEventsByOrganization(organizationId);
+    console.log('  Total events in org:', allEvents.length);
     
     // Use shared helper to get coach's event scope
     const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
@@ -3733,8 +3738,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       organizationId
     );
     
-    // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false);
+    console.log('  Coach teamIds:', teamIds);
+    console.log('  Coach divisionIds:', divisionIds);
+    console.log('  Coach programIds:', programIds);
+    
+    // Log each event's targeting for debugging
+    allEvents.forEach((event: any) => {
+      console.log(`  📅 Event "${event.title}" - assignTo:`, event.assignTo, 'visibility:', event.visibility);
+    });
+    
+    // Filter events using shared helper (with debug)
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, true);
+    
+    console.log('  Filtered result:', filteredEvents.length, 'events');
+    console.log('🏀 COACH EVENTS DEBUG - End\n');
     
     res.json(filteredEvents);
   });

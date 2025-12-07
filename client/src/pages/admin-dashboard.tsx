@@ -5969,6 +5969,9 @@ function ProgramsTab({ programs, teams, organization }: any) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        Array.isArray(query.queryKey) && query.queryKey.includes("program-memberships")
+      });
       toast({ title: editingProgram ? "Program updated successfully" : "Program created successfully" });
       setIsDialogOpen(false);
       setEditingProgram(null);

@@ -557,6 +557,9 @@ export const events = pgTable("events", {
   sendNotifications: boolean("send_notifications").default(false),
   createdBy: varchar("created_by"),
   status: varchar().default('active'), // active, cancelled, completed, draft
+  // Role-based participation control
+  participationRoles: text("participation_roles").array(), // Roles that can RSVP/check-in (player, parent, coach, admin)
+  proxyCheckinRoles: text("proxy_checkin_roles").array(), // Roles that can check in others (typically parent for player events)
 });
 
 // Event Targets table (normalized targeting for events)
@@ -592,6 +595,8 @@ export const attendances = pgTable("attendances", {
   type: varchar().default('advance'),
   latitude: numeric(),
   longitude: numeric(),
+  checkedInByUserId: varchar("checked_in_by_user_id"), // For proxy check-ins (parent checking in player)
+  checkInMethod: varchar("check_in_method"), // 'location', 'qr', 'manual', 'proxy'
 });
 
 // Facilities table (saved locations for quick event creation)

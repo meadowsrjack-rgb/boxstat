@@ -2633,23 +2633,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Auto-create product enrollment if team has a programId
               if (team.programId) {
-                console.log(`[PATCH] Team ${team.name} has programId ${team.programId}, auto-creating enrollment for player ${userId}`);
                 const accountHolderId = user.accountHolderId || userId;
                 
-                try {
-                  await db.insert(productEnrollments)
-                    .values({
-                      organizationId: organizationId,
-                      programId: team.programId,
-                      accountHolderId: accountHolderId,
-                      profileId: userId,
-                      status: 'active',
-                      source: 'admin',
-                    })
-                    .onConflictDoNothing(); // Don't overwrite existing enrollments
-                  console.log(`[PATCH] Created product enrollment for player ${userId} in program ${team.programId}`);
-                } catch (enrollErr) {
-                  console.error(`[PATCH] Failed to create product enrollment:`, enrollErr);
+                // Check if enrollment already exists to avoid duplicates
+                const existingEnrollment = await db.select({ id: productEnrollments.id })
+                  .from(productEnrollments)
+                  .where(
+                    and(
+                      eq(productEnrollments.profileId, userId),
+                      eq(productEnrollments.programId, team.programId),
+                      eq(productEnrollments.status, 'active')
+                    )
+                  )
+                  .limit(1);
+                
+                if (existingEnrollment.length === 0) {
+                  console.log(`[PATCH] Team ${team.name} has programId ${team.programId}, auto-creating enrollment for player ${userId}`);
+                  try {
+                    await db.insert(productEnrollments)
+                      .values({
+                        organizationId: organizationId,
+                        programId: team.programId,
+                        accountHolderId: accountHolderId,
+                        profileId: userId,
+                        status: 'active',
+                        source: 'admin',
+                      });
+                    console.log(`[PATCH] Created product enrollment for player ${userId} in program ${team.programId}`);
+                  } catch (enrollErr) {
+                    console.error(`[PATCH] Failed to create product enrollment:`, enrollErr);
+                  }
+                } else {
+                  console.log(`[PATCH] Player ${userId} already enrolled in program ${team.programId}, skipping`);
                 }
               }
             } catch (err) {

@@ -11,9 +11,6 @@ import UypTrophyRings from "@/components/UypTrophyRings";
 import {
   X,
   Shirt,
-  Ruler,
-  Gauge,
-  MapPin,
   Award,
   Trophy,
   Phone,
@@ -339,10 +336,19 @@ export default function PlayerCard({
                     data-testid="player-name"
                   >
                     {getPlayerFullName(playerProfile)}
+                    {playerProfile.jerseyNumber && (
+                      <span className="ml-2 text-2xl font-bold text-gray-600">#{playerProfile.jerseyNumber}</span>
+                    )}
                   </h1>
 
                   <div className="mt-1 text-sm font-medium text-gray-700" data-testid="player-position-jersey">
-                    {playerProfile.position || "Player"} #{playerProfile.jerseyNumber || "0"}
+                    {(playerProfile.height || playerProfile.position) ? (
+                      <>
+                        {playerProfile.height}{playerProfile.height && playerProfile.position && ' '}{playerProfile.position}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">Height & position not set</span>
+                    )}
                     {playerProfile.city && (
                       <div className="text-xs text-gray-600 mt-1">From {playerProfile.city}</div>
                     )}
@@ -356,73 +362,6 @@ export default function PlayerCard({
                   )}
                 </div>
 
-                {/* Info grid */}
-                <div className="relative px-6 pb-8">
-                  <div className="grid grid-cols-3 gap-3">
-                    <motion.div
-                      initial={{ y: 12, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0, duration: 0.35 }}
-                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                        <span
-                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                          style={{ color: "#d82428" }}
-                        >
-                          <Ruler className="h-4 w-4" />
-                        </span>
-                        <span>HEIGHT</span>
-                      </div>
-                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                        {playerProfile.height || "-"}
-                      </div>
-                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ y: 12, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.05, duration: 0.35 }}
-                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                        <span
-                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                          style={{ color: "#d82428" }}
-                        >
-                          <Gauge className="h-4 w-4" />
-                        </span>
-                        <span>AGE</span>
-                      </div>
-                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                        {playerProfile.age || "-1"}
-                      </div>
-                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ y: 12, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.10, duration: 0.35 }}
-                      className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                        <span
-                          className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                          style={{ color: "#d82428" }}
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </span>
-                        <span>FROM</span>
-                      </div>
-                      <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                        {(playerProfile.city || "Unknown").replace(", CA", "").replace(",CA", "")}
-                      </div>
-                      <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                    </motion.div>
-                  </div>
-                </div>
               </motion.section>
             </div>
 
@@ -435,7 +374,7 @@ export default function PlayerCard({
             <div className="px-2 pb-6">
               <div className="max-w-[340px] mx-auto">
                 <SkillBar 
-                  label="UYP RANKING PERCENTILE"  
+                  label="OVR"  
                   value={overallSkillScore} 
                 />
               </div>
@@ -597,7 +536,7 @@ function SkillBar({
     >
       <div className="flex justify-between text-sm">
         <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-red-600 font-semibold">{value}%</span>
+        <span className="text-red-600 font-semibold">{value}</span>
       </div>
 
       {/* Wider track to visually line up with trophy rings */}

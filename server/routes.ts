@@ -3505,17 +3505,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // EVENT ROUTES
   // =============================================
   
-  // Helper function to get team and division IDs for a user based on their role
+  // Helper function to get team, division, and program IDs for a user based on their role
   async function getUserEventScope(userId: string, role: string, organizationId: string, childProfileId?: string) {
     let teamIds: (string | number)[] = [];
     let divisionIds: (string | number)[] = [];
+    let programIds: (string | number)[] = [];
     let targetUserId = userId;
     
     if (childProfileId) {
       // Player Mode: Viewing as a specific child - only show that child's events
       const childProfile = await storage.getUser(childProfileId);
       if (childProfile) {
-        if (childProfile.teamId) teamIds = [childProfile.teamId];
+        if (childProfile.teamId) {
+          teamIds = [childProfile.teamId];
+          // Get the team to find its program
+          const team = await storage.getTeam(String(childProfile.teamId));
+          if (team?.programId) programIds.push(team.programId);
+        }
         if (childProfile.divisionId) divisionIds = [childProfile.divisionId];
         targetUserId = childProfileId;
       }
@@ -3524,43 +3530,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allUsersInOrg = await storage.getUsersByOrganization(organizationId);
       const childProfiles = allUsersInOrg.filter(u => u.parentId === userId || u.guardianId === userId);
       
-      // Collect all team IDs and division IDs from children
+      // Collect all team IDs, division IDs, and program IDs from children
       for (const child of childProfiles) {
-        if (child.teamId) teamIds.push(child.teamId);
+        if (child.teamId) {
+          teamIds.push(child.teamId);
+          // Get the team to find its program
+          const team = await storage.getTeam(String(child.teamId));
+          if (team?.programId) programIds.push(team.programId);
+        }
         if (child.divisionId) divisionIds.push(child.divisionId);
       }
       
       // Also include parent's own team/division if they have one
       const userProfile = await storage.getUser(userId);
-      if (userProfile?.teamId) teamIds.push(userProfile.teamId);
+      if (userProfile?.teamId) {
+        teamIds.push(userProfile.teamId);
+        const team = await storage.getTeam(String(userProfile.teamId));
+        if (team?.programId) programIds.push(team.programId);
+      }
       if (userProfile?.divisionId) divisionIds.push(userProfile.divisionId);
       
-      // Deduplicate team and division IDs
+      // Deduplicate team, division, and program IDs
       teamIds = [...new Set(teamIds.map(String))];
       divisionIds = [...new Set(divisionIds.map(String))];
+      programIds = [...new Set(programIds.map(String))];
     } else if (role === 'coach') {
       // Coach: Get all teams they're assigned to (as head coach or assistant)
       const coachTeams = await storage.getTeamsByCoach(userId);
       teamIds = coachTeams.map(team => team.id);
       
-      // Also collect division IDs from those teams
+      // Also collect division IDs and program IDs from those teams
       for (const team of coachTeams) {
         if (team.divisionId) divisionIds.push(team.divisionId);
+        if (team.programId) programIds.push(team.programId);
       }
       
       // Deduplicate
       teamIds = [...new Set(teamIds.map(String))];
       divisionIds = [...new Set(divisionIds.map(String))];
+      programIds = [...new Set(programIds.map(String))];
     } else {
       // Regular user (player): Use their own team/division
       const userProfile = await storage.getUser(userId);
       if (userProfile) {
-        if (userProfile.teamId) teamIds = [userProfile.teamId];
+        if (userProfile.teamId) {
+          teamIds = [userProfile.teamId];
+          const team = await storage.getTeam(String(userProfile.teamId));
+          if (team?.programId) programIds.push(team.programId);
+        }
         if (userProfile.divisionId) divisionIds = [userProfile.divisionId];
       }
+      programIds = [...new Set(programIds.map(String))];
     }
     
-    return { teamIds, divisionIds, targetUserId };
+    return { teamIds, divisionIds, programIds, targetUserId };
   }
   
   // Helper function to filter events based on visibility and assignment
@@ -3569,6 +3592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     role: string,
     teamIds: (string | number)[],
     divisionIds: (string | number)[],
+    programIds: (string | number)[],
     targetUserId: string,
     debug = false
   ) {
@@ -3598,6 +3622,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const divisionId of divisionIds) {
         if (visibility.divisions?.includes(String(divisionId)) || assignTo.divisions?.includes(String(divisionId))) {
           if (debug) console.log(`    ✅ MATCH: Division ${divisionId}`);
+          return true;
+        }
+      }
+      
+      // Check program-based visibility (check all program IDs)
+      for (const programId of programIds) {
+        if (visibility.programs?.includes(String(programId)) || assignTo.programs?.includes(String(programId))) {
+          if (debug) console.log(`    ✅ MATCH: Program ${programId}`);
           return true;
         }
       }
@@ -3636,8 +3668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json([]);
     }
     
-    // Get user's event scope (teams, divisions, target user ID)
-    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+    // Get user's event scope (teams, divisions, programs, target user ID)
+    const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
       userId,
       role,
       organizationId,
@@ -3646,11 +3678,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log('  teamIds collected:', teamIds);
     console.log('  divisionIds collected:', divisionIds);
+    console.log('  programIds collected:', programIds);
     console.log('  targetUserId:', targetUserId);
     console.log('  Total events to filter:', allEvents.length);
     
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, true);
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, true);
     
     console.log('  Filtered result:', filteredEvents.length, 'events shown');
     console.log('🔍 EVENT FILTERING DEBUG - End\n');
@@ -3668,8 +3701,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(allEvents);
     }
     
-    // Get user's event scope (teams, divisions, target user ID)
-    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+    // Get user's event scope (teams, divisions, programs, target user ID)
+    const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
       userId,
       role,
       organizationId,
@@ -3677,7 +3710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
     
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, false);
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false);
     
     res.json(filteredEvents);
   });
@@ -3694,14 +3727,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const allEvents = await storage.getEventsByOrganization(organizationId);
     
     // Use shared helper to get coach's event scope
-    const { teamIds, divisionIds, targetUserId } = await getUserEventScope(
+    const { teamIds, divisionIds, programIds, targetUserId } = await getUserEventScope(
       userId,
       role,
       organizationId
     );
     
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, targetUserId, false);
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false);
     
     res.json(filteredEvents);
   });

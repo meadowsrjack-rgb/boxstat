@@ -1,13 +1,15 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   MapPin, Calendar, Clock, 
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
@@ -69,6 +71,13 @@ export default function EventDetailModal({
   const [showQrCode, setShowQrCode] = useState(false);
   const [locationRequested, setLocationRequested] = useState(false);
   const [showLocationHelp, setShowLocationHelp] = useState(false);
+  
+  // Parent player selection popup state
+  const [showPlayerSelect, setShowPlayerSelect] = useState<'rsvp' | 'checkin' | null>(null);
+  const [pendingRsvpResponse, setPendingRsvpResponse] = useState<'attending' | 'not_attending' | null>(null);
+  
+  // Coach roster check-in state
+  const [selectedRosterPlayers, setSelectedRosterPlayers] = useState<Set<string>>(new Set());
   
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
   const isParent = userRole === 'parent';
@@ -289,22 +298,24 @@ export default function EventDetailModal({
 
   // Proxy check-in mutation for parents checking in their players
   const proxyCheckInMutation = useMutation({
-    mutationFn: (data: { playerId: string; latitude?: number; longitude?: number }) => {
+    mutationFn: (data: { playerId: string; playerName: string; latitude?: number; longitude?: number }) => {
       return apiRequest('POST', '/api/attendances/proxy', {
         eventId: event?.id,
         playerId: data.playerId,
         latitude: data.latitude,
         longitude: data.longitude,
-      });
+      }).then(response => ({ ...response, playerName: data.playerName }));
     },
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
+      setShowPlayerSelect(null);
+      const playerName = response?.playerName || 'Player';
       toast({ 
-        title: 'Player Checked In', 
-        description: response?.message || 'Your player has been checked in successfully!' 
+        title: 'Checked In!', 
+        description: `${playerName} is checked in!`
       });
     },
     onError: (error: any) => {
@@ -319,20 +330,24 @@ export default function EventDetailModal({
 
   // Proxy RSVP mutation for parents RSVPing on behalf of their players
   const proxyRsvpMutation = useMutation({
-    mutationFn: (data: { playerId: string; response: string }) => {
+    mutationFn: (data: { playerId: string; playerName: string; response: string }) => {
       return apiRequest('POST', '/api/rsvp/proxy', {
         eventId: event?.id,
         playerId: data.playerId,
         response: data.response,
-      });
+      }).then(res => ({ ...res, playerName: data.playerName, response: data.response }));
     },
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setShowPlayerSelect(null);
+      setPendingRsvpResponse(null);
+      const playerName = response?.playerName || 'Player';
+      const isAttending = response?.response === 'attending';
       toast({ 
         title: 'RSVP Updated', 
-        description: response?.message || 'RSVP has been updated successfully!' 
+        description: `${playerName} ${isAttending ? 'is attending' : 'is not attending'}!`
       });
     },
     onError: (error: any) => {
@@ -340,6 +355,58 @@ export default function EventDetailModal({
       toast({ 
         title: 'RSVP Failed', 
         description: error?.message || 'Failed to update RSVP. Please try again.',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Coach roster query - fetches players for this event
+  const { data: rosterData, isLoading: rosterLoading } = useQuery<{
+    eventId: number;
+    roster: { id: string; firstName: string; lastName: string; profileImageUrl?: string; isCheckedIn: boolean; rsvpResponse: string }[];
+    checkedInCount: number;
+    totalPlayers: number;
+  }>({
+    queryKey: ['/api/events', event?.id, 'roster'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch(`/api/events/${event?.id}/roster`, {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch roster');
+      return response.json();
+    },
+    enabled: open && !!event && isAdminOrCoach,
+  });
+
+  // Coach roster check-in mutation
+  const coachCheckInMutation = useMutation({
+    mutationFn: (data: { playerIds: string[]; action?: 'checkin' | 'checkout' }) => {
+      return apiRequest('POST', '/api/attendances/coach', {
+        eventId: event?.id,
+        playerIds: data.playerIds,
+        action: data.action || 'checkin',
+      });
+    },
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', event?.id, 'roster'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setSelectedRosterPlayers(new Set());
+      toast({ 
+        title: 'Attendance Updated', 
+        description: response?.message || 'Attendance has been updated successfully!' 
+      });
+    },
+    onError: (error: any) => {
+      console.error('Coach check-in error:', error);
+      toast({ 
+        title: 'Check-In Failed', 
+        description: error?.message || 'Failed to update attendance. Please try again.',
         variant: 'destructive'
       });
     },
@@ -441,13 +508,28 @@ export default function EventDetailModal({
     return attendances.find(a => a.userId === playerId);
   };
 
-  const handleRsvpClick = () => {
+  const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
+    // For parents with linked players, show player selection popup
+    if (isParent && linkedPlayers.length > 0) {
+      const newResponse = response || (userRsvp?.response === 'attending' ? 'not_attending' : 'attending');
+      setPendingRsvpResponse(newResponse);
+      setShowPlayerSelect('rsvp');
+      return;
+    }
+    
+    // For other roles, do direct RSVP
     const currentResponse = userRsvp?.response;
-    const newResponse = currentResponse === 'attending' ? 'not_attending' : 'attending';
+    const newResponse = response || (currentResponse === 'attending' ? 'not_attending' : 'attending');
     rsvpMutation.mutate(newResponse);
   };
 
   const handleCheckInClick = async () => {
+    // For parents with linked players, show player selection popup
+    if (isParent && linkedPlayers.length > 0) {
+      setShowPlayerSelect('checkin');
+      return;
+    }
+    
     if (userRole === 'admin' || userRole === 'coach') {
       checkInMutation.mutate(undefined);
       return;
@@ -508,7 +590,7 @@ export default function EventDetailModal({
   };
 
   // Handle proxy check-in for parents checking in their players
-  const handleProxyCheckIn = async (playerId: string) => {
+  const handleProxyCheckIn = async (playerId: string, playerName: string) => {
     if (!playerId) {
       toast({
         title: 'No Player Selected',
@@ -523,7 +605,7 @@ export default function EventDetailModal({
     if (playerAlreadyCheckedIn) {
       toast({
         title: 'Already Checked In',
-        description: 'This player has already been checked in.',
+        description: `${playerName} has already been checked in.`,
         variant: 'destructive',
       });
       return;
@@ -536,13 +618,14 @@ export default function EventDetailModal({
       
       proxyCheckInMutation.mutate({
         playerId,
+        playerName,
         latitude: userLocation?.lat,
         longitude: userLocation?.lng,
       });
     } catch (error) {
       console.error('Proxy check-in location error:', error);
       // Still attempt proxy check-in without location
-      proxyCheckInMutation.mutate({ playerId });
+      proxyCheckInMutation.mutate({ playerId, playerName });
     } finally {
       setIsCheckingLocation(false);
     }
@@ -761,127 +844,115 @@ export default function EventDetailModal({
               </Button>
             )}
 
-            {/* Parent Proxy RSVP/Check-In Section */}
-            {isParent && linkedPlayers.length > 0 && (
-              <Card className="p-4 bg-blue-50 border-blue-200" data-testid="card-parent-proxy">
-                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                  <UserCheck className="h-5 w-5" />
-                  Manage Your Players
+            {/* Coach Roster Check-In Section */}
+            {isAdminOrCoach && rosterData && rosterData.roster.length > 0 && (
+              <Card className="p-4 bg-green-50 border-green-200" data-testid="card-coach-roster">
+                <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5" />
+                  Roster Check-In
+                  <Badge variant="outline" className="ml-auto">
+                    {rosterData.checkedInCount}/{rosterData.totalPlayers}
+                  </Badge>
                 </h4>
-                <p className="text-sm text-blue-700 mb-3">
-                  RSVP or check in on behalf of your players
+                <p className="text-sm text-green-700 mb-3">
+                  Mark players as present
                 </p>
                 
-                {/* Player List with Status */}
-                <div className="space-y-3">
-                  {linkedPlayers.map(player => {
-                    const playerRsvp = getPlayerRsvp(player.id);
-                    const playerCheckIn = getPlayerCheckIn(player.id);
-                    const currentResponse = playerRsvp?.response || 'no_response';
-                    
+                {/* Bulk Actions */}
+                <div className="flex gap-2 mb-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={coachCheckInMutation.isPending}
+                    onClick={() => {
+                      const uncheckedPlayers = rosterData.roster.filter(p => !p.isCheckedIn).map(p => p.id);
+                      if (uncheckedPlayers.length > 0) {
+                        coachCheckInMutation.mutate({ playerIds: uncheckedPlayers });
+                      }
+                    }}
+                    data-testid="button-mark-all-present"
+                  >
+                    {coachCheckInMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                    )}
+                    Mark All Present
+                  </Button>
+                  {selectedRosterPlayers.size > 0 && (
+                    <Button
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={coachCheckInMutation.isPending}
+                      onClick={() => {
+                        coachCheckInMutation.mutate({ playerIds: Array.from(selectedRosterPlayers) });
+                      }}
+                      data-testid="button-checkin-selected"
+                    >
+                      Check In ({selectedRosterPlayers.size})
+                    </Button>
+                  )}
+                </div>
+                
+                {/* Player Roster List */}
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {rosterData.roster.map(player => {
+                    const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
                     return (
                       <div 
-                        key={player.id} 
-                        className="bg-white rounded-lg p-3 border border-blue-100"
-                        data-testid={`card-player-proxy-${player.id}`}
+                        key={player.id}
+                        className={`flex items-center gap-3 p-2 rounded-lg border ${
+                          player.isCheckedIn 
+                            ? 'bg-green-100 border-green-200' 
+                            : 'bg-white border-gray-200'
+                        }`}
+                        data-testid={`roster-player-${player.id}`}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-900">
-                            {player.firstName} {player.lastName}
-                          </span>
-                          <div className="flex gap-1">
-                            {playerCheckIn ? (
-                              <Badge className="bg-green-100 text-green-800 text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Checked In
-                              </Badge>
-                            ) : currentResponse === 'attending' ? (
-                              <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                Going
-                              </Badge>
-                            ) : currentResponse === 'not_attending' ? (
-                              <Badge className="bg-red-100 text-red-800 text-xs">
-                                Not Going
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-gray-100 text-gray-600 text-xs">
-                                No RSVP
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* RSVP Buttons */}
-                        <div className="flex gap-2 mb-2">
-                          <Button
-                            size="sm"
-                            variant={currentResponse === 'attending' ? 'default' : 'outline'}
-                            className={currentResponse === 'attending' ? 'bg-green-600 hover:bg-green-700 flex-1' : 'flex-1'}
-                            disabled={!windowStatus.rsvpOpen || proxyRsvpMutation.isPending}
-                            onClick={() => proxyRsvpMutation.mutate({ playerId: player.id, response: 'attending' })}
-                            data-testid={`button-proxy-rsvp-going-${player.id}`}
-                          >
-                            {proxyRsvpMutation.isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <>
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Going
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={currentResponse === 'not_attending' ? 'default' : 'outline'}
-                            className={currentResponse === 'not_attending' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
-                            disabled={!windowStatus.rsvpOpen || proxyRsvpMutation.isPending}
-                            onClick={() => proxyRsvpMutation.mutate({ playerId: player.id, response: 'not_attending' })}
-                            data-testid={`button-proxy-rsvp-not-going-${player.id}`}
-                          >
-                            {proxyRsvpMutation.isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <>
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Not Going
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                        
-                        {/* Check-in Button */}
-                        {!playerCheckIn && (
-                          <Button
-                            size="sm"
-                            className="w-full bg-green-600 hover:bg-green-700"
-                            disabled={!windowStatus.checkinOpen || proxyCheckInMutation.isPending || isCheckingLocation}
-                            onClick={() => handleProxyCheckIn(player.id)}
-                            data-testid={`button-proxy-checkin-${player.id}`}
-                          >
-                            {proxyCheckInMutation.isPending || isCheckingLocation ? (
-                              <>
-                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                Checking In...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Check In
-                              </>
-                            )}
-                          </Button>
+                        {!player.isCheckedIn && (
+                          <Checkbox
+                            checked={selectedRosterPlayers.has(player.id)}
+                            onCheckedChange={(checked) => {
+                              const newSet = new Set(selectedRosterPlayers);
+                              if (checked) {
+                                newSet.add(player.id);
+                              } else {
+                                newSet.delete(player.id);
+                              }
+                              setSelectedRosterPlayers(newSet);
+                            }}
+                            data-testid={`checkbox-player-${player.id}`}
+                          />
                         )}
-                        
-                        {/* Window Status Messages */}
-                        {!windowStatus.rsvpOpen && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            RSVP {windowStatus.rsvpStatus}
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={player.profileImageUrl} />
+                          <AvatarFallback className="text-xs">
+                            {(player.firstName?.[0] || '') + (player.lastName?.[0] || '')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{playerName}</p>
+                          <p className="text-xs text-gray-500">
+                            {player.rsvpResponse === 'attending' ? 'RSVP: Yes' : 
+                             player.rsvpResponse === 'not_attending' ? 'RSVP: No' : 'No RSVP'}
                           </p>
-                        )}
-                        {!windowStatus.checkinOpen && !playerCheckIn && (
-                          <p className="text-xs text-amber-600 mt-1">
-                            Check-in {windowStatus.checkinStatus}
-                          </p>
+                        </div>
+                        {player.isCheckedIn ? (
+                          <Badge className="bg-green-600 text-white text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Present
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            disabled={coachCheckInMutation.isPending}
+                            onClick={() => coachCheckInMutation.mutate({ playerIds: [player.id] })}
+                            data-testid={`button-checkin-${player.id}`}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     );
@@ -1114,6 +1185,99 @@ export default function EventDetailModal({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Parent Player Selection Popup */}
+      <AlertDialog open={showPlayerSelect !== null} onOpenChange={(open) => !open && setShowPlayerSelect(null)}>
+        <AlertDialogContent data-testid="dialog-player-select">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {showPlayerSelect === 'rsvp' 
+                ? (pendingRsvpResponse === 'attending' ? 'RSVP as Attending' : 'RSVP as Not Attending')
+                : 'Check In Player'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {showPlayerSelect === 'rsvp' 
+                ? 'Select which player you are RSVPing for:'
+                : 'Select which player you are checking in:'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {/* Window Status Warning */}
+          {showPlayerSelect === 'rsvp' && !windowStatus.rsvpOpen && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+              <p className="text-sm text-amber-800">
+                RSVP window {windowStatus.rsvpStatus}
+              </p>
+            </div>
+          )}
+          {showPlayerSelect === 'checkin' && !windowStatus.checkinOpen && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+              <p className="text-sm text-amber-800">
+                Check-in window {windowStatus.checkinStatus}
+              </p>
+            </div>
+          )}
+          
+          <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+            {linkedPlayers.map(player => {
+              const playerRsvp = getPlayerRsvp(player.id);
+              const playerCheckIn = getPlayerCheckIn(player.id);
+              const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
+              const isAlreadyCheckedIn = !!playerCheckIn;
+              const isWindowClosed = (showPlayerSelect === 'rsvp' && !windowStatus.rsvpOpen) || 
+                                     (showPlayerSelect === 'checkin' && !windowStatus.checkinOpen);
+              const isDisabled = (showPlayerSelect === 'checkin' && isAlreadyCheckedIn) || isWindowClosed;
+              
+              return (
+                <Button
+                  key={player.id}
+                  variant="outline"
+                  className={`w-full justify-start gap-3 h-auto py-3 ${isDisabled ? 'opacity-50' : ''}`}
+                  disabled={isDisabled || proxyRsvpMutation.isPending || proxyCheckInMutation.isPending}
+                  onClick={() => {
+                    if (showPlayerSelect === 'rsvp' && pendingRsvpResponse) {
+                      proxyRsvpMutation.mutate({ 
+                        playerId: player.id, 
+                        playerName,
+                        response: pendingRsvpResponse 
+                      });
+                    } else if (showPlayerSelect === 'checkin') {
+                      handleProxyCheckIn(player.id, playerName);
+                    }
+                  }}
+                  data-testid={`select-player-${player.id}`}
+                >
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={player.profileImageUrl || undefined} />
+                    <AvatarFallback>
+                      {(player.firstName?.[0] || '') + (player.lastName?.[0] || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">{playerName}</p>
+                    <p className="text-xs text-gray-500">
+                      {isAlreadyCheckedIn 
+                        ? 'Already checked in'
+                        : playerRsvp?.response === 'attending' 
+                          ? 'RSVP: Attending' 
+                          : playerRsvp?.response === 'not_attending'
+                            ? 'RSVP: Not attending'
+                            : 'No RSVP yet'}
+                    </p>
+                  </div>
+                  {(proxyRsvpMutation.isPending || proxyCheckInMutation.isPending) && (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </Button>
+              );
+            })}
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-player-select">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

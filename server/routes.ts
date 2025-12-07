@@ -4444,6 +4444,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Coach roster check-in: Coaches can check in players from their roster
+  app.post('/api/attendances/coach', requireAuth, async (req: any, res) => {
+    try {
+      const { id: coachId, role } = req.user;
+      const { playerIds, eventId: rawEventId, action = 'checkin' } = req.body;
+      
+      // Normalize eventId to number
+      const eventId = typeof rawEventId === 'number' ? rawEventId : parseInt(String(rawEventId));
+      if (isNaN(eventId)) {
+        return res.status(400).json({ error: 'Invalid eventId' });
+      }
+      
+      // Validate required fields
+      if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0) {
+        return res.status(400).json({ error: 'Missing required field: playerIds (must be an array)' });
+      }
+      
+      // Validate coach/admin role
+      if (role !== 'coach' && role !== 'admin') {
+        return res.status(403).json({ 
+          error: 'Unauthorized', 
+          message: 'Only coaches or admins can perform roster check-ins' 
+        });
+      }
+      
+      // Get the event
+      const event = await storage.getEvent(String(eventId));
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Get existing attendances
+      const existingAttendances = await storage.getAttendancesByEvent(eventId);
+      const checkedInPlayerIds = new Set(existingAttendances.map((a: any) => a.userId));
+      
+      const results: { playerId: string; success: boolean; action: string; playerName?: string; error?: string }[] = [];
+      
+      for (const playerId of playerIds) {
+        try {
+          const player = await storage.getUser(playerId);
+          if (!player) {
+            results.push({ playerId, success: false, action: 'error', error: 'Player not found' });
+            continue;
+          }
+          
+          const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown Player';
+          
+          if (action === 'checkout') {
+            // Remove check-in (undo)
+            const attendance = existingAttendances.find((a: any) => a.userId === playerId);
+            if (attendance) {
+              await storage.deleteAttendance(attendance.id);
+              results.push({ playerId, success: true, action: 'checkout', playerName });
+            } else {
+              results.push({ playerId, success: false, action: 'checkout', playerName, error: 'Not checked in' });
+            }
+          } else {
+            // Check in
+            if (checkedInPlayerIds.has(playerId)) {
+              results.push({ playerId, success: false, action: 'checkin', playerName, error: 'Already checked in' });
+              continue;
+            }
+            
+            const attendanceData = {
+              userId: playerId,
+              eventId: eventId,
+              qrCodeData: `coach-${coachId}-${Date.now()}`,
+              checkedInByUserId: coachId,
+              checkInMethod: 'coach_roster',
+            };
+            
+            await storage.createAttendance(attendanceData);
+            checkedInPlayerIds.add(playerId);
+            
+            // Credit deduction and award tracking
+            try {
+              const enrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+              const enrollmentWithCredits = enrollments.find((e: any) => 
+                e.remainingCredits && e.remainingCredits > 0
+              );
+              
+              if (enrollmentWithCredits) {
+                await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
+                console.log(`💳 Coach check-in: Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for player ${playerId}`);
+              }
+            } catch (creditError: any) {
+              console.error('⚠️ Credit deduction failed (non-fatal):', creditError.message);
+            }
+            
+            // Award evaluation
+            try {
+              const user = await storage.getUser(playerId);
+              if (user) {
+                const trackingUpdates: any = {
+                  consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
+                };
+                
+                const eventType = event.eventType?.toLowerCase() || '';
+                if (eventType.includes('practice') || eventType.includes('skills session')) {
+                  trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
+                } else if (eventType.includes('game') || eventType.includes('tournament')) {
+                  trackingUpdates.totalGames = (user.totalGames || 0) + 1;
+                }
+                
+                await storage.updateUserAwardTracking(playerId, trackingUpdates);
+                await evaluateAwardsForUser(playerId, storage);
+              }
+            } catch (awardError: any) {
+              console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+            }
+            
+            results.push({ playerId, success: true, action: 'checkin', playerName });
+          }
+        } catch (playerError: any) {
+          results.push({ playerId, success: false, action: 'error', error: playerError.message });
+        }
+      }
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+      
+      res.json({ 
+        success: true, 
+        results,
+        summary: {
+          total: playerIds.length,
+          successful: successCount,
+          failed: failCount,
+        },
+        message: action === 'checkout' 
+          ? `Removed ${successCount} player(s) from attendance`
+          : `Checked in ${successCount} player(s)`
+      });
+    } catch (error: any) {
+      console.error('Coach roster check-in error:', error);
+      res.status(500).json({ 
+        error: 'Failed to process roster check-ins',
+        message: error.message 
+      });
+    }
+  });
+  
+  // Get event roster for coach check-in (players who should be at this event)
+  app.get('/api/events/:eventId/roster', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      const eventId = parseInt(req.params.eventId);
+      
+      if (isNaN(eventId)) {
+        return res.status(400).json({ error: 'Invalid eventId' });
+      }
+      
+      // Only coaches and admins can see the full roster
+      if (role !== 'coach' && role !== 'admin') {
+        return res.status(403).json({ 
+          error: 'Unauthorized', 
+          message: 'Only coaches or admins can access the event roster' 
+        });
+      }
+      
+      const event = await storage.getEvent(String(eventId));
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Get all players who should be at this event based on targets
+      const allPlayers: any[] = [];
+      const eventTargets = await storage.getEventTargetsByEventId(eventId);
+      
+      // Get players from targeted teams
+      for (const target of eventTargets) {
+        if (target.targetType === 'team' && target.targetId) {
+          const teamMembers = await storage.getTeamMembersByTeam(parseInt(target.targetId));
+          for (const member of teamMembers) {
+            if (member.role === 'player') {
+              const player = await storage.getUser(member.userId);
+              if (player && !allPlayers.find(p => p.id === player.id)) {
+                allPlayers.push(player);
+              }
+            }
+          }
+        }
+      }
+      
+      // Also get RSVP'd players
+      const rsvpResponses = await storage.getRsvpResponsesByEvent(eventId);
+      for (const rsvp of rsvpResponses) {
+        const player = await storage.getUser(rsvp.userId);
+        if (player && player.role === 'player' && !allPlayers.find(p => p.id === player.id)) {
+          allPlayers.push(player);
+        }
+      }
+      
+      // Get current attendance status
+      const attendances = await storage.getAttendancesByEvent(eventId);
+      const checkedInIds = new Set(attendances.map((a: any) => a.userId));
+      
+      // Build roster with status
+      const roster = allPlayers.map(player => ({
+        id: player.id,
+        firstName: player.firstName,
+        lastName: player.lastName,
+        profileImageUrl: player.profileImageUrl,
+        isCheckedIn: checkedInIds.has(player.id),
+        rsvpResponse: rsvpResponses.find((r: any) => r.userId === player.id)?.response || 'no_response',
+      }));
+      
+      res.json({
+        eventId,
+        roster,
+        checkedInCount: attendances.length,
+        totalPlayers: roster.length,
+      });
+    } catch (error: any) {
+      console.error('Event roster fetch error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch event roster',
+        message: error.message 
+      });
+    }
+  });
+  
   app.post('/api/attendance', requireAuth, async (req: any, res) => {
     try {
       const attendanceData = insertAttendanceSchema.parse(req.body);

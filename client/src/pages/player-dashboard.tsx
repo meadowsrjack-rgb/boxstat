@@ -1207,7 +1207,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       >
                         {displayProfile?.firstName || "Jack"} {displayProfile?.lastName || "Meadows"}
                         {editableProfile.jerseyNumber && (
-                          <span className="ml-2 text-2xl font-bold text-gray-600">#{editableProfile.jerseyNumber}</span>
+                          <span className="ml-2 text-gray-600 text-[36px] font-black">#{editableProfile.jerseyNumber}</span>
                         )}
                       </h1>
 

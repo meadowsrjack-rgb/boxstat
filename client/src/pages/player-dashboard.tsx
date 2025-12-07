@@ -1206,15 +1206,18 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         }}
                       >
                         {displayProfile?.firstName || "Jack"} {displayProfile?.lastName || "Meadows"}
+                        {editableProfile.jerseyNumber && (
+                          <span className="ml-2 text-2xl font-bold text-gray-600">#{editableProfile.jerseyNumber}</span>
+                        )}
                       </h1>
 
                       <div className="mt-1 text-sm font-medium text-gray-700">
-                        {editableProfile.position ? (
+                        {(editableProfile.height || editableProfile.position) ? (
                           <>
-                            {editableProfile.position} #{editableProfile.jerseyNumber || "—"}
+                            {editableProfile.height}{editableProfile.height && editableProfile.position && ' '}{editableProfile.position}
                           </>
                         ) : (
-                          <span className="text-gray-400">Position not set</span>
+                          <span className="text-gray-400">Height & position not set</span>
                         )}
                         {editableProfile.city && (
                           <div className="text-xs text-gray-600 mt-1">From {editableProfile.city}</div>
@@ -1229,57 +1232,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       )}
                     </div>
 
-                    {/* Info grid */}
-                    <div className="relative px-6 pb-8 bg-[#f9fafb]">
-                      <div className="grid grid-cols-3 gap-3">
-                        <motion.div
-                          initial={{ y: 12, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                            <span
-                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                              style={{ color: "#d82428" }}
-                            >
-                              <Ruler className="h-4 w-4" />
-                            </span>
-                            <span>HEIGHT</span>
-                          </div>
-                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {editableProfile.height || <span className="text-gray-400 text-sm">Not set</span>}
-                          </div>
-                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                        </motion.div>
-
-                        <motion.div
-                          initial={{ y: 12, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.05, duration: 0.35 }}
-                          className="group rounded-2xl bg-white/70 ring-1 ring-black/5 p-3 shadow-sm hover:shadow-md transition-all"
-                        >
-                          <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide text-gray-500">
-                            <span
-                              className="grid place-items-center h-6 w-6 rounded-lg bg-red-50 ring-1 ring-[rgba(216,36,40,0.20)]"
-                              style={{ color: "#d82428" }}
-                            >
-                              <Target className="h-4 w-4" />
-                            </span>
-                            <span>DIVISION</span>
-                          </div>
-                          <div className="mt-1.5 text-[15px] font-bold text-gray-900 tracking-tight">
-                            {userTeam?.divisionId ? (
-                              divisions.find((d: any) => d.id === userTeam.divisionId)?.name || userTeam.divisionId
-                            ) : (
-                              <span className="text-gray-400 text-sm">Not assigned</span>
-                            )}
-                          </div>
-                          <div className="mt-2 h-px bg-gradient-to-r from-transparent via-red-200/60 to-transparent" />
-                        </motion.div>
-
-                        </div>
-                    </div>
                 </motion.section>
               </div>
 

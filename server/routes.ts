@@ -39,7 +39,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients, users, teamMemberships, waivers, waiverVersions, waiverSignatures, productEnrollments, products } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products } from "@shared/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;

@@ -365,19 +365,19 @@ export default function PlayerCard({
               </motion.section>
             </div>
 
-            {/* Trophies & Badges */}
-            <div className="p-2">
-              <UypTrophyRings data={ringsData} size={109} stroke={8} />
-            </div>
-
             {/* Overall Skills Assessment */}
-            <div className="px-2 pb-6">
+            <div className="px-2 pt-2 pb-4">
               <div className="max-w-[340px] mx-auto">
                 <SkillBar 
                   label="OVR"  
                   value={overallSkillScore} 
                 />
               </div>
+            </div>
+
+            {/* Trophies & Badges */}
+            <div className="p-2 pb-6">
+              <UypTrophyRings data={ringsData} size={109} stroke={8} />
             </div>
 
             {/* Emergency Contact & Medical Information - Coach View Only */}

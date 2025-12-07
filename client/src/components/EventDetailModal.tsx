@@ -71,13 +71,36 @@ export default function EventDetailModal({
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
   
   const handleRequestLocation = useCallback(async () => {
+    console.log('🔍 Location request initiated');
     setLocationRequested(true);
+    
+    // Check if geolocation is supported
+    if (!navigator.geolocation) {
+      toast({
+        title: 'Not Supported',
+        description: 'Location services are not available in this browser.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     try {
+      toast({
+        title: 'Requesting Location...',
+        description: 'Please allow location access when prompted.',
+      });
+      
       const result = await getOnce();
       if (result) {
         toast({ 
           title: 'Location Enabled', 
           description: 'Your location has been detected for check-in.' 
+        });
+      } else {
+        toast({
+          title: 'Location Failed',
+          description: 'Could not get your location. Check browser permissions.',
+          variant: 'destructive'
         });
       }
     } catch (e) {

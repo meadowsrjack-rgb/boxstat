@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MapPin, Calendar, Clock, 
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle
 } from 'lucide-react';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
 import { formatDateTime, offsetFromStart } from '@/lib/time';
@@ -67,8 +67,15 @@ export default function EventDetailModal({
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [showQrCode, setShowQrCode] = useState(false);
   const [locationRequested, setLocationRequested] = useState(false);
+  const [showLocationHelp, setShowLocationHelp] = useState(false);
   
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
+  
+  // Detect device/browser type for tailored instructions
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+  const isChrome = /Chrome/.test(navigator.userAgent);
   
   const handleRequestLocation = useCallback(async () => {
     console.log('🔍 Location request initiated');
@@ -97,14 +104,12 @@ export default function EventDetailModal({
           description: 'Your location has been detected for check-in.' 
         });
       } else {
-        toast({
-          title: 'Location Failed',
-          description: 'Could not get your location. Check browser permissions.',
-          variant: 'destructive'
-        });
+        // Show help dialog when location fails
+        setShowLocationHelp(true);
       }
     } catch (e) {
       console.error('Location error:', e);
+      setShowLocationHelp(true);
     }
   }, [getOnce, toast]);
 
@@ -538,16 +543,27 @@ export default function EventDetailModal({
                     </div>
                   </div>
                   {(geoError || (!coords && !geoLoading)) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleRequestLocation}
-                      className="text-xs"
-                      data-testid="button-enable-location"
-                    >
-                      <Locate className="h-3 w-3 mr-1" />
-                      Enable
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleRequestLocation}
+                        className="text-xs"
+                        data-testid="button-enable-location"
+                      >
+                        <Locate className="h-3 w-3 mr-1" />
+                        Enable
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowLocationHelp(true)}
+                        className="text-xs px-2"
+                        data-testid="button-location-help"
+                      >
+                        <HelpCircle className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>
@@ -687,6 +703,123 @@ export default function EventDetailModal({
           setShowQrScanner(false);
         }}
       />
+
+      {/* Location Permission Help Dialog */}
+      <Dialog open={showLocationHelp} onOpenChange={setShowLocationHelp}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MapPinOff className="h-5 w-5 text-amber-500" />
+              Enable Location Access
+            </DialogTitle>
+            <DialogDescription>
+              Location permission is needed to check in at this event. Follow these steps to enable it:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {isIOS ? (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  On iPhone/iPad:
+                </h4>
+                <ol className="text-sm text-gray-600 space-y-2 ml-6 list-decimal">
+                  <li>Open <strong>Settings</strong> on your device</li>
+                  <li>Scroll down and tap <strong>Privacy & Security</strong></li>
+                  <li>Tap <strong>Location Services</strong></li>
+                  <li>Make sure Location Services is <strong>ON</strong></li>
+                  <li>Scroll down and find your browser (Safari/Chrome)</li>
+                  <li>Tap it and select <strong>"While Using the App"</strong></li>
+                  <li>Return to this app and tap <strong>Try Again</strong></li>
+                </ol>
+              </div>
+            ) : isAndroid ? (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  On Android:
+                </h4>
+                <ol className="text-sm text-gray-600 space-y-2 ml-6 list-decimal">
+                  <li>Tap the <strong>lock icon</strong> in the address bar</li>
+                  <li>Tap <strong>Permissions</strong> or <strong>Site settings</strong></li>
+                  <li>Find <strong>Location</strong> and set to <strong>Allow</strong></li>
+                  <li>Or go to <strong>Settings → Apps → Chrome → Permissions → Location</strong></li>
+                  <li>Return here and tap <strong>Try Again</strong></li>
+                </ol>
+              </div>
+            ) : isSafari ? (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  In Safari:
+                </h4>
+                <ol className="text-sm text-gray-600 space-y-2 ml-6 list-decimal">
+                  <li>Click <strong>Safari</strong> in the menu bar</li>
+                  <li>Select <strong>Settings for This Website</strong></li>
+                  <li>Find <strong>Location</strong> and select <strong>Allow</strong></li>
+                  <li>Or click the <strong>Aa</strong> icon in the address bar</li>
+                  <li>Tap <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong></li>
+                </ol>
+              </div>
+            ) : isChrome ? (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  In Chrome:
+                </h4>
+                <ol className="text-sm text-gray-600 space-y-2 ml-6 list-decimal">
+                  <li>Click the <strong>lock/info icon</strong> in the address bar (left of URL)</li>
+                  <li>Click <strong>Site settings</strong></li>
+                  <li>Find <strong>Location</strong> and change to <strong>Allow</strong></li>
+                  <li>Close settings and <strong>refresh the page</strong></li>
+                  <li>Return here and tap <strong>Try Again</strong></li>
+                </ol>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  In Your Browser:
+                </h4>
+                <ol className="text-sm text-gray-600 space-y-2 ml-6 list-decimal">
+                  <li>Click the <strong>lock or info icon</strong> in the address bar</li>
+                  <li>Look for <strong>Site settings</strong> or <strong>Permissions</strong></li>
+                  <li>Find <strong>Location</strong> and set to <strong>Allow</strong></li>
+                  <li>Refresh the page and try again</li>
+                </ol>
+              </div>
+            )}
+            
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Alternative:</strong> You can also check in by scanning the QR code shown by your coach!
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setShowLocationHelp(false)}
+            >
+              Use QR Instead
+            </Button>
+            <Button 
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                setShowLocationHelp(false);
+                setLocationRequested(false);
+                setTimeout(() => handleRequestLocation(), 500);
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

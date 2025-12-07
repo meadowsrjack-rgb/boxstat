@@ -1568,7 +1568,7 @@ function SkillBar({
     >
       <div className="flex justify-between text-sm">
         <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-red-600 font-semibold">{value}%</span>
+        <span className="text-red-600 font-semibold">{value}</span>
       </div>
 
       {/* Wider track to visually line up with trophy rings */}

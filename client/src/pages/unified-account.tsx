@@ -975,7 +975,9 @@ export default function UnifiedAccount() {
                         className="cursor-pointer hover:border-red-500 transition-colors" 
                         data-testid={`event-card-${event.id}`}
                         onClick={() => {
-                          setSelectedEvent(event as Event);
+                          // Create a clean copy to avoid cyclic structure issues from React Query cache
+                          const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
+                          setSelectedEvent(cleanEvent);
                           setSelectedChildForModal(selectedChildId);
                           setEventDetailOpen(true);
                         }}
@@ -1064,7 +1066,9 @@ export default function UnifiedAccount() {
               selectedChildPerEvent={selectedChildPerEvent}
               setSelectedChildPerEvent={setSelectedChildPerEvent}
               onEventClick={(event, playerId) => {
-                setSelectedEvent(event as Event);
+                // Create a clean copy to avoid cyclic structure issues from React Query cache
+                const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
+                setSelectedEvent(cleanEvent);
                 setSelectedChildForModal(playerId);
                 setEventDetailOpen(true);
               }}

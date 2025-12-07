@@ -3764,16 +3764,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const assignTo = event.assignTo || {} as any;
     const visibility = event.visibility || {} as any;
     
+    // Build a set of user IDs who are in targeted programs (via team_memberships or product_enrollments)
+    let programMemberUserIds = new Set<string>();
+    const targetedPrograms = [...(assignTo.programs || []), ...(visibility.programs || [])];
+    
+    if (targetedPrograms.length > 0) {
+      // Get all teams that belong to the targeted programs
+      const allTeams = await storage.getTeamsByOrganization(organizationId);
+      const programTeamIds = allTeams
+        .filter((t: any) => t.programId && targetedPrograms.includes(String(t.programId)))
+        .map((t: any) => t.id);
+      
+      // Get all users who are members of teams in the targeted programs
+      // Using getUsersByTeam for each team to get the members
+      for (const teamId of programTeamIds) {
+        const teamUsers = await storage.getUsersByTeam(String(teamId));
+        teamUsers.forEach((user: any) => {
+          programMemberUserIds.add(user.id);
+        });
+      }
+      
+      // Also check product_enrollments for direct program enrollment
+      const enrollments = await storage.getProductEnrollmentsByOrganization(organizationId);
+      enrollments.forEach((e: any) => {
+        if (e.status === 'active' && targetedPrograms.includes(String(e.programId))) {
+          if (e.profileId) {
+            programMemberUserIds.add(e.profileId);
+          }
+        }
+      });
+    }
+    
     // Filter users who are invited to the event
     let invitedUsers = allUsers.filter((user: any) => {
       // If event has no targeting, include all roles that are in participationRoles (or all players by default)
-      if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && 
-          !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles) {
+      if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && !assignTo.programs &&
+          !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles && !visibility.programs) {
         // Default: show all players if no targeting specified
         const participationRoles = event.participationRoles || ['player'];
         return participationRoles.includes(user.role);
       }
       
+      // When programs are targeted, ONLY include users who are members of those programs
+      // This is a strict filter - programs take precedence over roles
+      if (targetedPrograms.length > 0) {
+        // User must be a member of one of the targeted programs
+        if (!programMemberUserIds.has(user.id)) {
+          return false;
+        }
+        // If they're in the program, include them (don't need to check other criteria)
+        return true;
+      }
+      
+      // For non-program-based targeting, use OR logic for other filters
       // Check user-specific assignment
       if (assignTo.users?.includes(user.id)) {
         return true;

@@ -249,6 +249,7 @@ export interface IStorage {
   deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined>;
   getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
   getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
+  getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]>;
 }
 
 // =============================================
@@ -1922,6 +1923,11 @@ class MemStorage implements IStorage {
     }
     
     return result;
+  }
+  
+  async getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]> {
+    // MemStorage doesn't track product enrollments - return empty
+    return [];
   }
 }
 
@@ -4263,6 +4269,12 @@ class DatabaseStorage implements IStorage {
     }
     
     return result;
+  }
+  
+  async getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]> {
+    const results = await db.select().from(schema.productEnrollments)
+      .where(eq(schema.productEnrollments.organizationId, organizationId));
+    return results as ProductEnrollment[];
   }
 
   // Helper mapping functions

@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MapPin, Calendar, Clock, 
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
 import { formatDateTime, offsetFromStart } from '@/lib/time';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -68,8 +69,10 @@ export default function EventDetailModal({
   const [showQrCode, setShowQrCode] = useState(false);
   const [locationRequested, setLocationRequested] = useState(false);
   const [showLocationHelp, setShowLocationHelp] = useState(false);
+  const [selectedPlayerForProxy, setSelectedPlayerForProxy] = useState<string | null>(null);
   
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
+  const isParent = userRole === 'parent';
   
   // Detect device/browser type for tailored instructions
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -189,7 +192,9 @@ export default function EventDetailModal({
     enabled: open && !!event,
   });
 
-  const { data: users = [] } = useQuery<UserType[]>({
+  // For admins/coaches, response is grouped { players, parents, coaches, admins, all }
+  // For players/parents, response is a flat array filtered by role (server uses authenticated role)
+  const { data: participantsData } = useQuery<UserType[] | { players: UserType[]; parents: UserType[]; coaches: UserType[]; admins: UserType[]; all: UserType[] }>({
     queryKey: ['/api/events', event?.id, 'participants'],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
@@ -203,6 +208,34 @@ export default function EventDetailModal({
       return response.json();
     },
     enabled: open && !!event,
+  });
+
+  // Extract users based on response format
+  const users: UserType[] = useMemo(() => {
+    if (!participantsData) return [];
+    // If it's a grouped response (for admin/coach)
+    if ('all' in participantsData) {
+      return participantsData.all;
+    }
+    // Flat array for player/parent
+    return participantsData as UserType[];
+  }, [participantsData]);
+
+  // For parents: fetch linked players
+  const { data: linkedPlayers = [] } = useQuery<UserType[]>({
+    queryKey: ['/api/parent/linked-players'],
+    queryFn: async () => {
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch('/api/parent/linked-players', {
+        headers,
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch linked players');
+      return response.json();
+    },
+    enabled: open && isParent,
   });
 
   const rsvpMutation = useMutation({
@@ -250,6 +283,36 @@ export default function EventDetailModal({
       toast({ 
         title: 'Check-In Failed', 
         description: error?.message || 'Failed to check in. Please try again.',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Proxy check-in mutation for parents checking in their players
+  const proxyCheckInMutation = useMutation({
+    mutationFn: (data: { playerId: string; latitude?: number; longitude?: number }) => {
+      return apiRequest('POST', '/api/attendances/proxy', {
+        eventId: event?.id,
+        playerId: data.playerId,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      });
+    },
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({ 
+        title: 'Player Checked In', 
+        description: response?.message || 'Your player has been checked in successfully!' 
+      });
+      setSelectedPlayerForProxy(null);
+    },
+    onError: (error: any) => {
+      console.error('Proxy check-in error:', error);
+      toast({ 
+        title: 'Check-In Failed', 
+        description: error?.message || 'Failed to check in player. Please try again.',
         variant: 'destructive'
       });
     },
@@ -383,6 +446,47 @@ export default function EventDetailModal({
         description: 'Failed to get your location. Please try QR code check-in.',
         variant: 'destructive',
       });
+    } finally {
+      setIsCheckingLocation(false);
+    }
+  };
+
+  // Handle proxy check-in for parents checking in their players
+  const handleProxyCheckIn = async (playerId: string) => {
+    if (!playerId) {
+      toast({
+        title: 'No Player Selected',
+        description: 'Please select a player to check in.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if player is already checked in
+    const playerAlreadyCheckedIn = attendances.find(a => a.userId === playerId);
+    if (playerAlreadyCheckedIn) {
+      toast({
+        title: 'Already Checked In',
+        description: 'This player has already been checked in.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCheckingLocation(true);
+    try {
+      // Get parent's location for the proxy check-in
+      const userLocation = await getOnce();
+      
+      proxyCheckInMutation.mutate({
+        playerId,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lng,
+      });
+    } catch (error) {
+      console.error('Proxy check-in location error:', error);
+      // Still attempt proxy check-in without location
+      proxyCheckInMutation.mutate({ playerId });
     } finally {
       setIsCheckingLocation(false);
     }
@@ -589,7 +693,7 @@ export default function EventDetailModal({
               />
             </div>
 
-            {!userCheckIn && !isAdminOrCoach && (
+            {!userCheckIn && !isAdminOrCoach && userRole === 'player' && (
               <Button 
                 variant="outline" 
                 className="w-full"
@@ -599,6 +703,69 @@ export default function EventDetailModal({
                 <QrCode className="h-4 w-4 mr-2" />
                 Scan QR Code to Check In
               </Button>
+            )}
+
+            {/* Parent Proxy Check-In Section */}
+            {isParent && linkedPlayers.length > 0 && (
+              <Card className="p-4 bg-green-50 border-green-200" data-testid="card-parent-proxy-checkin">
+                <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
+                  Check In Your Player
+                </h4>
+                <p className="text-sm text-green-700 mb-3">
+                  If your child doesn't have a phone, you can check them in.
+                </p>
+                <div className="space-y-3">
+                  <Select 
+                    value={selectedPlayerForProxy || ''} 
+                    onValueChange={setSelectedPlayerForProxy}
+                  >
+                    <SelectTrigger className="w-full" data-testid="select-player-for-proxy">
+                      <SelectValue placeholder="Select a player to check in" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {linkedPlayers.map(player => {
+                        const isCheckedIn = attendances.find(a => a.userId === player.id);
+                        return (
+                          <SelectItem 
+                            key={player.id} 
+                            value={player.id}
+                            disabled={!!isCheckedIn}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{player.firstName} {player.lastName}</span>
+                              {isCheckedIn && (
+                                <Badge className="bg-green-100 text-green-800 text-xs ml-2">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Checked In
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700"
+                    disabled={!selectedPlayerForProxy || proxyCheckInMutation.isPending || isCheckingLocation}
+                    onClick={() => selectedPlayerForProxy && handleProxyCheckIn(selectedPlayerForProxy)}
+                    data-testid="button-proxy-checkin"
+                  >
+                    {proxyCheckInMutation.isPending || isCheckingLocation ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Checking In...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Check In Player
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </Card>
             )}
 
             {isAdminOrCoach && (
@@ -634,7 +801,12 @@ export default function EventDetailModal({
               <Card className="p-4" data-testid="card-participant-list">
                 <h4 className="font-semibold mb-3 flex items-center gap-2 text-gray-900">
                   <Users className="h-4 w-4 text-gray-500" />
-                  Invited Players ({users.length})
+                  {userRole === 'player' 
+                    ? `Other Players (${users.filter(u => u.role === 'player').length})`
+                    : userRole === 'parent'
+                      ? `Participants (${users.length})`
+                      : `All Participants (${users.length})`
+                  }
                 </h4>
                 
                 <div className="space-y-2 max-h-60 overflow-y-auto">

@@ -68,6 +68,7 @@ export interface IStorage {
   getUsersByTeam(teamId: string): Promise<User[]>;
   getUsersByRole(organizationId: string, role: string): Promise<User[]>;
   getAccountProfiles(accountId: string): Promise<User[]>;
+  getPlayersByParent(parentId: string): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
@@ -834,6 +835,13 @@ class MemStorage implements IStorage {
       user => user.accountHolderId === accountId
     );
     return parent ? [parent, ...children] : children;
+  }
+  
+  async getPlayersByParent(parentId: string): Promise<User[]> {
+    // Get all player profiles where accountHolderId matches the parent
+    return Array.from(this.users.values()).filter(
+      user => user.accountHolderId === parentId && user.role === 'player'
+    );
   }
   
   async createUser(user: InsertUser): Promise<User> {
@@ -2468,6 +2476,19 @@ class DatabaseStorage implements IStorage {
     const children = childResults.map(user => this.mapDbUserToUser(user));
     
     return parent ? [parent, ...children] : children;
+  }
+
+  async getPlayersByParent(parentId: string): Promise<User[]> {
+    // Get all player profiles where parentId (accountHolderId) matches the parent
+    const playerResults = await db.select().from(schema.users).where(
+      and(
+        eq(schema.users.parentId, parentId),
+        eq(schema.users.role, 'player'),
+        eq(schema.users.isActive, true)
+      )
+    );
+    
+    return playerResults.map(user => this.mapDbUserToUser(user));
   }
 
   async createUser(user: InsertUser): Promise<User> {

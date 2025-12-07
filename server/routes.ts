@@ -3745,13 +3745,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.get('/api/events/:eventId/participants', requireAuth, async (req: any, res) => {
-    const { role, organizationId } = req.user;
+    const { role: userRole, organizationId, id: userId } = req.user;
     const { eventId } = req.params;
     
-    // Only admins and coaches can view participant lists
-    if (role !== 'admin' && role !== 'coach') {
-      return res.status(403).json({ message: 'Only admins and coaches can view participant lists' });
-    }
+    // SECURITY: Always use the authenticated user's actual role - no client override allowed
+    // The viewerRole query param is ignored for security reasons
     
     // Get the event to check its assignTo/visibility configuration
     const event = await storage.getEvent(eventId);
@@ -3763,17 +3761,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const allUsers = await storage.getUsersByOrganization(organizationId);
     
     // Filter users based on event visibility configuration
-    const assignTo = event.assignTo || {};
-    const visibility = event.visibility || {};
-    
-    // If event has no targeting, show all users
-    if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && 
-        !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles) {
-      return res.json(allUsers);
-    }
+    const assignTo = event.assignTo || {} as any;
+    const visibility = event.visibility || {} as any;
     
     // Filter users who are invited to the event
-    const invitedUsers = allUsers.filter(user => {
+    let invitedUsers = allUsers.filter((user: any) => {
+      // If event has no targeting, include all roles that are in participationRoles (or all players by default)
+      if (!assignTo.users && !assignTo.teams && !assignTo.divisions && !assignTo.roles && 
+          !visibility.users && !visibility.teams && !visibility.divisions && !visibility.roles) {
+        // Default: show all players if no targeting specified
+        const participationRoles = event.participationRoles || ['player'];
+        return participationRoles.includes(user.role);
+      }
+      
       // Check user-specific assignment
       if (assignTo.users?.includes(user.id)) {
         return true;
@@ -3796,6 +3796,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       return false;
     });
+    
+    // Role-based participant filtering based on authenticated user's ACTUAL role (not client-provided)
+    if (userRole === 'player') {
+      // Players can only see other players in the participant list
+      invitedUsers = invitedUsers.filter((user: any) => user.role === 'player');
+    } else if (userRole === 'parent') {
+      // Parents see players (their children and others) and other parents
+      // Filter out admins and coaches from parent view
+      invitedUsers = invitedUsers.filter((user: any) => 
+        user.role === 'player' || user.role === 'parent'
+      );
+    }
+    // Admins and coaches see everyone
+    
+    // Return structured response with role groupings for admin/coach views
+    if (userRole === 'admin' || userRole === 'coach') {
+      const grouped = {
+        players: invitedUsers.filter((u: any) => u.role === 'player'),
+        parents: invitedUsers.filter((u: any) => u.role === 'parent'),
+        coaches: invitedUsers.filter((u: any) => u.role === 'coach'),
+        admins: invitedUsers.filter((u: any) => u.role === 'admin'),
+        all: invitedUsers,
+      };
+      return res.json(grouped);
+    }
     
     res.json(invitedUsers);
   });
@@ -4081,6 +4106,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/attendance/user/:userId', requireAuth, async (req: any, res) => {
     const attendances = await storage.getAttendancesByUser(req.params.userId);
     res.json(attendances);
+  });
+  
+  // Proxy check-in: Parents can check in their linked players
+  app.post('/api/attendances/proxy', requireAuth, async (req: any, res) => {
+    try {
+      const { id: parentId, role, organizationId } = req.user;
+      const { playerId, eventId, latitude, longitude } = req.body;
+      
+      // Validate parent role
+      if (role !== 'parent' && role !== 'admin') {
+        return res.status(403).json({ 
+          error: 'Unauthorized', 
+          message: 'Only parents or admins can perform proxy check-ins' 
+        });
+      }
+      
+      // Get the event
+      const event = await storage.getEvent(eventId);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Check if proxy check-ins are allowed for this event
+      const proxyRoles = event.proxyCheckinRoles || ['parent']; // Default: parents can proxy
+      if (!proxyRoles.includes(role) && role !== 'admin') {
+        return res.status(403).json({
+          error: 'Proxy check-in not allowed',
+          message: 'This event does not allow proxy check-ins from your role.'
+        });
+      }
+      
+      // Get the player to verify they exist and are a player
+      const player = await storage.getUser(playerId);
+      if (!player || player.role !== 'player') {
+        return res.status(400).json({
+          error: 'Invalid player',
+          message: 'The specified player was not found.'
+        });
+      }
+      
+      // Verify parent-child relationship (skip for admins)
+      if (role === 'parent') {
+        // Check if player's accountHolderId matches parent's ID
+        if (player.accountHolderId !== parentId) {
+          return res.status(403).json({
+            error: 'Unauthorized',
+            message: 'You can only check in players linked to your account.'
+          });
+        }
+      }
+      
+      // Check if player is already checked in
+      const existingAttendances = await storage.getAttendancesByEvent(eventId);
+      const alreadyCheckedIn = existingAttendances.some((a: any) => a.userId === playerId);
+      if (alreadyCheckedIn) {
+        return res.status(400).json({
+          error: 'Already checked in',
+          message: 'This player has already been checked in.'
+        });
+      }
+      
+      // Location check for proxy check-ins (if event has coordinates)
+      if (event.latitude != null && event.longitude != null && latitude != null && longitude != null) {
+        const { distanceMeters } = await import('./utils/geo.js');
+        const distance = distanceMeters(
+          { lat: latitude, lng: longitude },
+          { lat: event.latitude, lng: event.longitude }
+        );
+        const radiusMeters = event.checkInRadius ?? 200;
+        
+        if (distance > radiusMeters) {
+          return res.status(403).json({
+            error: 'Too far away',
+            message: `You must be within ${radiusMeters}m of the event to check in your player. You are ${Math.round(distance)}m away.`,
+            distance: Math.round(distance),
+            required: radiusMeters,
+          });
+        }
+      }
+      
+      // Create the attendance record with proxy tracking
+      const attendanceData = {
+        userId: playerId,
+        eventId: parseInt(eventId),
+        qrCodeData: `proxy-${parentId}-${Date.now()}`,
+        latitude: latitude?.toString(),
+        longitude: longitude?.toString(),
+        checkedInByUserId: parentId,
+        checkInMethod: 'proxy',
+      };
+      
+      const attendance = await storage.createAttendance(attendanceData);
+      
+      // Credit deduction and award tracking (same as regular check-in)
+      try {
+        const enrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+        const enrollmentWithCredits = enrollments.find((e: any) => 
+          e.remainingCredits && e.remainingCredits > 0
+        );
+        
+        if (enrollmentWithCredits) {
+          await storage.deductEnrollmentCredit(enrollmentWithCredits.id);
+          console.log(`💳 Proxy check-in: Deducted 1 credit from enrollment ${enrollmentWithCredits.id} for player ${playerId}`);
+        }
+      } catch (creditError: any) {
+        console.error('⚠️ Credit deduction failed (non-fatal):', creditError.message);
+      }
+      
+      // Award evaluation
+      try {
+        const eventData = await storage.getEvent(eventId);
+        const user = await storage.getUser(playerId);
+        
+        if (eventData && user) {
+          const trackingUpdates: any = {
+            consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
+          };
+          
+          const eventType = eventData.eventType?.toLowerCase() || '';
+          if (eventType.includes('practice') || eventType.includes('skills session')) {
+            trackingUpdates.totalPractices = (user.totalPractices || 0) + 1;
+          } else if (eventType.includes('game') || eventType.includes('tournament')) {
+            trackingUpdates.totalGames = (user.totalGames || 0) + 1;
+          }
+          
+          await storage.updateUserAwardTracking(playerId, trackingUpdates);
+          await evaluateAwardsForUser(playerId, storage);
+          console.log(`✅ Awards evaluated for player ${playerId} after proxy check-in`);
+        }
+      } catch (awardError: any) {
+        console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
+      res.json({ 
+        success: true, 
+        attendance,
+        message: `${player.firstName} ${player.lastName} has been checked in.`
+      });
+    } catch (error: any) {
+      console.error('Proxy check-in error:', error);
+      res.status(500).json({ 
+        error: 'Failed to check in player',
+        message: error.message 
+      });
+    }
+  });
+  
+  // Get linked players for parent (for proxy check-in UI)
+  app.get('/api/parent/linked-players', requireAuth, async (req: any, res) => {
+    try {
+      const { id: parentId, role } = req.user;
+      
+      if (role !== 'parent' && role !== 'admin') {
+        return res.status(403).json({ message: 'Only parents can access linked players' });
+      }
+      
+      // Get all players linked to this parent
+      const linkedPlayers = await storage.getPlayersByParent(parentId);
+      res.json(linkedPlayers);
+    } catch (error: any) {
+      console.error('Error fetching linked players:', error);
+      res.status(500).json({ error: 'Failed to fetch linked players' });
+    }
   });
   
   app.post('/api/attendance', requireAuth, async (req: any, res) => {

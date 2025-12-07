@@ -1705,9 +1705,11 @@ interface ProgramMembership {
 function ProgramCard({ 
   membership, 
   displayProfileId,
+  onPlayerSelect,
 }: { 
   membership: ProgramMembership;
   displayProfileId: string | undefined;
+  onPlayerSelect: (playerId: string) => void;
 }) {
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
   
@@ -1764,6 +1766,7 @@ function ProgramCard({
                 displayProfileId={displayProfileId}
                 isExpanded={expandedTeamId === team.teamId}
                 onToggle={() => setExpandedTeamId(expandedTeamId === team.teamId ? null : team.teamId)}
+                onPlayerSelect={onPlayerSelect}
                 subgroupColor={getSubgroupColor()}
               />
             ))}
@@ -1807,6 +1810,7 @@ function SubgroupCard({
   displayProfileId,
   isExpanded,
   onToggle,
+  onPlayerSelect,
   subgroupColor,
 }: {
   team: ProgramMembership['teams'][0];
@@ -1814,9 +1818,9 @@ function SubgroupCard({
   displayProfileId: string | undefined;
   isExpanded: boolean;
   onToggle: () => void;
+  onPlayerSelect: (playerId: string) => void;
   subgroupColor: string;
 }) {
-  const [, navigate] = useLocation();
   // Visibility checks from program social settings
   const showRoster = membership.rosterVisibility !== 'hidden';
   const showChat = membership.chatMode !== 'disabled';
@@ -1898,7 +1902,7 @@ function SubgroupCard({
                         className={`flex items-center gap-2 p-2 rounded ${
                           member.id ? 'hover:bg-gray-50 cursor-pointer' : 'opacity-60'
                         }`}
-                        onClick={() => member.id && navigate(`/players/${member.id}`)}
+                        onClick={() => member.id && onPlayerSelect(member.id)}
                         data-testid={`roster-member-${memberKey}`}
                       >
                         <Avatar className="h-8 w-8">
@@ -1951,6 +1955,7 @@ function TeamBlock() {
   const { user } = useAuth();
   const currentUser = user as UserType;
   const { currentChildProfile } = useAppMode();
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   
   // Fetch active profile from localStorage (same as main dashboard)
   const localSelectedPlayerId = typeof window !== "undefined" ? localStorage.getItem("selectedPlayerId") : null;
@@ -2000,6 +2005,7 @@ function TeamBlock() {
                 key={membership.enrollmentId}
                 membership={membership}
                 displayProfileId={displayProfile?.id}
+                onPlayerSelect={setSelectedPlayerId}
               />
             ))}
             
@@ -2029,6 +2035,16 @@ function TeamBlock() {
           </div>
         )}
       </div>
+
+      {/* Player Card Modal */}
+      {selectedPlayerId && (
+        <PlayerCard
+          playerId={selectedPlayerId}
+          isOpen={!!selectedPlayerId}
+          onClose={() => setSelectedPlayerId(null)}
+          isCoach={currentUser.role === 'coach'}
+        />
+      )}
     </div>
   );
 }

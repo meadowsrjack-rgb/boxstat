@@ -2571,23 +2571,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     console.log(`[PATCH /api/users/${userId}] Update data:`, JSON.stringify(updateData, null, 2));
     
-    // If updating a player's teamId, also update team_memberships
-    if (updateData.teamId !== undefined) {
+    // If updating a player's team(s), also update team_memberships and auto-enroll in programs
+    // Handle both teamId (singular) and teamIds (array) for players
+    if (updateData.teamId !== undefined || updateData.teamIds !== undefined) {
       const user = await storage.getUser(userId);
       if (user && (user.role === 'player' || user.role === 'parent')) {
-        // Coerce teamId to number (Select components may send strings)
-        const newTeamId = updateData.teamId ? parseInt(String(updateData.teamId), 10) : null;
-        const oldTeamId = user.teamId ? parseInt(String(user.teamId), 10) : null;
-        
-        // Update the updateData to use the normalized number
-        if (newTeamId !== null) {
-          updateData.teamId = newTeamId;
+        // Get the list of team IDs to process - prefer teamIds array, fall back to teamId
+        let newTeamIds: number[] = [];
+        if (updateData.teamIds && Array.isArray(updateData.teamIds)) {
+          newTeamIds = updateData.teamIds.map((id: any) => parseInt(String(id), 10)).filter((id: number) => !isNaN(id));
+        } else if (updateData.teamId) {
+          const parsed = parseInt(String(updateData.teamId), 10);
+          if (!isNaN(parsed)) newTeamIds = [parsed];
         }
         
-        // Mark old team membership as inactive if changing teams
-        if (oldTeamId && oldTeamId !== newTeamId) {
-          console.log(`[PATCH] Marking player ${userId} as inactive on old team ${oldTeamId}`);
-          try {
+        // Get current team memberships for this player
+        const currentMemberships = await db.select({ teamId: teamMemberships.teamId })
+          .from(teamMemberships)
+          .where(
+            and(
+              eq(teamMemberships.profileId, userId),
+              eq(teamMemberships.status, 'active')
+            )
+          );
+        const currentTeamIds = currentMemberships.map(m => m.teamId);
+        
+        console.log(`[PATCH] Player ${userId}: current teams=${JSON.stringify(currentTeamIds)}, new teams=${JSON.stringify(newTeamIds)}`);
+        
+        // Mark removed teams as inactive
+        for (const oldTeamId of currentTeamIds) {
+          if (!newTeamIds.includes(oldTeamId)) {
+            console.log(`[PATCH] Marking player ${userId} as inactive on team ${oldTeamId}`);
             await db.update(teamMemberships)
               .set({ status: 'inactive' })
               .where(
@@ -2596,16 +2610,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   eq(teamMemberships.profileId, userId)
                 )
               );
-          } catch (err) {
-            console.log(`[PATCH] No existing membership to deactivate for team ${oldTeamId}`);
           }
         }
         
-        // Add to new team if specified - verify team exists first
-        if (newTeamId) {
-          const teamExists = await storage.getTeam(String(newTeamId));
-          if (teamExists) {
-            console.log(`[PATCH] Adding player ${userId} to team ${newTeamId}`);
+        // Add to new teams and auto-enroll in programs
+        for (const newTeamId of newTeamIds) {
+          const team = await storage.getTeam(String(newTeamId));
+          if (team) {
+            console.log(`[PATCH] Adding player ${userId} to team ${newTeamId} (${team.name})`);
             try {
               await db.insert(teamMemberships)
                 .values({
@@ -2618,13 +2630,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   target: [teamMemberships.teamId, teamMemberships.profileId],
                   set: { status: 'active', role: 'player' },
                 });
+              
+              // Auto-create product enrollment if team has a programId
+              if (team.programId) {
+                console.log(`[PATCH] Team ${team.name} has programId ${team.programId}, auto-creating enrollment for player ${userId}`);
+                const accountHolderId = user.accountHolderId || userId;
+                
+                try {
+                  await db.insert(productEnrollments)
+                    .values({
+                      organizationId: organizationId,
+                      programId: team.programId,
+                      accountHolderId: accountHolderId,
+                      profileId: userId,
+                      status: 'active',
+                      source: 'admin',
+                    })
+                    .onConflictDoNothing(); // Don't overwrite existing enrollments
+                  console.log(`[PATCH] Created product enrollment for player ${userId} in program ${team.programId}`);
+                } catch (enrollErr) {
+                  console.error(`[PATCH] Failed to create product enrollment:`, enrollErr);
+                }
+              }
             } catch (err) {
               console.error(`[PATCH] Failed to add player to team_memberships:`, err);
             }
           } else {
-            console.warn(`[PATCH] Team ${newTeamId} does not exist, skipping team_memberships insert`);
+            console.warn(`[PATCH] Team ${newTeamId} does not exist, skipping`);
           }
         }
+        
+        // Update users.teamId to the first valid team (for backward compatibility)
+        if (newTeamIds.length > 0) {
+          updateData.teamId = newTeamIds[0];
+        } else {
+          updateData.teamId = null;
+        }
+        // Remove teamIds from updateData to avoid updating a non-existent column
+        delete updateData.teamIds;
       }
     }
     

@@ -69,7 +69,6 @@ export default function EventDetailModal({
   const [showQrCode, setShowQrCode] = useState(false);
   const [locationRequested, setLocationRequested] = useState(false);
   const [showLocationHelp, setShowLocationHelp] = useState(false);
-  const [selectedPlayerForProxy, setSelectedPlayerForProxy] = useState<string | null>(null);
   
   const isAdminOrCoach = userRole === 'admin' || userRole === 'coach';
   const isParent = userRole === 'parent';
@@ -302,17 +301,45 @@ export default function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/attendances', event?.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/attendances'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
       toast({ 
         title: 'Player Checked In', 
         description: response?.message || 'Your player has been checked in successfully!' 
       });
-      setSelectedPlayerForProxy(null);
     },
     onError: (error: any) => {
       console.error('Proxy check-in error:', error);
       toast({ 
         title: 'Check-In Failed', 
         description: error?.message || 'Failed to check in player. Please try again.',
+        variant: 'destructive'
+      });
+    },
+  });
+
+  // Proxy RSVP mutation for parents RSVPing on behalf of their players
+  const proxyRsvpMutation = useMutation({
+    mutationFn: (data: { playerId: string; response: string }) => {
+      return apiRequest('POST', '/api/rsvp/proxy', {
+        eventId: event?.id,
+        playerId: data.playerId,
+        response: data.response,
+      });
+    },
+    onSuccess: (response: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({ 
+        title: 'RSVP Updated', 
+        description: response?.message || 'RSVP has been updated successfully!' 
+      });
+    },
+    onError: (error: any) => {
+      console.error('Proxy RSVP error:', error);
+      toast({ 
+        title: 'RSVP Failed', 
+        description: error?.message || 'Failed to update RSVP. Please try again.',
         variant: 'destructive'
       });
     },
@@ -384,6 +411,35 @@ export default function EventDetailModal({
       total: totalInvited,
     };
   }, [attendances, users]);
+
+  // Window status for proxy actions
+  const windowStatus = useMemo(() => {
+    const now = new Date();
+    return {
+      rsvpOpen: now >= eventWindows.rsvpOpen && now <= eventWindows.rsvpClose,
+      rsvpStatus: now < eventWindows.rsvpOpen 
+        ? `Opens ${eventWindows.rsvpOpen.toLocaleDateString()} at ${eventWindows.rsvpOpen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : now > eventWindows.rsvpClose
+          ? 'Closed'
+          : 'Open',
+      checkinOpen: now >= eventWindows.checkinOpen && now <= eventWindows.checkinClose,
+      checkinStatus: now < eventWindows.checkinOpen
+        ? `Opens ${eventWindows.checkinOpen.toLocaleDateString()} at ${eventWindows.checkinOpen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : now > eventWindows.checkinClose
+          ? 'Closed'
+          : 'Open',
+    };
+  }, [eventWindows]);
+
+  // Get RSVP status for each linked player
+  const getPlayerRsvp = (playerId: string) => {
+    return rsvps.find(r => r.userId === playerId);
+  };
+
+  // Get check-in status for each linked player
+  const getPlayerCheckIn = (playerId: string) => {
+    return attendances.find(a => a.userId === playerId);
+  };
 
   const handleRsvpClick = () => {
     const currentResponse = userRsvp?.response;
@@ -705,65 +761,131 @@ export default function EventDetailModal({
               </Button>
             )}
 
-            {/* Parent Proxy Check-In Section */}
+            {/* Parent Proxy RSVP/Check-In Section */}
             {isParent && linkedPlayers.length > 0 && (
-              <Card className="p-4 bg-green-50 border-green-200" data-testid="card-parent-proxy-checkin">
-                <h4 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
+              <Card className="p-4 bg-blue-50 border-blue-200" data-testid="card-parent-proxy">
+                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
                   <UserCheck className="h-5 w-5" />
-                  Check In Your Player
+                  Manage Your Players
                 </h4>
-                <p className="text-sm text-green-700 mb-3">
-                  If your child doesn't have a phone, you can check them in.
+                <p className="text-sm text-blue-700 mb-3">
+                  RSVP or check in on behalf of your players
                 </p>
+                
+                {/* Player List with Status */}
                 <div className="space-y-3">
-                  <Select 
-                    value={selectedPlayerForProxy || ''} 
-                    onValueChange={setSelectedPlayerForProxy}
-                  >
-                    <SelectTrigger className="w-full" data-testid="select-player-for-proxy">
-                      <SelectValue placeholder="Select a player to check in" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {linkedPlayers.map(player => {
-                        const isCheckedIn = attendances.find(a => a.userId === player.id);
-                        return (
-                          <SelectItem 
-                            key={player.id} 
-                            value={player.id}
-                            disabled={!!isCheckedIn}
+                  {linkedPlayers.map(player => {
+                    const playerRsvp = getPlayerRsvp(player.id);
+                    const playerCheckIn = getPlayerCheckIn(player.id);
+                    const currentResponse = playerRsvp?.response || 'no_response';
+                    
+                    return (
+                      <div 
+                        key={player.id} 
+                        className="bg-white rounded-lg p-3 border border-blue-100"
+                        data-testid={`card-player-proxy-${player.id}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900">
+                            {player.firstName} {player.lastName}
+                          </span>
+                          <div className="flex gap-1">
+                            {playerCheckIn ? (
+                              <Badge className="bg-green-100 text-green-800 text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Checked In
+                              </Badge>
+                            ) : currentResponse === 'attending' ? (
+                              <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                Going
+                              </Badge>
+                            ) : currentResponse === 'not_attending' ? (
+                              <Badge className="bg-red-100 text-red-800 text-xs">
+                                Not Going
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-gray-100 text-gray-600 text-xs">
+                                No RSVP
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* RSVP Buttons */}
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            size="sm"
+                            variant={currentResponse === 'attending' ? 'default' : 'outline'}
+                            className={currentResponse === 'attending' ? 'bg-green-600 hover:bg-green-700 flex-1' : 'flex-1'}
+                            disabled={!windowStatus.rsvpOpen || proxyRsvpMutation.isPending}
+                            onClick={() => proxyRsvpMutation.mutate({ playerId: player.id, response: 'attending' })}
+                            data-testid={`button-proxy-rsvp-going-${player.id}`}
                           >
-                            <div className="flex items-center gap-2">
-                              <span>{player.firstName} {player.lastName}</span>
-                              {isCheckedIn && (
-                                <Badge className="bg-green-100 text-green-800 text-xs ml-2">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Checked In
-                                </Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700"
-                    disabled={!selectedPlayerForProxy || proxyCheckInMutation.isPending || isCheckingLocation}
-                    onClick={() => selectedPlayerForProxy && handleProxyCheckIn(selectedPlayerForProxy)}
-                    data-testid="button-proxy-checkin"
-                  >
-                    {proxyCheckInMutation.isPending || isCheckingLocation ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Checking In...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Check In Player
-                      </>
-                    )}
-                  </Button>
+                            {proxyRsvpMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Going
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={currentResponse === 'not_attending' ? 'default' : 'outline'}
+                            className={currentResponse === 'not_attending' ? 'bg-red-600 hover:bg-red-700 flex-1' : 'flex-1'}
+                            disabled={!windowStatus.rsvpOpen || proxyRsvpMutation.isPending}
+                            onClick={() => proxyRsvpMutation.mutate({ playerId: player.id, response: 'not_attending' })}
+                            data-testid={`button-proxy-rsvp-not-going-${player.id}`}
+                          >
+                            {proxyRsvpMutation.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <>
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Not Going
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        
+                        {/* Check-in Button */}
+                        {!playerCheckIn && (
+                          <Button
+                            size="sm"
+                            className="w-full bg-green-600 hover:bg-green-700"
+                            disabled={!windowStatus.checkinOpen || proxyCheckInMutation.isPending || isCheckingLocation}
+                            onClick={() => handleProxyCheckIn(player.id)}
+                            data-testid={`button-proxy-checkin-${player.id}`}
+                          >
+                            {proxyCheckInMutation.isPending || isCheckingLocation ? (
+                              <>
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Checking In...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Check In
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        {/* Window Status Messages */}
+                        {!windowStatus.rsvpOpen && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            RSVP {windowStatus.rsvpStatus}
+                          </p>
+                        )}
+                        {!windowStatus.checkinOpen && !playerCheckIn && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            Check-in {windowStatus.checkinStatus}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             )}

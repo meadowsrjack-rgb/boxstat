@@ -4112,7 +4112,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/attendances/proxy', requireAuth, async (req: any, res) => {
     try {
       const { id: parentId, role, organizationId } = req.user;
-      const { playerId, eventId, latitude, longitude } = req.body;
+      const { playerId, eventId: rawEventId, latitude, longitude } = req.body;
+      
+      // Normalize eventId to number
+      const eventId = typeof rawEventId === 'number' ? rawEventId : parseInt(String(rawEventId));
+      if (isNaN(eventId)) {
+        return res.status(400).json({ error: 'Invalid eventId' });
+      }
+      
+      // Validate required fields
+      if (!playerId) {
+        return res.status(400).json({ error: 'Missing required field: playerId' });
+      }
       
       // Validate parent role
       if (role !== 'parent' && role !== 'admin') {
@@ -4123,7 +4134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get the event
-      const event = await storage.getEvent(eventId);
+      const event = await storage.getEvent(String(eventId));
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
@@ -4134,6 +4145,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({
           error: 'Proxy check-in not allowed',
           message: 'This event does not allow proxy check-ins from your role.'
+        });
+      }
+      
+      // Validate check-in window
+      const eventWindows = await storage.getEventWindowsByEvent(eventId);
+      const now = new Date();
+      const eventStart = new Date(event.startTime);
+      
+      // Calculate check-in window times
+      const checkinOpenWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'open');
+      const checkinCloseWindow = eventWindows.find((w: any) => w.windowType === 'checkin' && w.openRole === 'close');
+      
+      // Helper to calculate offset from event start
+      const offsetFromStart = (amount: number, unit: string, direction: string) => {
+        let ms = amount;
+        if (unit === 'minutes') ms *= 60 * 1000;
+        else if (unit === 'hours') ms *= 60 * 60 * 1000;
+        else if (unit === 'days') ms *= 24 * 60 * 60 * 1000;
+        return direction === 'before' 
+          ? new Date(eventStart.getTime() - ms)
+          : new Date(eventStart.getTime() + ms);
+      };
+      
+      // Default: check-in opens 30 minutes before, closes far in future
+      const checkinOpen = checkinOpenWindow 
+        ? offsetFromStart(checkinOpenWindow.amount, checkinOpenWindow.unit, checkinOpenWindow.direction)
+        : new Date(eventStart.getTime() - 30 * 60 * 1000);
+      const checkinClose = checkinCloseWindow
+        ? offsetFromStart(checkinCloseWindow.amount, checkinCloseWindow.unit, checkinCloseWindow.direction)
+        : new Date(eventStart.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+      
+      // Check if check-in window is open (admins bypass window check)
+      if (role !== 'admin' && (now < checkinOpen || now > checkinClose)) {
+        const status = now < checkinOpen ? 'not yet open' : 'closed';
+        return res.status(400).json({
+          error: 'Check-in window ' + status,
+          message: status === 'not yet open'
+            ? `Check-in opens at ${checkinOpen.toLocaleTimeString()}`
+            : `Check-in closed at ${checkinClose.toLocaleTimeString()}`,
+          checkinOpen: checkinOpen.toISOString(),
+          checkinClose: checkinClose.toISOString(),
         });
       }
       
@@ -4189,7 +4241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the attendance record with proxy tracking
       const attendanceData = {
         userId: playerId,
-        eventId: parseInt(eventId),
+        eventId: eventId,
         qrCodeData: `proxy-${parentId}-${Date.now()}`,
         latitude: latitude?.toString(),
         longitude: longitude?.toString(),
@@ -4216,7 +4268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Award evaluation
       try {
-        const eventData = await storage.getEvent(eventId);
+        const eventData = await storage.getEvent(String(eventId));
         const user = await storage.getUser(playerId);
         
         if (eventData && user) {
@@ -4268,6 +4320,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching linked players:', error);
       res.status(500).json({ error: 'Failed to fetch linked players' });
+    }
+  });
+  
+  // Proxy RSVP: Parents can RSVP on behalf of their linked players
+  app.post('/api/rsvp/proxy', requireAuth, async (req: any, res) => {
+    try {
+      const { id: parentId, role } = req.user;
+      const { playerId, eventId: rawEventId, response } = req.body;
+      
+      // Normalize eventId to number
+      const eventId = typeof rawEventId === 'number' ? rawEventId : parseInt(String(rawEventId));
+      if (isNaN(eventId)) {
+        return res.status(400).json({ error: 'Invalid eventId' });
+      }
+      
+      // Validate required fields
+      if (!playerId || !response) {
+        return res.status(400).json({ error: 'Missing required fields: playerId and response' });
+      }
+      
+      // Validate parent role
+      if (role !== 'parent' && role !== 'admin') {
+        return res.status(403).json({ 
+          error: 'Unauthorized', 
+          message: 'Only parents or admins can perform proxy RSVPs' 
+        });
+      }
+      
+      // Get the event
+      const event = await storage.getEvent(String(eventId));
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      
+      // Validate RSVP window
+      const eventWindows = await storage.getEventWindowsByEvent(eventId);
+      const now = new Date();
+      const eventStart = new Date(event.startTime);
+      
+      // Calculate RSVP window times
+      const rsvpOpenWindow = eventWindows.find((w: any) => w.windowType === 'rsvp' && w.openRole === 'open');
+      const rsvpCloseWindow = eventWindows.find((w: any) => w.windowType === 'rsvp' && w.openRole === 'close');
+      
+      // Helper to calculate offset from event start
+      const offsetFromStart = (amount: number, unit: string, direction: string) => {
+        let ms = amount;
+        if (unit === 'minutes') ms *= 60 * 1000;
+        else if (unit === 'hours') ms *= 60 * 60 * 1000;
+        else if (unit === 'days') ms *= 24 * 60 * 60 * 1000;
+        return direction === 'before' 
+          ? new Date(eventStart.getTime() - ms)
+          : new Date(eventStart.getTime() + ms);
+      };
+      
+      // Default: RSVP opens 3 days before, closes far in future
+      const rsvpOpen = rsvpOpenWindow 
+        ? offsetFromStart(rsvpOpenWindow.amount, rsvpOpenWindow.unit, rsvpOpenWindow.direction)
+        : new Date(eventStart.getTime() - 3 * 24 * 60 * 60 * 1000);
+      const rsvpClose = rsvpCloseWindow
+        ? offsetFromStart(rsvpCloseWindow.amount, rsvpCloseWindow.unit, rsvpCloseWindow.direction)
+        : new Date(eventStart.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+      
+      // Check if RSVP window is open (admins bypass window check)
+      if (role !== 'admin' && (now < rsvpOpen || now > rsvpClose)) {
+        const status = now < rsvpOpen ? 'not yet open' : 'closed';
+        return res.status(400).json({
+          error: 'RSVP window ' + status,
+          message: status === 'not yet open'
+            ? `RSVP opens at ${rsvpOpen.toLocaleString()}`
+            : `RSVP closed at ${rsvpClose.toLocaleString()}`,
+          rsvpOpen: rsvpOpen.toISOString(),
+          rsvpClose: rsvpClose.toISOString(),
+        });
+      }
+      
+      // Get the player to verify they exist and are a player
+      const player = await storage.getUser(playerId);
+      if (!player || player.role !== 'player') {
+        return res.status(400).json({
+          error: 'Invalid player',
+          message: 'The specified player was not found.'
+        });
+      }
+      
+      // Verify parent-child relationship (skip for admins)
+      if (role === 'parent') {
+        if (player.accountHolderId !== parentId) {
+          return res.status(403).json({
+            error: 'Unauthorized',
+            message: 'You can only RSVP for players linked to your account.'
+          });
+        }
+      }
+      
+      // Check if RSVP already exists
+      const existing = await storage.getRsvpResponseByUserAndEvent(playerId, eventId);
+      
+      let result;
+      if (existing) {
+        // Update existing response
+        result = await storage.updateRsvpResponse(existing.id, { response });
+      } else {
+        // Create new response
+        result = await storage.createRsvpResponse({
+          userId: playerId,
+          eventId: eventId,
+          response,
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        rsvp: result,
+        message: `${player.firstName} ${player.lastName}'s RSVP has been updated to "${response}".`
+      });
+    } catch (error: any) {
+      console.error('Proxy RSVP error:', error);
+      res.status(500).json({ 
+        error: 'Failed to update RSVP',
+        message: error.message 
+      });
     }
   });
   

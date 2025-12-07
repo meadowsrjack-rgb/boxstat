@@ -1223,13 +1223,6 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           <div className="text-xs text-gray-600 mt-1">From {editableProfile.city}</div>
                         )}
                       </div>
-
-                      {userTeam?.name && (
-                        <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-red-50 text-[13px] font-semibold text-[#d82428] px-3 py-1.5 ring-1 ring-[rgba(216,36,40,0.18)]">
-                          <Shirt className="h-4 w-4 text-[#d82428]" />
-                          {userTeam?.name}
-                        </div>
-                      )}
                     </div>
 
                 </motion.section>

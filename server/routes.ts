@@ -3882,13 +3882,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new attendance/check-in
   app.post('/api/attendances', requireAuth, async (req: any, res) => {
     try {
-      const attendanceData = insertAttendanceSchema.parse(req.body);
+      const { method, qr, ...restBody } = req.body;
+      const attendanceData = insertAttendanceSchema.parse(restBody);
       
       // Get user role for location bypass check
       const userRole = req.user?.role;
       
-      // Location validation (skip for admin/coach)
-      if (userRole !== 'admin' && userRole !== 'coach') {
+      // Handle QR code check-in (bypasses location check)
+      if (method === 'qr' && qr) {
+        try {
+          const qrData = typeof qr === 'string' ? JSON.parse(qr) : qr;
+          const { event: qrEventId, nonce, exp } = qrData;
+          
+          // Validate QR code
+          if (!qrEventId || !nonce || !exp) {
+            return res.status(400).json({
+              error: 'Invalid QR code',
+              message: 'The QR code is missing required information.',
+            });
+          }
+          
+          // Check expiry (QR codes valid for 5 minutes)
+          const expTime = parseInt(exp);
+          if (isNaN(expTime) || Date.now() > expTime) {
+            return res.status(400).json({
+              error: 'QR code expired',
+              message: 'This QR code has expired. Please ask your coach to generate a new one.',
+            });
+          }
+          
+          // Validate event ID matches
+          if (String(qrEventId) !== String(attendanceData.eventId)) {
+            return res.status(400).json({
+              error: 'Wrong event',
+              message: 'This QR code is for a different event.',
+            });
+          }
+          
+          // QR code is valid - proceed with check-in (skip location check)
+          console.log(`✅ QR check-in validated for event ${attendanceData.eventId}, user ${attendanceData.userId}`);
+        } catch (qrError) {
+          return res.status(400).json({
+            error: 'Invalid QR code',
+            message: 'Failed to parse QR code data.',
+          });
+        }
+      } else if (userRole !== 'admin' && userRole !== 'coach') {
+        // Location validation (skip for admin/coach and QR check-ins)
         // Get event to check location requirements
         const event = await storage.getEvent(attendanceData.eventId.toString());
         

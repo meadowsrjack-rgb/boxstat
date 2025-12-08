@@ -5944,8 +5944,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ message: 'Only admins can delete programs' });
     }
     
-    await storage.deleteProgram(req.params.id);
-    res.json({ success: true });
+    try {
+      // Check for existing enrollments before deletion
+      const enrollments = await db.select()
+        .from(schema.productEnrollments)
+        .where(eq(schema.productEnrollments.programId, req.params.id))
+        .limit(1);
+      
+      if (enrollments.length > 0) {
+        return res.status(400).json({ 
+          message: 'Cannot delete this program because it has active enrollments. Please remove all enrollments first.' 
+        });
+      }
+      
+      await storage.deleteProgram(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting program:', error);
+      res.status(500).json({ message: 'Failed to delete program', error: error.message });
+    }
   });
 
   // Get a single program with its social settings
@@ -7273,7 +7290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   cron.schedule('0 * * * *', async () => {
     try {
       console.log('🏆 Starting hourly award sync for all users...');
-      const allUsers = await storage.getAllUsers();
+      // Get all users from default organization
+      const allUsers = await storage.getUsersByOrganization('default-org');
       
       let syncCount = 0;
       for (const user of allUsers) {

@@ -432,14 +432,29 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
     }
   };
   
+  const getPaymentTypeBadge = (payment: any) => {
+    const isSubscription = payment.paymentType === "subscription" || 
+      (payment.billingModel && payment.billingModel === "Subscription");
+    return (
+      <Badge 
+        variant="outline" 
+        className={isSubscription ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}
+        data-testid={`badge-type-${payment.id}`}
+      >
+        {isSubscription ? "Subscription" : "One-Time"}
+      </Badge>
+    );
+  };
+  
   const TransactionRow = ({ payment }: { payment: any }) => (
     <div className="flex items-center justify-between py-3 border-b last:border-0" data-testid={`transaction-${payment.id}`}>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="font-medium text-sm truncate" data-testid={`transaction-user-${payment.id}`}>
             {getUserName(payment.userId)}
           </p>
           {getStatusBadge(payment.status)}
+          {getPaymentTypeBadge(payment)}
         </div>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>

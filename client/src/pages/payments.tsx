@@ -505,7 +505,8 @@ export default function PaymentsPage() {
     enabled: !!user,
   });
 
-  const programs = allProducts.filter(p => p.productCategory === 'service' && p.isActive !== false);
+  // Filter products - services include those without productCategory for backward compatibility
+  const programs = allProducts.filter(p => (!p.productCategory || p.productCategory === 'service') && p.isActive !== false);
   const storeItems = allProducts.filter(p => p.productCategory === 'goods' && p.isActive !== false);
   
   const enrolledProgramIds = new Set(enrollments.filter(e => e.status === 'active').map(e => e.programId));

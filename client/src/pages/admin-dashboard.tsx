@@ -52,6 +52,7 @@ import {
   UserCircle,
   ShoppingBag,
   Package,
+  Gift,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -4866,6 +4867,7 @@ function StoreTab({ organization }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [selectedSuggestedPrograms, setSelectedSuggestedPrograms] = useState<string[]>([]);
 
   const { data: allProducts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/programs"],
@@ -4873,6 +4875,9 @@ function StoreTab({ organization }: any) {
 
   // Filter to only show physical goods (productCategory = 'goods')
   const storeProducts = allProducts?.filter((p: any) => p.productCategory === 'goods') || [];
+  
+  // Filter to only show programs (services) for the suggested add-ons selector
+  const programOptions = allProducts?.filter((p: any) => p.productCategory === 'service' && p.isActive !== false) || [];
 
   const form = useForm({
     resolver: zodResolver(z.object({
@@ -4905,16 +4910,30 @@ function StoreTab({ organization }: any) {
         productCategory: "goods",
         type: "One-Time",
       };
+      let productId = editingProduct?.id;
+      
       if (editingProduct) {
-        return await apiRequest("PATCH", `/api/programs/${editingProduct.id}`, payload);
+        await apiRequest("PATCH", `/api/programs/${editingProduct.id}`, payload);
+      } else {
+        const result = await apiRequest("POST", "/api/programs", payload) as any;
+        productId = result.id;
       }
-      return await apiRequest("POST", "/api/programs", payload);
+      
+      // Save suggested programs for this product
+      if (productId) {
+        await apiRequest("PUT", `/api/products/${productId}/suggested-for-programs`, {
+          programIds: selectedSuggestedPrograms
+        });
+      }
+      
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
       toast({ title: editingProduct ? "Product updated" : "Product created" });
       setIsDialogOpen(false);
       setEditingProduct(null);
+      setSelectedSuggestedPrograms([]);
       form.reset();
     },
     onError: () => {
@@ -4936,7 +4955,7 @@ function StoreTab({ organization }: any) {
     },
   });
 
-  const handleEdit = (product: any) => {
+  const handleEdit = async (product: any) => {
     setEditingProduct(product);
     form.reset({
       organizationId: product.organizationId,
@@ -4948,11 +4967,26 @@ function StoreTab({ organization }: any) {
       shippingRequired: product.shippingRequired || false,
       isActive: product.isActive ?? true,
     });
+    
+    // Fetch current suggested programs for this product
+    try {
+      const response = await fetch(`/api/products/${product.id}/suggested-for-programs`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedSuggestedPrograms(data.programIds || []);
+      } else {
+        setSelectedSuggestedPrograms([]);
+      }
+    } catch {
+      setSelectedSuggestedPrograms([]);
+    }
+    
     setIsDialogOpen(true);
   };
 
   const handleCreate = () => {
     setEditingProduct(null);
+    setSelectedSuggestedPrograms([]);
     form.reset({
       organizationId: organization?.id || "",
       name: "",
@@ -5263,6 +5297,44 @@ function StoreTab({ organization }: any) {
                   </FormItem>
                 )}
               />
+
+              {/* Suggested Add-on for Programs */}
+              <div className="space-y-2 pt-4 border-t">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Gift className="w-4 h-4" />
+                  Suggest as Add-on for Programs
+                </Label>
+                <p className="text-xs text-gray-500 mb-2">
+                  When selected, this product will appear as a suggested add-on during registration for these programs
+                </p>
+                {programOptions.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No programs available</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-2">
+                    {programOptions.map((program: any) => (
+                      <div key={program.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={selectedSuggestedPrograms.includes(program.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedSuggestedPrograms([...selectedSuggestedPrograms, program.id]);
+                            } else {
+                              setSelectedSuggestedPrograms(selectedSuggestedPrograms.filter(id => id !== program.id));
+                            }
+                          }}
+                          data-testid={`checkbox-suggest-for-${program.id}`}
+                        />
+                        <Label className="text-sm font-normal cursor-pointer">{program.name}</Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedSuggestedPrograms.length > 0 && (
+                  <p className="text-xs text-green-600">
+                    This product will be suggested for {selectedSuggestedPrograms.length} program(s)
+                  </p>
+                )}
+              </div>
 
               <div className="flex gap-2 justify-end pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

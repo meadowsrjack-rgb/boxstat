@@ -387,7 +387,7 @@ function AppRouter() {
       <Route path="/trophies-badges" component={ProtectedTrophiesBadges} />
       <Route path="/skills" component={ProtectedSkills} />
       <Route path="/photo-upload" component={PhotoUpload} />
-      <Route path="/payments" component={RegistrationStatus} />
+      <Route path="/payments" component={PaymentsTab} />
       <Route path="/no-profiles" component={NoProfiles} />
       {/* New profile selection flow */}
       <Route path="/select-profile-type" component={SelectProfileType} />

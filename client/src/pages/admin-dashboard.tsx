@@ -5138,31 +5138,42 @@ function StoreTab({ organization }: any) {
               <FormField
                 control={form.control}
                 name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Price ($)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        step="0.01"
-                        min="0"
-                        placeholder="49.99"
-                        data-testid="input-store-price"
-                        value={field.value ? (field.value / 100).toFixed(2) : ""}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === "" || val === ".") {
-                            field.onChange(0);
-                          } else {
-                            const parsed = parseFloat(val);
-                            field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const [displayPrice, setDisplayPrice] = useState(field.value ? (field.value / 100).toString() : "");
+                  
+                  useEffect(() => {
+                    if (field.value !== undefined) {
+                      setDisplayPrice(field.value > 0 ? (field.value / 100).toString() : "");
+                    }
+                  }, [editingProduct]);
+                  
+                  return (
+                    <FormItem>
+                      <FormLabel>Price ($)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          step="0.01"
+                          min="0"
+                          placeholder="49.99"
+                          data-testid="input-store-price"
+                          value={displayPrice}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDisplayPrice(val);
+                            if (val === "" || val === ".") {
+                              field.onChange(0);
+                            } else {
+                              const parsed = parseFloat(val);
+                              field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
+                            }
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
@@ -5498,31 +5509,42 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     <FormField
                       control={form.control}
                       name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price ($)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00" 
-                              data-testid="input-program-price"
-                              value={field.value ? (field.value / 100).toFixed(2) : ""}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "" || val === ".") {
-                                  field.onChange(0);
-                                } else {
-                                  const parsed = parseFloat(val);
-                                  field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      render={({ field }) => {
+                        const [displayPrice, setDisplayPrice] = useState(field.value ? (field.value / 100).toString() : "");
+                        
+                        useEffect(() => {
+                          if (field.value !== undefined) {
+                            setDisplayPrice(field.value > 0 ? (field.value / 100).toString() : "");
+                          }
+                        }, [editingProgram]);
+                        
+                        return (
+                          <FormItem>
+                            <FormLabel>Price ($)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.01"
+                                min="0"
+                                placeholder="0.00" 
+                                data-testid="input-program-price"
+                                value={displayPrice}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setDisplayPrice(val);
+                                  if (val === "" || val === ".") {
+                                    field.onChange(0);
+                                  } else {
+                                    const parsed = parseFloat(val);
+                                    field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
+                                  }
+                                }}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
                     />
                   </div>
 

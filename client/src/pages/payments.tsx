@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription as 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  Loader2, CreditCard, Package, DollarSign, AlertCircle, CheckCircle2, 
+  Loader2, CreditCard, Package, DollarSign, AlertCircle, CheckCircle2, Check,
   XCircle, RefreshCw, Star, Sparkles, ShoppingBag, Crown, 
   Zap, Gift, ArrowRight, Clock, Users, ChevronRight, Trophy
 } from "lucide-react";
@@ -373,80 +373,294 @@ function BillingHistorySection({ payments, programs }: { payments: Payment[], pr
   );
 }
 
+type SuggestedAddOn = {
+  productId: string;
+  programId: string;
+  displayOrder: number;
+  isRequired: boolean;
+  product: Program;
+};
+
 function EnrollmentDialog({ 
   program, 
   children, 
+  storeItems,
   onClose, 
   onConfirm,
+  onConfirmWithAddOns,
   isLoading 
 }: { 
   program: Program | null; 
   children: ChildPlayer[];
+  storeItems: Program[];
   onClose: () => void; 
   onConfirm: (playerId: string | null) => void;
+  onConfirmWithAddOns: (playerId: string | null, addOnIds: string[]) => void;
   isLoading: boolean;
 }) {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState<1 | 2>(1);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [suggestedAddOnIds, setSuggestedAddOnIds] = useState<string[]>([]);
   const isPerFamily = program?.billingModel === 'Per Family';
   
+  // Fetch suggested add-ons for this program
+  const { data: suggestedAddOns = [] } = useQuery<SuggestedAddOn[]>({
+    queryKey: ["/api/programs", program?.id, "suggested-add-ons"],
+    queryFn: async () => {
+      if (!program?.id) return [];
+      const res = await fetch(`/api/programs/${program.id}/suggested-add-ons`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!program?.id,
+  });
+  
+  // Update suggested add-on IDs when data loads
+  useEffect(() => {
+    setSuggestedAddOnIds(suggestedAddOns.map(s => s.productId));
+  }, [suggestedAddOns]);
+  
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (program) {
+      setCurrentStep(1);
+      setSelectedAddOns([]);
+      setSelectedPlayer("");
+    }
+  }, [program]);
+  
   if (!program) return null;
+  
+  // Only show add-ons step if there are suggested add-ons for this program
+  const hasSuggestedAddOns = suggestedAddOnIds.length > 0;
+  
+  // Sort store items: suggested first (by display order), then others
+  const sortedStoreItems = useMemo(() => {
+    if (!hasSuggestedAddOns) return storeItems;
+    
+    const suggested: Program[] = [];
+    const others: Program[] = [];
+    
+    for (const item of storeItems) {
+      if (suggestedAddOnIds.includes(item.id)) {
+        suggested.push(item);
+      } else {
+        others.push(item);
+      }
+    }
+    
+    // Sort suggested by display order
+    const addOnOrderMap = new Map(suggestedAddOns.map(s => [s.productId, s.displayOrder]));
+    suggested.sort((a, b) => (addOnOrderMap.get(a.id) || 0) - (addOnOrderMap.get(b.id) || 0));
+    
+    return [...suggested, ...others];
+  }, [storeItems, suggestedAddOnIds, suggestedAddOns, hasSuggestedAddOns]);
+  
+  const handleNext = () => {
+    if (hasSuggestedAddOns && storeItems.length > 0) {
+      setCurrentStep(2);
+    } else {
+      onConfirm(isPerFamily ? null : selectedPlayer);
+    }
+  };
+  
+  const handleConfirmWithAddOns = () => {
+    onConfirmWithAddOns(isPerFamily ? null : selectedPlayer, selectedAddOns);
+  };
+  
+  const toggleAddOn = (productId: string) => {
+    setSelectedAddOns(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  };
+  
+  const calculateTotal = () => {
+    let total = program.price || 0;
+    for (const addOnId of selectedAddOns) {
+      const addOn = sortedStoreItems.find(s => s.id === addOnId);
+      if (addOn?.price) total += addOn.price;
+    }
+    return total;
+  };
 
   return (
     <Dialog open={!!program} onOpenChange={() => onClose()}>
-      <DialogContent className="bg-zinc-900 border-white/10 text-white">
+      <DialogContent className="bg-zinc-900 border-white/10 text-white max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-xl">Enroll in {program.name}</DialogTitle>
+          <DialogTitle className="text-xl">
+            {currentStep === 1 ? `Enroll in ${program.name}` : "Complete Your Order"}
+          </DialogTitle>
           <DialogDesc className="text-white/60">
-            {program.type === 'Subscription' 
-              ? `Subscribe for $${program.price ? (program.price / 100).toFixed(2) : '0'}/${program.billingCycle?.toLowerCase() || 'month'}`
-              : `One-time payment of $${program.price ? (program.price / 100).toFixed(2) : '0'}`
-            }
+            {currentStep === 1 ? (
+              program.type === 'Subscription' 
+                ? `Subscribe for $${program.price ? (program.price / 100).toFixed(2) : '0'}/${program.billingCycle?.toLowerCase() || 'month'}`
+                : `One-time payment of $${program.price ? (program.price / 100).toFixed(2) : '0'}`
+            ) : (
+              "Add gear and equipment to your order"
+            )}
           </DialogDesc>
         </DialogHeader>
 
-        <div className="py-4">
-          {isPerFamily ? (
-            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-center gap-2 text-blue-400 mb-2">
-                <Users className="h-4 w-4" />
-                <span className="font-medium">Family Enrollment</span>
+        {currentStep === 1 && (
+          <div className="py-4">
+            {isPerFamily ? (
+              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                <div className="flex items-center gap-2 text-blue-400 mb-2">
+                  <Users className="h-4 w-4" />
+                  <span className="font-medium">Family Enrollment</span>
+                </div>
+                <p className="text-sm text-white/70">
+                  This program covers your entire family. All your players will have access.
+                </p>
               </div>
-              <p className="text-sm text-white/70">
-                This program covers your entire family. All your players will have access.
-              </p>
+            ) : (
+              <div className="space-y-3">
+                <label className="text-sm text-white/70">Select Player</label>
+                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="select-player">
+                    <SelectValue placeholder="Choose a player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {children.map(child => (
+                      <SelectItem key={child.id} value={child.id}>
+                        {child.firstName} {child.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {currentStep === 2 && (
+          <div className="py-4 space-y-4 max-h-80 overflow-y-auto">
+            <div className="p-3 rounded-lg bg-white/5 border border-white/10 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <span className="font-medium">{program.name}</span>
+                </div>
+                <span className="font-semibold">${(program.price || 0) / 100}</span>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-3">
-              <label className="text-sm text-white/70">Select Player</label>
-              <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white" data-testid="select-player">
-                  <SelectValue placeholder="Choose a player" />
-                </SelectTrigger>
-                <SelectContent>
-                  {children.map(child => (
-                    <SelectItem key={child.id} value={child.id}>
-                      {child.firstName} {child.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            {suggestedAddOnIds.length > 0 && (
+              <div className="mb-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift className="h-4 w-4 text-purple-400" />
+                  <span className="text-sm font-medium text-purple-400">Recommended for You</span>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              {sortedStoreItems.map((item) => {
+                const isSuggested = suggestedAddOnIds.includes(item.id);
+                const isSelected = selectedAddOns.includes(item.id);
+                
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected 
+                        ? "bg-red-500/20 border-red-500/50" 
+                        : isSuggested 
+                          ? "bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                    }`}
+                    onClick={() => toggleAddOn(item.id)}
+                    data-testid={`addon-${item.id}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                          isSelected 
+                            ? "bg-red-500 border-red-500" 
+                            : "border-white/30"
+                        }`}>
+                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{item.name}</span>
+                            {isSuggested && (
+                              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
+                                Suggested
+                              </Badge>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="text-xs text-white/50 mt-0.5">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="font-semibold">${(item.price || 0) / 100}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-        </div>
+            
+            {selectedAddOns.length > 0 && (
+              <div className="pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between text-lg">
+                  <span className="font-medium">Total</span>
+                  <span className="font-bold">${(calculateTotal() / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="border-white/20 text-white hover:bg-white/10">
+        <DialogFooter className="gap-2">
+          {currentStep === 2 && (
+            <Button 
+              variant="outline" 
+              onClick={() => setCurrentStep(1)} 
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              Back
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            className="border-white/20 text-white hover:bg-white/10"
+          >
             Cancel
           </Button>
-          <Button 
-            className="bg-red-600 hover:bg-red-700 text-white"
-            onClick={() => onConfirm(isPerFamily ? null : selectedPlayer)}
-            disabled={isLoading || (!isPerFamily && !selectedPlayer)}
-            data-testid="button-confirm-enrollment"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Proceed to Payment
-          </Button>
+          
+          {currentStep === 1 && (
+            <Button 
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleNext}
+              disabled={isLoading || (!isPerFamily && !selectedPlayer)}
+              data-testid="button-next-enrollment"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {hasSuggestedAddOns && storeItems.length > 0 ? "Next" : "Proceed to Payment"}
+              {hasSuggestedAddOns && storeItems.length > 0 && <ChevronRight className="h-4 w-4 ml-1" />}
+            </Button>
+          )}
+          
+          {currentStep === 2 && (
+            <Button 
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={handleConfirmWithAddOns}
+              disabled={isLoading}
+              data-testid="button-confirm-enrollment"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {selectedAddOns.length > 0 
+                ? `Pay $${(calculateTotal() / 100).toFixed(2)}`
+                : "Skip Add-ons"
+              }
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -524,6 +738,40 @@ export default function PaymentsPage() {
         body: JSON.stringify({
           packageId: selectedProgram.id,
           playerId: playerId,
+          successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/payments?canceled=true`,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout');
+      }
+
+      const data = await response.json();
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
+    }
+  };
+  
+  const handleEnrollWithAddOns = async (playerId: string | null, addOnIds: string[]) => {
+    if (!selectedProgram) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/payments/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageId: selectedProgram.id,
+          playerId: playerId,
+          addOnIds: addOnIds.length > 0 ? addOnIds : undefined,
           successUrl: `${window.location.origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/payments?canceled=true`,
         }),
@@ -737,8 +985,10 @@ export default function PaymentsPage() {
         <EnrollmentDialog
           program={selectedProgram}
           children={children}
+          storeItems={storeItems}
           onClose={() => setSelectedProgram(null)}
           onConfirm={handleEnroll}
+          onConfirmWithAddOns={handleEnrollWithAddOns}
           isLoading={loading}
         />
       </div>

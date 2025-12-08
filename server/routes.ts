@@ -5947,8 +5947,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Check for existing enrollments before deletion
       const enrollments = await db.select()
-        .from(schema.productEnrollments)
-        .where(eq(schema.productEnrollments.programId, req.params.id))
+        .from(productEnrollments)
+        .where(eq(productEnrollments.programId, req.params.id))
         .limit(1);
       
       if (enrollments.length > 0) {

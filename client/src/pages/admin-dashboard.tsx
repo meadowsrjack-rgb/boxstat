@@ -1382,7 +1382,21 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     <TableCell>{user.phoneNumber || user.phone || "-"}</TableCell>
                     <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
                     <TableCell>
-                      <Badge variant={user.role === "admin" ? "default" : "secondary"}>{user.role}</Badge>
+                      <Badge 
+                        className={`capitalize ${
+                          user.role === "admin" 
+                            ? "bg-red-600 text-white hover:bg-red-700" 
+                            : user.role === "coach" 
+                            ? "bg-blue-600 text-white hover:bg-blue-700" 
+                            : user.role === "parent" 
+                            ? "bg-purple-600 text-white hover:bg-purple-700" 
+                            : user.role === "player" 
+                            ? "bg-green-600 text-white hover:bg-green-700" 
+                            : "bg-gray-500 text-white"
+                        }`}
+                      >
+                        {user.role}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {user.role === "player" && user.statusTag && user.statusTag !== "none" ? (
@@ -1482,7 +1496,19 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     </h2>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-sm text-gray-500">{viewingUser.email}</span>
-                      <Badge variant={viewingUser.role === "admin" ? "default" : "secondary"} className="capitalize">
+                      <Badge 
+                        className={`capitalize ${
+                          viewingUser.role === "admin" 
+                            ? "bg-red-600 text-white hover:bg-red-700" 
+                            : viewingUser.role === "coach" 
+                            ? "bg-blue-600 text-white hover:bg-blue-700" 
+                            : viewingUser.role === "parent" 
+                            ? "bg-purple-600 text-white hover:bg-purple-700" 
+                            : viewingUser.role === "player" 
+                            ? "bg-green-600 text-white hover:bg-green-700" 
+                            : "bg-gray-500 text-white"
+                        }`}
+                      >
                         {viewingUser.role}
                       </Badge>
                       {viewingUser.isActive !== false ? (

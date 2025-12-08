@@ -39,7 +39,7 @@ import {
 import { evaluateAwardsForUser } from "./utils/awardEngine";
 import { populateAwards } from "./utils/populateAwards";
 import { db } from "./db";
-import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products } from "@shared/schema";
+import { notifications, notificationRecipients, users, teamMemberships, teams, waivers, waiverVersions, waiverSignatures, productEnrollments, products, userAwards } from "@shared/schema";
 import { eq, and, sql, desc, inArray } from "drizzle-orm";
 
 let wss: WebSocketServer | null = null;
@@ -2891,6 +2891,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? allUsers.filter((u: any) => u.email?.toLowerCase() === user.email?.toLowerCase())
         : [user];
       
+      // Helper function to cascade delete related records for a user
+      const cascadeDeleteRelatedRecords = async (userIdToDelete: string) => {
+        console.log(`🗑️ Cascade deleting related records for user: ${userIdToDelete}`);
+        
+        // 1. Delete product_enrollments where user is profile or account holder
+        await db.delete(productEnrollments).where(
+          sql`${productEnrollments.profileId} = ${userIdToDelete} OR ${productEnrollments.accountHolderId} = ${userIdToDelete}`
+        );
+        
+        // 2. Delete waiver_signatures where user is profile or signer
+        await db.delete(waiverSignatures).where(
+          sql`${waiverSignatures.profileId} = ${userIdToDelete} OR ${waiverSignatures.signedBy} = ${userIdToDelete}`
+        );
+        
+        // 3. teams.coach_id has SET NULL rule in DB, so no action needed here
+        
+        // 4. Update user_awards to set awardedBy to null where this user awarded someone
+        // (the userId FK has cascade, but awardedBy doesn't)
+        await db.update(userAwards)
+          .set({ awardedBy: null })
+          .where(eq(userAwards.awardedBy, userIdToDelete));
+        
+        // 5. Delete team_memberships (should be handled by cascade, but explicit for safety)
+        await db.delete(teamMemberships).where(eq(teamMemberships.profileId, userIdToDelete));
+        
+        console.log(`✅ Cascade delete completed for user: ${userIdToDelete}`);
+      };
+      
       // Delete all profiles with the same email and their children
       for (const emailUser of sameEmailUsers) {
         if (deletedIds.has(emailUser.id)) continue;
@@ -2901,12 +2929,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Delete all child profiles first
         for (const child of childUsers) {
           if (deletedIds.has(child.id)) continue;
+          
+          // Cascade delete related records for child
+          await cascadeDeleteRelatedRecords(child.id);
+          
           if (child.email) {
             await storage.deletePendingRegistration(child.email, child.organizationId);
           }
           await storage.deleteUser(child.id);
           deletedIds.add(child.id);
         }
+        
+        // Cascade delete related records for this user
+        await cascadeDeleteRelatedRecords(emailUser.id);
         
         // Delete pending registration for this user's email
         if (emailUser.email) {

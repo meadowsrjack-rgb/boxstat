@@ -476,6 +476,7 @@ export default function PaymentsPage() {
         .then(() => {
           queryClient.invalidateQueries({ queryKey: ['/api/enrollments'] });
           queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
           window.history.replaceState({}, '', '/payments');
         })
         .catch(() => {

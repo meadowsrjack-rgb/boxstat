@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   LogOut,
   ChevronLeft,
+  ShoppingBag,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
@@ -723,6 +724,7 @@ export default function UnifiedAccount() {
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   
   // Check if device is locked - redirect to player dashboard if so
   useEffect(() => {
@@ -1084,44 +1086,53 @@ export default function UnifiedAccount() {
                     <CardTitle>Make a Payment</CardTitle>
                     <CardDescription>Purchase packages and memberships</CardDescription>
                   </div>
-                  <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                  <Dialog open={paymentDialogOpen} onOpenChange={(open) => {
+                    setPaymentDialogOpen(open);
+                    if (!open) {
+                      setIsStoreItemPurchase(false);
+                      setSelectedPackage("");
+                      setSelectedPlayer("");
+                    }
+                  }}>
                     <DialogTrigger asChild>
-                      <Button data-testid="button-make-payment">
+                      <Button data-testid="button-make-payment" onClick={() => setIsStoreItemPurchase(false)}>
                         <Plus className="w-4 h-4 mr-2" />
                         Make Payment
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-md" data-testid="dialog-make-payment">
                       <DialogHeader>
-                        <DialogTitle>Make a Payment</DialogTitle>
+                        <DialogTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DialogTitle>
                         <DialogDescription>
-                          Select a package and player to purchase
+                          {isStoreItemPurchase ? "Complete your store purchase" : "Select a package and player to purchase"}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        {/* Package Selection */}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Package</label>
-                          <Select value={selectedPackage} onValueChange={setSelectedPackage}>
-                            <SelectTrigger data-testid="select-package">
-                              <SelectValue placeholder="Select a package" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {programs?.filter(p => p.price && p.price > 0).map((program: any) => (
-                                <SelectItem key={program.id} value={program.id} data-testid={`package-option-${program.id}`}>
-                                  {program.name}
-                                </SelectItem>
-                              ))}
-                              {(!programs || programs.filter((p: any) => p.price && p.price > 0).length === 0) && (
-                                <SelectItem value="none" disabled>No packages available</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Package Selection - only show for program purchases */}
+                        {!isStoreItemPurchase && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Package</label>
+                            <Select value={selectedPackage} onValueChange={setSelectedPackage}>
+                              <SelectTrigger data-testid="select-package">
+                                <SelectValue placeholder="Select a package" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {programs?.filter((p: any) => p.price && p.price > 0 && p.productCategory === 'service').map((program: any) => (
+                                  <SelectItem key={program.id} value={program.id} data-testid={`package-option-${program.id}`}>
+                                    {program.name}
+                                  </SelectItem>
+                                ))}
+                                {(!programs || programs.filter((p: any) => p.price && p.price > 0 && p.productCategory === 'service').length === 0) && (
+                                  <SelectItem value="none" disabled>No programs available</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
 
-                        {/* Player Selection (conditionally shown based on billing model) */}
-                        {selectedPackage && (() => {
-                          const pkg = programs?.find((p: any) => p.id === selectedPackage);
+                        {/* Player Selection (conditionally shown based on billing model - not for store items) */}
+                        {selectedPackage && !isStoreItemPurchase && (() => {
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
                           const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
                           const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
                           
@@ -1151,41 +1162,53 @@ export default function UnifiedAccount() {
                           );
                         })()}
 
-                        {/* Package Details */}
+                        {/* Package/Item Details */}
                         {selectedPackage && (() => {
-                          const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                          return pkg && (
-                            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                              <h4 className="font-semibold">{pkg.name}</h4>
-                              {(pkg as any).description && (
-                                <p className="text-sm text-gray-600">{(pkg as any).description}</p>
-                              )}
-                              
-                              <div className="flex gap-2 flex-wrap">
-                                {(pkg as any).type && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                    {(pkg as any).type}
-                                  </span>
-                                )}
-                                {pkg.billingModel && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                    {pkg.billingModel}
-                                  </span>
-                                )}
-                                {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
-                                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                                    {(pkg as any).billingCycle}
-                                  </span>
+                          // Look up in the full programs array (contains both service and goods)
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                          if (!pkg) return null;
+                          
+                          const isStoreProduct = pkg.productCategory === 'goods';
+                          
+                          return (
+                            <div className={`p-4 rounded-lg space-y-3 ${isStoreProduct ? 'bg-purple-50' : 'bg-gray-50'}`}>
+                              <div className="flex items-start justify-between">
+                                <h4 className="font-semibold">{pkg.name}</h4>
+                                {isStoreProduct && (
+                                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Store Item</span>
                                 )}
                               </div>
+                              {pkg.description && (
+                                <p className="text-sm text-gray-600">{pkg.description}</p>
+                              )}
+                              
+                              {!isStoreProduct && (
+                                <div className="flex gap-2 flex-wrap">
+                                  {pkg.type && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                      {pkg.type}
+                                    </span>
+                                  )}
+                                  {pkg.billingModel && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                      {pkg.billingModel}
+                                    </span>
+                                  )}
+                                  {pkg.type === "Subscription" && pkg.billingCycle && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                                      {pkg.billingCycle}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                               
                               <div className="flex justify-between items-center pt-2 border-t">
                                 <span className="font-medium">Total:</span>
                                 <div className="text-right">
                                   <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
-                                  {(pkg as any).type === "Subscription" && (pkg as any).billingCycle && (
+                                  {!isStoreProduct && pkg.type === "Subscription" && pkg.billingCycle && (
                                     <p className="text-xs text-gray-500 mt-1">
-                                      per {(pkg as any).billingCycle.toLowerCase()}
+                                      per {pkg.billingCycle.toLowerCase()}
                                     </p>
                                   )}
                                 </div>
@@ -1209,33 +1232,49 @@ export default function UnifiedAccount() {
                               if (!selectedPackage) {
                                 toast({
                                   title: "Error",
-                                  description: "Please select a package",
+                                  description: "Please select a package or item",
                                   variant: "destructive",
                                 });
                                 return;
                               }
 
-                              const pkg = programs?.find((p: any) => p.id === selectedPackage);
-                              const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
-                              const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
-
-                              if (requiresPlayerSelection && !selectedPlayer) {
+                              // Look up in full programs array (includes both services and goods)
+                              const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                              if (!pkg) {
                                 toast({
                                   title: "Error",
-                                  description: "Please select a player for this per-player package",
+                                  description: "Selected item not found. Please try again.",
                                   variant: "destructive",
                                 });
                                 return;
+                              }
+                              
+                              const isStoreProduct = pkg.productCategory === 'goods';
+                              
+                              // Store items don't require player selection
+                              if (!isStoreProduct) {
+                                const billingModel = (pkg?.billingModel || 'Per Player').toLowerCase().replace(/[^a-z]/g, '');
+                                const requiresPlayerSelection = billingModel.includes('player') && !billingModel.includes('family') && !billingModel.includes('organization');
+
+                                if (requiresPlayerSelection && !selectedPlayer) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Please select a player for this per-player package",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
                               }
 
                               setIsProcessingPayment(true);
                               try {
-                                // Create checkout session
+                                // Create checkout session - backend handles both program and store purchases
                                 const response = await apiRequest("/api/payments/create-checkout", {
                                   method: "POST",
                                   data: {
                                     packageId: selectedPackage,
-                                    playerId: selectedPlayer || null,
+                                    playerId: isStoreProduct ? null : (selectedPlayer || null),
+                                    isStoreItem: isStoreProduct,
                                   },
                                 }) as { url: string };
 
@@ -1273,6 +1312,54 @@ export default function UnifiedAccount() {
                 </div>
               </CardHeader>
             </Card>
+
+            {/* Suggested Add-ons - Store Items */}
+            {(() => {
+              const storeItems = programs?.filter((p: any) => p.productCategory === 'goods' && p.isActive !== false && p.price && p.price > 0) || [];
+              if (storeItems.length === 0) return null;
+              
+              return (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShoppingBag className="w-5 h-5" />
+                      Merchandise & Add-ons
+                    </CardTitle>
+                    <CardDescription>Physical products and gear</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {storeItems.slice(0, 6).map((item: any) => (
+                        <div 
+                          key={item.id} 
+                          className="border rounded-lg p-4 hover:border-red-300 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedPackage(item.id);
+                            setIsStoreItemPurchase(true);
+                            setPaymentDialogOpen(true);
+                          }}
+                          data-testid={`store-item-${item.id}`}
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-medium text-sm">{item.name}</h4>
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Store</span>
+                          </div>
+                          {item.description && (
+                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.description}</p>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">${(item.price / 100).toFixed(2)}</span>
+                            <Button size="sm" variant="outline" className="text-xs">
+                              Buy
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
             
             {/* Payment History Component */}
             <PaymentHistory />

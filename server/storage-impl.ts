@@ -4237,7 +4237,20 @@ class DatabaseStorage implements IStorage {
     
     // Get active enrollments with their products
     // Include: 1) enrollments directly for this player (profileId = playerId)
-    //          2) family-wide enrollments (profileId is null) from player's parent
+    //          2) family-wide enrollments (profileId is null) from player's parent/account holder
+    // Build the query conditions
+    const directEnrollmentCondition = eq(schema.productEnrollments.profileId, playerId);
+    
+    // For family-wide enrollments, check if player has a parent/account holder AND enrollment is family-wide
+    // Check both accountHolderId (new) and parentId (legacy) for maximum compatibility
+    const parentReference = player.accountHolderId || player.parentId;
+    const familyEnrollmentCondition = parentReference 
+      ? and(
+          isNull(schema.productEnrollments.profileId),
+          eq(schema.productEnrollments.accountHolderId, parentReference)
+        )
+      : undefined;
+    
     const enrollments = await db.select({
       enrollment: schema.productEnrollments,
       product: schema.products,
@@ -4247,13 +4260,9 @@ class DatabaseStorage implements IStorage {
     .where(
       and(
         eq(schema.productEnrollments.status, 'active'),
-        or(
-          eq(schema.productEnrollments.profileId, playerId),
-          and(
-            isNull(schema.productEnrollments.profileId),
-            player.parentId ? eq(schema.productEnrollments.accountHolderId, player.parentId) : sql`false`
-          )
-        )
+        familyEnrollmentCondition
+          ? or(directEnrollmentCondition, familyEnrollmentCondition)
+          : directEnrollmentCondition
       )
     );
     
@@ -4299,18 +4308,32 @@ class DatabaseStorage implements IStorage {
       return result;
     }
     
-    // Get all players' payment status in one query
+    // Get all players with their payment status AND parent references (accountHolderId + parentId for legacy support)
     const players = await db.select({
       id: schema.users.id,
       paymentStatus: schema.users.paymentStatus,
+      accountHolderId: schema.users.accountHolderId,
+      parentId: schema.users.parentId,
     })
     .from(schema.users)
     .where(inArray(schema.users.id, playerIds));
     
-    const playersMap = new Map(players.map(p => [p.id, p.paymentStatus]));
+    // Use accountHolderId preferentially, fallback to parentId for legacy data
+    const playersMap = new Map(players.map(p => [p.id, { 
+      paymentStatus: p.paymentStatus, 
+      parentReference: p.accountHolderId || p.parentId || null
+    }]));
     
-    // Get all enrollments for all players in one query (matching single-player query structure)
-    const allEnrollments = await db.select({
+    // Get unique parent references for family-wide enrollment lookup
+    // Filter out both null and undefined values
+    const parentReferences = [...new Set(
+      players
+        .map(p => p.accountHolderId || p.parentId)
+        .filter((id): id is string => id !== null && id !== undefined && typeof id === 'string')
+    )];
+    
+    // Get all direct enrollments for players
+    const directEnrollments = await db.select({
       enrollment: schema.productEnrollments,
       product: schema.products,
     })
@@ -4323,32 +4346,68 @@ class DatabaseStorage implements IStorage {
       )
     );
     
-    // Group enrollments by player
+    // Get family-wide enrollments (profileId is null) from parents
+    let familyEnrollments: typeof directEnrollments = [];
+    if (parentReferences.length > 0) {
+      familyEnrollments = await db.select({
+        enrollment: schema.productEnrollments,
+        product: schema.products,
+      })
+      .from(schema.productEnrollments)
+      .leftJoin(schema.products, eq(schema.productEnrollments.programId, schema.products.id))
+      .where(
+        and(
+          isNull(schema.productEnrollments.profileId),
+          inArray(schema.productEnrollments.accountHolderId, parentReferences),
+          eq(schema.productEnrollments.status, 'active')
+        )
+      );
+    }
+    
+    // Group direct enrollments by player profileId
     const enrollmentsByPlayer = new Map<string, Array<{enrollment: typeof schema.productEnrollments.$inferSelect, product: typeof schema.products.$inferSelect | null}>>();
-    for (const row of allEnrollments) {
+    for (const row of directEnrollments) {
       const profileId = row.enrollment.profileId;
-      if (!enrollmentsByPlayer.has(profileId)) {
-        enrollmentsByPlayer.set(profileId, []);
+      if (profileId) {
+        if (!enrollmentsByPlayer.has(profileId)) {
+          enrollmentsByPlayer.set(profileId, []);
+        }
+        enrollmentsByPlayer.get(profileId)!.push(row);
       }
-      enrollmentsByPlayer.get(profileId)!.push(row);
+    }
+    
+    // Group family enrollments by accountHolderId (parent)
+    const familyEnrollmentsByParent = new Map<string, typeof familyEnrollments>();
+    for (const row of familyEnrollments) {
+      const accountHolderId = row.enrollment.accountHolderId;
+      if (!familyEnrollmentsByParent.has(accountHolderId)) {
+        familyEnrollmentsByParent.set(accountHolderId, []);
+      }
+      familyEnrollmentsByParent.get(accountHolderId)!.push(row);
     }
     
     // Calculate status tag for each player
     for (const playerId of playerIds) {
-      const paymentStatus = playersMap.get(playerId);
+      const playerInfo = playersMap.get(playerId);
       
       // Priority 1: Payment Due
-      if (paymentStatus === 'pending' || paymentStatus === 'overdue') {
+      if (playerInfo?.paymentStatus === 'pending' || playerInfo?.paymentStatus === 'overdue') {
         result.set(playerId, { tag: 'payment_due' });
         continue;
       }
       
-      const playerEnrollments = enrollmentsByPlayer.get(playerId) || [];
+      // Combine direct enrollments and family-wide enrollments
+      const directPlayerEnrollments = enrollmentsByPlayer.get(playerId) || [];
+      const familyPlayerEnrollments = playerInfo?.parentReference 
+        ? (familyEnrollmentsByParent.get(playerInfo.parentReference) || []) 
+        : [];
+      const allPlayerEnrollments = [...directPlayerEnrollments, ...familyPlayerEnrollments];
+      
       let hasSubscription = false;
       let totalCredits = 0;
       let hasLowBalance = false;
       
-      for (const { enrollment, product } of playerEnrollments) {
+      for (const { enrollment, product } of allPlayerEnrollments) {
         const accessTag = product?.accessTag;
         if (accessTag === 'club_member') {
           hasSubscription = true;

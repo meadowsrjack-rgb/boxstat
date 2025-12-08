@@ -51,6 +51,7 @@ import {
   UserPlus,
   UserCircle,
   ShoppingBag,
+  Package,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -7049,7 +7050,7 @@ function WaiversTab({ organization }: any) {
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const { toast } = useToast();
 
-  const { data: waivers = [], isLoading } = useQuery({
+  const { data: waivers = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/waivers'],
   });
 
@@ -7068,15 +7069,9 @@ function WaiversTab({ organization }: any) {
   const createWaiver = useMutation({
     mutationFn: async (data: any) => {
       if (editingWaiver) {
-        return apiRequest(`/api/waivers/${editingWaiver.id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(data),
-        });
+        return apiRequest('PATCH', `/api/waivers/${editingWaiver.id}`, data);
       } else {
-        return apiRequest('/api/waivers', {
-          method: 'POST',
-          body: JSON.stringify(data),
-        });
+        return apiRequest('POST', '/api/waivers', data);
       }
     },
     onSuccess: () => {

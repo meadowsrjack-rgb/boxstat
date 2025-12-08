@@ -21,6 +21,7 @@ import {
   type MigrationLookup,
   type Subscription,
   type Waiver,
+  type ProductEnrollment,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -42,6 +43,7 @@ import {
   type InsertMigrationLookup,
   type InsertSubscription,
   type InsertWaiver,
+  type InsertProductEnrollment,
   type SelectAwardDefinition,
   type InsertAwardDefinition,
   type SelectUserAwardRecord,
@@ -246,6 +248,7 @@ export interface IStorage {
   
   // Credit/Enrollment operations
   getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]>;
+  createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment>;
   deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined>;
   getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
   getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
@@ -282,6 +285,7 @@ class MemStorage implements IStorage {
   private userAwardRecords: Map<number, SelectUserAwardRecord> = new Map();
   private migrationLookups: Map<number, SelectMigrationLookup> = new Map();
   private subscriptionsStore: Map<number, SelectSubscription> = new Map();
+  private enrollmentsStore: Map<number, ProductEnrollment> = new Map();
   private nextTeamId = 1;
   private nextEventId = 1;
   private nextDivisionId = 1;
@@ -294,6 +298,7 @@ class MemStorage implements IStorage {
   private nextUserAwardRecordId = 1;
   private nextMigrationLookupId = 1;
   private nextSubscriptionId = 1;
+  private nextEnrollmentId = 1;
   
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1885,19 +1890,55 @@ class MemStorage implements IStorage {
     return undefined;
   }
   
-  // Credit/Enrollment operations (MemStorage uses basic implementation based on user data)
+  // Credit/Enrollment operations (MemStorage tracks product enrollments in memory)
   async getActiveEnrollmentsWithCredits(playerId: string): Promise<ProductEnrollment[]> {
-    // MemStorage doesn't track product enrollments - return empty
-    return [];
+    const enrollments: ProductEnrollment[] = [];
+    for (const enrollment of this.enrollmentsStore.values()) {
+      if (enrollment.profileId === playerId && enrollment.status === 'active') {
+        enrollments.push(enrollment);
+      }
+    }
+    return enrollments;
+  }
+  
+  async createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment> {
+    const id = this.nextEnrollmentId++;
+    const now = new Date().toISOString();
+    const enrollment: ProductEnrollment = {
+      id,
+      organizationId: data.organizationId,
+      programId: data.programId,
+      accountHolderId: data.accountHolderId,
+      profileId: data.profileId ?? null,
+      status: data.status ?? 'active',
+      source: data.source ?? 'direct',
+      paymentId: data.paymentId ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      startDate: data.startDate ?? now,
+      endDate: data.endDate ?? null,
+      autoRenew: data.autoRenew ?? false, // Default to false, subscriptions will explicitly pass true
+      totalCredits: data.totalCredits ?? null,
+      remainingCredits: data.remainingCredits ?? null,
+      metadata: data.metadata ?? {},
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.enrollmentsStore.set(id, enrollment);
+    return enrollment;
   }
   
   async deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined> {
-    // MemStorage doesn't track product enrollments
+    const enrollment = this.enrollmentsStore.get(enrollmentId);
+    if (enrollment && enrollment.remainingCredits && enrollment.remainingCredits > 0) {
+      enrollment.remainingCredits--;
+      enrollment.updatedAt = new Date().toISOString();
+      this.enrollmentsStore.set(enrollmentId, enrollment);
+      return enrollment;
+    }
     return undefined;
   }
   
   async getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}> {
-    // MemStorage uses only user paymentStatus for status tag determination
     const player = await this.getUser(playerId);
     
     if (!player) {
@@ -1909,14 +1950,48 @@ class MemStorage implements IStorage {
       return { tag: 'payment_due' };
     }
     
-    // For MemStorage, without product enrollments data, return 'none' for other cases
+    // Get enrollments for this player
+    const enrollments = await this.getActiveEnrollmentsWithCredits(playerId);
+    
+    let hasSubscription = false;
+    let totalCredits = 0;
+    let hasLowBalance = false;
+    
+    for (const enrollment of enrollments) {
+      const program = this.programs.get(enrollment.programId);
+      const accessTag = program?.accessTag;
+      
+      if (accessTag === 'club_member') {
+        hasSubscription = true;
+      } else if (accessTag === 'pack_holder' && enrollment.remainingCredits) {
+        totalCredits += enrollment.remainingCredits;
+        if (enrollment.remainingCredits > 0 && enrollment.remainingCredits < 3) {
+          hasLowBalance = true;
+        }
+      }
+    }
+    
+    // Priority 2: Low Balance
+    if (hasLowBalance) {
+      return { tag: 'low_balance', remainingCredits: totalCredits, lowBalance: true };
+    }
+    
+    // Priority 3: Club Member
+    if (hasSubscription) {
+      return { tag: 'club_member' };
+    }
+    
+    // Priority 4: Pack Holder
+    if (totalCredits > 0) {
+      return { tag: 'pack_holder', remainingCredits: totalCredits };
+    }
+    
     return { tag: 'none' };
   }
   
   async getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>> {
     const result = new Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>();
     
-    // MemStorage uses simple loop since it's in-memory anyway
     for (const playerId of playerIds) {
       const tag = await this.getPlayerStatusTag(playerId);
       result.set(playerId, tag);
@@ -1926,8 +2001,13 @@ class MemStorage implements IStorage {
   }
   
   async getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]> {
-    // MemStorage doesn't track product enrollments - return empty
-    return [];
+    const enrollments: ProductEnrollment[] = [];
+    for (const enrollment of this.enrollmentsStore.values()) {
+      if (enrollment.organizationId === organizationId) {
+        enrollments.push(enrollment);
+      }
+    }
+    return enrollments;
   }
 }
 
@@ -4096,6 +4176,31 @@ class DatabaseStorage implements IStorage {
     return results as ProductEnrollment[];
   }
   
+  async createEnrollment(data: InsertProductEnrollment): Promise<ProductEnrollment> {
+    const now = new Date().toISOString();
+    const results = await db.insert(schema.productEnrollments)
+      .values({
+        organizationId: data.organizationId,
+        programId: data.programId,
+        accountHolderId: data.accountHolderId,
+        profileId: data.profileId ?? null,
+        status: data.status ?? 'active',
+        source: data.source ?? 'direct',
+        paymentId: data.paymentId ?? null,
+        stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+        startDate: data.startDate ?? now,
+        endDate: data.endDate ?? null,
+        autoRenew: data.autoRenew ?? false, // Default to false, subscriptions will explicitly pass true
+        totalCredits: data.totalCredits ?? null,
+        remainingCredits: data.remainingCredits ?? null,
+        metadata: data.metadata ?? {},
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+    return results[0] as ProductEnrollment;
+  }
+  
   async deductEnrollmentCredit(enrollmentId: number): Promise<ProductEnrollment | undefined> {
     // First get current credits
     const enrollment = await db.select().from(schema.productEnrollments)
@@ -4131,6 +4236,8 @@ class DatabaseStorage implements IStorage {
     }
     
     // Get active enrollments with their products
+    // Include: 1) enrollments directly for this player (profileId = playerId)
+    //          2) family-wide enrollments (profileId is null) from player's parent
     const enrollments = await db.select({
       enrollment: schema.productEnrollments,
       product: schema.products,
@@ -4139,8 +4246,14 @@ class DatabaseStorage implements IStorage {
     .leftJoin(schema.products, eq(schema.productEnrollments.programId, schema.products.id))
     .where(
       and(
-        eq(schema.productEnrollments.profileId, playerId),
-        eq(schema.productEnrollments.status, 'active')
+        eq(schema.productEnrollments.status, 'active'),
+        or(
+          eq(schema.productEnrollments.profileId, playerId),
+          and(
+            isNull(schema.productEnrollments.profileId),
+            player.parentId ? eq(schema.productEnrollments.accountHolderId, player.parentId) : sql`false`
+          )
+        )
       )
     );
     

@@ -1503,7 +1503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!alreadyProcessed && session.amount_total) {
           const program = await storage.getProgram(packageId);
-          await storage.createPayment({
+          const payment = await storage.createPayment({
             organizationId: "default-org",
             userId: userId,
             playerId: playerId,
@@ -1517,6 +1517,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stripePaymentId: session.payment_intent as string,
           });
           console.log(`✅ Created package_purchase payment record via callback for user ${userId}`);
+          
+          // Create product enrollment for the player (or account holder if no player specified)
+          if (program) {
+            const enrollmentProfileId = playerId || userId;
+            try {
+              // Calculate credits - only for Pack type products with sessionCount
+              const isSubscription = program.type === 'Subscription';
+              const isPack = program.type === 'Pack';
+              const credits = isPack && program.sessionCount ? program.sessionCount : null;
+              const subscriptionId = typeof session.subscription === 'string' ? session.subscription : null;
+              const now = new Date().toISOString();
+              
+              const enrollment = await storage.createEnrollment({
+                organizationId: "default-org",
+                programId: packageId,
+                accountHolderId: userId,
+                profileId: enrollmentProfileId,
+                status: 'active',
+                source: 'direct',
+                paymentId: String(payment.id),
+                stripeSubscriptionId: subscriptionId,
+                startDate: now,
+                endDate: null,
+                totalCredits: credits,
+                remainingCredits: credits,
+                autoRenew: isSubscription, // Only subscriptions auto-renew, packs/one-time don't
+                metadata: {},
+              });
+              console.log(`✅ Created enrollment for profile ${enrollmentProfileId} in program ${packageId} (type: ${program.type}, credits: ${credits || 'N/A'}, autoRenew: ${isSubscription})`);
+              
+              // Update player's paymentStatus to 'paid' if enrolled
+              if (playerId) {
+                await storage.updateUser(playerId, { paymentStatus: 'paid' });
+                console.log(`✅ Updated paymentStatus to 'paid' for player ${playerId}`);
+              }
+            } catch (enrollError) {
+              console.error('Error creating enrollment:', enrollError);
+              // Don't fail the whole request if enrollment creation fails
+            }
+          }
         } else {
           console.log(`ℹ️ Payment already processed for user ${userId}`);
         }

@@ -22,6 +22,7 @@ import {
   type Subscription,
   type Waiver,
   type ProductEnrollment,
+  type ProgramSuggestedAddOn,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -44,6 +45,7 @@ import {
   type InsertSubscription,
   type InsertWaiver,
   type InsertProductEnrollment,
+  type InsertProgramSuggestedAddOn,
   type SelectAwardDefinition,
   type InsertAwardDefinition,
   type SelectUserAwardRecord,
@@ -166,6 +168,14 @@ export interface IStorage {
   createProgram(program: InsertProgram): Promise<Program>;
   updateProgram(id: string, updates: Partial<Program>): Promise<Program | undefined>;
   deleteProgram(id: string): Promise<void>;
+  
+  // Program Suggested Add-ons operations
+  getSuggestedAddOns(programId: string): Promise<ProgramSuggestedAddOn[]>;
+  getSuggestedAddOnsWithProducts(programId: string): Promise<{ addOn: ProgramSuggestedAddOn; product: Program }[]>;
+  addSuggestedAddOn(data: InsertProgramSuggestedAddOn): Promise<ProgramSuggestedAddOn>;
+  removeSuggestedAddOn(programId: string, productId: string): Promise<void>;
+  setProgramSuggestedAddOns(programId: string, productIds: string[]): Promise<void>;
+  getProductsWithSuggestedPrograms(productId: string): Promise<string[]>;
   
   // Package Selection operations
   getPackageSelection(id: string): Promise<PackageSelection | undefined>;
@@ -1408,6 +1418,71 @@ class MemStorage implements IStorage {
   
   async deleteProgram(id: string): Promise<void> {
     this.programs.delete(id);
+  }
+  
+  // Program Suggested Add-ons operations (in-memory)
+  private suggestedAddOns: Map<string, ProgramSuggestedAddOn> = new Map();
+  private suggestedAddOnId = 1;
+  
+  async getSuggestedAddOns(programId: string): Promise<ProgramSuggestedAddOn[]> {
+    return Array.from(this.suggestedAddOns.values()).filter(a => a.programId === programId);
+  }
+  
+  async getSuggestedAddOnsWithProducts(programId: string): Promise<{ addOn: ProgramSuggestedAddOn; product: Program }[]> {
+    const addOns = await this.getSuggestedAddOns(programId);
+    const result: { addOn: ProgramSuggestedAddOn; product: Program }[] = [];
+    for (const addOn of addOns) {
+      const product = await this.getProgram(addOn.productId);
+      if (product) {
+        result.push({ addOn, product });
+      }
+    }
+    return result.sort((a, b) => (a.addOn.displayOrder ?? 0) - (b.addOn.displayOrder ?? 0));
+  }
+  
+  async addSuggestedAddOn(data: InsertProgramSuggestedAddOn): Promise<ProgramSuggestedAddOn> {
+    const addOn: ProgramSuggestedAddOn = {
+      id: this.suggestedAddOnId++,
+      programId: data.programId,
+      productId: data.productId,
+      displayOrder: data.displayOrder ?? 0,
+      isRequired: data.isRequired ?? false,
+      createdAt: new Date().toISOString(),
+    };
+    this.suggestedAddOns.set(`${data.programId}-${data.productId}`, addOn);
+    return addOn;
+  }
+  
+  async removeSuggestedAddOn(programId: string, productId: string): Promise<void> {
+    this.suggestedAddOns.delete(`${programId}-${productId}`);
+  }
+  
+  async setProgramSuggestedAddOns(programId: string, productIds: string[]): Promise<void> {
+    // Remove existing add-ons for this program
+    for (const key of Array.from(this.suggestedAddOns.keys())) {
+      if (key.startsWith(`${programId}-`)) {
+        this.suggestedAddOns.delete(key);
+      }
+    }
+    // Add new add-ons
+    for (let i = 0; i < productIds.length; i++) {
+      await this.addSuggestedAddOn({
+        programId,
+        productId: productIds[i],
+        displayOrder: i,
+        isRequired: false,
+      });
+    }
+  }
+  
+  async getProductsWithSuggestedPrograms(productId: string): Promise<string[]> {
+    const programIds: string[] = [];
+    for (const addOn of Array.from(this.suggestedAddOns.values())) {
+      if (addOn.productId === productId) {
+        programIds.push(addOn.programId);
+      }
+    }
+    return programIds;
   }
   
   // Package Selection operations
@@ -3566,6 +3641,71 @@ class DatabaseStorage implements IStorage {
 
   async deleteProgram(id: string): Promise<void> {
     await db.delete(schema.programs).where(eq(schema.programs.id, id));
+  }
+
+  // Program Suggested Add-ons operations (database)
+  async getSuggestedAddOns(programId: string): Promise<ProgramSuggestedAddOn[]> {
+    const results = await db.select().from(schema.programSuggestedAddOns)
+      .where(eq(schema.programSuggestedAddOns.programId, programId))
+      .orderBy(schema.programSuggestedAddOns.displayOrder);
+    return results;
+  }
+  
+  async getSuggestedAddOnsWithProducts(programId: string): Promise<{ addOn: ProgramSuggestedAddOn; product: Program }[]> {
+    const addOns = await this.getSuggestedAddOns(programId);
+    const result: { addOn: ProgramSuggestedAddOn; product: Program }[] = [];
+    for (const addOn of addOns) {
+      const product = await this.getProgram(addOn.productId);
+      if (product) {
+        result.push({ addOn, product });
+      }
+    }
+    return result;
+  }
+  
+  async addSuggestedAddOn(data: InsertProgramSuggestedAddOn): Promise<ProgramSuggestedAddOn> {
+    const results = await db.insert(schema.programSuggestedAddOns)
+      .values({
+        programId: data.programId,
+        productId: data.productId,
+        displayOrder: data.displayOrder ?? 0,
+        isRequired: data.isRequired ?? false,
+      })
+      .returning();
+    return results[0];
+  }
+  
+  async removeSuggestedAddOn(programId: string, productId: string): Promise<void> {
+    await db.delete(schema.programSuggestedAddOns)
+      .where(
+        and(
+          eq(schema.programSuggestedAddOns.programId, programId),
+          eq(schema.programSuggestedAddOns.productId, productId)
+        )
+      );
+  }
+  
+  async setProgramSuggestedAddOns(programId: string, productIds: string[]): Promise<void> {
+    // Remove existing add-ons for this program
+    await db.delete(schema.programSuggestedAddOns)
+      .where(eq(schema.programSuggestedAddOns.programId, programId));
+    
+    // Add new add-ons
+    for (let i = 0; i < productIds.length; i++) {
+      await this.addSuggestedAddOn({
+        programId,
+        productId: productIds[i],
+        displayOrder: i,
+        isRequired: false,
+      });
+    }
+  }
+  
+  async getProductsWithSuggestedPrograms(productId: string): Promise<string[]> {
+    const results = await db.select({ programId: schema.programSuggestedAddOns.programId })
+      .from(schema.programSuggestedAddOns)
+      .where(eq(schema.programSuggestedAddOns.productId, productId));
+    return results.map(r => r.programId);
   }
 
   // Package Selection operations (placeholders - no database table yet)

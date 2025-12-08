@@ -6038,6 +6038,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get suggested add-ons for a program
+  app.get('/api/programs/:programId/suggested-add-ons', async (req: any, res) => {
+    try {
+      const { programId } = req.params;
+      const addOnsWithProducts = await storage.getSuggestedAddOnsWithProducts(programId);
+      res.json(addOnsWithProducts);
+    } catch (error: any) {
+      console.error('Error fetching suggested add-ons:', error);
+      res.status(500).json({ message: 'Failed to fetch suggested add-ons' });
+    }
+  });
+  
+  // Set suggested add-ons for a program (admin only)
+  app.put('/api/programs/:programId/suggested-add-ons', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can manage suggested add-ons' });
+      }
+      
+      const { programId } = req.params;
+      const { productIds } = req.body;
+      
+      if (!Array.isArray(productIds)) {
+        return res.status(400).json({ message: 'productIds must be an array' });
+      }
+      
+      await storage.setProgramSuggestedAddOns(programId, productIds);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error setting suggested add-ons:', error);
+      res.status(500).json({ message: 'Failed to set suggested add-ons' });
+    }
+  });
+  
+  // Get programs that suggest a specific product as an add-on
+  app.get('/api/products/:productId/suggested-for-programs', async (req: any, res) => {
+    try {
+      const { productId } = req.params;
+      const programIds = await storage.getProductsWithSuggestedPrograms(productId);
+      res.json({ programIds });
+    } catch (error: any) {
+      console.error('Error fetching suggested programs:', error);
+      res.status(500).json({ message: 'Failed to fetch suggested programs' });
+    }
+  });
+  
+  // Update which programs suggest a product as an add-on (admin only)
+  app.put('/api/products/:productId/suggested-for-programs', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can manage suggested add-ons' });
+      }
+      
+      const { productId } = req.params;
+      const { programIds } = req.body;
+      
+      if (!Array.isArray(programIds)) {
+        return res.status(400).json({ message: 'programIds must be an array' });
+      }
+      
+      // Remove this product from all programs first
+      const currentPrograms = await storage.getProductsWithSuggestedPrograms(productId);
+      for (const programId of currentPrograms) {
+        await storage.removeSuggestedAddOn(programId, productId);
+      }
+      
+      // Add to the new programs
+      for (const programId of programIds) {
+        await storage.addSuggestedAddOn({
+          programId,
+          productId,
+          displayOrder: 0,
+          isRequired: false,
+        });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error updating suggested programs:', error);
+      res.status(500).json({ message: 'Failed to update suggested programs' });
+    }
+  });
+
   // Get subgroups (teams/levels/groups) for a specific program
   app.get('/api/programs/:programId/subgroups', async (req: any, res) => {
     try {

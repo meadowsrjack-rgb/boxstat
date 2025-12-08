@@ -6250,6 +6250,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(enrollments);
   });
 
+  // Get current user's enrollments (for parent dashboard)
+  app.get('/api/enrollments', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+
+      // Get enrollments where user is the account holder (parent) or the profile (player)
+      const enrollments = await db.select()
+        .from(productEnrollments)
+        .where(
+          or(
+            eq(productEnrollments.accountHolderId, userId),
+            eq(productEnrollments.profileId, userId)
+          )
+        );
+
+      res.json(enrollments);
+    } catch (error) {
+      console.error('Error fetching enrollments:', error);
+      res.status(500).json({ message: 'Failed to fetch enrollments' });
+    }
+  });
+
   // Create an enrollment (admin only for now)
   app.post('/api/enrollments', requireAuth, async (req: any, res) => {
     const { role, organizationId, id: userId } = req.user;

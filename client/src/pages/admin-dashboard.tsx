@@ -5145,11 +5145,19 @@ function StoreTab({ organization }: any) {
                       <Input 
                         type="number" 
                         step="0.01"
+                        min="0"
                         placeholder="49.99"
-                        {...field}
-                        onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
-                        value={field.value ? (field.value / 100).toFixed(2) : ""}
                         data-testid="input-store-price"
+                        value={field.value ? (field.value / 100).toFixed(2) : ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "" || val === ".") {
+                            field.onChange(0);
+                          } else {
+                            const parsed = parseFloat(val);
+                            field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
+                          }
+                        }}
                       />
                     </FormControl>
                     <FormMessage />
@@ -5497,11 +5505,19 @@ function ProgramsTab({ programs, teams, organization }: any) {
                             <Input 
                               type="number" 
                               step="0.01"
-                              {...field} 
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
-                              value={field.value ? (field.value / 100).toFixed(2) : ""}
+                              min="0"
                               placeholder="0.00" 
-                              data-testid="input-program-price" 
+                              data-testid="input-program-price"
+                              value={field.value ? (field.value / 100).toFixed(2) : ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "" || val === ".") {
+                                  field.onChange(0);
+                                } else {
+                                  const parsed = parseFloat(val);
+                                  field.onChange(isNaN(parsed) ? 0 : Math.round(parsed * 100));
+                                }
+                              }}
                             />
                           </FormControl>
                           <FormMessage />

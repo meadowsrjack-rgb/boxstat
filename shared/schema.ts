@@ -399,6 +399,35 @@ export const products = pgTable("products", {
   shippingRequired: boolean("shipping_required").default(false), // Does this item need shipping?
 });
 
+// Program Suggested Add-ons table (many-to-many relationship between programs and store products)
+// Links goods (store products) as suggested add-ons for service (programs)
+export const programSuggestedAddOns = pgTable("program_suggested_add_ons", {
+  id: serial().primaryKey().notNull(),
+  programId: varchar("program_id").notNull(), // The program (service product)
+  productId: varchar("product_id").notNull(), // The store item (goods product) suggested for this program
+  displayOrder: integer("display_order").default(0), // Order to display suggested add-ons
+  isRequired: boolean("is_required").default(false), // If true, this add-on is required for the program
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.programId],
+    foreignColumns: [products.id],
+    name: "program_suggested_add_ons_program_id_fkey"
+  }),
+  foreignKey({
+    columns: [table.productId],
+    foreignColumns: [products.id],
+    name: "program_suggested_add_ons_product_id_fkey"
+  }),
+]);
+
+export const insertProgramSuggestedAddOnSchema = createInsertSchema(programSuggestedAddOns).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertProgramSuggestedAddOn = z.infer<typeof insertProgramSuggestedAddOnSchema>;
+export type ProgramSuggestedAddOn = typeof programSuggestedAddOns.$inferSelect;
+
 // Product Enrollments table (tracks who is enrolled in which products/programs)
 export const productEnrollments = pgTable("product_enrollments", {
   id: serial().primaryKey().notNull(),

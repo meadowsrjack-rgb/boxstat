@@ -4859,219 +4859,127 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   );
 }
 
-// Store Tab - Physical Goods/Inventory Management
+// Store Tab - Physical Goods/Inventory Management (Simplified)
 function StoreTab({ organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingPackage, setEditingPackage] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
 
-  const { data: packages, isLoading } = useQuery<any[]>({
+  const { data: allProducts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/programs"],
   });
 
-  const { data: awards } = useQuery<any[]>({
-    queryKey: ["/api/award-definitions"],
-  });
-
-  const { data: waivers = [] } = useQuery<any[]>({
-    queryKey: ["/api/waivers"],
-  });
+  // Filter to only show physical goods (productCategory = 'goods')
+  const storeProducts = allProducts?.filter((p: any) => p.productCategory === 'goods') || [];
 
   const form = useForm({
     resolver: zodResolver(z.object({
       organizationId: z.string(),
-      name: z.string().min(1, "Package name is required"),
-      slug: z.string().optional(),
+      name: z.string().min(1, "Product name is required"),
       description: z.string().optional(),
-      type: z.string().optional(),
-      billingCycle: z.string().optional(),
-      price: z.number().min(0).optional(),
-      billingModel: z.string().optional(),
-      durationDays: z.number().min(1).optional(),
-      allowInstallments: z.boolean().default(false),
-      installments: z.number().min(2).optional(),
-      installmentPrice: z.number().min(0).optional(),
-      payInFullDiscount: z.number().min(0).max(100).optional(),
-      stripePriceId: z.string().optional(),
-      stripeProductId: z.string().optional(),
-      tags: z.array(z.string()).default([]),
-      requireAAUMembership: z.boolean().default(false),
-      requireConcussionWaiver: z.boolean().default(false),
-      requireClubAgreement: z.boolean().default(false),
-      requiredWaivers: z.array(z.string()).default([]),
-      autoAssignPlayers: z.boolean().default(false),
-      accessTag: z.string().optional(),
-      sessionCount: z.number().optional(),
-      adminNotes: z.string().optional(),
+      price: z.number().min(0, "Price must be positive"),
+      inventorySizes: z.array(z.string()).default([]),
+      inventoryCount: z.number().optional(),
+      shippingRequired: z.boolean().default(false),
       isActive: z.boolean().default(true),
-      // Social toggle settings for program-based team/group management
-      hasSubgroups: z.boolean().default(true),
-      subgroupLabel: z.string().default("Team"),
-      rosterVisibility: z.string().default("members"),
-      chatMode: z.string().default("two_way"),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
       name: "",
-      slug: "",
       description: "",
-      type: "One-Time",
-      billingCycle: "",
       price: 0,
-      billingModel: "Per Player",
-      durationDays: 90,
-      allowInstallments: false,
-      installments: 3,
-      installmentPrice: 0,
-      payInFullDiscount: 0,
-      stripePriceId: "",
-      stripeProductId: "",
-      tags: [],
-      requireAAUMembership: false,
-      requireConcussionWaiver: false,
-      requireClubAgreement: false,
-      requiredWaivers: [],
-      autoAssignPlayers: false,
-      accessTag: "",
-      sessionCount: undefined,
-      adminNotes: "",
+      inventorySizes: [] as string[],
+      inventoryCount: 0,
+      shippingRequired: false,
       isActive: true,
-      // Social toggle defaults
-      hasSubgroups: true,
-      subgroupLabel: "Team",
-      rosterVisibility: "members",
-      chatMode: "two_way",
     },
   });
 
-  const selectedType = form.watch("type");
-  const selectedAccessTag = form.watch("accessTag");
-  const allowInstallments = form.watch("allowInstallments");
-  const price = form.watch("price");
-  const installments = form.watch("installments");
-
-  const createPackage = useMutation({
+  const createProduct = useMutation({
     mutationFn: async (data: any) => {
-      console.log('📦 Package mutation called with data:', data);
-      if (editingPackage) {
-        console.log('✏️ Updating package:', editingPackage.id);
-        return await apiRequest("PATCH", `/api/programs/${editingPackage.id}`, data);
+      const payload = {
+        ...data,
+        organizationId: organization?.id,
+        productCategory: "goods",
+        type: "One-Time",
+      };
+      if (editingProduct) {
+        return await apiRequest("PATCH", `/api/programs/${editingProduct.id}`, payload);
       }
-      console.log('➕ Creating new package');
-      return await apiRequest("POST", "/api/programs", data);
+      return await apiRequest("POST", "/api/programs", payload);
     },
-    onSuccess: (result) => {
-      console.log('✅ Package mutation successful:', result);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: editingPackage ? "Package updated successfully" : "Package created successfully" });
+      toast({ title: editingProduct ? "Product updated" : "Product created" });
       setIsDialogOpen(false);
-      setEditingPackage(null);
+      setEditingProduct(null);
       form.reset();
     },
-    onError: (error) => {
-      console.error('❌ Package mutation failed:', error);
-      toast({ title: "Failed to save package", variant: "destructive" });
+    onError: () => {
+      toast({ title: "Failed to save product", variant: "destructive" });
     },
   });
 
-  const deletePackage = useMutation({
+  const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
       return await apiRequest("DELETE", `/api/programs/${id}`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
-      toast({ title: "Package deleted successfully" });
+      toast({ title: "Product deleted" });
       setDeleteConfirm(null);
     },
     onError: () => {
-      toast({ title: "Failed to delete package", variant: "destructive" });
+      toast({ title: "Failed to delete product", variant: "destructive" });
     },
   });
 
-  const handleEdit = (pkg: any) => {
-    setEditingPackage(pkg);
+  const handleEdit = (product: any) => {
+    setEditingProduct(product);
     form.reset({
-      organizationId: pkg.organizationId,
-      name: pkg.name,
-      slug: pkg.slug || "",
-      description: pkg.description || "",
-      type: pkg.type || "One-Time",
-      billingCycle: pkg.billingCycle || "",
-      price: pkg.price || 0,
-      billingModel: pkg.billingModel || "Per Player",
-      durationDays: pkg.durationDays || 90,
-      allowInstallments: pkg.allowInstallments || false,
-      installments: pkg.installments || 3,
-      installmentPrice: pkg.installmentPrice || 0,
-      payInFullDiscount: pkg.payInFullDiscount || 0,
-      stripePriceId: pkg.stripePriceId || "",
-      stripeProductId: pkg.stripeProductId || "",
-      tags: pkg.tags || [],
-      requireAAUMembership: pkg.requireAAUMembership || false,
-      requireConcussionWaiver: pkg.requireConcussionWaiver || false,
-      requireClubAgreement: pkg.requireClubAgreement || false,
-      requiredWaivers: pkg.requiredWaivers || [],
-      autoAssignPlayers: pkg.autoAssignPlayers || false,
-      accessTag: pkg.accessTag || "",
-      sessionCount: pkg.sessionCount || undefined,
-      adminNotes: pkg.adminNotes || "",
-      isActive: pkg.isActive,
-      // Social toggle settings
-      hasSubgroups: pkg.hasSubgroups ?? true,
-      subgroupLabel: pkg.subgroupLabel || "Team",
-      rosterVisibility: pkg.rosterVisibility || "members",
-      chatMode: pkg.chatMode || "two_way",
+      organizationId: product.organizationId,
+      name: product.name,
+      description: product.description || "",
+      price: product.price || 0,
+      inventorySizes: product.inventorySizes || [],
+      inventoryCount: product.inventoryCount || 0,
+      shippingRequired: product.shippingRequired || false,
+      isActive: product.isActive ?? true,
     });
     setIsDialogOpen(true);
   };
 
   const handleCreate = () => {
-    setEditingPackage(null);
+    setEditingProduct(null);
     form.reset({
       organizationId: organization?.id || "",
       name: "",
-      slug: "",
       description: "",
-      type: "One-Time",
-      billingCycle: "",
       price: 0,
-      billingModel: "Per Player",
-      durationDays: 90,
-      allowInstallments: false,
-      installments: 3,
-      installmentPrice: 0,
-      payInFullDiscount: 0,
-      stripePriceId: "",
-      stripeProductId: "",
-      tags: [],
-      requireAAUMembership: false,
-      requireConcussionWaiver: false,
-      requireClubAgreement: false,
-      autoAssignPlayers: false,
-      accessTag: "",
-      sessionCount: undefined,
-      adminNotes: "",
+      inventorySizes: [],
+      inventoryCount: 0,
+      shippingRequired: false,
       isActive: true,
-      // Social toggle defaults
-      hasSubgroups: true,
-      subgroupLabel: "Team",
-      rosterVisibility: "members",
-      chatMode: "two_way",
     });
     setIsDialogOpen(true);
+  };
+
+  const formatPrice = (cents: number) => {
+    if (!cents) return "$0.00";
+    return `$${(cents / 100).toFixed(2)}`;
   };
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Package Management</CardTitle>
-          <CardDescription>Create and manage subscription packages</CardDescription>
+          <CardTitle>Store - Merchandise & Gear</CardTitle>
+          <CardDescription>Manage physical products and inventory</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-packages" />
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-store" />
           </div>
         </CardContent>
       </Card>
@@ -5083,87 +4991,82 @@ function StoreTab({ organization }: any) {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Products</CardTitle>
-            <CardDescription>Create and manage subscription packages for your organization</CardDescription>
+            <CardTitle>Store - Merchandise & Gear</CardTitle>
+            <CardDescription>Physical products like jerseys, equipment, and merchandise</CardDescription>
           </div>
-          <Button onClick={handleCreate} data-testid="button-create-package">
+          <Button onClick={handleCreate} data-testid="button-create-store-product">
             <Plus className="w-4 h-4 mr-2" />
-            Create Package
+            Add Product
           </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {!packages || packages.length === 0 ? (
-          <div className="text-center py-12" data-testid="empty-packages">
-            <p className="text-gray-600 font-medium">No packages found</p>
-            <p className="text-gray-500 text-sm mt-2">Create your first package to get started</p>
+        {storeProducts.length === 0 ? (
+          <div className="text-center py-12" data-testid="empty-store">
+            <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-600 font-medium">No merchandise yet</p>
+            <p className="text-gray-500 text-sm mt-2">Add jerseys, equipment, or other physical products</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Product</TableHead>
                 <TableHead>Price</TableHead>
-                <TableHead>Billing</TableHead>
-                <TableHead>Waivers</TableHead>
+                <TableHead>Sizes</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Shipping</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {packages.map((pkg: any) => (
-                <TableRow key={pkg.id} data-testid={`row-package-${pkg.id}`}>
+              {storeProducts.map((product: any) => (
+                <TableRow key={product.id} data-testid={`row-store-${product.id}`}>
                   <TableCell>
-                    <div>
-                      <div className="font-medium" data-testid={`text-package-name-${pkg.id}`}>
-                        {pkg.name}
+                    <div className="font-medium" data-testid={`text-store-name-${product.id}`}>
+                      {product.name}
+                    </div>
+                    {product.description && (
+                      <div className="text-xs text-gray-500 truncate max-w-[200px]">{product.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {formatPrice(product.price)}
+                  </TableCell>
+                  <TableCell>
+                    {product.inventorySizes?.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {product.inventorySizes.slice(0, 4).map((size: string) => (
+                          <Badge key={size} variant="outline" className="text-xs">{size}</Badge>
+                        ))}
+                        {product.inventorySizes.length > 4 && (
+                          <Badge variant="outline" className="text-xs">+{product.inventorySizes.length - 4}</Badge>
+                        )}
                       </div>
-                      {pkg.slug && (
-                        <div className="text-xs text-gray-500">{pkg.slug}</div>
-                      )}
-                    </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" data-testid={`badge-type-${pkg.id}`}>
-                      {pkg.type || "Program"}
-                    </Badge>
+                    {product.inventoryCount !== undefined && product.inventoryCount !== null ? (
+                      <Badge variant={product.inventoryCount > 10 ? "outline" : product.inventoryCount > 0 ? "secondary" : "destructive"}>
+                        {product.inventoryCount}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <div data-testid={`text-price-${pkg.id}`}>
-                      ${((pkg.price || 0) / 100).toFixed(2)}
-                    </div>
+                    {product.shippingRequired ? (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700">Required</Badge>
+                    ) : (
+                      <span className="text-gray-400 text-sm">Pickup</span>
+                    )}
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm" data-testid={`text-billing-${pkg.id}`}>
-                      {pkg.billingModel || "-"}
-                      {pkg.billingCycle && (
-                        <div className="text-xs text-gray-500">{pkg.billingCycle}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {pkg.requireAAUMembership && (
-                        <Badge variant="secondary" className="text-xs">AAU</Badge>
-                      )}
-                      {pkg.requireConcussionWaiver && (
-                        <Badge variant="secondary" className="text-xs">Concussion</Badge>
-                      )}
-                      {pkg.requireClubAgreement && (
-                        <Badge variant="secondary" className="text-xs">Club</Badge>
-                      )}
-                      {!pkg.requireAAUMembership && !pkg.requireConcussionWaiver && !pkg.requireClubAgreement && (
-                        <span className="text-gray-400 text-xs">None</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant={pkg.isActive ? "default" : "secondary"}
-                      data-testid={`badge-status-${pkg.id}`}
-                    >
-                      {pkg.isActive ? "Active" : "Inactive"}
+                    <Badge variant={product.isActive ? "default" : "secondary"}>
+                      {product.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
@@ -5171,16 +5074,16 @@ function StoreTab({ organization }: any) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEdit(pkg)}
-                        data-testid={`button-edit-${pkg.id}`}
+                        onClick={() => handleEdit(product)}
+                        data-testid={`button-edit-store-${product.id}`}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setDeleteConfirm(pkg)}
-                        data-testid={`button-delete-${pkg.id}`}
+                        onClick={() => setDeleteConfirm(product)}
+                        data-testid={`button-delete-store-${product.id}`}
                       >
                         <Trash2 className="w-4 h-4 text-red-600" />
                       </Button>
@@ -5192,431 +5095,90 @@ function StoreTab({ organization }: any) {
           </Table>
         )}
       </CardContent>
-      {/* Create/Edit Package Dialog */}
+
+      {/* Simple Store Product Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle data-testid="dialog-title-package">
-              {editingPackage ? "Edit Package" : "Create New Package"}
+            <DialogTitle data-testid="dialog-title-store">
+              {editingProduct ? "Edit Product" : "Add New Product"}
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(
-              (data) => {
-                console.log('📝 Form validation passed, submitting data:', data);
-                console.log('📝 Form errors:', form.formState.errors);
-                createPackage.mutate(data);
-              },
-              (errors) => {
-                console.error('❌ Form validation failed:', errors);
-                toast({ title: "Please check form errors", description: Object.values(errors).map((e: any) => e.message).join(', '), variant: "destructive" });
-              }
-            )} className="space-y-6">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Basic Information</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Package Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Youth Club + FNH Package" {...field} data-testid="input-package-name" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="slug"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Slug / ID</FormLabel>
-                      <FormControl>
-                        <Input placeholder="youth_club_fnh_package" {...field} data-testid="input-slug" />
-                      </FormControl>
-                      <FormDescription>Unique key for internal mapping/API</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Includes access to Youth Club practices and Friday Night Hoops games for one season."
-                          {...field}
-                          data-testid="input-description"
-                        />
-                      </FormControl>
-                      <FormDescription>Public description for checkout and dashboard</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Pricing & Billing */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Pricing & Billing</h3>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} data-testid="select-type">
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Subscription">Subscription</SelectItem>
-                            <SelectItem value="One-Time">One-Time</SelectItem>
-                            <SelectItem value="Program">Program</SelectItem>
-                            <SelectItem value="Add-On">Add-On</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {selectedType === "Subscription" && (
-                    <FormField
-                      control={form.control}
-                      name="billingCycle"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Billing Cycle</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value} data-testid="select-billing-cycle">
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select cycle" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Monthly">Monthly</SelectItem>
-                              <SelectItem value="Quarterly">Quarterly</SelectItem>
-                              <SelectItem value="6-Month">6-Month</SelectItem>
-                              <SelectItem value="Yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Price (USD) *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="325.00"
-                            {...field}
-                            onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
-                            value={field.value ? (field.value / 100).toFixed(2) : ""}
-                            data-testid="input-price"
-                          />
-                        </FormControl>
-                        <FormDescription>Enter as dollars (converted to cents)</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="billingModel"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Billing Model *</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} data-testid="select-billing-model">
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select model" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Per Player">Per Player</SelectItem>
-                            <SelectItem value="Per Family">Per Family</SelectItem>
-                            <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {selectedType === "One-Time" && (
-                  <FormField
-                    control={form.control}
-                    name="durationDays"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration (Days)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="90"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
-                            value={field.value || ""}
-                            data-testid="input-duration"
-                          />
-                        </FormControl>
-                        <FormDescription>Expiration period for one-time passes</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Player Status Tag */}
-                <FormField
-                  control={form.control}
-                  name="accessTag"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Player Status Tag</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""} data-testid="select-access-tag">
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select tag this product gives" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="">None</SelectItem>
-                          <SelectItem value="club_member">Club Member (for subscriptions)</SelectItem>
-                          <SelectItem value="pack_holder">Pack Holder (for session packs)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>What status tag does this product give to players?</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Session Count for Pack Holder */}
-                {selectedAccessTag === "pack_holder" && (
-                  <FormField
-                    control={form.control}
-                    name="sessionCount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Number of Sessions</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="10"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
-                            value={field.value || ""}
-                            data-testid="input-session-count"
-                          />
-                        </FormControl>
-                        <FormDescription>How many sessions/credits does this pack include?</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="stripePriceId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stripe Price ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="price_1Hx23..." {...field} data-testid="input-stripe-price-id" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="stripeProductId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Stripe Product ID</FormLabel>
-                        <FormControl>
-                          <Input placeholder="prod_..." {...field} data-testid="input-stripe-product-id" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-
-              {/* Payment Options */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Payment Options</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="allowInstallments"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Allow Installment Plan</FormLabel>
-                        <FormDescription>
-                          Enable customers to pay in multiple installments
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-allow-installments"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {allowInstallments && (
-                  <div className="grid grid-cols-2 gap-4 pl-4 border-l-2 border-gray-200">
-                    <FormField
-                      control={form.control}
-                      name="installments"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Number of Installments</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              min="2"
-                              max="12"
-                              placeholder="3"
-                              {...field}
-                              onChange={(e) => {
-                                const numInstallments = parseInt(e.target.value || "3");
-                                field.onChange(numInstallments);
-                                if (price && numInstallments > 0) {
-                                  const calculatedInstallmentPrice = Math.ceil(price / numInstallments);
-                                  form.setValue("installmentPrice", calculatedInstallmentPrice);
-                                }
-                              }}
-                              value={field.value || ""}
-                              data-testid="input-installments"
-                            />
-                          </FormControl>
-                          <FormDescription>How many payments (2-12)</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="installmentPrice"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price Per Installment (USD)</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="number" 
-                              placeholder="Auto-calculated"
-                              {...field}
-                              onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
-                              value={field.value ? (field.value / 100).toFixed(2) : ""}
-                              data-testid="input-installment-price"
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            {price && installments ? (
-                              <span className="text-green-600">
-                                Total: ${((field.value || 0) * (installments || 1) / 100).toFixed(2)}
-                              </span>
-                            ) : "Auto-calculated from total price"}
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="payInFullDiscount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pay In Full Discount (%)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0"
-                          max="100"
-                          placeholder="10"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
-                          value={field.value || ""}
-                          data-testid="input-pay-in-full-discount"
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        {price && field.value && field.value > 0 ? (
-                          <span className="text-green-600">
-                            Discounted price: ${((price * (100 - field.value) / 100) / 100).toFixed(2)} (saves ${((price * field.value / 100) / 100).toFixed(2)})
-                          </span>
-                        ) : "Percentage discount if customer pays the full amount upfront"}
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Tags */}
+            <form onSubmit={form.handleSubmit((data) => createProduct.mutate(data))} className="space-y-4">
               <FormField
                 control={form.control}
-                name="tags"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tags</FormLabel>
-                    <FormDescription>Categorize this package</FormDescription>
+                    <FormLabel>Product Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Team Jersey" {...field} data-testid="input-store-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Official team jersey with custom name and number" {...field} data-testid="input-store-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Price ($)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01"
+                        placeholder="49.99"
+                        {...field}
+                        onChange={(e) => field.onChange(Math.round(parseFloat(e.target.value || "0") * 100))}
+                        value={field.value ? (field.value / 100).toFixed(2) : ""}
+                        data-testid="input-store-price"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="inventorySizes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Available Sizes</FormLabel>
+                    <FormDescription>Select which sizes are available</FormDescription>
                     <div className="flex flex-wrap gap-2 mt-2">
-                      {["Youth Club", "Skills", "FNH", "Camp", "Uniform", "Add-On"].map((tag) => (
-                        <div key={tag} className="flex items-center space-x-2">
+                      {["XS", "S", "M", "L", "XL", "2XL", "3XL", "YS", "YM", "YL"].map((size) => (
+                        <div key={size} className="flex items-center space-x-1">
                           <Checkbox
-                            checked={(field.value as string[] || []).includes(tag)}
+                            checked={(field.value || []).includes(size)}
                             onCheckedChange={(checked) => {
-                              const current = (field.value as string[]) || [];
+                              const current = field.value || [];
                               if (checked) {
-                                field.onChange([...current, tag]);
+                                field.onChange([...current, size]);
                               } else {
-                                field.onChange(current.filter((t: string) => t !== tag));
+                                field.onChange(current.filter((s: string) => s !== size));
                               }
                             }}
-                            data-testid={`checkbox-tag-${tag.toLowerCase().replace(/\s+/g, '-')}`}
+                            data-testid={`checkbox-size-${size.toLowerCase()}`}
                           />
-                          <Label className="text-sm font-normal">{tag}</Label>
+                          <Label className="text-sm font-normal">{size}</Label>
                         </div>
                       ))}
                     </div>
@@ -5625,318 +5187,84 @@ function StoreTab({ organization }: any) {
                 )}
               />
 
-              {/* Waivers & Agreements */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Waivers & Agreements</h3>
-                <p className="text-sm text-gray-500">Select which waivers and agreements are required for this package</p>
-                
-                <FormField
-                  control={form.control}
-                  name="requireAAUMembership"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">AAU Membership</FormLabel>
-                        <FormDescription>
-                          Require players to provide AAU membership information
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-require-aau"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requireConcussionWaiver"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">HEADSUP Concussion Waiver</FormLabel>
-                        <FormDescription>
-                          Require acknowledgment of CDC HEADSUP concussion information
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-require-concussion"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="requireClubAgreement"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Club Team Agreement</FormLabel>
-                        <FormDescription>
-                          Require acceptance of UYP Club Team Experience agreement
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-require-club-agreement"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {waivers.filter((w: any) => w.isActive).length > 0 && (
-                  <FormField
-                    control={form.control}
-                    name="requiredWaivers"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Custom Waivers</FormLabel>
-                        <FormDescription>Select additional waivers created in the Waivers tab</FormDescription>
-                        <div className="space-y-2 mt-2">
-                          {waivers.filter((w: any) => w.isActive).map((waiver: any) => (
-                            <div key={waiver.id} className="flex items-center justify-between rounded-lg border p-4">
-                              <div className="space-y-0.5">
-                                <div className="text-sm font-medium">{waiver.name}</div>
-                                <div className="text-xs text-gray-500">{waiver.title}</div>
-                              </div>
-                              <Switch
-                                checked={(field.value || []).includes(waiver.id)}
-                                onCheckedChange={(checked) => {
-                                  const current = field.value || [];
-                                  if (checked) {
-                                    field.onChange([...current, waiver.id]);
-                                  } else {
-                                    field.onChange(current.filter((id: string) => id !== waiver.id));
-                                  }
-                                }}
-                                data-testid={`switch-waiver-${waiver.id}`}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-
-              {/* Automation */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700">Automation</h3>
-                
-                <FormField
-                  control={form.control}
-                  name="autoAssignPlayers"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">Auto Assign Players</FormLabel>
-                        <FormDescription>
-                          Automatically mark players active under this plan when purchased
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-auto-assign"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Admin Notes */}
               <FormField
                 control={form.control}
-                name="adminNotes"
+                name="inventoryCount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Admin Notes</FormLabel>
+                    <FormLabel>Stock Count</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Used for Season 2025 Youth Packages"
+                      <Input 
+                        type="number" 
+                        placeholder="50"
                         {...field}
-                        data-testid="input-admin-notes"
+                        onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                        value={field.value || ""}
+                        data-testid="input-stock-count"
                       />
                     </FormControl>
-                    <FormDescription>Internal notes not shown to users</FormDescription>
+                    <FormDescription>Leave empty for unlimited</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Social Settings Section */}
-              <div className="space-y-4 pt-4 border-t">
-                <div className="text-sm font-medium text-gray-700">Team/Group Settings</div>
-                <p className="text-xs text-gray-500">Configure how teams or groups work within this program</p>
-                
-                {/* Has Subgroups Toggle */}
-                <FormField
-                  control={form.control}
-                  name="hasSubgroups"
-                  render={({ field }) => (
-                    <FormItem className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-sm">Enable Teams/Groups</FormLabel>
-                        <FormDescription className="text-xs">
-                          Does this program have teams, levels, or groups?
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          data-testid="switch-has-subgroups"
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                {/* Subgroup Label */}
-                <FormField
-                  control={form.control}
-                  name="subgroupLabel"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Group Label</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-subgroup-label">
-                            <SelectValue placeholder="Select label" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Team">Team (e.g., 10u Black)</SelectItem>
-                          <SelectItem value="Level">Level (e.g., Rookies, Elite)</SelectItem>
-                          <SelectItem value="Group">Group (e.g., Session A)</SelectItem>
-                          <SelectItem value="Class">Class (e.g., Beginners)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>What to call subdivisions in this program</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Roster Visibility */}
-                <FormField
-                  control={form.control}
-                  name="rosterVisibility"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Roster Visibility</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-roster-visibility">
-                            <SelectValue placeholder="Select visibility" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="public">Public - Anyone can see roster</SelectItem>
-                          <SelectItem value="members">Members Only - Only team members see roster</SelectItem>
-                          <SelectItem value="hidden">Hidden - No roster shown to players</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Control who can see the team/group roster</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Chat Mode */}
-                <FormField
-                  control={form.control}
-                  name="chatMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Chat Mode</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-chat-mode">
-                            <SelectValue placeholder="Select chat mode" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="two_way">Full Chat - Everyone can send messages</SelectItem>
-                          <SelectItem value="announcements">Announcements Only - Only coaches can post</SelectItem>
-                          <SelectItem value="disabled">Disabled - No chat for this program</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>Control chat features for teams/groups</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {/* Active Status */}
               <FormField
                 control={form.control}
-                name="isActive"
+                name="shippingRequired"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Active Status</FormLabel>
-                      <FormDescription>
-                        Enable or disable this package for sale
-                      </FormDescription>
-                    </div>
+                  <FormItem className="flex items-center gap-2 space-y-0">
                     <FormControl>
-                      <Switch
+                      <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        data-testid="switch-active"
+                        data-testid="checkbox-shipping-required"
                       />
                     </FormControl>
+                    <FormLabel className="!mt-0">Shipping Required</FormLabel>
+                    <FormDescription className="!mt-0 ml-2 text-xs">(vs. pickup only)</FormDescription>
                   </FormItem>
                 )}
               />
 
-              <div className="flex gap-2 justify-end">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setIsDialogOpen(false)}
-                  data-testid="button-cancel"
-                >
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="checkbox-product-active"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Active (available for purchase)</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  type="submit"
-                  disabled={createPackage.isPending}
-                  data-testid="button-save-package"
-                >
-                  {createPackage.isPending ? "Saving..." : (editingPackage ? "Update Package" : "Create Package")}
+                <Button type="submit" disabled={createProduct.isPending} data-testid="button-save-store-product">
+                  {createProduct.isPending ? "Saving..." : (editingProduct ? "Update" : "Add Product")}
                 </Button>
               </div>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
-      {/* Delete Confirmation Dialog */}
+
+      {/* Delete Confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
           <p className="text-gray-600">
-            Are you sure you want to delete the package "{deleteConfirm?.name}"? This action cannot be undone.
+            Are you sure you want to delete "{deleteConfirm?.name}"? This action cannot be undone.
           </p>
           <div className="flex gap-2 justify-end mt-4">
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
@@ -5944,11 +5272,11 @@ function StoreTab({ organization }: any) {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deletePackage.mutate(deleteConfirm.id)}
-              disabled={deletePackage.isPending}
-              data-testid="button-confirm-delete"
+              onClick={() => deleteProduct.mutate(deleteConfirm.id)}
+              disabled={deleteProduct.isPending}
+              data-testid="button-confirm-delete-store"
             >
-              {deletePackage.isPending ? "Deleting..." : "Delete"}
+              {deleteProduct.isPending ? "Deleting..." : "Delete"}
             </Button>
           </div>
         </DialogContent>
@@ -5957,13 +5285,17 @@ function StoreTab({ organization }: any) {
   );
 }
 
-// Programs Tab Component - Manages programs with social settings
+// Programs Tab Component - Manages programs with social settings AND pricing
 function ProgramsTab({ programs, teams, organization }: any) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<any>(null);
   const tableRef = useDragScroll();
+
+  const { data: waivers = [] } = useQuery<any[]>({
+    queryKey: ["/api/waivers"],
+  });
 
   const handleViewProgram = (programId: string) => {
     navigate(`/admin/programs/${programId}`);
@@ -5974,24 +5306,42 @@ function ProgramsTab({ programs, teams, organization }: any) {
       organizationId: organization?.id || "",
       name: "",
       description: "",
-      type: "Program",
+      type: "Subscription",
+      price: 0,
+      billingCycle: "Monthly",
+      billingModel: "Per Player",
+      durationDays: 90,
+      allowInstallments: false,
+      installments: 3,
+      installmentPrice: 0,
+      payInFullDiscount: 0,
+      accessTag: "club_member",
+      sessionCount: undefined as number | undefined,
+      requiredWaivers: [] as string[],
       hasSubgroups: true,
       subgroupLabel: "Team",
       rosterVisibility: "members",
       chatMode: "two_way",
       isActive: true,
+      productCategory: "service",
     },
   });
 
+  const selectedType = form.watch("type");
+  const selectedAccessTag = form.watch("accessTag");
+  const allowInstallments = form.watch("allowInstallments");
+
   const createProgram = useMutation({
     mutationFn: async (data: any) => {
-      if (editingProgram) {
-        return await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, data);
-      }
-      return await apiRequest("POST", "/api/programs", {
+      const payload = {
         ...data,
         organizationId: organization?.id,
-      });
+        productCategory: "service",
+      };
+      if (editingProgram) {
+        return await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, payload);
+      }
+      return await apiRequest("POST", "/api/programs", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
@@ -6027,12 +5377,24 @@ function ProgramsTab({ programs, teams, organization }: any) {
       organizationId: program.organizationId,
       name: program.name,
       description: program.description || "",
-      type: program.type || "Program",
+      type: program.type || "Subscription",
+      price: program.price || 0,
+      billingCycle: program.billingCycle || "Monthly",
+      billingModel: program.billingModel || "Per Player",
+      durationDays: program.durationDays || 90,
+      allowInstallments: program.allowInstallments || false,
+      installments: program.installments || 3,
+      installmentPrice: program.installmentPrice || 0,
+      payInFullDiscount: program.payInFullDiscount || 0,
+      accessTag: program.accessTag || "club_member",
+      sessionCount: program.sessionCount,
+      requiredWaivers: program.requiredWaivers || [],
       hasSubgroups: program.hasSubgroups ?? true,
       subgroupLabel: program.subgroupLabel || "Team",
       rosterVisibility: program.rosterVisibility || "members",
       chatMode: program.chatMode || "two_way",
       isActive: program.isActive ?? true,
+      productCategory: "service",
     });
     setIsDialogOpen(true);
   };
@@ -6095,6 +5457,271 @@ function ProgramsTab({ programs, teams, organization }: any) {
                     </FormItem>
                   )}
                 />
+
+                {/* Pricing Section */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-medium mb-3">Pricing & Billing</h4>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Product Type</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-program-type">
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Subscription">Subscription (Recurring)</SelectItem>
+                              <SelectItem value="One-Time">One-Time Payment</SelectItem>
+                              <SelectItem value="Pack">Credit Pack</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Price ($)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              {...field} 
+                              onChange={(e) => field.onChange(parseFloat(e.target.value) * 100)}
+                              value={field.value ? (field.value / 100).toFixed(2) : ""}
+                              placeholder="0.00" 
+                              data-testid="input-program-price" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {selectedType === "Subscription" && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <FormField
+                        control={form.control}
+                        name="billingCycle"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Billing Cycle</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-billing-cycle">
+                                  <SelectValue placeholder="Select cycle" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Monthly">Monthly</SelectItem>
+                                <SelectItem value="Quarterly">Quarterly</SelectItem>
+                                <SelectItem value="6-Month">6-Month</SelectItem>
+                                <SelectItem value="Yearly">Yearly</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="billingModel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Billing Model</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-billing-model">
+                                  <SelectValue placeholder="Select model" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Per Player">Per Player</SelectItem>
+                                <SelectItem value="Per Family">Per Family</SelectItem>
+                                <SelectItem value="Organization-Wide">Organization-Wide</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {selectedType === "One-Time" && (
+                    <FormField
+                      control={form.control}
+                      name="durationDays"
+                      render={({ field }) => (
+                        <FormItem className="mt-3">
+                          <FormLabel>Duration (Days)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              placeholder="90" 
+                              data-testid="input-duration-days" 
+                            />
+                          </FormControl>
+                          <FormDescription>How long access lasts after purchase</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {selectedType === "Pack" && (
+                    <FormField
+                      control={form.control}
+                      name="sessionCount"
+                      render={({ field }) => (
+                        <FormItem className="mt-3">
+                          <FormLabel>Number of Sessions/Credits</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              {...field} 
+                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                              placeholder="10" 
+                              data-testid="input-session-count" 
+                            />
+                          </FormControl>
+                          <FormDescription>Credits that get used per check-in</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="allowInstallments"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0 mt-3">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-allow-installments"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Allow Installment Payments</FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  {allowInstallments && (
+                    <div className="grid grid-cols-2 gap-3 mt-3 pl-6">
+                      <FormField
+                        control={form.control}
+                        name="installments"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of Installments</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                placeholder="3" 
+                                data-testid="input-installments" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="payInFullDiscount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Pay-in-Full Discount (%)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                {...field} 
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                placeholder="0" 
+                                data-testid="input-pay-in-full-discount" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="accessTag"
+                    render={({ field }) => (
+                      <FormItem className="mt-3">
+                        <FormLabel>Access Type</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-access-tag">
+                              <SelectValue placeholder="Select access type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="club_member">Club Member (Full Access)</SelectItem>
+                            <SelectItem value="pack_holder">Pack Holder (Credit-Based)</SelectItem>
+                            <SelectItem value="none">No Special Access</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Determines user's status after purchase</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {waivers.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="requiredWaivers"
+                      render={({ field }) => (
+                        <FormItem className="mt-3">
+                          <FormLabel>Required Waivers</FormLabel>
+                          <div className="space-y-2 border rounded-md p-3">
+                            {waivers.map((waiver: any) => (
+                              <div key={waiver.id} className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={field.value?.includes(waiver.id)}
+                                  onCheckedChange={(checked) => {
+                                    const current = field.value || [];
+                                    if (checked) {
+                                      field.onChange([...current, waiver.id]);
+                                    } else {
+                                      field.onChange(current.filter((id: string) => id !== waiver.id));
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm">{waiver.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <FormDescription>Users must sign these waivers before enrolling</FormDescription>
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
                 
                 <div className="border-t pt-4 mt-4">
                   <h4 className="font-medium mb-3">Social Settings</h4>
@@ -6221,10 +5848,9 @@ function ProgramsTab({ programs, teams, organization }: any) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Subgroup Type</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Price</TableHead>
                 <TableHead>Teams</TableHead>
-                <TableHead>Roster</TableHead>
-                <TableHead>Chat</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -6232,6 +5858,10 @@ function ProgramsTab({ programs, teams, organization }: any) {
             <TableBody>
               {programs.map((program: any) => {
                 const programTeams = getTeamsForProgram(program.id);
+                const formatPrice = (cents: number) => {
+                  if (!cents) return "Free";
+                  return `$${(cents / 100).toFixed(2)}`;
+                };
                 return (
                   <TableRow key={program.id} data-testid={`row-program-${program.id}`} className="cursor-pointer hover:bg-gray-50" onClick={() => handleViewProgram(program.id)}>
                     <TableCell className="font-medium" data-testid={`text-program-name-${program.id}`}>
@@ -6243,39 +5873,40 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {program.hasSubgroups ? (
-                        <Badge variant="outline">{program.subgroupLabel || "Team"}</Badge>
-                      ) : (
-                        <span className="text-gray-400 text-sm">None</span>
+                      <Badge variant="outline" className={
+                        program.type === "Subscription" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                        program.type === "Pack" ? "bg-purple-50 text-purple-700 border-purple-200" :
+                        "bg-green-50 text-green-700 border-green-200"
+                      }>
+                        {program.type || "One-Time"}
+                      </Badge>
+                      {program.billingCycle && program.type === "Subscription" && (
+                        <div className="text-xs text-gray-500 mt-1">{program.billingCycle}</div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{formatPrice(program.price)}</div>
+                      {program.billingModel && program.billingModel !== "Per Player" && (
+                        <div className="text-xs text-gray-500">{program.billingModel}</div>
                       )}
                     </TableCell>
                     <TableCell>
                       {programTeams.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {programTeams.slice(0, 3).map((t: any) => (
+                          {programTeams.slice(0, 2).map((t: any) => (
                             <Badge key={t.id} variant="secondary" className="text-xs">
                               {t.name}
                             </Badge>
                           ))}
-                          {programTeams.length > 3 && (
+                          {programTeams.length > 2 && (
                             <Badge variant="secondary" className="text-xs">
-                              +{programTeams.length - 3} more
+                              +{programTeams.length - 2}
                             </Badge>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-sm">No teams</span>
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={program.rosterVisibility === 'hidden' ? 'secondary' : 'outline'}>
-                        {program.rosterVisibility || 'members'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={program.chatMode === 'disabled' ? 'secondary' : 'outline'}>
-                        {program.chatMode === 'two_way' ? '2-Way' : program.chatMode === 'announcements' ? 'Announce' : 'Off'}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge variant={program.isActive ? "default" : "secondary"}>
@@ -6316,7 +5947,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
               })}
               {programs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                     No programs yet. Create your first program to get started.
                   </TableCell>
                 </TableRow>

@@ -1000,34 +1000,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
-      // Fetch all unpaid package selections for the user
-      const packageSelections = await storage.getPackageSelectionsByParent(req.user.id);
-      const unpaidSelections = packageSelections.filter(selection => !selection.isPaid);
+      const { productId, productCategory } = req.body;
       
-      if (unpaidSelections.length === 0) {
-        return res.status(404).json({ error: "No unpaid package selections found" });
-      }
+      // Build line items - either for a direct product purchase or from package selections
+      const lineItems: any[] = [];
+      let metadata: any = { userId: user.id };
+      let mode: 'payment' | 'subscription' = 'payment';
       
-      // Build line items
-      const lineItems = [];
-      for (const selection of unpaidSelections) {
-        const program = await storage.getProgram(selection.programId);
-        if (program && program.price) {
+      if (productId) {
+        // Direct product purchase flow
+        const product = await storage.getProgram(productId);
+        if (!product) {
+          return res.status(404).json({ error: "Product not found" });
+        }
+        if (!product.price || product.price <= 0) {
+          return res.status(400).json({ error: "Product has no valid price" });
+        }
+        
+        // Check if this is a subscription product
+        if (product.type === 'Subscription' && product.billingCycle) {
+          // Create a subscription checkout
+          mode = 'subscription';
           lineItems.push({
             price_data: {
               currency: 'usd',
               product_data: {
-                name: program.name,
+                name: product.name,
+                description: product.description || undefined,
               },
-              unit_amount: program.price, // Price is already in cents
+              unit_amount: product.price,
+              recurring: {
+                interval: product.billingCycle.toLowerCase() as 'day' | 'week' | 'month' | 'year',
+              },
+            },
+            quantity: 1,
+          });
+        } else {
+          // One-time payment
+          lineItems.push({
+            price_data: {
+              currency: 'usd',
+              product_data: {
+                name: product.name,
+                description: product.description || undefined,
+              },
+              unit_amount: product.price,
             },
             quantity: 1,
           });
         }
-      }
-      
-      if (lineItems.length === 0) {
-        return res.status(404).json({ error: "No valid programs found for selections" });
+        
+        metadata.productId = productId;
+        metadata.productCategory = productCategory || product.productCategory || 'service';
+      } else {
+        // Legacy package selections flow
+        const packageSelections = await storage.getPackageSelectionsByParent(req.user.id);
+        const unpaidSelections = packageSelections.filter(selection => !selection.isPaid);
+        
+        if (unpaidSelections.length === 0) {
+          return res.status(404).json({ error: "No unpaid package selections found" });
+        }
+        
+        for (const selection of unpaidSelections) {
+          const program = await storage.getProgram(selection.programId);
+          if (program && program.price) {
+            lineItems.push({
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: program.name,
+                },
+                unit_amount: program.price,
+              },
+              quantity: 1,
+            });
+          }
+        }
+        
+        if (lineItems.length === 0) {
+          return res.status(404).json({ error: "No valid programs found for selections" });
+        }
+        
+        metadata.packageSelectionIds = unpaidSelections.map(s => s.id).join(',');
       }
       
       // Create or retrieve Stripe customer
@@ -1052,13 +1106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
         line_items: lineItems,
-        mode: 'payment',
+        mode,
         success_url: `${origin}/payments?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/payments?canceled=true`,
-        metadata: {
-          userId: user.id,
-          packageSelectionIds: unpaidSelections.map(s => s.id).join(','),
-        },
+        metadata,
       });
       
       res.json({

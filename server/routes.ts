@@ -1183,21 +1183,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
+      // Determine if this is a subscription or one-time payment
+      const isSubscription = program.type === 'Subscription' && program.billingCycle;
+      
+      // Build line items based on product type
+      const lineItem: any = {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: program.name,
+            description: program.description || undefined,
+          },
+          unit_amount: program.price, // Price is already in cents
+        },
+        quantity: 1,
+      };
+      
+      // Add recurring for subscriptions
+      if (isSubscription) {
+        const interval = (program.billingCycle || 'month').toLowerCase();
+        // Map billing cycle to Stripe interval
+        const stripeInterval = interval === 'monthly' ? 'month' : 
+                               interval === 'yearly' ? 'year' : 
+                               interval === 'weekly' ? 'week' :
+                               interval === 'daily' ? 'day' : interval;
+        lineItem.price_data.recurring = {
+          interval: stripeInterval as 'day' | 'week' | 'month' | 'year',
+        };
+      }
+      
       // Create Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: program.name,
-              description: program.description || undefined,
-            },
-            unit_amount: program.price, // Price is already in cents
-          },
-          quantity: 1,
-        }],
-        mode: program.type === 'Subscription' ? 'subscription' : 'payment',
+        line_items: [lineItem],
+        mode: isSubscription ? 'subscription' : 'payment',
         success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/unified-account?payment=canceled`,
         metadata: {

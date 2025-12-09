@@ -3793,6 +3793,11 @@ class DatabaseStorage implements IStorage {
   }
 
   async deleteProgram(id: string): Promise<void> {
+    // First, delete any suggested add-ons that reference this program (as the main program or as the add-on product)
+    await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.programId, id));
+    await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.productId, id));
+    
+    // Now delete the program itself
     await db.delete(schema.programs).where(eq(schema.programs.id, id));
   }
 

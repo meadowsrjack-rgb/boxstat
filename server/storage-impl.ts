@@ -3333,6 +3333,14 @@ class DatabaseStorage implements IStorage {
       tier: data.tier,
       class: data.class ?? null,
       prestige: data.prestige ?? 'Prospect',
+      // New trigger system fields
+      triggerCategory: data.triggerCategory ?? 'manual',
+      eventFilter: data.eventFilter ?? null,
+      countMode: data.countMode ?? null,
+      threshold: data.threshold ?? null,
+      referenceId: data.referenceId ?? null,
+      timeUnit: data.timeUnit ?? null,
+      // Legacy fields (kept for backwards compatibility)
       triggerField: data.triggerField ?? null,
       triggerOperator: data.triggerOperator ?? '>=',
       triggerValue: data.triggerValue ?? null,
@@ -3355,6 +3363,14 @@ class DatabaseStorage implements IStorage {
       tier: data.tier,
       class: data.class,
       prestige: data.prestige,
+      // New trigger system fields
+      triggerCategory: data.triggerCategory,
+      eventFilter: data.eventFilter,
+      countMode: data.countMode,
+      threshold: data.threshold,
+      referenceId: data.referenceId,
+      timeUnit: data.timeUnit,
+      // Legacy fields
       triggerField: data.triggerField,
       triggerOperator: data.triggerOperator,
       triggerValue: data.triggerValue,

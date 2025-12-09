@@ -89,6 +89,13 @@ export default function AdminProgramDetail() {
 
   const programTeams = teams.filter(team => team.programId === programId);
 
+  // Helper to get coach name from ID
+  const getCoachName = (coachId?: string) => {
+    if (!coachId) return "—";
+    const coach = coaches.find(c => c.id === coachId);
+    return coach ? `${coach.firstName} ${coach.lastName}` : coachId;
+  };
+
   useEffect(() => {
     if (program) {
       setOverviewForm({
@@ -618,7 +625,7 @@ export default function AdminProgramDetail() {
                             {team.name}
                           </TableCell>
                           <TableCell>{team.division || "—"}</TableCell>
-                          <TableCell>{team.coachId || "—"}</TableCell>
+                          <TableCell>{getCoachName(team.coachId)}</TableCell>
                           <TableCell>{team.season || "—"}</TableCell>
                           <TableCell>{team.rosterSize || 0}</TableCell>
                           <TableCell>

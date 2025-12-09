@@ -673,19 +673,31 @@ export const userBadges = pgTable("user_badges", {
   badgeType: varchar("badge_type", { length: 50 }),
 });
 
-// Award Definitions table (new awards system)
+// Award Definitions table (new simplified awards system)
+// Trigger Categories: checkin, system, time, store, manual
 export const awardDefinitions = pgTable("award_definitions", {
   id: serial().primaryKey().notNull(),
   name: text().notNull(),
-  tier: text().notNull(),
+  tier: text().notNull(), // Gold, Purple, Blue, Green, Grey, Special
+  description: text(),
+  imageUrl: text("image_url"),
+  
+  // Trigger configuration
+  triggerCategory: text("trigger_category").default('manual'), // checkin, system, time, store, manual
+  eventFilter: text("event_filter"), // game, practice, skills, fnh, any (for checkin/rsvp)
+  countMode: text("count_mode"), // total, streak (for checkin)
+  threshold: integer(), // number required (e.g., 50 checkins, 5 years)
+  referenceId: text("reference_id"), // for system (award ID to count) or store (product SKU)
+  timeUnit: text("time_unit"), // years, months, days (for time triggers)
+  
+  // Legacy fields (kept for backwards compatibility during migration)
   class: text(),
   prestige: text().default('Prospect'),
   triggerField: text("trigger_field"),
   triggerOperator: text("trigger_operator").default('>='),
   triggerValue: numeric("trigger_value"),
   triggerType: text("trigger_type").default('count'),
-  description: text(),
-  imageUrl: text("image_url"),
+  
   active: boolean().default(true),
   organizationId: varchar("organization_id"),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -1246,21 +1258,39 @@ export const insertUserAwardSchema = z.object({
 export type InsertUserAward = z.infer<typeof insertUserAwardSchema>;
 
 // =============================================
-// Award Definition Schema (New Awards System)
+// Award Definition Schema (Simplified Awards System)
 // =============================================
+
+// Trigger categories for simplified awards
+export type TriggerCategory = 'checkin' | 'system' | 'time' | 'store' | 'manual';
+export type EventFilter = 'game' | 'practice' | 'skills' | 'fnh' | 'any';
+export type CountMode = 'total' | 'streak';
+export type TimeUnit = 'years' | 'months' | 'days';
+export type AwardTier = 'Gold' | 'Purple' | 'Blue' | 'Green' | 'Grey' | 'Special';
 
 export interface AwardDefinition {
   id: number;
   name: string;
   tier: string;
+  description?: string;
+  imageUrl?: string;
+  
+  // New trigger configuration
+  triggerCategory: TriggerCategory;
+  eventFilter?: EventFilter;
+  countMode?: CountMode;
+  threshold?: number;
+  referenceId?: string;
+  timeUnit?: TimeUnit;
+  
+  // Legacy fields
   class?: string;
   prestige: string;
   triggerField?: string;
   triggerOperator: string;
   triggerValue?: number;
   triggerType: string;
-  description?: string;
-  imageUrl?: string;
+  
   active: boolean;
   organizationId?: string;
   createdAt: Date;

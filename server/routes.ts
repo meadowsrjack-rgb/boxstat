@@ -210,8 +210,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await (storage as any).initializeTestUsers?.();
     await (storage as any).initializeFacilities?.();
     
-    // Populate all 99 awards from the registry
-    await populateAwards(storage, "default-org");
+    // Award population disabled - awards are now managed manually through admin panel
+    // await populateAwards(storage, "default-org");
   }
   
   // =============================================

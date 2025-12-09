@@ -1051,24 +1051,37 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-team" data-testid="label-edit-team">Team & Program Assignments</Label>
+                  <div className="space-y-4">
+                    <Label data-testid="label-edit-assignments">Program & Team Assignments</Label>
                     {(() => {
                       const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
                                      editingUser.teamId ? [editingUser.teamId] : [];
                       const currentAssignedTeams = teams?.filter((t: any) => teamIds.includes(t.id)) || [];
                       
+                      // Group teams by program
+                      const teamsByProgram = programs?.reduce((acc: any, program: any) => {
+                        acc[program.id] = {
+                          program,
+                          teams: teams?.filter((t: any) => t.programId === program.id) || []
+                        };
+                        return acc;
+                      }, {}) || {};
+                      
+                      // Teams without a program
+                      const teamsWithoutProgram = teams?.filter((t: any) => !t.programId) || [];
+                      
                       return (
-                        <>
+                        <div className="space-y-3">
+                          {/* Current Assignments Summary */}
                           {currentAssignedTeams.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-2" data-testid="current-assignments">
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3" data-testid="current-assignments">
                               <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
                               <div className="flex flex-wrap gap-2">
                                 {currentAssignedTeams.map((team: any) => (
                                   <div key={team.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                                     <span>{team.name}</span>
                                     {team.program && (
-                                      <span className="text-blue-600">→ {team.program}</span>
+                                      <span className="text-blue-600">({team.program})</span>
                                     )}
                                     <button
                                       type="button"
@@ -1088,48 +1101,106 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                                   </div>
                                 ))}
                               </div>
-                              <p className="text-xs text-blue-600 mt-2">Removing a team will also cancel the program enrollment</p>
                             </div>
                           )}
-                          <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multiselect-edit-team">
-                            {teams?.length > 0 ? (
-                              teams.map((team: any) => {
-                                const isChecked = teamIds.includes(team.id);
-                                
-                                return (
-                                  <div key={team.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`team-${team.id}`}
-                                      checked={isChecked}
-                                      onCheckedChange={(checked) => {
-                                        let newTeamIds;
-                                        if (checked) {
-                                          newTeamIds = [...teamIds, team.id];
-                                        } else {
-                                          newTeamIds = teamIds.filter((id: number) => id !== team.id);
-                                        }
-                                        setEditingUser({
-                                          ...editingUser,
-                                          teamIds: newTeamIds,
-                                          teamId: newTeamIds[0] || null
-                                        });
-                                      }}
-                                      data-testid={`checkbox-team-${team.id}`}
-                                    />
-                                    <label
-                                      htmlFor={`team-${team.id}`}
-                                      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer ${isChecked ? 'text-blue-700' : ''}`}
-                                    >
-                                      {team.name} {team.program ? `(${team.program})` : ''}
-                                    </label>
+                          
+                          {/* Programs with their teams */}
+                          <div className="border rounded-md max-h-64 overflow-y-auto" data-testid="program-team-assignments">
+                            {programs?.map((program: any) => {
+                              const programTeams = teamsByProgram[program.id]?.teams || [];
+                              if (programTeams.length === 0) return null;
+                              
+                              const hasAssignedTeam = programTeams.some((t: any) => teamIds.includes(t.id));
+                              
+                              return (
+                                <div key={program.id} className="border-b last:border-b-0">
+                                  <div className={`px-3 py-2 font-semibold text-sm ${hasAssignedTeam ? 'bg-blue-50 text-blue-800' : 'bg-gray-50 text-gray-700'}`}>
+                                    {program.name}
                                   </div>
-                                );
-                              })
-                            ) : (
-                              <p className="text-sm text-gray-500">No teams available</p>
+                                  <div className="p-2 space-y-1">
+                                    {programTeams.map((team: any) => {
+                                      const isChecked = teamIds.includes(team.id);
+                                      return (
+                                        <div key={team.id} className="flex items-center space-x-2 pl-2">
+                                          <Checkbox
+                                            id={`team-${team.id}`}
+                                            checked={isChecked}
+                                            onCheckedChange={(checked) => {
+                                              let newTeamIds;
+                                              if (checked) {
+                                                newTeamIds = [...teamIds, team.id];
+                                              } else {
+                                                newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                              }
+                                              setEditingUser({
+                                                ...editingUser,
+                                                teamIds: newTeamIds,
+                                                teamId: newTeamIds[0] || null
+                                              });
+                                            }}
+                                            data-testid={`checkbox-team-${team.id}`}
+                                          />
+                                          <label
+                                            htmlFor={`team-${team.id}`}
+                                            className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
+                                          >
+                                            {team.name}
+                                          </label>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            
+                            {/* Teams without program */}
+                            {teamsWithoutProgram.length > 0 && (
+                              <div className="border-b last:border-b-0">
+                                <div className="px-3 py-2 font-semibold text-sm bg-gray-50 text-gray-700">
+                                  Other Teams
+                                </div>
+                                <div className="p-2 space-y-1">
+                                  {teamsWithoutProgram.map((team: any) => {
+                                    const isChecked = teamIds.includes(team.id);
+                                    return (
+                                      <div key={team.id} className="flex items-center space-x-2 pl-2">
+                                        <Checkbox
+                                          id={`team-${team.id}`}
+                                          checked={isChecked}
+                                          onCheckedChange={(checked) => {
+                                            let newTeamIds;
+                                            if (checked) {
+                                              newTeamIds = [...teamIds, team.id];
+                                            } else {
+                                              newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                            }
+                                            setEditingUser({
+                                              ...editingUser,
+                                              teamIds: newTeamIds,
+                                              teamId: newTeamIds[0] || null
+                                            });
+                                          }}
+                                          data-testid={`checkbox-team-${team.id}`}
+                                        />
+                                        <label
+                                          htmlFor={`team-${team.id}`}
+                                          className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
+                                        >
+                                          {team.name}
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {(!programs || programs.length === 0) && (!teams || teams.length === 0) && (
+                              <p className="p-3 text-sm text-gray-500">No programs or teams available</p>
                             )}
                           </div>
-                        </>
+                        </div>
                       );
                     })()}
                   </div>

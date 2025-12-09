@@ -2047,10 +2047,29 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [editingTeam, setEditingTeam] = useState<any>(null);
   const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<any>(null);
+  const [teamRoster, setTeamRoster] = useState<string[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
   const tableRef = useDragScroll();
 
   const coaches = users.filter((u: any) => u.role === "coach");
   const players = users.filter((u: any) => u.role === "player");
+  
+  // Fetch team roster when editing begins
+  useEffect(() => {
+    if (editingTeam?.id) {
+      setRosterLoading(true);
+      // Get players assigned to this team from users data
+      const assignedPlayers = users.filter((u: any) => {
+        if (u.role !== 'player') return false;
+        const userTeamIds = Array.isArray(u.teamIds) ? u.teamIds : u.teamId ? [u.teamId] : [];
+        return userTeamIds.includes(editingTeam.id);
+      }).map((u: any) => u.id);
+      setTeamRoster(assignedPlayers);
+      setRosterLoading(false);
+    } else {
+      setTeamRoster([]);
+    }
+  }, [editingTeam?.id, users]);
 
   const form = useForm<any>({
     resolver: zodResolver(insertTeamSchema),
@@ -2114,6 +2133,55 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
     },
     onError: () => {
       toast({ title: "Failed to update team", variant: "destructive" });
+    },
+  });
+  
+  // Update roster assignments mutation
+  const updateRoster = useMutation({
+    mutationFn: async ({ teamId, playerIds }: { teamId: number; playerIds: string[] }) => {
+      // Get current roster
+      const currentRoster = users.filter((u: any) => {
+        if (u.role !== 'player') return false;
+        const userTeamIds = Array.isArray(u.teamIds) ? u.teamIds : u.teamId ? [u.teamId] : [];
+        return userTeamIds.includes(teamId);
+      }).map((u: any) => u.id);
+      
+      // Find players to add and remove
+      const toAdd = playerIds.filter(id => !currentRoster.includes(id));
+      const toRemove = currentRoster.filter((id: string) => !playerIds.includes(id));
+      
+      // Add new players
+      for (const playerId of toAdd) {
+        const player = users.find((u: any) => u.id === playerId);
+        if (player) {
+          const currentTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
+          await apiRequest("PATCH", `/api/users/${playerId}`, {
+            teamIds: [...currentTeamIds, teamId],
+            teamId: currentTeamIds[0] || teamId
+          });
+        }
+      }
+      
+      // Remove players
+      for (const playerId of toRemove) {
+        const player = users.find((u: any) => u.id === playerId);
+        if (player) {
+          const currentTeamIds = Array.isArray(player.teamIds) ? player.teamIds : player.teamId ? [player.teamId] : [];
+          const newTeamIds = currentTeamIds.filter((id: number) => id !== teamId);
+          await apiRequest("PATCH", `/api/users/${playerId}`, {
+            teamIds: newTeamIds,
+            teamId: newTeamIds[0] || null
+          });
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      toast({ title: "Roster updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update roster", variant: "destructive" });
     },
   });
 
@@ -2687,15 +2755,93 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                       />
                     </div>
 
-                    <Button
-                      type="button"
-                      className="w-full"
-                      onClick={() => updateTeam.mutate(editingTeam)}
-                      disabled={updateTeam.isPending}
-                      data-testid="button-submit-edit-team"
-                    >
-                      {updateTeam.isPending ? "Updating..." : "Update Team"}
-                    </Button>
+                    {/* Roster Management Section */}
+                    <div className="space-y-2 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label>Team Roster ({teamRoster.length} players)</Label>
+                        {updateRoster.isPending && (
+                          <span className="text-xs text-blue-600">Saving roster...</span>
+                        )}
+                      </div>
+                      {rosterLoading ? (
+                        <div className="border rounded-md p-4 text-center text-gray-500">
+                          Loading roster...
+                        </div>
+                      ) : (
+                        <div className="border rounded-md max-h-64 overflow-y-auto" data-testid="edit-team-roster">
+                          {/* Current Roster */}
+                          {teamRoster.length > 0 && (
+                            <div className="p-2 border-b bg-blue-50">
+                              <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {teamRoster.map(playerId => {
+                                  const player = players.find((p: any) => p.id === playerId);
+                                  return player ? (
+                                    <div key={playerId} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                      <span>{player.firstName} {player.lastName}</span>
+                                      <button
+                                        type="button"
+                                        className="ml-1 text-blue-600 hover:text-blue-800"
+                                        onClick={() => setTeamRoster(teamRoster.filter(id => id !== playerId))}
+                                        data-testid={`button-remove-roster-${playerId}`}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Available Players */}
+                          <div className="p-2 space-y-1">
+                            <p className="text-xs font-semibold text-gray-500 mb-2">Add Players:</p>
+                            {players.length === 0 ? (
+                              <p className="text-sm text-gray-500">No players available</p>
+                            ) : (
+                              players.map((player: any) => {
+                                const isOnRoster = teamRoster.includes(player.id);
+                                return (
+                                  <div key={player.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      checked={isOnRoster}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setTeamRoster([...teamRoster, player.id]);
+                                        } else {
+                                          setTeamRoster(teamRoster.filter(id => id !== player.id));
+                                        }
+                                      }}
+                                      data-testid={`checkbox-roster-${player.id}`}
+                                    />
+                                    <label className={`text-sm cursor-pointer ${isOnRoster ? 'text-blue-700 font-medium' : ''}`}>
+                                      {player.firstName} {player.lastName}
+                                      {player.division && <span className="text-gray-400 ml-1">({player.division})</span>}
+                                    </label>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        className="flex-1"
+                        onClick={async () => {
+                          await updateTeam.mutateAsync(editingTeam);
+                          await updateRoster.mutateAsync({ teamId: editingTeam.id, playerIds: teamRoster });
+                        }}
+                        disabled={updateTeam.isPending || updateRoster.isPending}
+                        data-testid="button-submit-edit-team"
+                      >
+                        {updateTeam.isPending || updateRoster.isPending ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </DialogContent>

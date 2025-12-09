@@ -1337,14 +1337,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
           
+          const program = await storage.getProgram(packageId);
+          
           // Create payment record with playerId
           if (session.amount_total) {
             try {
-              const program = await storage.getProgram(packageId);
               await storage.createPayment({
                 organizationId: "default-org",
                 userId: userId,
-                playerId: playerId,
+                playerId: playerId || undefined,
                 amount: session.amount_total, // Store in cents (Stripe convention)
                 currency: 'usd',
                 paymentType: program?.type || 'package',
@@ -1358,6 +1359,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } catch (paymentError: any) {
               console.error("Error creating payment record:", paymentError);
               // Don't fail the webhook if payment record creation fails
+            }
+          }
+          
+          // Update player's paymentStatus to "paid" and create enrollment
+          if (playerId) {
+            try {
+              // Update player's payment status
+              await storage.updateUser(playerId, {
+                paymentStatus: "paid",
+              });
+              console.log(`✅ Updated player ${playerId} paymentStatus to paid`);
+              
+              // Check for existing enrollment for this player and program
+              const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+              const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
+              
+              if (!hasEnrollment) {
+                await storage.createEnrollment({
+                  organizationId: "default-org",
+                  accountHolderId: userId,
+                  profileId: playerId,
+                  programId: packageId,
+                  status: 'active',
+                  source: 'payment',
+                  remainingCredits: program?.sessionCount || undefined,
+                  totalCredits: program?.sessionCount || undefined,
+                });
+                console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+              }
+            } catch (playerUpdateError: any) {
+              console.error("Error updating player status or enrollment:", playerUpdateError);
             }
           }
           
@@ -1506,7 +1538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const payment = await storage.createPayment({
             organizationId: "default-org",
             userId: userId,
-            playerId: playerId,
+            playerId: playerId || undefined,
             amount: session.amount_total,
             currency: 'usd',
             paymentType: program?.type || 'package',

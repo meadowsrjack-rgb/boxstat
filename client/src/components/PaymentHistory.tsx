@@ -96,20 +96,31 @@ export function PaymentHistory() {
     );
   }
 
+  // Helper to determine if payment is a subscription
+  // Uses paymentType field as canonical source, with stripeData as fallback
+  const isSubscriptionPayment = (p: EnrichedPayment): boolean => {
+    // Check paymentType field first (canonical source)
+    if (p.paymentType === 'subscription') return true;
+    // Fallback to stripeData for older records
+    if (p.stripeData?.type === 'subscription') return true;
+    return false;
+  };
+
   // Separate active subscriptions from other payments
   const activeSubscriptions = payments.filter(
-    p => p.stripeData?.type === 'subscription' && 
-         (p.stripeData?.status === 'active' || p.stripeData?.subscriptionDetails?.status === 'active')
+    p => isSubscriptionPayment(p) && 
+         (p.stripeData?.status === 'active' || p.stripeData?.subscriptionDetails?.status === 'active' || p.status === 'completed')
   );
 
   const oneTimePayments = payments.filter(
-    p => !p.stripeData || p.stripeData?.type === 'one_time'
+    p => !isSubscriptionPayment(p)
   );
 
   const inactiveSubscriptions = payments.filter(
-    p => p.stripeData?.type === 'subscription' && 
+    p => isSubscriptionPayment(p) && 
          p.stripeData?.status !== 'active' &&
-         p.stripeData?.subscriptionDetails?.status !== 'active'
+         p.stripeData?.subscriptionDetails?.status !== 'active' &&
+         p.status !== 'completed'
   );
 
   const getStatusIcon = (status: string) => {

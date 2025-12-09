@@ -196,6 +196,12 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/notifications"],
   });
 
+  // Fetch program memberships for the user being edited
+  const { data: editingUserProgramMemberships = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", editingUser?.id, "program-memberships"],
+    enabled: !!editingUser?.id,
+  });
+
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
@@ -1073,12 +1079,37 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       // Teams without a program
                       const teamsWithoutProgram = teams?.filter((t: any) => !t.programId) || [];
                       
+                      // Program enrollments (from productEnrollments table)
+                      const programEnrollments = editingUserProgramMemberships || [];
+                      
                       return (
                         <div className="space-y-3">
-                          {/* Current Assignments - Clear display of what user is currently in */}
+                          {/* Program Enrollments - show what programs the user is enrolled in */}
+                          {programEnrollments.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3" data-testid="program-enrollments">
+                              <p className="text-xs font-semibold text-blue-700 mb-2">Program Enrollments ({programEnrollments.length}):</p>
+                              <div className="space-y-1">
+                                {programEnrollments.map((enrollment: any) => (
+                                  <div key={enrollment.enrollmentId} className="flex items-center justify-between bg-white border border-blue-100 rounded px-2 py-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">{enrollment.programName}</span>
+                                      {enrollment.teams?.length > 0 && (
+                                        <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                                          {enrollment.teams.length} team{enrollment.teams.length > 1 ? 's' : ''}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Current Team Assignments - Clear display of what teams user is on */}
                           {activeTeams.length > 0 ? (
                             <div className="bg-green-50 border border-green-200 rounded-md p-3" data-testid="current-assignments">
-                              <p className="text-xs font-semibold text-green-700 mb-2">Current Assignments ({activeTeams.length}):</p>
+                              <p className="text-xs font-semibold text-green-700 mb-2">Team Assignments ({activeTeams.length}):</p>
                               <div className="space-y-1">
                                 {activeTeams.map((assignment: any) => (
                                   <div key={assignment.teamId} className="flex items-center justify-between bg-white border border-green-100 rounded px-2 py-1.5">
@@ -1108,9 +1139,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                                 ))}
                               </div>
                             </div>
-                          ) : (
+                          ) : programEnrollments.length === 0 ? (
                             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3" data-testid="no-assignments">
-                              <p className="text-sm text-yellow-700">Not currently assigned to any teams</p>
+                              <p className="text-sm text-yellow-700">Not enrolled in any programs or assigned to any teams</p>
+                            </div>
+                          ) : (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3" data-testid="no-team-assignments">
+                              <p className="text-sm text-yellow-700">Enrolled in programs but not assigned to any teams yet</p>
                             </div>
                           )}
                           

@@ -3075,6 +3075,32 @@ class DatabaseStorage implements IStorage {
 
   async deleteTeam(id: string): Promise<void> {
     const teamId = parseInt(id);
+    
+    // Get the team to find its programId
+    const team = await this.getTeam(id);
+    
+    if (team && team.programId) {
+      // Get all team members before deleting
+      const memberships = await db.select().from(schema.teamMemberships)
+        .where(eq(schema.teamMemberships.teamId, teamId));
+      
+      // Cancel enrollments for all players on this team for this program
+      for (const membership of memberships) {
+        if (membership.profileId) {
+          await db.update(schema.productEnrollments)
+            .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
+            .where(and(
+              eq(schema.productEnrollments.programId, team.programId),
+              eq(schema.productEnrollments.profileId, membership.profileId)
+            ));
+        }
+      }
+    }
+    
+    // Delete team memberships first (in case CASCADE doesn't work)
+    await db.delete(schema.teamMemberships).where(eq(schema.teamMemberships.teamId, teamId));
+    
+    // Now delete the team
     await db.delete(schema.teams).where(eq(schema.teams.id, teamId));
   }
 
@@ -3796,6 +3822,11 @@ class DatabaseStorage implements IStorage {
     // First, delete any suggested add-ons that reference this program (as the main program or as the add-on product)
     await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.programId, id));
     await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.productId, id));
+    
+    // Cancel all enrollments for this program
+    await db.update(schema.productEnrollments)
+      .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
+      .where(eq(schema.productEnrollments.programId, id));
     
     // Now delete the program itself
     await db.delete(schema.programs).where(eq(schema.programs.id, id));

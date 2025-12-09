@@ -3690,6 +3690,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           set: { status: 'active', role: memberRole },
         });
       
+      // Auto-enroll player if team has a programId
+      if (team.programId) {
+        // Get the account holder ID
+        const accountHolderId = player.accountHolderId || player.id;
+        
+        // Check if already enrolled in this program
+        const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+        const alreadyEnrolled = existingEnrollments.some(
+          (e: any) => e.programId === team.programId && e.profileId === playerId && e.status === 'active'
+        );
+        
+        if (!alreadyEnrolled) {
+          await storage.createEnrollment({
+            organizationId: team.organizationId || organizationId,
+            programId: team.programId,
+            accountHolderId: accountHolderId,
+            profileId: playerId,
+            status: 'active',
+            source: 'team_assignment',
+          });
+          console.log(`Auto-enrolled player ${playerId} in program ${team.programId}`);
+        }
+      }
+      
       // Also update legacy teamId field for backwards compatibility
       const updatedPlayer = await storage.updateUser(playerId, { teamId: teamIdNum } as any);
       
@@ -3734,6 +3758,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Cannot remove players from other organizations' });
       }
 
+      // Get the team to check if it has a programId
+      const team = await storage.getTeam(teamId);
+      
       // Remove from team_memberships table
       await db.delete(teamMemberships)
         .where(
@@ -3742,6 +3769,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             eq(teamMemberships.profileId, playerId)
           )
         );
+      
+      // Cancel enrollment for this player if team has a programId
+      if (team && team.programId) {
+        await db.update(productEnrollments)
+          .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
+          .where(
+            and(
+              eq(productEnrollments.programId, team.programId),
+              eq(productEnrollments.profileId, playerId)
+            )
+          );
+        console.log(`Cancelled enrollment for player ${playerId} in program ${team.programId}`);
+      }
       
       // Also clear legacy teamId field for backwards compatibility
       const updatedPlayer = await storage.updateUser(playerId, { teamId: null } as any);
@@ -6188,18 +6228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      // Check for existing enrollments before deletion
-      const enrollments = await db.select()
-        .from(productEnrollments)
-        .where(eq(productEnrollments.programId, req.params.id))
-        .limit(1);
-      
-      if (enrollments.length > 0) {
-        return res.status(400).json({ 
-          message: 'Cannot delete this program because it has active enrollments. Please remove all enrollments first.' 
-        });
-      }
-      
+      // deleteProgram now automatically cancels all enrollments before deletion
       await storage.deleteProgram(req.params.id);
       res.json({ success: true });
     } catch (error: any) {

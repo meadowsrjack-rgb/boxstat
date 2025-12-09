@@ -1051,78 +1051,101 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="edit-team" data-testid="label-edit-team">Teams (Multiple Selection)</Label>
-                    <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multiselect-edit-team">
-                      {teams?.length > 0 ? (
-                        teams.map((team: any) => {
-                          const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
-                                         editingUser.teamId ? [editingUser.teamId] : [];
-                          const isChecked = teamIds.includes(team.id);
-                          
-                          return (
-                            <div key={team.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`team-${team.id}`}
-                                checked={isChecked}
-                                onCheckedChange={(checked) => {
-                                  let newTeamIds;
-                                  if (checked) {
-                                    newTeamIds = [...teamIds, team.id];
-                                  } else {
-                                    newTeamIds = teamIds.filter((id: number) => id !== team.id);
-                                  }
-                                  setEditingUser({
-                                    ...editingUser,
-                                    teamIds: newTeamIds,
-                                    teamId: newTeamIds[0] || null
-                                  });
-                                }}
-                                data-testid={`checkbox-team-${team.id}`}
-                              />
-                              <label
-                                htmlFor={`team-${team.id}`}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                              >
-                                {team.name} {team.program ? `(${team.program})` : ''}
-                              </label>
+                    <Label htmlFor="edit-team" data-testid="label-edit-team">Team & Program Assignments</Label>
+                    {(() => {
+                      const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
+                                     editingUser.teamId ? [editingUser.teamId] : [];
+                      const currentAssignedTeams = teams?.filter((t: any) => teamIds.includes(t.id)) || [];
+                      
+                      return (
+                        <>
+                          {currentAssignedTeams.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-2" data-testid="current-assignments">
+                              <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {currentAssignedTeams.map((team: any) => (
+                                  <div key={team.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                    <span>{team.name}</span>
+                                    {team.program && (
+                                      <span className="text-blue-600">→ {team.program}</span>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="ml-1 text-blue-600 hover:text-blue-800"
+                                      onClick={() => {
+                                        const newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                        setEditingUser({
+                                          ...editingUser,
+                                          teamIds: newTeamIds,
+                                          teamId: newTeamIds[0] || null
+                                        });
+                                      }}
+                                      data-testid={`button-remove-team-${team.id}`}
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-xs text-blue-600 mt-2">Removing a team will also cancel the program enrollment</p>
                             </div>
-                          );
-                        })
-                      ) : (
-                        <p className="text-sm text-gray-500">No teams available</p>
-                      )}
-                    </div>
+                          )}
+                          <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multiselect-edit-team">
+                            {teams?.length > 0 ? (
+                              teams.map((team: any) => {
+                                const isChecked = teamIds.includes(team.id);
+                                
+                                return (
+                                  <div key={team.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`team-${team.id}`}
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        let newTeamIds;
+                                        if (checked) {
+                                          newTeamIds = [...teamIds, team.id];
+                                        } else {
+                                          newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                        }
+                                        setEditingUser({
+                                          ...editingUser,
+                                          teamIds: newTeamIds,
+                                          teamId: newTeamIds[0] || null
+                                        });
+                                      }}
+                                      data-testid={`checkbox-team-${team.id}`}
+                                    />
+                                    <label
+                                      htmlFor={`team-${team.id}`}
+                                      className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer ${isChecked ? 'text-blue-700' : ''}`}
+                                    >
+                                      {team.name} {team.program ? `(${team.program})` : ''}
+                                    </label>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <p className="text-sm text-gray-500">No teams available</p>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                   
                   {editingUser.role !== 'coach' && (
                     <div className="space-y-2">
                       <Label htmlFor="edit-division" data-testid="label-edit-division">Division</Label>
-                      <Select 
-                        value={selectedDivision || editingUser.divisionId || "none"}
-                        onValueChange={(value) => {
-                          const actualValue = value === "none" ? "" : value;
-                          const selectedDivisionObj = divisions?.find((d: any) => d.id === actualValue);
-                          const divisionName = selectedDivisionObj?.name || "";
-                          setSelectedDivision(actualValue);
-                          setEditingUser({
-                            ...editingUser, 
-                            division: divisionName,
-                            divisionId: actualValue
-                          });
-                        }}
-                      >
-                        <SelectTrigger id="edit-division" data-testid="select-edit-division">
-                          <SelectValue placeholder="Select a division" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {divisions?.map((division: any) => (
-                            <SelectItem key={division.id} value={division.id}>
-                              {division.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="edit-division"
+                        value={editingUser.division || ""}
+                        onChange={(e) => setEditingUser({
+                          ...editingUser, 
+                          division: e.target.value
+                        })}
+                        placeholder="e.g., U10, U12, Varsity"
+                        data-testid="input-edit-division"
+                      />
                     </div>
                   )}
                   
@@ -2178,28 +2201,18 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 
                     <FormField
                       control={form.control}
-                      name="divisionId"
+                      name="division"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Division</FormLabel>
-                          <Select 
-                            onValueChange={(value) => field.onChange(value === "none" ? undefined : parseInt(value))} 
-                            value={field.value ? field.value.toString() : "none"}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-team-division">
-                                <SelectValue placeholder="Select a division" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">None</SelectItem>
-                              {(divisions || []).map((division: any) => (
-                                <SelectItem key={division.id} value={division.id.toString()}>
-                                  {division.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormControl>
+                            <Input 
+                              {...field}
+                              value={field.value || ""}
+                              placeholder="e.g., U10, U12, Varsity"
+                              data-testid="input-team-division"
+                            />
+                          </FormControl>
                           <FormDescription>Optional age division</FormDescription>
                           <FormMessage />
                         </FormItem>
@@ -2437,22 +2450,13 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
 
                     <div className="space-y-2">
                       <Label htmlFor="edit-team-division">Division</Label>
-                      <Select
-                        value={editingTeam.divisionId?.toString() || "none"}
-                        onValueChange={(value) => setEditingTeam({...editingTeam, divisionId: value === "none" ? null : parseInt(value)})}
-                      >
-                        <SelectTrigger id="edit-team-division" data-testid="select-edit-team-division">
-                          <SelectValue placeholder="Select a division" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {divisions.map((division: any) => (
-                            <SelectItem key={division.id} value={division.id.toString()}>
-                              {division.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="edit-team-division"
+                        value={editingTeam.division || ""}
+                        onChange={(e) => setEditingTeam({...editingTeam, division: e.target.value})}
+                        placeholder="e.g., U10, U12, Varsity"
+                        data-testid="input-edit-team-division"
+                      />
                     </div>
 
                     <div className="space-y-2">

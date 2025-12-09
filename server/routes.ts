@@ -2775,7 +2775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`[PATCH] Player ${userId}: current teams=${JSON.stringify(currentTeamIds)}, new teams=${JSON.stringify(newTeamIds)}`);
         
-        // Mark removed teams as inactive
+        // Mark removed teams as inactive and cancel associated enrollments
         for (const oldTeamId of currentTeamIds) {
           if (!newTeamIds.includes(oldTeamId)) {
             console.log(`[PATCH] Marking player ${userId} as inactive on team ${oldTeamId}`);
@@ -2787,6 +2787,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   eq(teamMemberships.profileId, userId)
                 )
               );
+            
+            // Cancel enrollment for this team's program if exists
+            const removedTeam = await storage.getTeam(String(oldTeamId));
+            if (removedTeam?.programId) {
+              console.log(`[PATCH] Cancelling enrollment for player ${userId} in program ${removedTeam.programId}`);
+              await db.update(productEnrollments)
+                .set({ status: 'cancelled' })
+                .where(
+                  and(
+                    eq(productEnrollments.profileId, userId),
+                    eq(productEnrollments.programId, removedTeam.programId),
+                    eq(productEnrollments.status, 'active')
+                  )
+                );
+            }
           }
         }
         
@@ -3354,7 +3369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Coordinator endpoint: Create team with player assignments and auto-enrollment
   app.post('/api/teams/with-assignments', requireAuth, async (req: any, res) => {
-    const { role } = req.user;
+    const { role, organizationId } = req.user;
     if (role !== 'admin') {
       return res.status(403).json({ message: 'Only admins can use this endpoint' });
     }
@@ -3423,6 +3438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!existingEnrollment) {
                 await db.insert(productEnrollments)
                   .values({
+                    organizationId: organizationId || team.organizationId || 'default-org',
                     programId: team.programId,
                     accountHolderId: accountHolderId,
                     profileId: playerId,

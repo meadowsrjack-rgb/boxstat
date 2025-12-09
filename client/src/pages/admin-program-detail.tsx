@@ -84,7 +84,7 @@ export default function AdminProgramDetail() {
 
   const { data: coaches = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/users"],
-    select: (data: any[]) => data.filter(u => u.roles?.includes('coach')),
+    select: (data: any[]) => data.filter(u => u.role === 'coach'),
   });
 
   const programTeams = teams.filter(team => team.programId === programId);

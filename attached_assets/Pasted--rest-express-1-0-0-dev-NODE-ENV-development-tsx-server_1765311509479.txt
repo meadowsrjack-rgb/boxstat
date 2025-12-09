@@ -1,0 +1,179 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+✅ APNs configured for direct push notifications
+   Host: api.sandbox.push.apple.com
+   Bundle ID: boxstat.app
+✅ Firebase Admin initialized for Android FCM push notifications
+✅ Web Push notifications configured with VAPID keys
+🏆 Starting award population...
+✅ Award population complete!
+   Created: 0
+   Skipped: 100
+   Total: 100
+Stripe initialized in 🧪 TEST mode (key: sk_test_...)
+8:11:33 PM [express] serving on port 5000
+✅ Sports Management Platform ready!
+📝 Database storage initialized
+👤 Default admin user: admin@example.com
+🏢 Default organization: My Sports Organization
+
+🧪 Test Account Credentials:
+   Email: test@example.com
+   Password: test123
+   Role: parent
+
+Browserslist: browsers data (caniuse-lite) is 14 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[BABEL] Note: The code generator has deoptimised the styling of /home/runner/workspace/client/src/pages/admin-dashboard.tsx as it exceeds the max of 500KB.
+8:11:41 PM [express] GET /api/auth/user 304 in 48ms :: {"id":"1764873247759-aecinrbny","organization…
+8:12:39 PM [express] GET /api/auth/user 200 in 78ms :: {"id":"1764873247759-aecinrbny","organization…
+Error fetching teams: error: column "division" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getTeamsByOrganization (/home/runner/workspace/server/storage-impl.ts:2979:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3319:21) {
+  length: 172,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: 'Perhaps you meant to reference the column "teams.division_id".',
+  position: '86',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3729',
+  routine: 'errorMissingColumn'
+}
+8:12:39 PM [express] GET /api/organization 200 in 77ms :: {"id":"default-org","name":"UYP","subdomai…
+🔍 EVENT FILTERING DEBUG - Start
+  userId: 1764873247759-aecinrbny
+  role: admin
+  childProfileId: undefined
+  Admin viewing own dashboard - showing all events
+8:12:39 PM [express] GET /api/programs 200 in 110ms :: [{"id":"prog-skills-academy","organizationId"…
+8:12:39 PM [express] GET /api/award-definitions 200 in 113ms :: [{"id":314,"name":"Superstar (10× MV…
+8:12:39 PM [express] GET /api/events 200 in 146ms :: [{"id":"214","organizationId":"default-org","ti…
+8:12:39 PM [express] GET /api/teams 500 in 221ms :: {"message":"Failed to fetch teams"}
+8:12:39 PM [express] GET /api/payments 200 in 76ms :: [{"id":"3","organizationId":"default-org","use…
+8:12:39 PM [express] GET /api/users 200 in 265ms :: [{"id":"parent-1764899796149-a46e45aa","organiza…
+8:12:39 PM [express] GET /api/auth/user 304 in 83ms :: {"id":"1764873247759-aecinrbny","organization…
+8:12:39 PM [express] GET /api/divisions 200 in 79ms :: [{"id":"1","organizationId":"default-org","na…
+8:12:39 PM [express] GET /api/evaluations 200 in 77ms :: [{"id":1,"organizationId":"default-org","pl…
+8:12:39 PM [express] GET /api/admin/notifications 200 in 79ms :: [{"id":56,"organizationId":"default…
+8:12:39 PM [express] GET /api/notifications/announcements 304 in 85ms :: []
+8:12:39 PM [express] GET /api/notifications/feed 304 in 84ms :: []
+8:16:54 PM [express] POST /api/auth/login 200 in 635ms :: {"success":true,"token":"eyJhbGciOiJIUzI1N…
+8:16:56 PM [express] GET /api/auth/user 304 in 39ms :: {"id":"1764873247759-aecinrbny","organization…
+8:16:56 PM [express] GET /api/auth/user 304 in 42ms :: {"id":"1764873247759-aecinrbny","organization…
+8:16:57 PM [express] GET /api/account/players 304 in 337ms :: [{"id":"1764888338434-4lskk247x","orga…
+Error fetching teams: error: column "division" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getTeamsByOrganization (/home/runner/workspace/server/storage-impl.ts:2979:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3319:21) {
+  length: 172,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: 'Perhaps you meant to reference the column "teams.division_id".',
+  position: '86',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3729',
+  routine: 'errorMissingColumn'
+}
+8:16:57 PM [express] GET /api/teams 500 in 40ms :: {"message":"Failed to fetch teams"}
+8:16:57 PM [express] GET /api/users 304 in 155ms :: [{"id":"parent-1764899796149-a46e45aa","organiza…
+8:16:57 PM [express] GET /api/evaluations 304 in 172ms :: [{"id":1,"organizationId":"default-org","p…
+8:16:57 PM [express] GET /api/programs 200 in 187ms :: [{"id":"prog-skills-academy","organizationId"…
+8:16:57 PM [express] GET /api/organization 304 in 189ms :: {"id":"default-org","name":"UYP","subdoma…
+🔍 EVENT FILTERING DEBUG - Start
+  userId: 1764873247759-aecinrbny
+  role: admin
+  childProfileId: undefined
+  Admin viewing own dashboard - showing all events
+8:16:57 PM [express] GET /api/events 304 in 206ms :: [{"id":"214","organizationId":"default-org","ti…
+8:16:57 PM [express] GET /api/payments 304 in 39ms :: [{"id":"3","organizationId":"default-org","use…
+8:16:57 PM [express] GET /api/auth/user 304 in 40ms :: {"id":"1764873247759-aecinrbny","organization…
+8:16:57 PM [express] GET /api/divisions 304 in 41ms :: [{"id":"1","organizationId":"default-org","na…
+8:16:57 PM [express] GET /api/award-definitions 304 in 214ms :: [{"id":314,"name":"Superstar (10× MV…
+8:16:57 PM [express] GET /api/admin/notifications 304 in 81ms :: [{"id":56,"organizationId":"default…
+8:16:57 PM [express] GET /api/notifications/announcements 304 in 51ms :: []
+8:16:57 PM [express] GET /api/notifications/feed 304 in 52ms :: []
+8:17:28 PM [express] GET /api/notifications/feed 304 in 169ms :: []
+8:17:31 PM [express] GET /api/waivers 304 in 42ms :: [{"id":"waiver_aau_1764912371.611760","organiza…
+8:17:35 PM [express] GET /api/programs/1765310651934-qykyd4pvd 200 in 40ms :: {"id":"1765310651934-q…
+8:17:35 PM [express] GET /api/auth/user 304 in 44ms :: {"id":"1764873247759-aecinrbny","organization…
+Error fetching teams: error: column "division" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.getTeamsByOrganization (/home/runner/workspace/server/storage-impl.ts:2979:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3319:21) {
+  length: 172,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: 'Perhaps you meant to reference the column "teams.division_id".',
+  position: '86',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3729',
+  routine: 'errorMissingColumn'
+}
+8:17:35 PM [express] GET /api/teams 500 in 154ms :: {"message":"Failed to fetch teams"}
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345
+o?t(o):n(u)},"cb"),s=new r(function(o,u){n=o,t=u}).catch(o=>{throw Error.captureStackTrace(
+                                                                         ^
+
+error: column "division" of relation "teams" does not exist
+    at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async NeonPreparedQuery.execute (/home/runner/workspace/node_modules/src/neon-serverless/session.ts:102:18)
+    at async DatabaseStorage.createTeam (/home/runner/workspace/server/storage-impl.ts:3039:21)
+    at async <anonymous> (/home/runner/workspace/server/routes.ts:3351:18) {
+  length: 127,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '100',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_target.c',
+  line: '1066',
+  routine: 'checkInsertTargets'
+}
+
+Node.js v20.19.3

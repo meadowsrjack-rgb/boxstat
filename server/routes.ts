@@ -2680,11 +2680,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.get('/api/users', requireAuth, async (req: any, res) => {
     const { organizationId } = req.user;
-    const users = await storage.getUsersByOrganization(organizationId);
+    const allUsers = await storage.getUsersByOrganization(organizationId);
+    const allTeams = await storage.getTeamsByOrganization(organizationId);
+    const allPrograms = await storage.getProgramsByOrganization(organizationId);
+    
+    // Create maps for quick lookup
+    const teamMap = new Map(allTeams.map(t => [t.id, t]));
+    const programMap = new Map(allPrograms.map(p => [p.id, p]));
+    
+    // Fetch active team memberships for all players
+    const activeMemberships = await db.select({
+      profileId: teamMemberships.profileId,
+      teamId: teamMemberships.teamId,
+    })
+      .from(teamMemberships)
+      .where(eq(teamMemberships.status, 'active'));
+    
+    // Group memberships by profileId
+    const membershipsByUser = new Map<string, number[]>();
+    for (const m of activeMemberships) {
+      const existing = membershipsByUser.get(m.profileId) || [];
+      existing.push(m.teamId);
+      membershipsByUser.set(m.profileId, existing);
+    }
     
     // Separate players from non-players
-    const players = users.filter((u: any) => u.role === 'player');
-    const nonPlayers = users.filter((u: any) => u.role !== 'player');
+    const players = allUsers.filter((u: any) => u.role === 'player');
+    const nonPlayers = allUsers.filter((u: any) => u.role !== 'player');
     
     // Fetch status tags for all players in a single bulk query
     const playerIds = players.map((p: any) => p.id);
@@ -2696,14 +2718,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error fetching bulk status tags:', error);
     }
     
-    // Enrich players with status tags from the bulk result
+    // Enrich players with status tags and active team memberships
     const enrichedPlayers = players.map((player: any) => {
       const statusTag = statusTagsMap.get(player.id) || { tag: player.paymentStatus === 'pending' ? 'payment_due' : 'none' };
+      const activeTeamIds = membershipsByUser.get(player.id) || [];
+      const activeTeams = activeTeamIds.map(teamId => {
+        const team = teamMap.get(teamId);
+        if (!team) return null;
+        const program = team.programId ? programMap.get(team.programId) : null;
+        return {
+          teamId: team.id,
+          teamName: team.name,
+          programId: team.programId,
+          programName: program?.name || null,
+        };
+      }).filter(Boolean);
+      
       return {
         ...player,
         statusTag: statusTag.tag || 'none',
         remainingCredits: statusTag.remainingCredits,
         lowBalance: statusTag.lowBalance,
+        teamIds: activeTeamIds,
+        activeTeams,
       };
     });
     
@@ -2711,6 +2748,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const enrichedNonPlayers = nonPlayers.map((user: any) => ({
       ...user,
       statusTag: null,
+      teamIds: [],
+      activeTeams: [],
     }));
     
     // Combine and return all users

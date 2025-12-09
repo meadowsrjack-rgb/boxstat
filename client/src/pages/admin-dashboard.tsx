@@ -1054,9 +1054,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                   <div className="space-y-4">
                     <Label data-testid="label-edit-assignments">Program & Team Assignments</Label>
                     {(() => {
+                      // Use teamIds from the user data (now populated from active team memberships)
                       const teamIds = Array.isArray(editingUser.teamIds) ? editingUser.teamIds : 
                                      editingUser.teamId ? [editingUser.teamId] : [];
-                      const currentAssignedTeams = teams?.filter((t: any) => teamIds.includes(t.id)) || [];
+                      
+                      // Use activeTeams from API for display (includes team/program names)
+                      const activeTeams = editingUser.activeTeams || [];
                       
                       // Group teams by program
                       const teamsByProgram = programs?.reduce((acc: any, program: any) => {
@@ -1072,53 +1075,115 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       
                       return (
                         <div className="space-y-3">
-                          {/* Current Assignments Summary */}
-                          {currentAssignedTeams.length > 0 && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3" data-testid="current-assignments">
-                              <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {currentAssignedTeams.map((team: any) => (
-                                  <div key={team.id} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                                    <span>{team.name}</span>
-                                    {team.program && (
-                                      <span className="text-blue-600">({team.program})</span>
-                                    )}
+                          {/* Current Assignments - Clear display of what user is currently in */}
+                          {activeTeams.length > 0 ? (
+                            <div className="bg-green-50 border border-green-200 rounded-md p-3" data-testid="current-assignments">
+                              <p className="text-xs font-semibold text-green-700 mb-2">Current Assignments ({activeTeams.length}):</p>
+                              <div className="space-y-1">
+                                {activeTeams.map((assignment: any) => (
+                                  <div key={assignment.teamId} className="flex items-center justify-between bg-white border border-green-100 rounded px-2 py-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-sm font-medium">{assignment.teamName}</span>
+                                      {assignment.programName && (
+                                        <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{assignment.programName}</span>
+                                      )}
+                                    </div>
                                     <button
                                       type="button"
-                                      className="ml-1 text-blue-600 hover:text-blue-800"
+                                      className="text-red-500 hover:text-red-700 text-sm font-medium px-2"
                                       onClick={() => {
-                                        const newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                        const newTeamIds = teamIds.filter((id: number) => id !== assignment.teamId);
                                         setEditingUser({
                                           ...editingUser,
                                           teamIds: newTeamIds,
-                                          teamId: newTeamIds[0] || null
+                                          teamId: newTeamIds[0] || null,
+                                          activeTeams: activeTeams.filter((a: any) => a.teamId !== assignment.teamId)
                                         });
                                       }}
-                                      data-testid={`button-remove-team-${team.id}`}
+                                      data-testid={`button-remove-team-${assignment.teamId}`}
                                     >
-                                      ×
+                                      Remove
                                     </button>
                                   </div>
                                 ))}
                               </div>
                             </div>
+                          ) : (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3" data-testid="no-assignments">
+                              <p className="text-sm text-yellow-700">Not currently assigned to any teams</p>
+                            </div>
                           )}
                           
-                          {/* Programs with their teams */}
-                          <div className="border rounded-md max-h-64 overflow-y-auto" data-testid="program-team-assignments">
-                            {programs?.map((program: any) => {
-                              const programTeams = teamsByProgram[program.id]?.teams || [];
-                              if (programTeams.length === 0) return null;
+                          {/* Add to Teams Section */}
+                          <div className="mt-3">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">Add to Team:</p>
+                            <div className="border rounded-md max-h-48 overflow-y-auto" data-testid="program-team-assignments">
+                              {programs?.map((program: any) => {
+                                const programTeams = teamsByProgram[program.id]?.teams || [];
+                                if (programTeams.length === 0) return null;
+                                
+                                const hasAssignedTeam = programTeams.some((t: any) => teamIds.includes(t.id));
+                                
+                                return (
+                                  <div key={program.id} className="border-b last:border-b-0">
+                                    <div className={`px-3 py-2 font-semibold text-sm ${hasAssignedTeam ? 'bg-blue-50 text-blue-800' : 'bg-gray-50 text-gray-700'}`}>
+                                      {program.name}
+                                    </div>
+                                    <div className="p-2 space-y-1">
+                                      {programTeams.map((team: any) => {
+                                        const isChecked = teamIds.includes(team.id);
+                                        return (
+                                          <div key={team.id} className="flex items-center space-x-2 pl-2">
+                                            <Checkbox
+                                              id={`team-${team.id}`}
+                                              checked={isChecked}
+                                              onCheckedChange={(checked) => {
+                                                let newTeamIds;
+                                                let newActiveTeams = [...activeTeams];
+                                                if (checked) {
+                                                  newTeamIds = [...teamIds, team.id];
+                                                  // Add to activeTeams display
+                                                  newActiveTeams.push({
+                                                    teamId: team.id,
+                                                    teamName: team.name,
+                                                    programId: program.id,
+                                                    programName: program.name
+                                                  });
+                                                } else {
+                                                  newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                                  newActiveTeams = newActiveTeams.filter((a: any) => a.teamId !== team.id);
+                                                }
+                                                setEditingUser({
+                                                  ...editingUser,
+                                                  teamIds: newTeamIds,
+                                                  teamId: newTeamIds[0] || null,
+                                                  activeTeams: newActiveTeams
+                                                });
+                                              }}
+                                              data-testid={`checkbox-team-${team.id}`}
+                                            />
+                                            <label
+                                              htmlFor={`team-${team.id}`}
+                                              className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
+                                            >
+                                              {team.name}
+                                            </label>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
                               
-                              const hasAssignedTeam = programTeams.some((t: any) => teamIds.includes(t.id));
-                              
-                              return (
-                                <div key={program.id} className="border-b last:border-b-0">
-                                  <div className={`px-3 py-2 font-semibold text-sm ${hasAssignedTeam ? 'bg-blue-50 text-blue-800' : 'bg-gray-50 text-gray-700'}`}>
-                                    {program.name}
+                              {/* Teams without program */}
+                              {teamsWithoutProgram.length > 0 && (
+                                <div className="border-b last:border-b-0">
+                                  <div className="px-3 py-2 font-semibold text-sm bg-gray-50 text-gray-700">
+                                    Other Teams
                                   </div>
                                   <div className="p-2 space-y-1">
-                                    {programTeams.map((team: any) => {
+                                    {teamsWithoutProgram.map((team: any) => {
                                       const isChecked = teamIds.includes(team.id);
                                       return (
                                         <div key={team.id} className="flex items-center space-x-2 pl-2">
@@ -1127,15 +1192,24 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                                             checked={isChecked}
                                             onCheckedChange={(checked) => {
                                               let newTeamIds;
+                                              let newActiveTeams = [...activeTeams];
                                               if (checked) {
                                                 newTeamIds = [...teamIds, team.id];
+                                                newActiveTeams.push({
+                                                  teamId: team.id,
+                                                  teamName: team.name,
+                                                  programId: null,
+                                                  programName: null
+                                                });
                                               } else {
                                                 newTeamIds = teamIds.filter((id: number) => id !== team.id);
+                                                newActiveTeams = newActiveTeams.filter((a: any) => a.teamId !== team.id);
                                               }
                                               setEditingUser({
                                                 ...editingUser,
                                                 teamIds: newTeamIds,
-                                                teamId: newTeamIds[0] || null
+                                                teamId: newTeamIds[0] || null,
+                                                activeTeams: newActiveTeams
                                               });
                                             }}
                                             data-testid={`checkbox-team-${team.id}`}
@@ -1151,54 +1225,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                                     })}
                                   </div>
                                 </div>
-                              );
-                            })}
-                            
-                            {/* Teams without program */}
-                            {teamsWithoutProgram.length > 0 && (
-                              <div className="border-b last:border-b-0">
-                                <div className="px-3 py-2 font-semibold text-sm bg-gray-50 text-gray-700">
-                                  Other Teams
-                                </div>
-                                <div className="p-2 space-y-1">
-                                  {teamsWithoutProgram.map((team: any) => {
-                                    const isChecked = teamIds.includes(team.id);
-                                    return (
-                                      <div key={team.id} className="flex items-center space-x-2 pl-2">
-                                        <Checkbox
-                                          id={`team-${team.id}`}
-                                          checked={isChecked}
-                                          onCheckedChange={(checked) => {
-                                            let newTeamIds;
-                                            if (checked) {
-                                              newTeamIds = [...teamIds, team.id];
-                                            } else {
-                                              newTeamIds = teamIds.filter((id: number) => id !== team.id);
-                                            }
-                                            setEditingUser({
-                                              ...editingUser,
-                                              teamIds: newTeamIds,
-                                              teamId: newTeamIds[0] || null
-                                            });
-                                          }}
-                                          data-testid={`checkbox-team-${team.id}`}
-                                        />
-                                        <label
-                                          htmlFor={`team-${team.id}`}
-                                          className={`text-sm leading-none cursor-pointer ${isChecked ? 'text-blue-700 font-medium' : ''}`}
-                                        >
-                                          {team.name}
-                                        </label>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {(!programs || programs.length === 0) && (!teams || teams.length === 0) && (
-                              <p className="p-3 text-sm text-gray-500">No programs or teams available</p>
-                            )}
+                              )}
+                              
+                              {(!programs || programs.length === 0) && (!teams || teams.length === 0) && (
+                                <p className="p-3 text-sm text-gray-500">No programs or teams available</p>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

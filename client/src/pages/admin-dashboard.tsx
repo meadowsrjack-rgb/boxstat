@@ -4265,10 +4265,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       const formData = new FormData();
       formData.append('image', file);
 
+      // Get auth token from localStorage for file upload
+      const token = localStorage.getItem('authToken');
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/upload/award-image', {
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers,
       });
 
       if (!response.ok) {

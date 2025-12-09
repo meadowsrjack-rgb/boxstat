@@ -331,8 +331,10 @@ export default function EventDetailModal({
   // Proxy RSVP mutation for parents RSVPing on behalf of their players
   const proxyRsvpMutation = useMutation({
     mutationFn: (data: { playerId: string; playerName: string; response: string }) => {
+      // Extract primitive eventId to avoid circular reference issues from React Query cache
+      const eventId = event?.id ? String(event.id) : null;
       return apiRequest('POST', '/api/rsvp/proxy', {
-        eventId: event?.id,
+        eventId,
         playerId: data.playerId,
         response: data.response,
       }).then(res => ({ ...res, playerName: data.playerName, response: data.response }));

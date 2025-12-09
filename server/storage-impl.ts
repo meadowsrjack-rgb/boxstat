@@ -3380,7 +3380,11 @@ class DatabaseStorage implements IStorage {
   }
   
   async deleteAwardDefinition(id: number): Promise<void> {
-    await db.delete(schema.awardDefinitions).where(eq(schema.awardDefinitions.id, id));
+    // Soft delete by setting active to false instead of removing
+    // This prevents the award from being recreated by the populate script on restart
+    await db.update(schema.awardDefinitions)
+      .set({ active: false })
+      .where(eq(schema.awardDefinitions.id, id));
   }
   
   async getActiveAwardDefinitions(organizationId: string): Promise<SelectAwardDefinition[]> {

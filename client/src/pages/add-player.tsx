@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, Calendar, FileText, ExternalLink, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, UserPlus, CreditCard, DollarSign, Loader2, Calendar, FileText, ExternalLink, AlertTriangle, Package, Check } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -89,6 +89,7 @@ export default function AddPlayer() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [playerData, setPlayerData] = useState<{
     firstName?: string;
     lastName?: string;
@@ -111,6 +112,42 @@ export default function AddPlayer() {
   // Fetch custom waivers - always enabled so data is ready for step flow
   const { data: waivers = [], isLoading: waiversLoading } = useQuery<Waiver[]>({
     queryKey: ["/api/waivers"],
+  });
+
+  // Fetch all store items (goods products) for add-ons
+  const { data: storeItems = [] } = useQuery<Program[]>({
+    queryKey: ["/api/programs"],
+    select: (data) => data.filter((p: any) => p.productCategory === 'goods'),
+  });
+
+  // Get selected program for add-ons lookup
+  const selectedProgram = programs.find(p => p.id === playerData.packageId);
+
+  // Fetch suggested add-ons for the selected program
+  const { data: suggestedAddOns = [] } = useQuery<{ productId: string; displayOrder: number }[]>({
+    queryKey: ['/api/programs', playerData.packageId, 'suggested-add-ons'],
+    enabled: !!playerData.packageId,
+  });
+
+  // Determine if we have suggested add-ons
+  const suggestedAddOnIds = suggestedAddOns.map(a => a.productId);
+  const hasSuggestedAddOns = suggestedAddOnIds.length > 0 && storeItems.length > 0;
+
+  // Sort store items: suggested first (by displayOrder), then others
+  const sortedStoreItems = [...storeItems].sort((a, b) => {
+    const aIsSuggested = suggestedAddOnIds.includes(a.id);
+    const bIsSuggested = suggestedAddOnIds.includes(b.id);
+    
+    if (aIsSuggested && !bIsSuggested) return -1;
+    if (!aIsSuggested && bIsSuggested) return 1;
+    
+    if (aIsSuggested && bIsSuggested) {
+      const aOrder = suggestedAddOns.find(s => s.productId === a.id)?.displayOrder ?? 999;
+      const bOrder = suggestedAddOns.find(s => s.productId === b.id)?.displayOrder ?? 999;
+      return aOrder - bOrder;
+    }
+    
+    return 0;
   });
 
   // Group programs by category
@@ -162,34 +199,36 @@ export default function AddPlayer() {
     },
   });
 
-  // Get selected program for step 4 (used in later steps)
-  const selectedProgram = programs.find(p => p.id === playerData.packageId);
-
   // Calculate dynamic step flow based on selected program's requirements
   // Steps 1-4 are always fixed: Name, DOB, Gender, Package Selection
   // Steps 5+ are dynamic based on package requirements
   const getStepFlow = () => {
     const baseSteps = ["name", "dob", "gender", "package"];
-    const waiverSteps: string[] = [];
+    const dynamicSteps: string[] = [];
 
     if (selectedProgram) {
+      // Add add-ons step if there are suggested add-ons
+      if (hasSuggestedAddOns) {
+        dynamicSteps.push("addons");
+      }
+      
       if (selectedProgram.requireAAUMembership) {
-        waiverSteps.push("aau");
+        dynamicSteps.push("aau");
       }
       if (selectedProgram.requireConcussionWaiver) {
-        waiverSteps.push("concussion");
+        dynamicSteps.push("concussion");
       }
       if (selectedProgram.requireClubAgreement) {
-        waiverSteps.push("club");
+        dynamicSteps.push("club");
       }
       // Add custom waivers
       const customWaiverIds = selectedProgram.requiredWaivers || [];
       customWaiverIds.forEach(waiverId => {
-        waiverSteps.push(`custom_${waiverId}`);
+        dynamicSteps.push(`custom_${waiverId}`);
       });
     }
 
-    return [...baseSteps, ...waiverSteps, "payment"];
+    return [...baseSteps, ...dynamicSteps, "payment"];
   };
 
   const stepFlow = getStepFlow();
@@ -279,8 +318,28 @@ export default function AddPlayer() {
               isLoading={programsLoading}
               onSubmit={(data) => {
                 setPlayerData({ ...playerData, ...data });
+                // Clear any previously selected add-ons when changing program
+                setSelectedAddOns([]);
                 handleNext();
               }}
+              onBack={handleBack}
+            />
+          )}
+
+          {/* Add-ons Selection (conditional - only when program has suggested add-ons) */}
+          {currentStepName === "addons" && (
+            <AddOnsStep
+              storeItems={sortedStoreItems}
+              suggestedAddOnIds={suggestedAddOnIds}
+              selectedAddOns={selectedAddOns}
+              onToggleAddOn={(productId: string) => {
+                setSelectedAddOns(prev =>
+                  prev.includes(productId)
+                    ? prev.filter(id => id !== productId)
+                    : [...prev, productId]
+                );
+              }}
+              onSubmit={handleNext}
               onBack={handleBack}
             />
           )}
@@ -367,8 +426,13 @@ export default function AddPlayer() {
             <PaymentSummaryStep
               playerData={playerData}
               selectedProgram={selectedProgram}
+              selectedAddOns={selectedAddOns}
+              storeItems={sortedStoreItems}
               onSubmit={() => {
-                const finalData = { ...playerData };
+                const finalData = { 
+                  ...playerData,
+                  addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
+                };
                 addPlayerMutation.mutate(finalData);
               }}
               onBack={handleBack}
@@ -1292,19 +1356,130 @@ function PackageSelectionStep({
   );
 }
 
+function AddOnsStep({
+  storeItems,
+  suggestedAddOnIds,
+  selectedAddOns,
+  onToggleAddOn,
+  onSubmit,
+  onBack,
+}: {
+  storeItems: Program[];
+  suggestedAddOnIds: string[];
+  selectedAddOns: string[];
+  onToggleAddOn: (productId: string) => void;
+  onSubmit: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-2 text-white flex items-center gap-2">
+          <Package className="w-5 h-5" />
+          Recommended Add-ons
+        </h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Enhance your registration with these recommended items
+        </p>
+
+        <div className="space-y-2">
+          {storeItems.map((item) => {
+            const isSuggested = suggestedAddOnIds.includes(item.id);
+            const isSelected = selectedAddOns.includes(item.id);
+            
+            return (
+              <div
+                key={item.id}
+                onClick={() => onToggleAddOn(item.id)}
+                className={`
+                  relative cursor-pointer rounded-lg border p-4 transition-all
+                  ${isSelected 
+                    ? 'border-red-600 bg-red-950/30' 
+                    : 'border-gray-700 bg-gray-800/50 hover:border-gray-600'
+                  }
+                `}
+                data-testid={`addon-item-${item.id}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`
+                      w-5 h-5 rounded border flex items-center justify-center
+                      ${isSelected 
+                        ? 'bg-red-600 border-red-600' 
+                        : 'border-gray-500'
+                      }
+                    `}>
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{item.name}</span>
+                        {isSuggested && (
+                          <span className="px-2 py-0.5 text-xs rounded bg-purple-600/30 text-purple-300 font-medium">
+                            Suggested
+                          </span>
+                        )}
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-gray-400 mt-1">{item.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-red-400">
+                      ${item.price ? (item.price / 100).toFixed(2) : '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex justify-between pt-6">
+        <button type="button" onClick={onBack} data-testid="button-back" className="text-gray-400 hover:text-white transition-colors">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <button 
+          type="button" 
+          onClick={onSubmit} 
+          data-testid="button-next" 
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          {selectedAddOns.length > 0 ? 'Continue' : 'Skip Add-ons'}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PaymentSummaryStep({
   playerData,
   selectedProgram,
+  selectedAddOns,
+  storeItems,
   onSubmit,
   onBack,
   isSubmitting,
 }: {
   playerData: any;
   selectedProgram?: Program;
+  selectedAddOns: string[];
+  storeItems: Program[];
   onSubmit: () => void;
   onBack: () => void;
   isSubmitting?: boolean;
 }) {
+  // Calculate total including add-ons
+  const programPrice = selectedProgram?.price || 0;
+  const addOnsTotal = selectedAddOns.reduce((sum, id) => {
+    const item = storeItems.find(s => s.id === id);
+    return sum + (item?.price || 0);
+  }, 0);
+  const totalPrice = programPrice + addOnsTotal;
+  const selectedAddOnItems = storeItems.filter(s => selectedAddOns.includes(s.id));
   return (
     <div className="space-y-6">
       <div>
@@ -1337,18 +1512,47 @@ function PaymentSummaryStep({
               Selected Package
             </h4>
             <div className="space-y-1">
-              <p className="font-semibold text-white" data-testid="text-selected-program-name">
-                {selectedProgram.name}
-              </p>
+              <div className="flex justify-between items-center">
+                <p className="font-semibold text-white" data-testid="text-selected-program-name">
+                  {selectedProgram.name}
+                </p>
+                <span className="text-red-400 font-medium">
+                  ${(programPrice / 100).toFixed(2)}
+                </span>
+              </div>
               {selectedProgram.description && (
                 <p className="text-sm text-gray-400">{selectedProgram.description}</p>
               )}
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-red-900">
-                <span className="text-gray-300 font-medium">Total Amount:</span>
-                <span className="text-2xl font-bold text-red-400" data-testid="text-total-amount">
-                  ${selectedProgram.price ? (selectedProgram.price / 100).toFixed(2) : "0.00"}
-                </span>
-              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Selected Add-ons */}
+        {selectedAddOnItems.length > 0 && (
+          <div className="border border-gray-700 rounded-lg p-4 bg-gray-800/50 mt-4">
+            <h4 className="font-medium text-gray-300 mb-2 flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Add-ons
+            </h4>
+            <div className="space-y-2">
+              {selectedAddOnItems.map(item => (
+                <div key={item.id} className="flex justify-between items-center text-sm">
+                  <span className="text-white">{item.name}</span>
+                  <span className="text-gray-400">${(item.price ? item.price / 100 : 0).toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Total */}
+        {selectedProgram && (
+          <div className="border border-red-900 rounded-lg p-4 bg-red-950/50 mt-4">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300 font-medium">Total Amount:</span>
+              <span className="text-2xl font-bold text-red-400" data-testid="text-total-amount">
+                ${(totalPrice / 100).toFixed(2)}
+              </span>
             </div>
           </div>
         )}

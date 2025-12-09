@@ -2179,7 +2179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId } = req.body;
+      const { firstName, lastName, dateOfBirth, gender, aauMembershipId, postalCode, concussionWaiverAcknowledged, clubAgreementAcknowledged, packageId, addOnIds } = req.body;
       
       // Validate required fields
       if (!firstName || !lastName) {
@@ -2270,20 +2270,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
+      // Build line items starting with the program
+      const lineItems: any[] = [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: program.name,
+            description: `Registration for ${firstName} ${lastName}`,
+          },
+          unit_amount: program.price, // Price is already in cents
+        },
+        quantity: 1,
+      }];
+
+      // Add any selected add-ons (validate they are goods products)
+      if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
+        for (const addOnId of addOnIds) {
+          const addOn = await storage.getProgram(addOnId);
+          // Only allow goods products as add-ons
+          if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+            lineItems.push({
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: addOn.name,
+                  description: addOn.description || `Add-on for ${firstName} ${lastName}`,
+                },
+                unit_amount: addOn.price,
+              },
+              quantity: 1,
+            });
+          }
+        }
+      }
+
       // Create Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
-        line_items: [{
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: program.name,
-              description: `Registration for ${firstName} ${lastName}`,
-            },
-            unit_amount: program.price, // Price is already in cents
-          },
-          quantity: 1,
-        }],
+        line_items: lineItems,
         mode: 'payment',
         success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
@@ -2292,6 +2316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           playerId: playerUser.id,
           accountHolderId: id,
           packageId: packageId,
+          addOnIds: addOnIds ? JSON.stringify(addOnIds) : '',
         },
       });
       

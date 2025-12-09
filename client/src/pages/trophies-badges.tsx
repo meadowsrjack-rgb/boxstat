@@ -10,17 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Trophy, Award, ArrowLeft, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type PrestigeLevel = "Prospect" | "Starter" | "AllStar" | "Superstar" | "HallOfFame";
-type TierType = "Trophy" | "Badge";
+type TierType = "Gold" | "Purple" | "Blue" | "Green" | "Grey" | "Special";
+type TriggerCategory = "checkin" | "system" | "time" | "store" | "manual";
 
 interface AwardDefinition {
   id: number;
   name: string;
   tier: TierType;
-  prestige: PrestigeLevel;
   description: string | null;
   imageUrl: string | null;
   active: boolean;
+  triggerCategory?: TriggerCategory;
+  threshold?: number;
 }
 
 interface UserAwardRecord {
@@ -41,28 +42,39 @@ interface AwardWithDetails extends AwardDefinition {
   notes?: string;
 }
 
-const PRESTIGE_COLORS = {
-  Prospect: "bg-gray-500",
-  Starter: "bg-green-500",
-  AllStar: "bg-blue-500",
-  Superstar: "bg-purple-500",
-  HallOfFame: "bg-yellow-500"
+const TIER_COLORS = {
+  Gold: "bg-yellow-500",
+  Purple: "bg-purple-500",
+  Blue: "bg-blue-500",
+  Green: "bg-green-500",
+  Grey: "bg-gray-500",
+  Special: "bg-gradient-to-r from-purple-500 to-yellow-500"
 };
 
-const PRESTIGE_TEXT_COLORS = {
-  Prospect: "text-gray-600 dark:text-gray-400",
-  Starter: "text-green-600 dark:text-green-400",
-  AllStar: "text-blue-600 dark:text-blue-400",
-  Superstar: "text-purple-600 dark:text-purple-400",
-  HallOfFame: "text-yellow-600 dark:text-yellow-400"
+const TIER_TEXT_COLORS = {
+  Gold: "text-yellow-600 dark:text-yellow-400",
+  Purple: "text-purple-600 dark:text-purple-400",
+  Blue: "text-blue-600 dark:text-blue-400",
+  Green: "text-green-600 dark:text-green-400",
+  Grey: "text-gray-600 dark:text-gray-400",
+  Special: "text-purple-600 dark:text-purple-400"
 };
 
-const PRESTIGE_BORDER_COLORS = {
-  Prospect: "border-gray-500",
-  Starter: "border-green-500",
-  AllStar: "border-blue-500",
-  Superstar: "border-purple-500",
-  HallOfFame: "border-yellow-500"
+const TIER_BORDER_COLORS = {
+  Gold: "border-yellow-500",
+  Purple: "border-purple-500",
+  Blue: "border-blue-500",
+  Green: "border-green-500",
+  Grey: "border-gray-500",
+  Special: "border-purple-500"
+};
+
+const TRIGGER_LABELS: Record<TriggerCategory, string> = {
+  checkin: "Check-in",
+  system: "Collection",
+  time: "Time",
+  store: "Store",
+  manual: "Manual"
 };
 
 export default function TrophiesBadgesPage() {
@@ -70,8 +82,8 @@ export default function TrophiesBadgesPage() {
   const { currentChildProfile } = useAppMode();
   const [, setLocation] = useLocation();
   const [selectedTier, setSelectedTier] = useState<"all" | TierType>("all");
-  const [selectedPrestige, setSelectedPrestige] = useState<"all" | PrestigeLevel>("all");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "prestige">("newest");
+  const [selectedTrigger, setSelectedTrigger] = useState<"all" | TriggerCategory>("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "tier">("newest");
 
   // Support Player Mode - show awards for the active child profile if one is selected
   // Priority: localStorage selectedPlayerId > currentChildProfile (device config) > user.activeProfileId > user.id
@@ -127,6 +139,9 @@ export default function TrophiesBadgesPage() {
     return awardDefinitions.filter(def => def.active && !earnedIds.has(def.id));
   }, [awardDefinitions, earnedAwards]);
 
+  // Tier hierarchy for sorting
+  const tierOrder = ["Gold", "Special", "Purple", "Blue", "Green", "Grey"];
+
   // Filter and sort awards
   const filteredEarnedAwards = useMemo(() => {
     let filtered = earnedAwards;
@@ -136,9 +151,9 @@ export default function TrophiesBadgesPage() {
       filtered = filtered.filter(award => award.tier === selectedTier);
     }
 
-    // Filter by prestige
-    if (selectedPrestige !== "all") {
-      filtered = filtered.filter(award => award.prestige === selectedPrestige);
+    // Filter by trigger category
+    if (selectedTrigger !== "all") {
+      filtered = filtered.filter(award => (award.triggerCategory || "manual") === selectedTrigger);
     }
 
     // Sort
@@ -147,12 +162,11 @@ export default function TrophiesBadgesPage() {
         return new Date(b.earnedDate).getTime() - new Date(a.earnedDate).getTime();
       } else if (sortBy === "oldest") {
         return new Date(a.earnedDate).getTime() - new Date(b.earnedDate).getTime();
-      } else { // prestige
-        const prestigeOrder = ["HallOfFame", "Superstar", "AllStar", "Starter", "Prospect"];
-        return prestigeOrder.indexOf(a.prestige) - prestigeOrder.indexOf(b.prestige);
+      } else { // tier
+        return tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier);
       }
     });
-  }, [earnedAwards, selectedTier, selectedPrestige, sortBy]);
+  }, [earnedAwards, selectedTier, selectedTrigger, sortBy]);
 
   const filteredAvailableAwards = useMemo(() => {
     let filtered = availableAwards;
@@ -162,28 +176,29 @@ export default function TrophiesBadgesPage() {
       filtered = filtered.filter(award => award.tier === selectedTier);
     }
 
-    // Filter by prestige
-    if (selectedPrestige !== "all") {
-      filtered = filtered.filter(award => award.prestige === selectedPrestige);
+    // Filter by trigger category
+    if (selectedTrigger !== "all") {
+      filtered = filtered.filter(award => (award.triggerCategory || "manual") === selectedTrigger);
     }
 
-    // Sort by prestige
+    // Sort by tier
     return filtered.sort((a, b) => {
-      const prestigeOrder = ["HallOfFame", "Superstar", "AllStar", "Starter", "Prospect"];
-      return prestigeOrder.indexOf(a.prestige) - prestigeOrder.indexOf(b.prestige);
+      return tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier);
     });
-  }, [availableAwards, selectedTier, selectedPrestige]);
+  }, [availableAwards, selectedTier, selectedTrigger]);
 
-  // Calculate statistics
+  // Calculate statistics - group by tier
   const stats = useMemo(() => {
-    const trophies = earnedAwards.filter(a => a.tier === "Trophy");
-    const badges = earnedAwards.filter(a => a.tier === "Badge");
+    const gold = earnedAwards.filter(a => a.tier === "Gold");
+    const purple = earnedAwards.filter(a => a.tier === "Purple");
+    const other = earnedAwards.filter(a => !["Gold", "Purple"].includes(a.tier));
     return {
       total: earnedAwards.length,
-      trophies: trophies.length,
-      badges: badges.length,
+      gold: gold.length,
+      purple: purple.length,
+      available: availableAwards.length,
     };
-  }, [earnedAwards]);
+  }, [earnedAwards, availableAwards]);
 
   const isLoading = loadingDefinitions || loadingUserAwards;
 
@@ -223,37 +238,48 @@ export default function TrophiesBadgesPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card className="bg-white/5 border-white/10" data-testid="card-stat-total">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Total Awards</p>
+                  <p className="text-sm text-gray-400">Earned</p>
                   <p className="text-3xl font-bold text-white">{stats.total}</p>
                 </div>
-                <Award className="h-8 w-8 text-yellow-500" />
+                <Award className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-trophies">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-gold">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Trophies</p>
-                  <p className="text-3xl font-bold text-white">{stats.trophies}</p>
+                  <p className="text-sm text-gray-400">Gold</p>
+                  <p className="text-3xl font-bold text-white">{stats.gold}</p>
                 </div>
-                <Trophy className="h-8 w-8 text-orange-500" />
+                <Trophy className="h-8 w-8 text-yellow-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10" data-testid="card-stat-badges">
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-purple">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">Badges</p>
-                  <p className="text-3xl font-bold text-white">{stats.badges}</p>
+                  <p className="text-sm text-gray-400">Purple</p>
+                  <p className="text-3xl font-bold text-white">{stats.purple}</p>
                 </div>
-                <Award className="h-8 w-8 text-blue-500" />
+                <Award className="h-8 w-8 text-purple-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white/5 border-white/10" data-testid="card-stat-available">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Available</p>
+                  <p className="text-3xl font-bold text-white">{stats.available}</p>
+                </div>
+                <Award className="h-8 w-8 text-gray-500" />
               </div>
             </CardContent>
           </Card>
@@ -268,31 +294,35 @@ export default function TrophiesBadgesPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Type</label>
+                <label className="text-sm text-gray-400 mb-2 block">Tier</label>
                 <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
                   <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-tier">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Trophy">Trophies Only</SelectItem>
-                    <SelectItem value="Badge">Badges Only</SelectItem>
+                    <SelectItem value="all">All Tiers</SelectItem>
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Purple">Purple</SelectItem>
+                    <SelectItem value="Blue">Blue</SelectItem>
+                    <SelectItem value="Green">Green</SelectItem>
+                    <SelectItem value="Grey">Grey</SelectItem>
+                    <SelectItem value="Special">Special</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Prestige Level</label>
-                <Select value={selectedPrestige} onValueChange={(value) => setSelectedPrestige(value as any)}>
-                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-prestige">
+                <label className="text-sm text-gray-400 mb-2 block">Trigger Type</label>
+                <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
+                  <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-trigger">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
-                    <SelectItem value="Superstar">Superstar</SelectItem>
-                    <SelectItem value="AllStar">All-Star</SelectItem>
-                    <SelectItem value="Starter">Starter</SelectItem>
-                    <SelectItem value="Prospect">Prospect</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="checkin">Check-in</SelectItem>
+                    <SelectItem value="system">Collection</SelectItem>
+                    <SelectItem value="time">Time</SelectItem>
+                    <SelectItem value="store">Store</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -305,7 +335,7 @@ export default function TrophiesBadgesPage() {
                   <SelectContent>
                     <SelectItem value="newest">Newest First</SelectItem>
                     <SelectItem value="oldest">Oldest First</SelectItem>
-                    <SelectItem value="prestige">Prestige (High to Low)</SelectItem>
+                    <SelectItem value="tier">Tier (High to Low)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -355,17 +385,19 @@ export default function TrophiesBadgesPage() {
                 {filteredEarnedAwards.map((award) => (
                   <Card
                     key={award.id}
-                    className={`bg-white/5 border-2 ${PRESTIGE_BORDER_COLORS[award.prestige]} hover:scale-105 transition-transform duration-200`}
+                    className={`bg-white/5 border-2 ${TIER_BORDER_COLORS[award.tier]} hover:scale-105 transition-transform duration-200`}
                     data-testid={`card-award-${award.id}`}
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between mb-2">
-                        <Badge className={PRESTIGE_COLORS[award.prestige]} data-testid={`badge-prestige-${award.id}`}>
-                          {award.prestige}
-                        </Badge>
-                        <Badge variant="outline" className="border-white/20" data-testid={`badge-tier-${award.id}`}>
+                        <Badge className={TIER_COLORS[award.tier]} data-testid={`badge-tier-${award.id}`}>
                           {award.tier}
                         </Badge>
+                        {award.triggerCategory && (
+                          <Badge variant="outline" className="border-white/20" data-testid={`badge-trigger-${award.id}`}>
+                            {TRIGGER_LABELS[award.triggerCategory]}
+                          </Badge>
+                        )}
                       </div>
                       <div className="aspect-square bg-white/10 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
                         {award.imageUrl ? (
@@ -376,7 +408,7 @@ export default function TrophiesBadgesPage() {
                             data-testid={`img-award-${award.id}`}
                           />
                         ) : (
-                          <Trophy className={`h-20 w-20 ${PRESTIGE_TEXT_COLORS[award.prestige]}`} />
+                          <Trophy className={`h-20 w-20 ${TIER_TEXT_COLORS[award.tier]}`} />
                         )}
                       </div>
                       <CardTitle className="text-lg leading-tight" data-testid={`text-award-name-${award.id}`}>
@@ -440,12 +472,14 @@ export default function TrophiesBadgesPage() {
                   >
                     <CardHeader>
                       <div className="flex items-start justify-between mb-2">
-                        <Badge className={`${PRESTIGE_COLORS[award.prestige]} opacity-50`} data-testid={`badge-prestige-available-${award.id}`}>
-                          {award.prestige}
-                        </Badge>
-                        <Badge variant="outline" className="border-white/20" data-testid={`badge-tier-available-${award.id}`}>
+                        <Badge className={`${TIER_COLORS[award.tier]} opacity-50`} data-testid={`badge-tier-available-${award.id}`}>
                           {award.tier}
                         </Badge>
+                        {award.triggerCategory && (
+                          <Badge variant="outline" className="border-white/20 opacity-50" data-testid={`badge-trigger-available-${award.id}`}>
+                            {TRIGGER_LABELS[award.triggerCategory]}
+                          </Badge>
+                        )}
                       </div>
                       <div className="aspect-square bg-white/10 rounded-lg flex items-center justify-center mb-4 overflow-hidden grayscale">
                         {award.imageUrl ? (

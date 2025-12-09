@@ -4042,8 +4042,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const [recipientsAward, setRecipientsAward] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterTier, setFilterTier] = useState<string>("all");
-  const [filterPrestige, setFilterPrestige] = useState<string>("all");
-  const [filterClass, setFilterClass] = useState<string>("all");
+  const [filterClass, setFilterClass] = useState<string>("all"); // Now used for trigger category
   const [filterActive, setFilterActive] = useState<string>("all");
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -4061,34 +4060,38 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   const awardFormSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    tier: z.enum(["Trophy", "Badge"]),
-    class: z.enum(["Legacy", "Team", "Coach", "HallOfFame", "Superstar", "AllStar", "Starter", "Prospect", "Attendance", "Commitment", "Variety", "Time", "Training"]).optional(),
-    prestige: z.enum(["Prospect", "Starter", "AllStar", "Superstar", "HallOfFame"]),
-    triggerField: z.enum(["totalPractices", "totalGames", "consecutiveCheckins", "videosCompleted", "yearsActive"]).optional(),
-    triggerOperator: z.enum([">=", "=", "<"]).default(">="),
-    triggerValue: z.number().optional(),
-    triggerType: z.enum(["count", "streak", "boolean", "manual"]).default("count"),
+    tier: z.enum(["Gold", "Purple", "Blue", "Green", "Grey", "Special"]),
     description: z.string().optional(),
     imageUrl: z.string().optional(),
     active: z.boolean().default(true),
+    // New simplified trigger system
+    triggerCategory: z.enum(["checkin", "system", "time", "store", "manual"]).default("manual"),
+    eventFilter: z.enum(["game", "practice", "skills", "fnh", "any"]).optional(),
+    countMode: z.enum(["total", "streak"]).optional(),
+    threshold: z.number().optional(),
+    referenceId: z.string().optional(),
+    timeUnit: z.enum(["years", "months", "days"]).optional(),
   });
 
   const form = useForm({
     resolver: zodResolver(awardFormSchema),
     defaultValues: {
       name: "",
-      tier: "Badge" as const,
-      class: undefined,
-      prestige: "Prospect" as const,
-      triggerField: undefined,
-      triggerOperator: ">=" as const,
-      triggerValue: undefined,
-      triggerType: "count" as const,
+      tier: "Grey" as const,
       description: "",
       imageUrl: "",
       active: true,
+      triggerCategory: "manual" as const,
+      eventFilter: undefined,
+      countMode: undefined,
+      threshold: undefined,
+      referenceId: undefined,
+      timeUnit: undefined,
     },
   });
+
+  // Watch trigger category to show/hide fields dynamically
+  const watchedTriggerCategory = form.watch("triggerCategory");
 
   const createAward = useMutation({
     mutationFn: async (data: any) => {
@@ -4173,25 +4176,39 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     }
   };
 
-  // Get prestige badge color
-  const getPrestigeBadgeColor = (prestige: string) => {
+  // Get tier badge color (new simplified tiers)
+  const getTierBadgeColor = (tier: string) => {
     const colors: Record<string, string> = {
-      "Prospect": "bg-gray-100 text-gray-700 border-gray-300",
-      "Starter": "bg-green-100 text-green-700 border-green-300",
-      "AllStar": "bg-blue-100 text-blue-700 border-blue-300",
-      "Superstar": "bg-purple-100 text-purple-700 border-purple-300",
-      "HallOfFame": "bg-yellow-100 text-yellow-700 border-yellow-300",
+      "Gold": "bg-yellow-100 text-yellow-700 border-yellow-300",
+      "Purple": "bg-purple-100 text-purple-700 border-purple-300",
+      "Blue": "bg-blue-100 text-blue-700 border-blue-300",
+      "Green": "bg-green-100 text-green-700 border-green-300",
+      "Grey": "bg-gray-100 text-gray-700 border-gray-300",
+      "Special": "bg-gradient-to-r from-purple-100 to-yellow-100 text-purple-700 border-purple-300",
     };
-    return colors[prestige] || colors["Prospect"];
+    return colors[tier] || colors["Grey"];
   };
 
-  // Prestige hierarchy for sorting
-  const prestigeOrder: Record<string, number> = {
-    "HallOfFame": 5,
-    "Superstar": 4,
-    "AllStar": 3,
-    "Starter": 2,
-    "Prospect": 1,
+  // Get trigger category label
+  const getTriggerCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      "checkin": "Check-in",
+      "system": "Collection",
+      "time": "Time",
+      "store": "Store",
+      "manual": "Manual",
+    };
+    return labels[category] || "Manual";
+  };
+
+  // Tier hierarchy for sorting
+  const tierOrder: Record<string, number> = {
+    "Gold": 6,
+    "Special": 5,
+    "Purple": 4,
+    "Blue": 3,
+    "Green": 2,
+    "Grey": 1,
   };
 
   // Filter and sort awards
@@ -4199,13 +4216,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     .filter((award: any) => {
       const matchesSearch = award.name.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTier = filterTier === "all" || award.tier === filterTier;
-      const matchesPrestige = filterPrestige === "all" || award.prestige === filterPrestige;
-      const matchesClass = filterClass === "all" || award.class === filterClass;
       const matchesActive = filterActive === "all" || 
         (filterActive === "active" && award.active) || 
         (filterActive === "inactive" && !award.active);
+      const matchesTrigger = filterClass === "all" || award.triggerCategory === filterClass;
       
-      return matchesSearch && matchesTier && matchesPrestige && matchesClass && matchesActive;
+      return matchesSearch && matchesTier && matchesActive && matchesTrigger;
     })
     .sort((a: any, b: any) => {
       if (!sortField) return 0;
@@ -4218,10 +4234,10 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       if (aValue == null) return 1;
       if (bValue == null) return -1;
       
-      // Special handling for prestige sorting
-      if (sortField === 'prestige') {
-        const aRank = prestigeOrder[aValue] || 0;
-        const bRank = prestigeOrder[bValue] || 0;
+      // Special handling for tier sorting
+      if (sortField === 'tier') {
+        const aRank = tierOrder[aValue] || 0;
+        const bRank = tierOrder[bValue] || 0;
         return sortDirection === 'asc' ? aRank - bRank : bRank - aRank;
       }
       
@@ -4287,16 +4303,16 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     
     form.reset({
       name: award.name || "",
-      tier: award.tier || "Badge",
-      class: award.class || undefined,
-      prestige: award.prestige || "Prospect",
-      triggerField: award.triggerField || undefined,
-      triggerOperator: award.triggerOperator || ">=",
-      triggerValue: award.triggerValue != null && award.triggerValue !== "" ? Number(award.triggerValue) : undefined,
-      triggerType: award.triggerType || "count",
+      tier: award.tier || "Grey",
       description: award.description || "",
       imageUrl: award.imageUrl || "",
       active: award.active ?? true,
+      triggerCategory: award.triggerCategory || "manual",
+      eventFilter: award.eventFilter || undefined,
+      countMode: award.countMode || undefined,
+      threshold: award.threshold != null ? Number(award.threshold) : undefined,
+      referenceId: award.referenceId || undefined,
+      timeUnit: award.timeUnit || undefined,
     } as any);
     setIsDialogOpen(true);
   };
@@ -4350,181 +4366,270 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="tier"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tier *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-award-tier">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Trophy">Trophy</SelectItem>
-                              <SelectItem value="Badge">Badge</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="prestige"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prestige *</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-award-prestige">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Prospect">Prospect</SelectItem>
-                              <SelectItem value="Starter">Starter</SelectItem>
-                              <SelectItem value="AllStar">All Star</SelectItem>
-                              <SelectItem value="Superstar">Superstar</SelectItem>
-                              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
                   <FormField
                     control={form.control}
-                    name="class"
+                    name="tier"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Class</FormLabel>
+                        <FormLabel>Tier *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-award-class">
-                              <SelectValue placeholder="Select a class..." />
+                            <SelectTrigger data-testid="select-award-tier">
+                              <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Legacy">Legacy</SelectItem>
-                            <SelectItem value="Team">Team</SelectItem>
-                            <SelectItem value="Coach">Coach</SelectItem>
-                            <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
-                            <SelectItem value="Superstar">Superstar</SelectItem>
-                            <SelectItem value="AllStar">All Star</SelectItem>
-                            <SelectItem value="Starter">Starter</SelectItem>
-                            <SelectItem value="Prospect">Prospect</SelectItem>
-                            <SelectItem value="Attendance">Attendance</SelectItem>
-                            <SelectItem value="Commitment">Commitment</SelectItem>
-                            <SelectItem value="Variety">Variety</SelectItem>
-                            <SelectItem value="Time">Time</SelectItem>
-                            <SelectItem value="Training">Training</SelectItem>
+                            <SelectItem value="Gold">Gold</SelectItem>
+                            <SelectItem value="Purple">Purple</SelectItem>
+                            <SelectItem value="Blue">Blue</SelectItem>
+                            <SelectItem value="Green">Green</SelectItem>
+                            <SelectItem value="Grey">Grey</SelectItem>
+                            <SelectItem value="Special">Special</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="triggerField"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Trigger Field</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-award-trigger-field">
-                                <SelectValue placeholder="Select field..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="totalPractices">Total Practices</SelectItem>
-                              <SelectItem value="totalGames">Total Games</SelectItem>
-                              <SelectItem value="consecutiveCheckins">Consecutive Check-ins</SelectItem>
-                              <SelectItem value="videosCompleted">Videos Completed</SelectItem>
-                              <SelectItem value="yearsActive">Years Active</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="triggerType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Trigger Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-award-trigger-type">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="count">Count</SelectItem>
-                              <SelectItem value="streak">Streak</SelectItem>
-                              <SelectItem value="boolean">Boolean</SelectItem>
-                              <SelectItem value="manual">Manual</SelectItem>
-                              <SelectItem value="location_away">Location Away</SelectItem>
-                              <SelectItem value="online_training">Online Training</SelectItem>
-                              <SelectItem value="completeAll">Complete All</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="triggerOperator"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Operator</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-award-trigger-operator">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value=">=">&gt;=</SelectItem>
-                              <SelectItem value="=">=</SelectItem>
-                              <SelectItem value="<">&lt;</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="triggerValue"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Trigger Value</FormLabel>
+                  
+                  {/* Trigger Category - The Master Switch */}
+                  <FormField
+                    control={form.control}
+                    name="triggerCategory"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>How is this earned? *</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <Input
-                              {...field}
-                              type="number"
-                              placeholder="10"
-                              onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
-                              value={field.value || ""}
-                              data-testid="input-award-trigger-value"
-                            />
+                            <SelectTrigger data-testid="select-trigger-category">
+                              <SelectValue />
+                            </SelectTrigger>
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                          <SelectContent>
+                            <SelectItem value="checkin">Check-in / Attendance</SelectItem>
+                            <SelectItem value="system">Collection (Meta-Badge)</SelectItem>
+                            <SelectItem value="time">Time Active</SelectItem>
+                            <SelectItem value="store">Store Purchase</SelectItem>
+                            <SelectItem value="manual">Manual Assignment</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {watchedTriggerCategory === "checkin" && "Award based on event attendance"}
+                          {watchedTriggerCategory === "system" && "Award when user collects enough of another badge"}
+                          {watchedTriggerCategory === "time" && "Award based on membership duration"}
+                          {watchedTriggerCategory === "store" && "Award when user purchases a specific product"}
+                          {watchedTriggerCategory === "manual" && "Coach or admin assigns this award manually"}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Dynamic fields based on trigger category */}
+                  {watchedTriggerCategory === "checkin" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="eventFilter"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Event Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-event-filter">
+                                    <SelectValue placeholder="Select event type..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="any">Any Event</SelectItem>
+                                  <SelectItem value="game">Games Only</SelectItem>
+                                  <SelectItem value="practice">Practices Only</SelectItem>
+                                  <SelectItem value="skills">Skills Sessions</SelectItem>
+                                  <SelectItem value="fnh">Friday Night Hoops</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="countMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Count Mode</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-count-mode">
+                                    <SelectValue placeholder="Select mode..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="total">Total (Cumulative)</SelectItem>
+                                  <SelectItem value="streak">Streak (Consecutive)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number Required</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="e.g., 50"
+                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                value={field.value || ""}
+                                data-testid="input-threshold"
+                              />
+                            </FormControl>
+                            <FormDescription>How many check-ins are needed to earn this award?</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {watchedTriggerCategory === "system" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      <FormField
+                        control={form.control}
+                        name="referenceId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Target Award</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-reference-award">
+                                  <SelectValue placeholder="Select award to count..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {awardDefinitions
+                                  .filter((a: any) => a.active && a.triggerCategory !== 'system')
+                                  .map((a: any) => (
+                                    <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>Which award needs to be collected multiple times?</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number Required</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="e.g., 10"
+                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                value={field.value || ""}
+                                data-testid="input-system-threshold"
+                              />
+                            </FormControl>
+                            <FormDescription>How many of that award are needed?</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {watchedTriggerCategory === "time" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="threshold"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Duration</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  placeholder="e.g., 5"
+                                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                  value={field.value || ""}
+                                  data-testid="input-time-threshold"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="timeUnit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unit</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-time-unit">
+                                    <SelectValue placeholder="Select unit..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="years">Years</SelectItem>
+                                  <SelectItem value="months">Months</SelectItem>
+                                  <SelectItem value="days">Days</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormDescription>Award after the user has been a member for this duration</FormDescription>
+                    </div>
+                  )}
+
+                  {watchedTriggerCategory === "store" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      <FormField
+                        control={form.control}
+                        name="referenceId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Product SKU or ID</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="e.g., program-foundation"
+                                data-testid="input-store-reference"
+                              />
+                            </FormControl>
+                            <FormDescription>The product identifier that triggers this award when purchased</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {watchedTriggerCategory === "manual" && (
+                    <div className="p-4 border rounded-lg bg-muted/50">
+                      <p className="text-sm text-muted-foreground">
+                        This award has no automatic triggers. Coaches or admins will assign it manually to players.
+                      </p>
+                    </div>
+                  )}
                   <FormField
                     control={form.control}
                     name="description"
@@ -4662,42 +4767,25 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="Trophy">Trophy</SelectItem>
-              <SelectItem value="Badge">Badge</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={filterPrestige} onValueChange={setFilterPrestige}>
-            <SelectTrigger className="w-40" data-testid="filter-prestige">
-              <SelectValue placeholder="Prestige" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Prestige</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-              <SelectItem value="Starter">Starter</SelectItem>
-              <SelectItem value="AllStar">All Star</SelectItem>
-              <SelectItem value="Superstar">Superstar</SelectItem>
-              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
+              <SelectItem value="Gold">Gold</SelectItem>
+              <SelectItem value="Purple">Purple</SelectItem>
+              <SelectItem value="Blue">Blue</SelectItem>
+              <SelectItem value="Green">Green</SelectItem>
+              <SelectItem value="Grey">Grey</SelectItem>
+              <SelectItem value="Special">Special</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-40" data-testid="filter-class">
-              <SelectValue placeholder="Class" />
+            <SelectTrigger className="w-40" data-testid="filter-trigger">
+              <SelectValue placeholder="Trigger" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              <SelectItem value="Legacy">Legacy</SelectItem>
-              <SelectItem value="Team">Team</SelectItem>
-              <SelectItem value="Coach">Coach</SelectItem>
-              <SelectItem value="HallOfFame">Hall of Fame</SelectItem>
-              <SelectItem value="Superstar">Superstar</SelectItem>
-              <SelectItem value="AllStar">All Star</SelectItem>
-              <SelectItem value="Starter">Starter</SelectItem>
-              <SelectItem value="Prospect">Prospect</SelectItem>
-              <SelectItem value="Attendance">Attendance</SelectItem>
-              <SelectItem value="Commitment">Commitment</SelectItem>
-              <SelectItem value="Variety">Variety</SelectItem>
-              <SelectItem value="Time">Time</SelectItem>
-              <SelectItem value="Training">Training</SelectItem>
+              <SelectItem value="all">All Triggers</SelectItem>
+              <SelectItem value="checkin">Check-in</SelectItem>
+              <SelectItem value="system">Collection</SelectItem>
+              <SelectItem value="time">Time</SelectItem>
+              <SelectItem value="store">Store</SelectItem>
+              <SelectItem value="manual">Manual</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterActive} onValueChange={setFilterActive}>
@@ -4734,32 +4822,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('prestige')}
-                  data-testid="header-prestige"
-                >
-                  Prestige
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('class')}
-                  data-testid="header-class"
-                >
-                  Class
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('triggerField')}
+                  onClick={() => handleSort('triggerCategory')}
                   data-testid="header-trigger"
                 >
                   Trigger
                 </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100" 
-                  onClick={() => handleSort('triggerType')}
-                  data-testid="header-type"
-                >
-                  Type
-                </TableHead>
+                <TableHead>Details</TableHead>
                 <TableHead>Recipients</TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100" 
@@ -4774,7 +4842,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             <TableBody>
               {filteredAwards.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
                     No awards found
                   </TableCell>
                 </TableRow>
@@ -4795,32 +4863,36 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           data-testid={`img-award-${award.id}`}
                         />
                       ) : (
-                        award.tier === 'Trophy' ? (
-                          <Trophy className="w-12 h-12 text-gray-300" data-testid={`icon-trophy-${award.id}`} />
-                        ) : (
-                          <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />
-                        )
+                        <Award className="w-12 h-12 text-gray-300" data-testid={`icon-badge-${award.id}`} />
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{award.tier}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getPrestigeBadgeColor(award.prestige)}>
-                        {award.prestige}
+                      <Badge variant="outline" className={getTierBadgeColor(award.tier)}>
+                        {award.tier}
                       </Badge>
                     </TableCell>
-                    <TableCell>{award.class || "-"}</TableCell>
                     <TableCell>
-                      {award.triggerField ? (
-                        <div className="text-sm">
-                          {award.triggerField} {award.triggerOperator} {award.triggerValue}
-                        </div>
-                      ) : (
-                        "-"
+                      <Badge variant="secondary">
+                        {getTriggerCategoryLabel(award.triggerCategory || 'manual')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {award.triggerCategory === 'checkin' && (
+                        <span>{award.countMode === 'streak' ? 'Streak' : 'Total'}: {award.threshold || 0} {award.eventFilter || 'any'}</span>
+                      )}
+                      {award.triggerCategory === 'time' && (
+                        <span>{award.threshold || 0} {award.timeUnit || 'years'}</span>
+                      )}
+                      {award.triggerCategory === 'store' && (
+                        <span>SKU: {award.referenceId || '-'}</span>
+                      )}
+                      {award.triggerCategory === 'system' && (
+                        <span>Collect {award.threshold || 0} of #{award.referenceId || '-'}</span>
+                      )}
+                      {(award.triggerCategory === 'manual' || !award.triggerCategory) && (
+                        <span>-</span>
                       )}
                     </TableCell>
-                    <TableCell>{award.triggerType || "-"}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"

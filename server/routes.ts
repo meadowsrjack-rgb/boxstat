@@ -1363,34 +1363,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Update player's paymentStatus to "paid" and create enrollment
-          if (playerId) {
+          if (playerId && typeof playerId === 'string' && playerId.length > 0) {
             try {
-              // Update player's payment status
-              await storage.updateUser(playerId, {
-                paymentStatus: "paid",
-              });
-              console.log(`✅ Updated player ${playerId} paymentStatus to paid`);
-              
-              // Check for existing enrollment for this player and program
-              const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
-              const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
-              
-              if (!hasEnrollment) {
-                await storage.createEnrollment({
-                  organizationId: "default-org",
-                  accountHolderId: userId,
-                  profileId: playerId,
-                  programId: packageId,
-                  status: 'active',
-                  source: 'payment',
-                  remainingCredits: program?.sessionCount || undefined,
-                  totalCredits: program?.sessionCount || undefined,
+              // Verify player exists before updating
+              const player = await storage.getUser(playerId);
+              if (player) {
+                // Update player's payment status
+                await storage.updateUser(playerId, {
+                  paymentStatus: "paid",
                 });
-                console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                console.log(`✅ Updated player ${playerId} paymentStatus to paid`);
+                
+                // Check for existing enrollment for this player and program
+                const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+                const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
+                
+                if (!hasEnrollment && program) {
+                  await storage.createEnrollment({
+                    organizationId: "default-org",
+                    accountHolderId: userId,
+                    profileId: playerId,
+                    programId: packageId,
+                    status: 'active',
+                    source: 'payment',
+                    remainingCredits: program.sessionCount ?? undefined,
+                    totalCredits: program.sessionCount ?? undefined,
+                  });
+                  console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                } else if (hasEnrollment) {
+                  console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
+                }
+              } else {
+                console.warn(`⚠️ Player ${playerId} not found, cannot update status`);
               }
             } catch (playerUpdateError: any) {
               console.error("Error updating player status or enrollment:", playerUpdateError);
             }
+          } else {
+            console.log(`ℹ️ No valid playerId provided in session metadata, skipping player status update`);
           }
           
           return res.json({ received: true });
@@ -6945,6 +6955,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error marking notification as read:', error);
       res.status(400).json({ error: 'Failed to mark notification as read', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // NOTIFICATION CAMPAIGN ROUTES (Scheduled Messaging)
+  // =============================================
+  
+  app.get('/api/notification-campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const campaigns = await storage.getNotificationCampaignsByOrganization(organizationId);
+      res.json(campaigns);
+    } catch (error: any) {
+      console.error('Error fetching notification campaigns:', error);
+      res.status(500).json({ error: 'Failed to fetch campaigns', message: error.message });
+    }
+  });
+  
+  app.get('/api/notification-campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid campaign ID' });
+      }
+      const campaign = await storage.getNotificationCampaign(id);
+      if (!campaign) {
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+      res.json(campaign);
+    } catch (error: any) {
+      console.error('Error fetching campaign:', error);
+      res.status(500).json({ error: 'Failed to fetch campaign', message: error.message });
+    }
+  });
+  
+  app.post('/api/notification-campaigns', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId, organizationId, role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      
+      const campaignData = {
+        ...req.body,
+        organizationId,
+        createdBy: userId,
+        status: req.body.scheduleType === 'immediate' ? 'active' : 'draft',
+      };
+      
+      // Calculate nextRunAt based on schedule type
+      if (campaignData.scheduleType === 'immediate') {
+        campaignData.nextRunAt = new Date().toISOString();
+      } else if (campaignData.scheduleType === 'scheduled' && campaignData.scheduledAt) {
+        campaignData.nextRunAt = campaignData.scheduledAt;
+        campaignData.status = 'active';
+      } else if (campaignData.scheduleType === 'recurring' && campaignData.recurrenceTime) {
+        // Calculate first run based on recurrence settings
+        const [hours, minutes] = campaignData.recurrenceTime.split(':').map(Number);
+        const firstRun = new Date();
+        firstRun.setHours(hours, minutes, 0, 0);
+        if (firstRun <= new Date()) {
+          firstRun.setDate(firstRun.getDate() + 1);
+        }
+        campaignData.nextRunAt = firstRun.toISOString();
+        campaignData.status = 'active';
+      }
+      
+      const campaign = await storage.createNotificationCampaign(campaignData);
+      res.json(campaign);
+    } catch (error: any) {
+      console.error('Error creating notification campaign:', error);
+      res.status(500).json({ error: 'Failed to create campaign', message: error.message });
+    }
+  });
+  
+  app.patch('/api/notification-campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid campaign ID' });
+      }
+      const updated = await storage.updateNotificationCampaign(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating campaign:', error);
+      res.status(500).json({ error: 'Failed to update campaign', message: error.message });
+    }
+  });
+  
+  app.delete('/api/notification-campaigns/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid campaign ID' });
+      }
+      await storage.deleteNotificationCampaign(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting campaign:', error);
+      res.status(500).json({ error: 'Failed to delete campaign', message: error.message });
+    }
+  });
+  
+  // Campaign runs history
+  app.get('/api/notification-campaigns/:id/runs', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid campaign ID' });
+      }
+      const runs = await storage.getCampaignRunsByCampaign(id);
+      res.json(runs);
+    } catch (error: any) {
+      console.error('Error fetching campaign runs:', error);
+      res.status(500).json({ error: 'Failed to fetch runs', message: error.message });
+    }
+  });
+  
+  // =============================================
+  // NOTIFICATION TRIGGER RULES ROUTES
+  // =============================================
+  
+  app.get('/api/notification-trigger-rules', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const rules = await storage.getNotificationTriggerRulesByOrganization(organizationId);
+      res.json(rules);
+    } catch (error: any) {
+      console.error('Error fetching trigger rules:', error);
+      res.status(500).json({ error: 'Failed to fetch trigger rules', message: error.message });
+    }
+  });
+  
+  app.post('/api/notification-trigger-rules', requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const ruleData = {
+        ...req.body,
+        organizationId,
+      };
+      const rule = await storage.createNotificationTriggerRule(ruleData);
+      res.json(rule);
+    } catch (error: any) {
+      console.error('Error creating trigger rule:', error);
+      res.status(500).json({ error: 'Failed to create trigger rule', message: error.message });
+    }
+  });
+  
+  app.patch('/api/notification-trigger-rules/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid rule ID' });
+      }
+      const updated = await storage.updateNotificationTriggerRule(id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Trigger rule not found' });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating trigger rule:', error);
+      res.status(500).json({ error: 'Failed to update trigger rule', message: error.message });
+    }
+  });
+  
+  app.delete('/api/notification-trigger-rules/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid rule ID' });
+      }
+      await storage.deleteNotificationTriggerRule(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting trigger rule:', error);
+      res.status(500).json({ error: 'Failed to delete trigger rule', message: error.message });
     }
   });
   

@@ -4227,7 +4227,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Award Definitions</CardTitle>
-          <CardDescription>Manage trophies and badges for your organization</CardDescription>
+          <CardDescription>Manage awards for your organization</CardDescription>
         </div>
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
@@ -6354,6 +6354,10 @@ function DivisionsTab({ divisions, teams, organization }: any) {
 function NotificationsTab({ notifications, users, teams, divisions, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState('daily');
+  const [recurrenceTime, setRecurrenceTime] = useState('09:00');
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -6382,7 +6386,42 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
 
   const createMessage = useMutation({
     mutationFn: async (data: any) => {
-      // Ensure sentBy is set with current user ID
+      // For scheduled or recurring messages, use the campaign API
+      if (scheduleType !== 'immediate') {
+        // Validate scheduled campaigns require a date/time
+        if (scheduleType === 'scheduled' && !scheduledAt) {
+          throw new Error('Please select a date and time for the scheduled message');
+        }
+        if (scheduleType === 'recurring' && !recurrenceTime) {
+          throw new Error('Please select a time for the recurring message');
+        }
+        
+        // Convert datetime-local value to ISO string
+        const scheduledAtISO = scheduleType === 'scheduled' && scheduledAt 
+          ? new Date(scheduledAt).toISOString() 
+          : undefined;
+        
+        const campaignData = {
+          title: data.title,
+          message: data.message,
+          types: data.types || ['message'],
+          recipientTarget: data.recipientTarget,
+          recipientUserIds: data.recipientUserIds,
+          recipientRoles: data.recipientRoles,
+          recipientTeamIds: data.recipientTeamIds,
+          recipientDivisionIds: data.recipientDivisionIds,
+          deliveryChannels: data.deliveryChannels,
+          scheduleType,
+          scheduledAt: scheduledAtISO,
+          recurrenceFrequency: scheduleType === 'recurring' ? recurrenceFrequency : undefined,
+          recurrenceTime: scheduleType === 'recurring' ? recurrenceTime : undefined,
+          timezone: 'America/Los_Angeles',
+        };
+        console.log('[Notification Form] Creating campaign:', campaignData);
+        return await apiRequest("POST", "/api/notification-campaigns", campaignData);
+      }
+      
+      // For immediate messages, use the regular notification API
       const notificationData = {
         ...data,
         sentBy: currentUser?.id || data.sentBy,
@@ -6393,9 +6432,16 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
-      toast({ title: "Message sent successfully" });
-      setIsDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/notification-campaigns"] });
+      const successMessage = scheduleType === 'immediate' ? "Message sent successfully" : "Message scheduled successfully";
+      // Reset state before closing dialog to avoid stale values
+      setScheduleType('immediate');
+      setScheduledAt('');
+      setRecurrenceFrequency('daily');
+      setRecurrenceTime('09:00');
       form.reset();
+      setIsDialogOpen(false);
+      toast({ title: successMessage });
     },
     onError: (error: any) => {
       console.error('[Notification Form] Failed to send notification:', error);
@@ -6420,6 +6466,10 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     setIsDialogOpen(open);
     if (!open) {
       form.reset();
+      setScheduleType('immediate');
+      setScheduledAt('');
+      setRecurrenceFrequency('daily');
+      setRecurrenceTime('09:00');
     }
   };
 
@@ -6792,9 +6842,70 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                     </FormItem>
                   )}
                 />
+                
+                <div className="border-t pt-4">
+                  <FormLabel className="text-base font-semibold">Scheduling</FormLabel>
+                  <div className="mt-3 space-y-3">
+                    <Select 
+                      value={scheduleType} 
+                      onValueChange={(val) => setScheduleType(val as 'immediate' | 'scheduled' | 'recurring')}
+                    >
+                      <SelectTrigger data-testid="select-schedule-type">
+                        <SelectValue placeholder="When to send" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="immediate">Send Immediately</SelectItem>
+                        <SelectItem value="scheduled">Schedule for Later</SelectItem>
+                        <SelectItem value="recurring">Recurring (Daily/Weekly)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {scheduleType === 'scheduled' && (
+                      <div className="space-y-2">
+                        <Label>Send Date & Time</Label>
+                        <Input 
+                          type="datetime-local" 
+                          value={scheduledAt}
+                          onChange={(e) => setScheduledAt(e.target.value)}
+                          data-testid="input-scheduled-at"
+                        />
+                      </div>
+                    )}
+                    
+                    {scheduleType === 'recurring' && (
+                      <div className="space-y-3 bg-gray-50 p-3 rounded-md">
+                        <div className="space-y-2">
+                          <Label>Frequency</Label>
+                          <Select value={recurrenceFrequency} onValueChange={setRecurrenceFrequency}>
+                            <SelectTrigger data-testid="select-recurrence-frequency">
+                              <SelectValue placeholder="How often" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Time of Day</Label>
+                          <Input 
+                            type="time" 
+                            value={recurrenceTime}
+                            onChange={(e) => setRecurrenceTime(e.target.value)}
+                            data-testid="input-recurrence-time"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Messages will be sent at the specified time based on Pacific Time.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 <Button type="submit" className="w-full" disabled={createMessage.isPending} data-testid="button-submit-notification">
-                  {createMessage.isPending ? "Sending..." : "Send Message"}
+                  {createMessage.isPending ? (scheduleType === 'immediate' ? "Sending..." : "Scheduling...") : (scheduleType === 'immediate' ? "Send Message" : "Schedule Message")}
                 </Button>
               </form>
             </Form>

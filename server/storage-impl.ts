@@ -23,6 +23,10 @@ import {
   type Waiver,
   type ProductEnrollment,
   type ProgramSuggestedAddOn,
+  type NotificationCampaign,
+  type NotificationCampaignRun,
+  type NotificationTriggerRule,
+  type TriggeredNotificationLog,
   type InsertUser,
   type InsertTeam,
   type InsertEvent,
@@ -46,6 +50,10 @@ import {
   type InsertWaiver,
   type InsertProductEnrollment,
   type InsertProgramSuggestedAddOn,
+  type InsertNotificationCampaign,
+  type InsertNotificationCampaignRun,
+  type InsertNotificationTriggerRule,
+  type InsertTriggeredNotificationLog,
   type SelectAwardDefinition,
   type InsertAwardDefinition,
   type SelectUserAwardRecord,
@@ -263,6 +271,27 @@ export interface IStorage {
   getPlayerStatusTag(playerId: string): Promise<{tag: string; remainingCredits?: number; lowBalance?: boolean}>;
   getPlayerStatusTagsBulk(playerIds: string[]): Promise<Map<string, {tag: string; remainingCredits?: number; lowBalance?: boolean}>>;
   getProductEnrollmentsByOrganization(organizationId: string): Promise<ProductEnrollment[]>;
+  
+  // Notification Campaign operations
+  getNotificationCampaign(id: number): Promise<NotificationCampaign | undefined>;
+  getNotificationCampaignsByOrganization(organizationId: string): Promise<NotificationCampaign[]>;
+  getPendingCampaigns(beforeTime: string): Promise<NotificationCampaign[]>;
+  createNotificationCampaign(data: InsertNotificationCampaign): Promise<NotificationCampaign>;
+  updateNotificationCampaign(id: number, updates: Partial<NotificationCampaign>): Promise<NotificationCampaign | undefined>;
+  deleteNotificationCampaign(id: number): Promise<void>;
+  createCampaignRun(data: InsertNotificationCampaignRun): Promise<NotificationCampaignRun>;
+  updateCampaignRun(id: number, updates: Partial<NotificationCampaignRun>): Promise<NotificationCampaignRun | undefined>;
+  getCampaignRunsByCampaign(campaignId: number): Promise<NotificationCampaignRun[]>;
+  
+  // Notification Trigger Rule operations
+  getNotificationTriggerRule(id: number): Promise<NotificationTriggerRule | undefined>;
+  getNotificationTriggerRulesByOrganization(organizationId: string): Promise<NotificationTriggerRule[]>;
+  getActiveNotificationTriggerRulesByType(organizationId: string, triggerType: string): Promise<NotificationTriggerRule[]>;
+  createNotificationTriggerRule(data: InsertNotificationTriggerRule): Promise<NotificationTriggerRule>;
+  updateNotificationTriggerRule(id: number, updates: Partial<NotificationTriggerRule>): Promise<NotificationTriggerRule | undefined>;
+  deleteNotificationTriggerRule(id: number): Promise<void>;
+  createTriggeredNotificationLog(data: InsertTriggeredNotificationLog): Promise<TriggeredNotificationLog>;
+  getTriggeredNotificationLogsByUser(userId: string): Promise<TriggeredNotificationLog[]>;
 }
 
 // =============================================
@@ -2084,6 +2113,130 @@ class MemStorage implements IStorage {
     }
     return enrollments;
   }
+  
+  // Notification Campaign operations (stub implementations for MemStorage)
+  private campaignsStore: Map<number, NotificationCampaign> = new Map();
+  private campaignRunsStore: Map<number, NotificationCampaignRun> = new Map();
+  private triggerRulesStore: Map<number, NotificationTriggerRule> = new Map();
+  private triggeredLogsStore: Map<number, TriggeredNotificationLog> = new Map();
+  private nextCampaignId = 1;
+  private nextCampaignRunId = 1;
+  private nextTriggerRuleId = 1;
+  private nextTriggeredLogId = 1;
+  
+  async getNotificationCampaign(id: number): Promise<NotificationCampaign | undefined> {
+    return this.campaignsStore.get(id);
+  }
+  
+  async getNotificationCampaignsByOrganization(organizationId: string): Promise<NotificationCampaign[]> {
+    return Array.from(this.campaignsStore.values()).filter(c => c.organizationId === organizationId);
+  }
+  
+  async getPendingCampaigns(beforeTime: string): Promise<NotificationCampaign[]> {
+    return Array.from(this.campaignsStore.values()).filter(c => 
+      c.status === 'active' && c.nextRunAt && c.nextRunAt <= beforeTime
+    );
+  }
+  
+  async createNotificationCampaign(data: InsertNotificationCampaign): Promise<NotificationCampaign> {
+    const now = new Date().toISOString();
+    const campaign: NotificationCampaign = {
+      id: this.nextCampaignId++,
+      ...data,
+      totalRuns: 0,
+      lastRunAt: null,
+      createdAt: now,
+      updatedAt: now,
+    } as NotificationCampaign;
+    this.campaignsStore.set(campaign.id, campaign);
+    return campaign;
+  }
+  
+  async updateNotificationCampaign(id: number, updates: Partial<NotificationCampaign>): Promise<NotificationCampaign | undefined> {
+    const campaign = this.campaignsStore.get(id);
+    if (!campaign) return undefined;
+    const updated = { ...campaign, ...updates, updatedAt: new Date().toISOString() };
+    this.campaignsStore.set(id, updated);
+    return updated;
+  }
+  
+  async deleteNotificationCampaign(id: number): Promise<void> {
+    this.campaignsStore.delete(id);
+  }
+  
+  async createCampaignRun(data: InsertNotificationCampaignRun): Promise<NotificationCampaignRun> {
+    const run: NotificationCampaignRun = {
+      id: this.nextCampaignRunId++,
+      ...data,
+      createdAt: new Date().toISOString(),
+    } as NotificationCampaignRun;
+    this.campaignRunsStore.set(run.id, run);
+    return run;
+  }
+  
+  async updateCampaignRun(id: number, updates: Partial<NotificationCampaignRun>): Promise<NotificationCampaignRun | undefined> {
+    const run = this.campaignRunsStore.get(id);
+    if (!run) return undefined;
+    const updated = { ...run, ...updates };
+    this.campaignRunsStore.set(id, updated);
+    return updated;
+  }
+  
+  async getCampaignRunsByCampaign(campaignId: number): Promise<NotificationCampaignRun[]> {
+    return Array.from(this.campaignRunsStore.values()).filter(r => r.campaignId === campaignId);
+  }
+  
+  async getNotificationTriggerRule(id: number): Promise<NotificationTriggerRule | undefined> {
+    return this.triggerRulesStore.get(id);
+  }
+  
+  async getNotificationTriggerRulesByOrganization(organizationId: string): Promise<NotificationTriggerRule[]> {
+    return Array.from(this.triggerRulesStore.values()).filter(r => r.organizationId === organizationId);
+  }
+  
+  async getActiveNotificationTriggerRulesByType(organizationId: string, triggerType: string): Promise<NotificationTriggerRule[]> {
+    return Array.from(this.triggerRulesStore.values()).filter(r => 
+      r.organizationId === organizationId && r.triggerType === triggerType && r.isActive
+    );
+  }
+  
+  async createNotificationTriggerRule(data: InsertNotificationTriggerRule): Promise<NotificationTriggerRule> {
+    const now = new Date().toISOString();
+    const rule: NotificationTriggerRule = {
+      id: this.nextTriggerRuleId++,
+      ...data,
+      createdAt: now,
+      updatedAt: now,
+    } as NotificationTriggerRule;
+    this.triggerRulesStore.set(rule.id, rule);
+    return rule;
+  }
+  
+  async updateNotificationTriggerRule(id: number, updates: Partial<NotificationTriggerRule>): Promise<NotificationTriggerRule | undefined> {
+    const rule = this.triggerRulesStore.get(id);
+    if (!rule) return undefined;
+    const updated = { ...rule, ...updates, updatedAt: new Date().toISOString() };
+    this.triggerRulesStore.set(id, updated);
+    return updated;
+  }
+  
+  async deleteNotificationTriggerRule(id: number): Promise<void> {
+    this.triggerRulesStore.delete(id);
+  }
+  
+  async createTriggeredNotificationLog(data: InsertTriggeredNotificationLog): Promise<TriggeredNotificationLog> {
+    const log: TriggeredNotificationLog = {
+      id: this.nextTriggeredLogId++,
+      ...data,
+      createdAt: new Date().toISOString(),
+    } as TriggeredNotificationLog;
+    this.triggeredLogsStore.set(log.id, log);
+    return log;
+  }
+  
+  async getTriggeredNotificationLogsByUser(userId: string): Promise<TriggeredNotificationLog[]> {
+    return Array.from(this.triggeredLogsStore.values()).filter(l => l.recipientUserId === userId);
+  }
 }
 
 // =============================================
@@ -2091,7 +2244,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, or, sql, isNull, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, isNull, inArray, desc } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -4942,6 +5095,132 @@ class DatabaseStorage implements IStorage {
       inventoryCount: dbProgram.inventoryCount,
       shippingRequired: dbProgram.shippingRequired ?? false,
     };
+  }
+  
+  // Notification Campaign operations
+  async getNotificationCampaign(id: number): Promise<NotificationCampaign | undefined> {
+    const results = await db.select().from(schema.notificationCampaigns)
+      .where(eq(schema.notificationCampaigns.id, id));
+    return results[0] as NotificationCampaign | undefined;
+  }
+  
+  async getNotificationCampaignsByOrganization(organizationId: string): Promise<NotificationCampaign[]> {
+    const results = await db.select().from(schema.notificationCampaigns)
+      .where(eq(schema.notificationCampaigns.organizationId, organizationId))
+      .orderBy(desc(schema.notificationCampaigns.createdAt));
+    return results as NotificationCampaign[];
+  }
+  
+  async getPendingCampaigns(beforeTime: string): Promise<NotificationCampaign[]> {
+    const results = await db.select().from(schema.notificationCampaigns)
+      .where(
+        and(
+          eq(schema.notificationCampaigns.status, 'active'),
+          lte(schema.notificationCampaigns.nextRunAt, beforeTime)
+        )
+      );
+    return results as NotificationCampaign[];
+  }
+  
+  async createNotificationCampaign(data: InsertNotificationCampaign): Promise<NotificationCampaign> {
+    const results = await db.insert(schema.notificationCampaigns)
+      .values(data)
+      .returning();
+    return results[0] as NotificationCampaign;
+  }
+  
+  async updateNotificationCampaign(id: number, updates: Partial<NotificationCampaign>): Promise<NotificationCampaign | undefined> {
+    const results = await db.update(schema.notificationCampaigns)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(schema.notificationCampaigns.id, id))
+      .returning();
+    return results[0] as NotificationCampaign | undefined;
+  }
+  
+  async deleteNotificationCampaign(id: number): Promise<void> {
+    await db.delete(schema.notificationCampaigns)
+      .where(eq(schema.notificationCampaigns.id, id));
+  }
+  
+  async createCampaignRun(data: InsertNotificationCampaignRun): Promise<NotificationCampaignRun> {
+    const results = await db.insert(schema.notificationCampaignRuns)
+      .values(data)
+      .returning();
+    return results[0] as NotificationCampaignRun;
+  }
+  
+  async updateCampaignRun(id: number, updates: Partial<NotificationCampaignRun>): Promise<NotificationCampaignRun | undefined> {
+    const results = await db.update(schema.notificationCampaignRuns)
+      .set(updates)
+      .where(eq(schema.notificationCampaignRuns.id, id))
+      .returning();
+    return results[0] as NotificationCampaignRun | undefined;
+  }
+  
+  async getCampaignRunsByCampaign(campaignId: number): Promise<NotificationCampaignRun[]> {
+    const results = await db.select().from(schema.notificationCampaignRuns)
+      .where(eq(schema.notificationCampaignRuns.campaignId, campaignId))
+      .orderBy(desc(schema.notificationCampaignRuns.scheduledAt));
+    return results as NotificationCampaignRun[];
+  }
+  
+  // Notification Trigger Rule operations
+  async getNotificationTriggerRule(id: number): Promise<NotificationTriggerRule | undefined> {
+    const results = await db.select().from(schema.notificationTriggerRules)
+      .where(eq(schema.notificationTriggerRules.id, id));
+    return results[0] as NotificationTriggerRule | undefined;
+  }
+  
+  async getNotificationTriggerRulesByOrganization(organizationId: string): Promise<NotificationTriggerRule[]> {
+    const results = await db.select().from(schema.notificationTriggerRules)
+      .where(eq(schema.notificationTriggerRules.organizationId, organizationId));
+    return results as NotificationTriggerRule[];
+  }
+  
+  async getActiveNotificationTriggerRulesByType(organizationId: string, triggerType: string): Promise<NotificationTriggerRule[]> {
+    const results = await db.select().from(schema.notificationTriggerRules)
+      .where(
+        and(
+          eq(schema.notificationTriggerRules.organizationId, organizationId),
+          eq(schema.notificationTriggerRules.triggerType, triggerType),
+          eq(schema.notificationTriggerRules.isActive, true)
+        )
+      );
+    return results as NotificationTriggerRule[];
+  }
+  
+  async createNotificationTriggerRule(data: InsertNotificationTriggerRule): Promise<NotificationTriggerRule> {
+    const results = await db.insert(schema.notificationTriggerRules)
+      .values(data)
+      .returning();
+    return results[0] as NotificationTriggerRule;
+  }
+  
+  async updateNotificationTriggerRule(id: number, updates: Partial<NotificationTriggerRule>): Promise<NotificationTriggerRule | undefined> {
+    const results = await db.update(schema.notificationTriggerRules)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(schema.notificationTriggerRules.id, id))
+      .returning();
+    return results[0] as NotificationTriggerRule | undefined;
+  }
+  
+  async deleteNotificationTriggerRule(id: number): Promise<void> {
+    await db.delete(schema.notificationTriggerRules)
+      .where(eq(schema.notificationTriggerRules.id, id));
+  }
+  
+  async createTriggeredNotificationLog(data: InsertTriggeredNotificationLog): Promise<TriggeredNotificationLog> {
+    const results = await db.insert(schema.triggeredNotificationLog)
+      .values(data)
+      .returning();
+    return results[0] as TriggeredNotificationLog;
+  }
+  
+  async getTriggeredNotificationLogsByUser(userId: string): Promise<TriggeredNotificationLog[]> {
+    const results = await db.select().from(schema.triggeredNotificationLog)
+      .where(eq(schema.triggeredNotificationLog.recipientUserId, userId))
+      .orderBy(desc(schema.triggeredNotificationLog.createdAt));
+    return results as TriggeredNotificationLog[];
   }
 }
 

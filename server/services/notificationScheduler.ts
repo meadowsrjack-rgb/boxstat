@@ -8,6 +8,15 @@ export class NotificationScheduler {
   start() {
     console.log('Starting notification scheduler...');
     
+    // Process scheduled campaigns every minute
+    const campaignProcessorJob = cron.schedule('* * * * *', async () => {
+      await this.processScheduledCampaigns();
+    }, {
+      scheduled: false
+    });
+    
+    this.jobs.set('campaignProcessor', campaignProcessorJob);
+    
     // DISABLED: storage.getUpcomingEvents not implemented yet
     // Check for upcoming events every 15 minutes
     // const eventReminderJob = cron.schedule('*/15 * * * *', async () => {
@@ -165,6 +174,199 @@ export class NotificationScheduler {
 
   async triggerCheckInNotifications() {
     await this.processCheckInAvailability();
+  }
+  
+  // Process scheduled notification campaigns
+  private async processScheduledCampaigns() {
+    try {
+      const now = new Date().toISOString();
+      const pendingCampaigns = await storage.getPendingCampaigns(now);
+      
+      for (const campaign of pendingCampaigns) {
+        console.log(`Processing scheduled campaign: ${campaign.id} - ${campaign.title}`);
+        
+        let runId: number | null = null;
+        
+        try {
+          // Create a campaign run record
+          const run = await storage.createCampaignRun({
+            campaignId: campaign.id,
+            scheduledAt: campaign.nextRunAt || now,
+            status: 'executing',
+          });
+          runId = run.id;
+          
+          // Resolve recipients based on targeting
+          const recipients = await this.resolveRecipients(
+            campaign.organizationId,
+            campaign.recipientTarget,
+            campaign.recipientUserIds || [],
+            campaign.recipientRoles || [],
+            campaign.recipientTeamIds || [],
+            campaign.recipientDivisionIds || [],
+            campaign.recipientProgramIds || []
+          );
+          
+          let successCount = 0;
+          let failureCount = 0;
+          
+          // Send notifications to each recipient
+          for (const userId of recipients) {
+            try {
+              // Create in-app notification
+              await notificationService.sendMultiChannelNotification({
+                userId,
+                title: campaign.title,
+                message: campaign.message,
+                type: 'campaign',
+                data: { campaignId: campaign.id },
+                channels: campaign.deliveryChannels as Array<'in_app' | 'push' | 'email'>,
+              });
+              successCount++;
+            } catch (err) {
+              console.error(`Failed to send campaign notification to user ${userId}:`, err);
+              failureCount++;
+            }
+          }
+          
+          // Update campaign run with results
+          await storage.updateCampaignRun(run.id, {
+            status: 'completed',
+            executedAt: new Date().toISOString(),
+            recipientCount: recipients.length,
+            successCount,
+            failureCount,
+          });
+          
+          // Calculate next run time for recurring campaigns
+          let nextRunAt: string | null = null;
+          if (campaign.scheduleType === 'recurring' && campaign.recurrenceFrequency) {
+            nextRunAt = this.calculateNextRun(campaign);
+          }
+          
+          // Update campaign status
+          await storage.updateNotificationCampaign(campaign.id, {
+            lastRunAt: new Date().toISOString(),
+            totalRuns: (campaign.totalRuns || 0) + 1,
+            nextRunAt: nextRunAt || undefined,
+            status: nextRunAt ? 'active' : 'completed',
+          });
+          
+          console.log(`Campaign ${campaign.id} sent to ${recipients.length} recipients (${successCount} success, ${failureCount} failed)`);
+          
+        } catch (campaignError) {
+          console.error(`Error processing campaign ${campaign.id}:`, campaignError);
+          
+          // Mark the campaign run and campaign as failed
+          try {
+            // Update the run record if we created one
+            if (runId !== null) {
+              await storage.updateCampaignRun(runId, {
+                status: 'failed',
+                executedAt: new Date().toISOString(),
+              });
+            }
+            
+            // Update campaign status to reflect error
+            await storage.updateNotificationCampaign(campaign.id, {
+              status: 'failed',
+            });
+          } catch (updateError) {
+            console.error(`Failed to update campaign ${campaign.id} status to failed:`, updateError);
+          }
+          // Don't fail other campaigns
+        }
+      }
+    } catch (error) {
+      console.error('Error in processScheduledCampaigns:', error);
+    }
+  }
+  
+  // Resolve recipient user IDs based on targeting configuration
+  private async resolveRecipients(
+    organizationId: string,
+    recipientTarget: string,
+    userIds: string[],
+    roles: string[],
+    teamIds: string[],
+    divisionIds: string[],
+    programIds: string[]
+  ): Promise<string[]> {
+    const recipientSet = new Set<string>();
+    
+    try {
+      if (recipientTarget === 'everyone') {
+        // Get all users in org
+        const allUsers = await storage.getUsersByOrganization(organizationId);
+        allUsers.forEach(u => recipientSet.add(u.id));
+      } else if (recipientTarget === 'users' && userIds.length > 0) {
+        userIds.forEach(id => recipientSet.add(id));
+      } else if (recipientTarget === 'roles' && roles.length > 0) {
+        for (const role of roles) {
+          const roleUsers = await storage.getUsersByRole(organizationId, role);
+          roleUsers.forEach(u => recipientSet.add(u.id));
+        }
+      } else if (recipientTarget === 'teams' && teamIds.length > 0) {
+        for (const teamId of teamIds) {
+          const teamMembers = await storage.getUsersByTeam(teamId);
+          teamMembers.forEach(u => recipientSet.add(u.id));
+        }
+      }
+      // TODO: Add division and program targeting
+    } catch (error) {
+      console.error('Error resolving recipients:', error);
+    }
+    
+    return Array.from(recipientSet);
+  }
+  
+  // Calculate the next run time for recurring campaigns
+  private calculateNextRun(campaign: any): string | null {
+    const now = new Date();
+    const lastRun = campaign.lastRunAt ? new Date(campaign.lastRunAt) : now;
+    const interval = campaign.recurrenceInterval || 1;
+    
+    let nextRun: Date;
+    
+    switch (campaign.recurrenceFrequency) {
+      case 'daily':
+        nextRun = new Date(lastRun);
+        nextRun.setDate(nextRun.getDate() + interval);
+        break;
+      case 'weekly':
+        nextRun = new Date(lastRun);
+        nextRun.setDate(nextRun.getDate() + (interval * 7));
+        break;
+      case 'monthly':
+        nextRun = new Date(lastRun);
+        nextRun.setMonth(nextRun.getMonth() + interval);
+        break;
+      default:
+        return null;
+    }
+    
+    // Check end conditions
+    if (campaign.recurrenceEndDate && nextRun > new Date(campaign.recurrenceEndDate)) {
+      return null;
+    }
+    
+    if (campaign.recurrenceEndAfterOccurrences && 
+        (campaign.totalRuns || 0) + 1 >= campaign.recurrenceEndAfterOccurrences) {
+      return null;
+    }
+    
+    // Set the time if specified
+    if (campaign.recurrenceTime) {
+      const [hours, minutes] = campaign.recurrenceTime.split(':').map(Number);
+      nextRun.setHours(hours, minutes, 0, 0);
+    }
+    
+    return nextRun.toISOString();
+  }
+  
+  // Manual trigger for campaigns (testing)
+  async triggerCampaignProcessor() {
+    await this.processScheduledCampaigns();
   }
 }
 

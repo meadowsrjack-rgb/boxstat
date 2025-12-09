@@ -593,6 +593,64 @@ export class NotificationService {
       return 0;
     }
   }
+  
+  // Send notification via multiple channels (in-app, push, email)
+  async sendMultiChannelNotification(params: {
+    userId: string;
+    title: string;
+    message: string;
+    type?: string;
+    data?: Record<string, any>;
+    channels?: Array<'in_app' | 'push' | 'email'>;
+  }): Promise<void> {
+    const { userId, title, message, type = 'notification', data = {}, channels = ['in_app', 'push'] } = params;
+    
+    try {
+      // Create in-app notification if channel includes it
+      if (channels.includes('in_app')) {
+        // Create the notification record
+        const [notification] = await db.insert(notifications)
+          .values({
+            organizationId: 'default-org',
+            title,
+            message,
+            types: ['notification'],
+            recipientTarget: 'users',
+            recipientUserIds: [userId],
+            status: 'sent',
+            sentAt: new Date().toISOString(),
+            sentBy: 'system',
+          })
+          .returning();
+        
+        // Create recipient record
+        if (notification) {
+          await db.insert(notificationRecipients)
+            .values({
+              notificationId: notification.id,
+              userId,
+              isRead: false,
+            });
+          
+          // Send push notification if channel includes it
+          if (channels.includes('push')) {
+            await this.sendPushNotification(notification.id, userId, title, message);
+          }
+        }
+      } else if (channels.includes('push')) {
+        // Push-only notification (no in-app record)
+        await this.sendPushNotification(0, userId, title, message);
+      }
+      
+      // Email channel would be handled separately if needed
+      if (channels.includes('email')) {
+        console.log(`Email notification to ${userId}: ${title} - not yet implemented`);
+      }
+    } catch (error) {
+      console.error('Error sending multi-channel notification:', error);
+      throw error;
+    }
+  }
 
 }
 

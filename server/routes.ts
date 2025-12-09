@@ -3352,6 +3352,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(team);
   });
   
+  // Coordinator endpoint: Create team with player assignments and auto-enrollment
+  app.post('/api/teams/with-assignments', requireAuth, async (req: any, res) => {
+    const { role } = req.user;
+    if (role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can use this endpoint' });
+    }
+    
+    const { teamData, playerIds = [] } = req.body;
+    
+    try {
+      // 1. Create the team
+      const parsedTeamData = insertTeamSchema.parse(teamData);
+      const team = await storage.createTeam(parsedTeamData);
+      
+      if (!team?.id) {
+        return res.status(500).json({ message: 'Failed to create team' });
+      }
+      
+      const results = {
+        team,
+        assignments: { success: [] as string[], failed: [] as string[] },
+        enrollments: { success: [] as string[], failed: [] as string[] },
+      };
+      
+      // 2. Assign players and create enrollments
+      for (const playerId of playerIds) {
+        try {
+          // Get the player to find their parent account
+          const player = await storage.getUser(playerId);
+          if (!player) {
+            results.assignments.failed.push(playerId);
+            continue;
+          }
+          
+          // Create team membership
+          await db.insert(teamMemberships)
+            .values({
+              teamId: team.id,
+              profileId: playerId,
+              role: 'player',
+              status: 'active',
+              jerseyNumber: player.jerseyNumber,
+              position: player.position,
+            })
+            .onConflictDoUpdate({
+              target: [teamMemberships.teamId, teamMemberships.profileId],
+              set: { status: 'active', role: 'player' },
+            });
+          
+          // Update legacy teamId field
+          await storage.updateUser(playerId, { teamId: team.id } as any);
+          results.assignments.success.push(playerId);
+          
+          // 3. Create product enrollment if team has a programId
+          if (team.programId) {
+            try {
+              const accountHolderId = player.parentId || playerId;
+              
+              // Check if enrollment already exists
+              const [existingEnrollment] = await db.select()
+                .from(productEnrollments)
+                .where(
+                  and(
+                    eq(productEnrollments.programId, team.programId),
+                    eq(productEnrollments.profileId, playerId)
+                  )
+                );
+              
+              if (!existingEnrollment) {
+                await db.insert(productEnrollments)
+                  .values({
+                    programId: team.programId,
+                    accountHolderId: accountHolderId,
+                    profileId: playerId,
+                    status: 'active',
+                    source: 'admin',
+                    autoRenew: false,
+                  });
+                results.enrollments.success.push(playerId);
+              } else {
+                // Already enrolled, count as success
+                results.enrollments.success.push(playerId);
+              }
+            } catch (enrollErr) {
+              console.error(`Failed to enroll player ${playerId}:`, enrollErr);
+              results.enrollments.failed.push(playerId);
+            }
+          }
+        } catch (assignErr) {
+          console.error(`Failed to assign player ${playerId}:`, assignErr);
+          results.assignments.failed.push(playerId);
+        }
+      }
+      
+      res.json(results);
+    } catch (error: any) {
+      console.error('Error in team creation with assignments:', error);
+      res.status(500).json({ message: error.message || 'Failed to create team with assignments' });
+    }
+  });
+  
   app.patch('/api/teams/:id', requireAuth, async (req: any, res) => {
     const { role } = req.user;
     if (role !== 'admin' && role !== 'coach') {

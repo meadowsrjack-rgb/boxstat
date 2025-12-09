@@ -29,6 +29,7 @@ export default function AdminProgramDetail() {
   const [isEditingPricing, setIsEditingPricing] = useState(false);
   const [showCreateTeamDialog, setShowCreateTeamDialog] = useState(false);
   const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
 
   const [overviewForm, setOverviewForm] = useState({
     name: "",
@@ -60,6 +61,7 @@ export default function AdminProgramDetail() {
     division: "",
     coachId: "",
     assistantCoachIds: [] as string[],
+    playerIds: [] as string[],
     season: "",
     notes: "",
   });
@@ -85,6 +87,11 @@ export default function AdminProgramDetail() {
   const { data: coaches = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/users"],
     select: (data: any[]) => data.filter(u => u.role === 'coach'),
+  });
+
+  const { data: players = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
+    queryKey: ["/api/users"],
+    select: (data: any[]) => data.filter(u => u.role === 'player'),
   });
 
   const programTeams = teams.filter(team => team.programId === programId);
@@ -148,7 +155,7 @@ export default function AdminProgramDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({ title: "Team created successfully" });
       setShowCreateTeamDialog(false);
-      setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], season: "", notes: "" });
+      setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], playerIds: [], season: "", notes: "" });
     },
     onError: (error: Error) => {
       toast({ title: "Failed to create team", description: error.message, variant: "destructive" });
@@ -190,18 +197,62 @@ export default function AdminProgramDetail() {
     updateProgram.mutate(pricingForm);
   };
 
-  const handleCreateTeam = () => {
-    createTeam.mutate({
-      organizationId: program?.organizationId || "default-org",
-      name: teamForm.name,
-      programId: programId,
-      division: teamForm.division || undefined,
-      coachId: teamForm.coachId || undefined,
-      assistantCoachIds: teamForm.assistantCoachIds,
-      season: teamForm.season || undefined,
-      notes: teamForm.notes || undefined,
-      active: true,
-    });
+  const handleCreateTeam = async () => {
+    setIsCreatingTeam(true);
+    try {
+      // Use coordinator endpoint that handles team creation + player assignments + enrollments
+      const result = await apiRequest("POST", "/api/teams/with-assignments", {
+        teamData: {
+          organizationId: program?.organizationId || "default-org",
+          name: teamForm.name,
+          programId: programId,
+          division: teamForm.division || undefined,
+          coachId: teamForm.coachId || undefined,
+          assistantCoachIds: teamForm.assistantCoachIds,
+          season: teamForm.season || undefined,
+          notes: teamForm.notes || undefined,
+          active: true,
+        },
+        playerIds: teamForm.playerIds,
+      });
+      
+      // Show appropriate feedback based on results
+      const { assignments, enrollments } = result;
+      const hasFailures = assignments?.failed?.length > 0 || enrollments?.failed?.length > 0;
+      
+      if (hasFailures) {
+        const failedCount = (assignments?.failed?.length || 0) + (enrollments?.failed?.length || 0);
+        toast({ 
+          title: "Team created with warnings", 
+          description: `${failedCount} operation(s) could not be completed. Some players may need manual enrollment.`,
+          variant: "destructive" 
+        });
+      } else {
+        const enrolledCount = enrollments?.success?.length || 0;
+        const assignedCount = assignments?.success?.length || 0;
+        let description = "Team has been created.";
+        if (assignedCount > 0) {
+          description = `${assignedCount} player(s) assigned`;
+          if (enrolledCount > 0) {
+            description += ` and enrolled in the program.`;
+          } else {
+            description += `.`;
+          }
+        }
+        toast({ title: "Team created successfully", description });
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/team-memberships"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/product-enrollments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
+      setShowCreateTeamDialog(false);
+      setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], playerIds: [], season: "", notes: "" });
+    } catch (error) {
+      toast({ title: "Failed to create team", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setIsCreatingTeam(false);
+    }
   };
 
   if (programLoading) {
@@ -564,6 +615,47 @@ export default function AdminProgramDetail() {
                         )}
                       </div>
                       <div className="space-y-2">
+                        <Label>Assign Players (Optional)</Label>
+                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                          {players.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No players available</p>
+                          ) : (
+                            players.map((player) => (
+                              <label
+                                key={player.id}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={teamForm.playerIds.includes(player.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setTeamForm({
+                                        ...teamForm,
+                                        playerIds: [...teamForm.playerIds, player.id]
+                                      });
+                                    } else {
+                                      setTeamForm({
+                                        ...teamForm,
+                                        playerIds: teamForm.playerIds.filter(id => id !== player.id)
+                                      });
+                                    }
+                                  }}
+                                  className="h-4 w-4"
+                                  data-testid={`checkbox-player-${player.id}`}
+                                />
+                                <span className="text-sm">{player.firstName} {player.lastName}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                        {teamForm.playerIds.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {teamForm.playerIds.length} player{teamForm.playerIds.length !== 1 ? 's' : ''} selected - will be assigned and enrolled in this program
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="season">Season (Optional)</Label>
                         <Input
                           id="season"
@@ -589,10 +681,10 @@ export default function AdminProgramDetail() {
                       </Button>
                       <Button
                         onClick={handleCreateTeam}
-                        disabled={!teamForm.name || createTeam.isPending}
+                        disabled={!teamForm.name || isCreatingTeam}
                         data-testid="button-submit-team"
                       >
-                        {createTeam.isPending ? "Creating..." : `Create ${program.subgroupLabel || "Team"}`}
+                        {isCreatingTeam ? "Creating..." : `Create ${program.subgroupLabel || "Team"}`}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -666,6 +758,110 @@ export default function AdminProgramDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Edit Team Dialog */}
+            <Dialog open={!!editingTeam} onOpenChange={(open) => !open && setEditingTeam(null)}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit {program.subgroupLabel || "Team"}</DialogTitle>
+                </DialogHeader>
+                {editingTeam && (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-team-name">{program.subgroupLabel || "Team"} Name</Label>
+                      <Input
+                        id="edit-team-name"
+                        value={editingTeam.name}
+                        onChange={(e) => setEditingTeam({ ...editingTeam, name: e.target.value })}
+                        data-testid="input-edit-team-name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-division">Division (Optional)</Label>
+                      <Input
+                        id="edit-division"
+                        value={editingTeam.division || ""}
+                        onChange={(e) => setEditingTeam({ ...editingTeam, division: e.target.value })}
+                        placeholder="e.g., U10, U12, Varsity"
+                        data-testid="input-edit-team-division"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-coach">Head Coach (Optional)</Label>
+                      <Select
+                        value={editingTeam.coachId || ""}
+                        onValueChange={(value) => setEditingTeam({ ...editingTeam, coachId: value })}
+                      >
+                        <SelectTrigger data-testid="select-edit-team-coach">
+                          <SelectValue placeholder="Select coach..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {coaches.map((coach) => (
+                            <SelectItem key={coach.id} value={coach.id}>
+                              {coach.firstName} {coach.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-season">Season (Optional)</Label>
+                      <Input
+                        id="edit-season"
+                        value={editingTeam.season || ""}
+                        onChange={(e) => setEditingTeam({ ...editingTeam, season: e.target.value })}
+                        placeholder="e.g., Spring 2025"
+                        data-testid="input-edit-team-season"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-notes">Notes (Optional)</Label>
+                      <Textarea
+                        id="edit-notes"
+                        value={editingTeam.notes || ""}
+                        onChange={(e) => setEditingTeam({ ...editingTeam, notes: e.target.value })}
+                        data-testid="input-edit-team-notes"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="edit-active">Active</Label>
+                      <Switch
+                        id="edit-active"
+                        checked={editingTeam.active ?? true}
+                        onCheckedChange={(checked) => setEditingTeam({ ...editingTeam, active: checked })}
+                        data-testid="switch-edit-team-active"
+                      />
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingTeam(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      if (editingTeam) {
+                        updateTeam.mutate({
+                          id: editingTeam.id,
+                          updates: {
+                            name: editingTeam.name,
+                            division: editingTeam.division || undefined,
+                            coachId: editingTeam.coachId || undefined,
+                            season: editingTeam.season || undefined,
+                            notes: editingTeam.notes || undefined,
+                            active: editingTeam.active,
+                          }
+                        });
+                      }
+                    }}
+                    disabled={!editingTeam?.name || updateTeam.isPending}
+                    data-testid="button-save-team"
+                  >
+                    {updateTeam.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="pricing" className="space-y-6">

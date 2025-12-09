@@ -554,6 +554,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [showAddRoleDialog, setShowAddRoleDialog] = useState(false);
   const [selectedRoleToAdd, setSelectedRoleToAdd] = useState<string>("");
+  const [deleteConfirmUser, setDeleteConfirmUser] = useState<any>(null);
   const tableRef = useDragScroll();
 
   // Fetch user evaluations - only when viewing user in performance tab
@@ -1504,7 +1505,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={() => deleteUser.mutate(user.id)}
+                          onClick={() => setDeleteConfirmUser(user)}
                           data-testid={`button-delete-user-${user.id}`}
                           title="Delete User"
                         >
@@ -1939,6 +1940,30 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deleteConfirmUser?.firstName} {deleteConfirmUser?.lastName}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteUser.mutate(deleteConfirmUser.id);
+                setDeleteConfirmUser(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -1950,6 +1975,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [editingTeam, setEditingTeam] = useState<any>(null);
+  const [deleteConfirmTeam, setDeleteConfirmTeam] = useState<any>(null);
   const tableRef = useDragScroll();
 
   const coaches = users.filter((u: any) => u.role === "coach");
@@ -2677,7 +2703,7 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            onClick={() => deleteTeam.mutate(team.id)}
+                            onClick={() => setDeleteConfirmTeam(team)}
                             data-testid={`button-delete-team-${team.id}`}
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
@@ -2775,6 +2801,30 @@ function TeamsTab({ teams, users, divisions, programs, organization }: any) {
           </DialogContent>
         </Dialog>
       )}
+      
+      {/* Delete Team Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmTeam} onOpenChange={(open) => !open && setDeleteConfirmTeam(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmTeam?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteTeam.mutate(deleteConfirmTeam.id);
+                setDeleteConfirmTeam(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -2797,6 +2847,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   const [selectedDivisions, setSelectedDivisions] = useState<string[]>([]);
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [deleteConfirmEvent, setDeleteConfirmEvent] = useState<any>(null);
 
   // Fetch users and divisions for the multi-select
   const { data: allUsers = [] } = useQuery<any[]>({
@@ -3784,7 +3835,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => deleteEvent.mutate(event.id)}
+                        onClick={() => setDeleteConfirmEvent(event)}
                         data-testid={`button-delete-event-${event.id}`}
                         title="Delete Event"
                       >
@@ -3955,6 +4006,30 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
           </div>
         )}
       </CardContent>
+      
+      {/* Delete Event Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmEvent} onOpenChange={(open) => !open && setDeleteConfirmEvent(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmEvent?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteEvent.mutate(deleteConfirmEvent.id);
+                setDeleteConfirmEvent(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -5402,6 +5477,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
   const [, navigate] = useLocation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<any>(null);
+  const [deleteConfirmProgram, setDeleteConfirmProgram] = useState<any>(null);
   const tableRef = useDragScroll();
 
   const { data: waivers = [] } = useQuery<any[]>({
@@ -6065,7 +6141,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deleteProgram.mutate(program.id)}
+                          onClick={() => setDeleteConfirmProgram(program)}
                           data-testid={`button-delete-program-${program.id}`}
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
@@ -6086,6 +6162,30 @@ function ProgramsTab({ programs, teams, organization }: any) {
           </Table>
         </div>
       </CardContent>
+      
+      {/* Delete Program Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmProgram} onOpenChange={(open) => !open && setDeleteConfirmProgram(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Program</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmProgram?.name}"? This action cannot be undone. Programs with active enrollments cannot be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteProgram.mutate(deleteConfirmProgram.id);
+                setDeleteConfirmProgram(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -6095,6 +6195,7 @@ function DivisionsTab({ divisions, teams, organization }: any) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any>(null);
+  const [deleteConfirmDivision, setDeleteConfirmDivision] = useState<any>(null);
 
   const form = useForm({
     resolver: zodResolver(insertDivisionSchema),
@@ -6338,7 +6439,7 @@ function DivisionsTab({ divisions, teams, organization }: any) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => deleteDivision.mutate(division.id)}
+                      onClick={() => setDeleteConfirmDivision(division)}
                       data-testid={`button-delete-division-${division.id}`}
                     >
                       <Trash2 className="w-4 h-4 text-red-600" />
@@ -6350,6 +6451,30 @@ function DivisionsTab({ divisions, teams, organization }: any) {
           </TableBody>
         </Table>
       </CardContent>
+      
+      {/* Delete Division Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmDivision} onOpenChange={(open) => !open && setDeleteConfirmDivision(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Division</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmDivision?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteDivision.mutate(deleteConfirmDivision.id);
+                setDeleteConfirmDivision(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
@@ -6359,6 +6484,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [scheduleType, setScheduleType] = useState<'immediate' | 'scheduled' | 'recurring'>('immediate');
+  const [deleteConfirmMessage, setDeleteConfirmMessage] = useState<any>(null);
   const [scheduledAt, setScheduledAt] = useState('');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('daily');
   const [recurrenceTime, setRecurrenceTime] = useState('09:00');
@@ -6960,7 +7086,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => deleteMessage.mutate(notification.id)}
+                    onClick={() => setDeleteConfirmMessage(notification)}
                     data-testid={`button-delete-notification-${notification.id}`}
                   >
                     <Trash2 className="w-4 h-4 text-red-600" />
@@ -6971,6 +7097,30 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
           </TableBody>
         </Table>
       </CardContent>
+      
+      {/* Delete Message Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmMessage} onOpenChange={(open) => !open && setDeleteConfirmMessage(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Message</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deleteConfirmMessage?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                deleteMessage.mutate(deleteConfirmMessage.id);
+                setDeleteConfirmMessage(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

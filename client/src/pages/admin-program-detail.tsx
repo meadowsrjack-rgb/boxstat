@@ -57,8 +57,9 @@ export default function AdminProgramDetail() {
 
   const [teamForm, setTeamForm] = useState({
     name: "",
-    divisionId: "",
+    division: "",
     coachId: "",
+    assistantCoachIds: [] as string[],
     season: "",
     notes: "",
   });
@@ -142,7 +143,7 @@ export default function AdminProgramDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
       toast({ title: "Team created successfully" });
       setShowCreateTeamDialog(false);
-      setTeamForm({ name: "", divisionId: "", coachId: "", season: "", notes: "" });
+      setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], season: "", notes: "" });
     },
     onError: (error: Error) => {
       toast({ title: "Failed to create team", description: error.message, variant: "destructive" });
@@ -190,12 +191,12 @@ export default function AdminProgramDetail() {
       organizationId: program?.organizationId || "default-org",
       name: teamForm.name,
       programId: programId,
-      divisionId: teamForm.divisionId ? parseInt(teamForm.divisionId) : undefined,
+      division: teamForm.division || undefined,
       coachId: teamForm.coachId || undefined,
+      assistantCoachIds: teamForm.assistantCoachIds,
       season: teamForm.season || undefined,
       notes: teamForm.notes || undefined,
       active: true,
-      assistantCoachIds: [],
     });
   };
 
@@ -486,21 +487,13 @@ export default function AdminProgramDetail() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="division">Division (Optional)</Label>
-                        <Select
-                          value={teamForm.divisionId}
-                          onValueChange={(value) => setTeamForm({ ...teamForm, divisionId: value })}
-                        >
-                          <SelectTrigger data-testid="select-team-division">
-                            <SelectValue placeholder="Select division..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {divisions.map((div) => (
-                              <SelectItem key={div.id} value={div.id}>
-                                {div.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="division"
+                          value={teamForm.division}
+                          onChange={(e) => setTeamForm({ ...teamForm, division: e.target.value })}
+                          placeholder="e.g., U10, U12, Varsity"
+                          data-testid="input-team-division"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="coach">Head Coach (Optional)</Label>
@@ -519,6 +512,49 @@ export default function AdminProgramDetail() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Assistant Coaches (Optional)</Label>
+                        <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
+                          {coaches.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No coaches available</p>
+                          ) : (
+                            coaches
+                              .filter(c => c.id !== teamForm.coachId) // Exclude head coach from assistant list
+                              .map((coach) => (
+                                <label
+                                  key={coach.id}
+                                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={teamForm.assistantCoachIds.includes(coach.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setTeamForm({
+                                          ...teamForm,
+                                          assistantCoachIds: [...teamForm.assistantCoachIds, coach.id]
+                                        });
+                                      } else {
+                                        setTeamForm({
+                                          ...teamForm,
+                                          assistantCoachIds: teamForm.assistantCoachIds.filter(id => id !== coach.id)
+                                        });
+                                      }
+                                    }}
+                                    className="h-4 w-4"
+                                    data-testid={`checkbox-assistant-coach-${coach.id}`}
+                                  />
+                                  <span className="text-sm">{coach.firstName} {coach.lastName}</span>
+                                </label>
+                              ))
+                          )}
+                        </div>
+                        {teamForm.assistantCoachIds.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {teamForm.assistantCoachIds.length} assistant coach{teamForm.assistantCoachIds.length !== 1 ? 'es' : ''} selected
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="season">Season (Optional)</Label>
@@ -581,7 +617,7 @@ export default function AdminProgramDetail() {
                           <TableCell className="font-medium" data-testid={`text-team-name-${team.id}`}>
                             {team.name}
                           </TableCell>
-                          <TableCell>{team.divisionId || "—"}</TableCell>
+                          <TableCell>{team.division || "—"}</TableCell>
                           <TableCell>{team.coachId || "—"}</TableCell>
                           <TableCell>{team.season || "—"}</TableCell>
                           <TableCell>{team.rosterSize || 0}</TableCell>

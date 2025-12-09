@@ -1,14 +1,24 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Trophy } from "lucide-react";
+import { Trophy, Award } from "lucide-react";
+
+interface AwardDefinition {
+  id: number;
+  name: string;
+  tier: string;
+  description: string | null;
+  imageUrl: string | null;
+  triggerCategory: string;
+  active: boolean;
+}
 
 /* =================== Awards =================== */
-// Seasonal Team Trophies (Coach-awarded at season end)
-// IDs must match the shared/awards.registry.ts file
+// Fallback hardcoded awards (used when database awards unavailable)
 export const TEAM_TROPHIES = [
   { id: "mvp-season", name: "Season MVP", kind: "trophy" as const, description: "Most Valuable Player for the entire season" },
   { id: "coach-choice", name: "Coach's Award", kind: "trophy" as const, description: "Special recognition for exceptional character and dedication" },
@@ -16,8 +26,6 @@ export const TEAM_TROPHIES = [
   { id: "defensive-player", name: "Defensive Player", kind: "trophy" as const, description: "Greatest defensive impact" },
 ];
 
-// Coach Awards (assign anytime)
-// IDs must match the shared/awards.registry.ts file
 export const COACH_AWARDS = [
   { id: "game-mvp", name: "Game MVP", kind: "badge" as const, description: "Top performer in a game" },
   { id: "hustle-award", name: "Hustle Award", kind: "badge" as const, description: "Relentless hustle and effort" },
@@ -62,11 +70,45 @@ export function AwardsDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
   player: PlayerLite | null;
-  onGive: (awardId: string, kind: "badge" | "trophy") => void;
+  onGive: (awardId: string | number, kind: "badge" | "trophy") => void;
   giving: boolean;
 }) {
-  const [tab, setTab] = useState<"trophies" | "awards">("trophies");
-  const list = tab === "trophies" ? TEAM_TROPHIES : COACH_AWARDS;
+  const [tab, setTab] = useState<"trophies" | "badges">("trophies");
+  
+  // Fetch manual award definitions from database
+  const { data: awardDefinitions = [] } = useQuery<AwardDefinition[]>({
+    queryKey: ["/api/award-definitions"],
+    enabled: open,
+  });
+
+  // Filter for manual awards (coach-assignable) that are active
+  const manualAwards = awardDefinitions.filter(
+    (a) => a.triggerCategory === "manual" && a.active
+  );
+
+  // Separate by tier: Gold/Purple/Special = trophies, others = badges
+  const trophyTiers = ["Gold", "Purple", "Special"];
+  const trophies = manualAwards.filter((a) => trophyTiers.includes(a.tier));
+  const badges = manualAwards.filter((a) => !trophyTiers.includes(a.tier));
+
+  const displayList = tab === "trophies" ? trophies : badges;
+  const hasTrophies = trophies.length > 0;
+  const hasBadges = badges.length > 0;
+
+  // Fallback to hardcoded if no DB awards
+  const useFallback = manualAwards.length === 0;
+  const fallbackList = tab === "trophies" ? TEAM_TROPHIES : COACH_AWARDS;
+
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case "Gold": return "bg-yellow-100 text-yellow-700";
+      case "Purple": return "bg-purple-100 text-purple-700";
+      case "Special": return "bg-gradient-to-r from-purple-100 to-yellow-100 text-purple-700";
+      case "Blue": return "bg-blue-100 text-blue-700";
+      case "Green": return "bg-green-100 text-green-700";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,36 +116,85 @@ export function AwardsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-600" />
-            {tab === "trophies" ? "Team Trophies (Seasonal)" : "Coach Awards (Anytime)"}
+            {tab === "trophies" ? "Trophies" : "Badges"}
             {player ? <span className="ml-auto text-xs text-gray-500">{player.firstName} {player.lastName}</span> : null}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-2 mb-3">
-          <Button variant={tab === "trophies" ? "default" : "outline"} onClick={() => setTab("trophies")} className={tab === "trophies" ? "bg-yellow-600 hover:bg-yellow-700" : ""} data-testid="button-tab-trophies">Trophies</Button>
-          <Button variant={tab === "awards" ? "default" : "outline"} onClick={() => setTab("awards")} className={tab === "awards" ? "bg-blue-600 hover:bg-blue-700" : ""} data-testid="button-tab-awards">Coach Awards</Button>
+          <Button 
+            variant={tab === "trophies" ? "default" : "outline"} 
+            onClick={() => setTab("trophies")} 
+            className={tab === "trophies" ? "bg-yellow-600 hover:bg-yellow-700" : ""} 
+            data-testid="button-tab-trophies"
+          >
+            Trophies {!useFallback && `(${trophies.length})`}
+          </Button>
+          <Button 
+            variant={tab === "badges" ? "default" : "outline"} 
+            onClick={() => setTab("badges")} 
+            className={tab === "badges" ? "bg-blue-600 hover:bg-blue-700" : ""} 
+            data-testid="button-tab-awards"
+          >
+            Badges {!useFallback && `(${badges.length})`}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
-          {list.map((a) => (
-            <button
-              key={a.id}
-              onClick={() => onGive(a.id, a.kind)}
-              disabled={giving || !player}
-              className={`text-left p-3 rounded-md border transition-colors hover:bg-gray-50 ${giving ? "opacity-70 cursor-not-allowed" : ""}`}
-              data-testid={`button-award-${a.id}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${a.kind === "trophy" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
-                  <Trophy className="h-5 w-5" />
+          {useFallback ? (
+            fallbackList.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onGive(a.id, a.kind)}
+                disabled={giving || !player}
+                className={`text-left p-3 rounded-md border transition-colors hover:bg-gray-50 ${giving ? "opacity-70 cursor-not-allowed" : ""}`}
+                data-testid={`button-award-${a.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${a.kind === "trophy" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                    <Trophy className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium">{a.name}</div>
+                    <div className="text-xs text-gray-600">{a.description}</div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="font-medium">{a.name}</div>
-                  <div className="text-xs text-gray-600">{a.description}</div>
+              </button>
+            ))
+          ) : displayList.length === 0 ? (
+            <div className="text-center py-6 text-gray-500">
+              <Award className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <p>No {tab === "trophies" ? "trophies" : "badges"} available to give.</p>
+              <p className="text-xs mt-1">Add manual awards in the Admin Panel.</p>
+            </div>
+          ) : (
+            displayList.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => onGive(a.id, tab === "trophies" ? "trophy" : "badge")}
+                disabled={giving || !player}
+                className={`text-left p-3 rounded-md border transition-colors hover:bg-gray-50 ${giving ? "opacity-70 cursor-not-allowed" : ""}`}
+                data-testid={`button-award-${a.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  {a.imageUrl ? (
+                    <img src={a.imageUrl} alt={a.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getTierColor(a.tier)}`}>
+                      {tab === "trophies" ? <Trophy className="h-5 w-5" /> : <Award className="h-5 w-5" />}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="font-medium flex items-center gap-2">
+                      {a.name}
+                      <Badge variant="outline" className="text-xs">{a.tier}</Badge>
+                    </div>
+                    <div className="text-xs text-gray-600">{a.description || "Manual award"}</div>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
 
         <div className="flex gap-2 pt-3">

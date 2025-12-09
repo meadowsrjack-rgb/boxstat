@@ -350,7 +350,7 @@ export default function CoachDashboard() {
   });
 
   const awardMutation = useMutation({
-    mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
+    mutationFn: async ({ awardId, kind }: { awardId: string | number; kind: "badge" | "trophy" }) => {
       if (!selectedPlayer) throw new Error("No player selected");
       const token = localStorage.getItem('authToken');
       const headers: Record<string, string> = { "Content-Type": "application/json" };

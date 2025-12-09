@@ -22,6 +22,13 @@ interface AwardDefinition {
   active: boolean;
   triggerCategory?: TriggerCategory;
   threshold?: number;
+  programIds?: string[] | null;
+}
+
+interface ProgramMembership {
+  enrollmentId: number;
+  programId: string;
+  programName: string;
 }
 
 interface UserAwardRecord {
@@ -83,6 +90,7 @@ export default function TrophiesBadgesPage() {
   const [, setLocation] = useLocation();
   const [selectedTier, setSelectedTier] = useState<"all" | TierType>("all");
   const [selectedTrigger, setSelectedTrigger] = useState<"all" | TriggerCategory>("all");
+  const [selectedProgram, setSelectedProgram] = useState<"all" | string>("all");
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "tier">("newest");
 
   // Support Player Mode - show awards for the active child profile if one is selected
@@ -109,6 +117,12 @@ export default function TrophiesBadgesPage() {
       return res.json();
     },
     enabled: !!user && !!viewingUserId,
+  });
+
+  // Fetch user's program memberships for program filter
+  const { data: programMemberships = [] } = useQuery<ProgramMembership[]>({
+    queryKey: ["/api/users", viewingUserId, "program-memberships"],
+    enabled: !!viewingUserId,
   });
 
   // Combine award definitions with user award data
@@ -142,6 +156,14 @@ export default function TrophiesBadgesPage() {
   // Tier hierarchy for sorting
   const tierOrder = ["Gold", "Special", "Purple", "Blue", "Green", "Grey"];
 
+  // Helper to check if award belongs to selected program
+  const matchesProgram = (award: AwardDefinition) => {
+    if (selectedProgram === "all") return true;
+    // Awards with no programIds are global and should show for all
+    if (!award.programIds || award.programIds.length === 0) return true;
+    return award.programIds.includes(selectedProgram);
+  };
+
   // Filter and sort awards
   const filteredEarnedAwards = useMemo(() => {
     let filtered = earnedAwards;
@@ -156,6 +178,9 @@ export default function TrophiesBadgesPage() {
       filtered = filtered.filter(award => (award.triggerCategory || "manual") === selectedTrigger);
     }
 
+    // Filter by program
+    filtered = filtered.filter(matchesProgram);
+
     // Sort
     return filtered.sort((a, b) => {
       if (sortBy === "newest") {
@@ -166,7 +191,7 @@ export default function TrophiesBadgesPage() {
         return tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier);
       }
     });
-  }, [earnedAwards, selectedTier, selectedTrigger, sortBy]);
+  }, [earnedAwards, selectedTier, selectedTrigger, selectedProgram, sortBy]);
 
   const filteredAvailableAwards = useMemo(() => {
     let filtered = availableAwards;
@@ -181,11 +206,14 @@ export default function TrophiesBadgesPage() {
       filtered = filtered.filter(award => (award.triggerCategory || "manual") === selectedTrigger);
     }
 
+    // Filter by program
+    filtered = filtered.filter(matchesProgram);
+
     // Sort by tier
     return filtered.sort((a, b) => {
       return tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier);
     });
-  }, [availableAwards, selectedTier, selectedTrigger]);
+  }, [availableAwards, selectedTier, selectedTrigger, selectedProgram]);
 
   // Calculate statistics - group by tier
   const stats = useMemo(() => {
@@ -292,7 +320,7 @@ export default function TrophiesBadgesPage() {
               <Filter className="h-4 w-4" />
               <span className="font-semibold">Filters</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Tier</label>
                 <Select value={selectedTier} onValueChange={(value) => setSelectedTier(value as any)}>
@@ -311,7 +339,7 @@ export default function TrophiesBadgesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-gray-400 mb-2 block">Trigger Type</label>
+                <label className="text-sm text-gray-400 mb-2 block">Category</label>
                 <Select value={selectedTrigger} onValueChange={(value) => setSelectedTrigger(value as any)}>
                   <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-trigger">
                     <SelectValue />
@@ -326,6 +354,24 @@ export default function TrophiesBadgesPage() {
                   </SelectContent>
                 </Select>
               </div>
+              {programMemberships.length > 0 && (
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Program</label>
+                  <Select value={selectedProgram} onValueChange={(value) => setSelectedProgram(value)}>
+                    <SelectTrigger className="bg-white/10 border-white/20" data-testid="select-program">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Programs</SelectItem>
+                      {programMemberships.map((pm) => (
+                        <SelectItem key={pm.programId} value={pm.programId}>
+                          {pm.programName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <label className="text-sm text-gray-400 mb-2 block">Sort By</label>
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>

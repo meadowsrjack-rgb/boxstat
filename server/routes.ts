@@ -3284,7 +3284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Unauthorized to view this user\'s teams' });
       }
       
-      // Query team_memberships table for this user's teams
+      // Query team_memberships table for this user's ACTIVE teams only
       const memberships = await db
         .select({
           teamId: teamMemberships.teamId,
@@ -3292,7 +3292,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: teamMemberships.status,
         })
         .from(teamMemberships)
-        .where(eq(teamMemberships.profileId, userId));
+        .where(
+          and(
+            eq(teamMemberships.profileId, userId),
+            eq(teamMemberships.status, 'active')
+          )
+        );
       
       if (memberships.length === 0) {
         // Fallback to legacy teamId field for backwards compatibility
@@ -7747,22 +7752,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Cannot award users from other organizations' });
       }
       
-      // awardId is a string from the registry (e.g., "game-mvp")
-      // Find the corresponding award in the registry and then look up the DB record by name
-      const { AWARDS } = await import('@shared/awards.registry');
-      const registryAward = AWARDS.find((a: any) => a.id === awardId);
-      if (!registryAward) {
-        return res.status(404).json({ error: `Award not found in registry: ${awardId}` });
-      }
+      let dbAwardId: number;
       
-      // Look up the database award definition by name
-      const allAwardDefs = await storage.getAwardDefinitions(organizationId);
-      const awardDefinition = allAwardDefs.find((a: any) => a.name === registryAward.name);
-      if (!awardDefinition) {
-        return res.status(404).json({ error: `Award definition not found in database: ${registryAward.name}` });
+      // Check if awardId is already a number (new database-driven approach)
+      if (typeof awardId === 'number') {
+        // Verify the award definition exists
+        const awardDefinition = await storage.getAwardDefinition(awardId);
+        if (!awardDefinition) {
+          return res.status(404).json({ error: 'Award definition not found' });
+        }
+        dbAwardId = awardId;
+      } else {
+        // awardId is a string from the registry (e.g., "game-mvp") - legacy fallback
+        const { AWARDS } = await import('@shared/awards.registry');
+        const registryAward = AWARDS.find((a: any) => a.id === awardId);
+        if (!registryAward) {
+          return res.status(404).json({ error: `Award not found in registry: ${awardId}` });
+        }
+        
+        // Look up the database award definition by name
+        const allAwardDefs = await storage.getAwardDefinitions(organizationId);
+        const awardDefinition = allAwardDefs.find((a: any) => a.name === registryAward.name);
+        if (!awardDefinition) {
+          return res.status(404).json({ error: `Award definition not found in database: ${registryAward.name}` });
+        }
+        
+        dbAwardId = awardDefinition.id; // This is the integer ID
       }
-      
-      const dbAwardId = awardDefinition.id; // This is the integer ID
       
       // Check if user already has this award for the same year
       const currentYear = year || new Date().getFullYear();

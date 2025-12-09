@@ -3332,19 +3332,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { organizationId } = req.user;
       const teams = await storage.getTeamsByOrganization(organizationId);
+      const programs = await storage.getProgramsByOrganization(organizationId);
       
-      // Add roster count to each team
-      const teamsWithRosterCount = await Promise.all(
+      // Create a map of program IDs to program names for quick lookup
+      const programNameMap = new Map(programs.map(p => [p.id, p.name]));
+      
+      // Add roster count and program name to each team
+      const teamsWithExtras = await Promise.all(
         teams.map(async (team) => {
           const roster = await storage.getUsersByTeam(String(team.id));
           return {
             ...team,
             rosterCount: roster.length,
+            program: team.programId ? programNameMap.get(team.programId) || null : null,
           };
         })
       );
       
-      res.json(teamsWithRosterCount);
+      res.json(teamsWithExtras);
     } catch (error: any) {
       console.error('Error fetching teams:', error);
       res.status(500).json({ message: 'Failed to fetch teams' });

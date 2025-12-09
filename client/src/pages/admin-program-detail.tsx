@@ -719,7 +719,7 @@ export default function AdminProgramDetail() {
                           <TableCell>{team.division || "—"}</TableCell>
                           <TableCell>{getCoachName(team.coachId)}</TableCell>
                           <TableCell>{team.season || "—"}</TableCell>
-                          <TableCell>{team.rosterSize || 0}</TableCell>
+                          <TableCell>{(team as any).rosterCount ?? team.rosterSize ?? 0}</TableCell>
                           <TableCell>
                             <Badge variant={team.active ? "default" : "secondary"}>
                               {team.active ? "Active" : "Inactive"}

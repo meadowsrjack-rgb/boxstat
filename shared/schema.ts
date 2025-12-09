@@ -1925,3 +1925,176 @@ export const insertSubscriptionSchema = z.object({
 
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type SelectSubscription = typeof subscriptions.$inferSelect;
+
+// =============================================
+// Notification Campaigns Schema (Scheduled/Recurring Messages)
+// =============================================
+
+export type CampaignStatus = "draft" | "scheduled" | "active" | "paused" | "completed" | "cancelled";
+export type ScheduleType = "immediate" | "scheduled" | "recurring";
+export type RecurrenceFrequency = "daily" | "weekly" | "monthly";
+
+export const notificationCampaigns = pgTable("notification_campaigns", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  title: varchar().notNull(),
+  message: text().notNull(),
+  types: text("types").array().notNull().default(sql`ARRAY['message']::text[]`),
+  
+  // Targeting (same as notifications table)
+  recipientTarget: varchar("recipient_target").notNull(), // "everyone", "users", "roles", "teams", "divisions", "programs"
+  recipientUserIds: text("recipient_user_ids").array(),
+  recipientRoles: text("recipient_roles").array(),
+  recipientTeamIds: text("recipient_team_ids").array(),
+  recipientDivisionIds: text("recipient_division_ids").array(),
+  recipientProgramIds: text("recipient_program_ids").array(),
+  
+  // Delivery channels
+  deliveryChannels: text("delivery_channels").array().notNull().default(sql`ARRAY['in_app']::text[]`),
+  
+  // Schedule configuration
+  scheduleType: varchar("schedule_type").notNull().default('immediate'), // immediate, scheduled, recurring
+  scheduledAt: timestamp("scheduled_at", { mode: 'string' }), // For one-time scheduled
+  timezone: varchar().default('America/Los_Angeles'),
+  
+  // Recurrence configuration (for recurring type)
+  recurrenceFrequency: varchar("recurrence_frequency"), // daily, weekly, monthly
+  recurrenceInterval: integer("recurrence_interval").default(1), // every N days/weeks/months
+  recurrenceDays: text("recurrence_days").array(), // ["monday", "wednesday", "friday"] for weekly
+  recurrenceTime: varchar("recurrence_time"), // "09:00" - time of day to send
+  recurrenceEndDate: timestamp("recurrence_end_date", { mode: 'string' }), // optional end date
+  recurrenceEndAfterOccurrences: integer("recurrence_end_after_occurrences"), // or end after N sends
+  
+  // Tracking
+  nextRunAt: timestamp("next_run_at", { mode: 'string' }),
+  lastRunAt: timestamp("last_run_at", { mode: 'string' }),
+  totalRuns: integer("total_runs").default(0),
+  
+  status: varchar().notNull().default('draft'),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertNotificationCampaignSchema = createInsertSchema(notificationCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalRuns: true,
+  lastRunAt: true,
+});
+
+export type InsertNotificationCampaign = z.infer<typeof insertNotificationCampaignSchema>;
+export type NotificationCampaign = typeof notificationCampaigns.$inferSelect;
+
+// Campaign Runs table (history of each send)
+export const notificationCampaignRuns = pgTable("notification_campaign_runs", {
+  id: serial().primaryKey().notNull(),
+  campaignId: integer("campaign_id").notNull(),
+  scheduledAt: timestamp("scheduled_at", { mode: 'string' }).notNull(),
+  executedAt: timestamp("executed_at", { mode: 'string' }),
+  status: varchar().notNull().default('pending'), // pending, executing, completed, failed
+  recipientCount: integer("recipient_count").default(0),
+  successCount: integer("success_count").default(0),
+  failureCount: integer("failure_count").default(0),
+  errorLog: text("error_log"),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.campaignId],
+    foreignColumns: [notificationCampaigns.id],
+    name: "notification_campaign_runs_campaign_id_fkey"
+  }).onDelete("cascade"),
+]);
+
+export const insertNotificationCampaignRunSchema = createInsertSchema(notificationCampaignRuns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNotificationCampaignRun = z.infer<typeof insertNotificationCampaignRunSchema>;
+export type NotificationCampaignRun = typeof notificationCampaignRuns.$inferSelect;
+
+// =============================================
+// Notification Trigger Rules Schema (Automated Notifications)
+// =============================================
+
+export type TriggerType = 
+  | "award_earned"           // When a player earns a badge or trophy
+  | "skills_evaluation"      // When coach completes skills evaluation for player
+  | "payment_due"            // Payment reminder before due date
+  | "payment_overdue"        // Payment is past due
+  | "payment_received"       // Payment confirmation
+  | "event_created"          // New event created (to assigned users)
+  | "event_updated"          // Event details changed
+  | "event_cancelled"        // Event was cancelled
+  | "event_reminder"         // Reminder before event starts
+  | "rsvp_reminder"          // Reminder to RSVP
+  | "checkin_available"      // Check-in window is now open
+  | "enrollment_confirmed"   // Program enrollment confirmed
+  | "team_assignment"        // Player assigned to team
+  | "waiver_required"        // New waiver needs signing
+  | "waiver_expiring";       // Waiver about to expire
+
+export const notificationTriggerRules = pgTable("notification_trigger_rules", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  triggerType: varchar("trigger_type").notNull(),
+  name: varchar().notNull(),
+  description: text(),
+  
+  // Template content (can use variables like {{playerName}}, {{eventTitle}}, etc.)
+  titleTemplate: varchar("title_template").notNull(),
+  messageTemplate: text("message_template").notNull(),
+  
+  // Delivery configuration
+  deliveryChannels: text("delivery_channels").array().notNull().default(sql`ARRAY['in_app', 'push']::text[]`),
+  
+  // Timing (for reminder-type triggers)
+  triggerOffsetMinutes: integer("trigger_offset_minutes"), // e.g., 60 = 1 hour before event
+  
+  // Conditions (JSON for flexible filtering)
+  conditions: jsonb().default({}), // e.g., { "eventTypes": ["practice", "game"] }
+  
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+export const insertNotificationTriggerRuleSchema = createInsertSchema(notificationTriggerRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNotificationTriggerRule = z.infer<typeof insertNotificationTriggerRuleSchema>;
+export type NotificationTriggerRule = typeof notificationTriggerRules.$inferSelect;
+
+// Triggered Notification Log (history of automated notifications sent)
+export const triggeredNotificationLog = pgTable("triggered_notification_log", {
+  id: serial().primaryKey().notNull(),
+  triggerRuleId: integer("trigger_rule_id").notNull(),
+  triggerType: varchar("trigger_type").notNull(),
+  recipientUserId: varchar("recipient_user_id").notNull(),
+  relatedEntityType: varchar("related_entity_type"), // "event", "payment", "award", etc.
+  relatedEntityId: varchar("related_entity_id"),
+  title: varchar().notNull(),
+  message: text().notNull(),
+  deliveryChannels: text("delivery_channels").array(),
+  deliveryStatus: jsonb("delivery_status").default({}), // { "push": "sent", "in_app": "sent" }
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+  foreignKey({
+    columns: [table.triggerRuleId],
+    foreignColumns: [notificationTriggerRules.id],
+    name: "triggered_notification_log_rule_id_fkey"
+  }).onDelete("cascade"),
+]);
+
+export const insertTriggeredNotificationLogSchema = createInsertSchema(triggeredNotificationLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTriggeredNotificationLog = z.infer<typeof insertTriggeredNotificationLogSchema>;
+export type TriggeredNotificationLog = typeof triggeredNotificationLog.$inferSelect;

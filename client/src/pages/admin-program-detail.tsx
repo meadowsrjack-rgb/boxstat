@@ -119,8 +119,7 @@ export default function AdminProgramDetail() {
 
   const updateProgram = useMutation({
     mutationFn: async (updates: Partial<Program>) => {
-      const response = await apiRequest("PATCH", `/api/programs/${programId}`, updates);
-      return response.json();
+      return await apiRequest("PATCH", `/api/programs/${programId}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs", programId] });
@@ -136,8 +135,7 @@ export default function AdminProgramDetail() {
 
   const createTeam = useMutation({
     mutationFn: async (team: InsertTeam) => {
-      const response = await apiRequest("POST", "/api/teams", team);
-      return response.json();
+      return await apiRequest("POST", "/api/teams", team);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });
@@ -152,8 +150,7 @@ export default function AdminProgramDetail() {
 
   const updateTeam = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<Team> }) => {
-      const response = await apiRequest("PATCH", `/api/teams/${id}`, updates);
-      return response.json();
+      return await apiRequest("PATCH", `/api/teams/${id}`, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/teams"] });

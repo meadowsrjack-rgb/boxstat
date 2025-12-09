@@ -516,39 +516,42 @@ export default function AdminProgramDetail() {
                       <div className="space-y-2">
                         <Label>Assistant Coaches (Optional)</Label>
                         <div className="border rounded-md p-3 max-h-32 overflow-y-auto space-y-2">
-                          {coaches.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No coaches available</p>
-                          ) : (
-                            coaches
-                              .filter(c => c.id !== teamForm.coachId) // Exclude head coach from assistant list
-                              .map((coach) => (
-                                <label
-                                  key={coach.id}
-                                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={teamForm.assistantCoachIds.includes(coach.id)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setTeamForm({
-                                          ...teamForm,
-                                          assistantCoachIds: [...teamForm.assistantCoachIds, coach.id]
-                                        });
-                                      } else {
-                                        setTeamForm({
-                                          ...teamForm,
-                                          assistantCoachIds: teamForm.assistantCoachIds.filter(id => id !== coach.id)
-                                        });
-                                      }
-                                    }}
-                                    className="h-4 w-4"
-                                    data-testid={`checkbox-assistant-coach-${coach.id}`}
-                                  />
-                                  <span className="text-sm">{coach.firstName} {coach.lastName}</span>
-                                </label>
-                              ))
-                          )}
+                          {(() => {
+                            const availableAssistants = coaches.filter(c => c.id !== teamForm.coachId);
+                            if (coaches.length === 0) {
+                              return <p className="text-sm text-muted-foreground">No coaches available</p>;
+                            }
+                            if (availableAssistants.length === 0) {
+                              return <p className="text-sm text-muted-foreground">No other coaches available (all coaches are assigned as head coach)</p>;
+                            }
+                            return availableAssistants.map((coach) => (
+                              <label
+                                key={coach.id}
+                                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={teamForm.assistantCoachIds.includes(coach.id)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setTeamForm({
+                                        ...teamForm,
+                                        assistantCoachIds: [...teamForm.assistantCoachIds, coach.id]
+                                      });
+                                    } else {
+                                      setTeamForm({
+                                        ...teamForm,
+                                        assistantCoachIds: teamForm.assistantCoachIds.filter(id => id !== coach.id)
+                                      });
+                                    }
+                                  }}
+                                  className="h-4 w-4"
+                                  data-testid={`checkbox-assistant-coach-${coach.id}`}
+                                />
+                                <span className="text-sm">{coach.firstName} {coach.lastName}</span>
+                              </label>
+                            ));
+                          })()}
                         </div>
                         {teamForm.assistantCoachIds.length > 0 && (
                           <p className="text-xs text-muted-foreground">

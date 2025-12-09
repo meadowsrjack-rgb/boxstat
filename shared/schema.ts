@@ -690,6 +690,10 @@ export const awardDefinitions = pgTable("award_definitions", {
   referenceId: text("reference_id"), // for system (award ID to count) or store (product SKU)
   timeUnit: text("time_unit"), // years, months, days (for time triggers)
   
+  // Program/Team scope filtering (for checkin awards)
+  programIds: text("program_ids").array(), // array of program IDs to scope the award
+  teamIds: integer("team_ids").array(), // array of team IDs to scope the award
+  
   // Legacy fields (kept for backwards compatibility during migration)
   class: text(),
   prestige: text().default('Prospect'),

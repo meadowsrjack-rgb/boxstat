@@ -4071,6 +4071,18 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     threshold: z.number().optional(),
     referenceId: z.string().optional(),
     timeUnit: z.enum(["years", "months", "days"]).optional(),
+    // Program/Team scope
+    programIds: z.array(z.string()).optional(),
+    teamIds: z.array(z.number()).optional(),
+  });
+
+  // Fetch programs and teams for check-in award scope
+  const { data: programs = [] } = useQuery<any[]>({
+    queryKey: ["/api/programs"],
+  });
+  
+  const { data: teams = [] } = useQuery<any[]>({
+    queryKey: ["/api/teams"],
   });
 
   const form = useForm({
@@ -4087,8 +4099,13 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       threshold: undefined,
       referenceId: undefined,
       timeUnit: undefined,
+      programIds: [] as string[],
+      teamIds: [] as number[],
     },
   });
+
+  // Watch selected programs to filter available teams
+  const watchedProgramIds = form.watch("programIds") || [];
 
   // Watch trigger category to show/hide fields dynamically
   const watchedTriggerCategory = form.watch("triggerCategory");
@@ -4321,6 +4338,8 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
       threshold: award.threshold != null ? Number(award.threshold) : undefined,
       referenceId: award.referenceId || undefined,
       timeUnit: award.timeUnit || undefined,
+      programIds: award.programIds || [],
+      teamIds: award.teamIds || [],
     } as any);
     setIsDialogOpen(true);
   };
@@ -4436,6 +4455,101 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                   {/* Dynamic fields based on trigger category */}
                   {watchedTriggerCategory === "checkin" && (
                     <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      {/* Program Selection */}
+                      <FormField
+                        control={form.control}
+                        name="programIds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Programs (Optional)</FormLabel>
+                            <div className="flex flex-wrap gap-2 p-2 border rounded-lg min-h-[40px]">
+                              {programs.map((program: any) => {
+                                const isSelected = (field.value || []).includes(program.id);
+                                return (
+                                  <Badge
+                                    key={program.id}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`cursor-pointer ${isSelected ? "bg-primary" : "hover:bg-muted"}`}
+                                    onClick={() => {
+                                      const current = field.value || [];
+                                      if (isSelected) {
+                                        field.onChange(current.filter((id: string) => id !== program.id));
+                                        // Also clear teams from this program
+                                        const programTeamIds = teams
+                                          .filter((t: any) => t.programId === program.id)
+                                          .map((t: any) => t.id);
+                                        const currentTeams = form.getValues("teamIds") || [];
+                                        form.setValue("teamIds", currentTeams.filter((id: number) => !programTeamIds.includes(id)));
+                                      } else {
+                                        field.onChange([...current, program.id]);
+                                      }
+                                    }}
+                                    data-testid={`badge-program-${program.id}`}
+                                  >
+                                    {program.name}
+                                  </Badge>
+                                );
+                              })}
+                              {programs.length === 0 && (
+                                <span className="text-muted-foreground text-sm">No programs available</span>
+                              )}
+                            </div>
+                            <FormDescription>
+                              Select programs to limit this award. Leave empty for all programs.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Team Selection - only show if programs are selected */}
+                      {watchedProgramIds.length > 0 && (
+                        <FormField
+                          control={form.control}
+                          name="teamIds"
+                          render={({ field }) => {
+                            const filteredTeams = teams.filter((team: any) => 
+                              watchedProgramIds.includes(team.programId)
+                            );
+                            return (
+                              <FormItem>
+                                <FormLabel>Teams (Optional)</FormLabel>
+                                <div className="flex flex-wrap gap-2 p-2 border rounded-lg min-h-[40px]">
+                                  {filteredTeams.map((team: any) => {
+                                    const isSelected = (field.value || []).includes(team.id);
+                                    return (
+                                      <Badge
+                                        key={team.id}
+                                        variant={isSelected ? "default" : "outline"}
+                                        className={`cursor-pointer ${isSelected ? "bg-primary" : "hover:bg-muted"}`}
+                                        onClick={() => {
+                                          const current = field.value || [];
+                                          if (isSelected) {
+                                            field.onChange(current.filter((id: number) => id !== team.id));
+                                          } else {
+                                            field.onChange([...current, team.id]);
+                                          }
+                                        }}
+                                        data-testid={`badge-team-${team.id}`}
+                                      >
+                                        {team.name}
+                                      </Badge>
+                                    );
+                                  })}
+                                  {filteredTeams.length === 0 && (
+                                    <span className="text-muted-foreground text-sm">No teams in selected programs</span>
+                                  )}
+                                </div>
+                                <FormDescription>
+                                  Select specific teams or leave empty for all teams in selected programs.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      )}
+
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}

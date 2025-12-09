@@ -3340,6 +3340,9 @@ class DatabaseStorage implements IStorage {
       threshold: data.threshold ?? null,
       referenceId: data.referenceId ?? null,
       timeUnit: data.timeUnit ?? null,
+      // Program/Team scope filtering
+      programIds: data.programIds ?? null,
+      teamIds: data.teamIds ?? null,
       // Legacy fields (kept for backwards compatibility)
       triggerField: data.triggerField ?? null,
       triggerOperator: data.triggerOperator ?? '>=',
@@ -3370,6 +3373,9 @@ class DatabaseStorage implements IStorage {
       threshold: data.threshold,
       referenceId: data.referenceId,
       timeUnit: data.timeUnit,
+      // Program/Team scope filtering
+      programIds: data.programIds,
+      teamIds: data.teamIds,
       // Legacy fields
       triggerField: data.triggerField,
       triggerOperator: data.triggerOperator,

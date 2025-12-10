@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown } from "lucide-react";
+import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,11 +12,53 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [bugDialogOpen, setBugDialogOpen] = useState(false);
+  const [bugTitle, setBugTitle] = useState("");
+  const [bugDescription, setBugDescription] = useState("");
+
+  const submitBugMutation = useMutation({
+    mutationFn: async (bugData: { title: string; description: string }) => {
+      return apiRequest("/api/bug-reports", {
+        method: "POST",
+        data: bugData,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Bug Report Submitted",
+        description: "Thank you for your feedback! We'll look into it.",
+      });
+      setBugDialogOpen(false);
+      setBugTitle("");
+      setBugDescription("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to submit bug report. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: players = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/account/players"],
@@ -85,6 +128,15 @@ export default function ProfileGateway() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700 z-50">
+            <DropdownMenuItem 
+              onClick={() => setBugDialogOpen(true)}
+              className="text-gray-300 hover:text-white hover:bg-gray-700 cursor-pointer"
+              data-testid="menu-item-report-bug"
+            >
+              <Bug className="w-4 h-4 mr-2" />
+              Report Bug
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-gray-700" />
             <DropdownMenuItem 
               onClick={handleSignOut}
               className="text-gray-300 hover:text-white hover:bg-gray-700 cursor-pointer"
@@ -254,6 +306,60 @@ export default function ProfileGateway() {
           </div>
         </div>
       </div>
+
+      <Dialog open={bugDialogOpen} onOpenChange={setBugDialogOpen}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Report a Bug</DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Help us improve by reporting any issues you've encountered.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="bug-title" className="text-gray-300">Title</Label>
+              <Input
+                id="bug-title"
+                placeholder="Brief description of the issue"
+                value={bugTitle}
+                onChange={(e) => setBugTitle(e.target.value)}
+                className="bg-gray-900 border-gray-600 text-white placeholder:text-gray-500"
+                data-testid="input-bug-title"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bug-description" className="text-gray-300">Description</Label>
+              <Textarea
+                id="bug-description"
+                placeholder="Please describe what happened, what you expected, and steps to reproduce..."
+                value={bugDescription}
+                onChange={(e) => setBugDescription(e.target.value)}
+                rows={5}
+                className="bg-gray-900 border-gray-600 text-white placeholder:text-gray-500 resize-none"
+                data-testid="input-bug-description"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setBugDialogOpen(false)}
+                className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                data-testid="button-cancel-bug-report"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => submitBugMutation.mutate({ title: bugTitle, description: bugDescription })}
+                disabled={!bugTitle.trim() || !bugDescription.trim() || submitBugMutation.isPending}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                data-testid="button-submit-bug-report"
+              >
+                {submitBugMutation.isPending ? "Submitting..." : "Submit Report"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

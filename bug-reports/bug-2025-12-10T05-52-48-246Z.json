@@ -1,0 +1,13 @@
+{
+  "id": "afdef716-785b-49fb-9f21-e9411ec52bf6",
+  "title": "Test Bug Report",
+  "description": "This is a test bug description from the API test.",
+  "submittedAt": "2025-12-10T05:52:48.246Z",
+  "user": {
+    "id": "1764873247759-aecinrbny",
+    "email": "unknown",
+    "name": "Unknown User"
+  },
+  "userAgent": "curl/8.14.1",
+  "platform": "unknown"
+}

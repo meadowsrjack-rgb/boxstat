@@ -8247,6 +8247,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================
+  // BUG REPORTS
+  // =============================================
+  
+  app.post("/api/bug-reports", requireAuth, async (req: any, res) => {
+    try {
+      const { title, description } = req.body;
+      
+      if (!title || !description) {
+        return res.status(400).json({ error: "Title and description are required" });
+      }
+      
+      const userId = req.user?.id || 'anonymous';
+      
+      // Fetch full user details from storage
+      const fullUser = userId !== 'anonymous' ? await storage.getUser(userId) : null;
+      const userEmail = fullUser?.email || 'unknown';
+      const userName = fullUser?.firstName && fullUser?.lastName 
+        ? `${fullUser.firstName} ${fullUser.lastName}` 
+        : 'Unknown User';
+      
+      const timestamp = new Date().toISOString();
+      const fileTimestamp = timestamp.replace(/[:.]/g, '-');
+      const filename = `bug-${fileTimestamp}.json`;
+      
+      const bugReport = {
+        id: crypto.randomUUID(),
+        title,
+        description,
+        submittedAt: timestamp,
+        user: {
+          id: userId,
+          email: userEmail,
+          name: userName,
+        },
+        userAgent: req.headers['user-agent'] || 'unknown',
+        platform: req.headers['sec-ch-ua-platform'] || 'unknown',
+      };
+      
+      const bugReportsDir = path.join(process.cwd(), 'bug-reports');
+      if (!fs.existsSync(bugReportsDir)) {
+        fs.mkdirSync(bugReportsDir, { recursive: true });
+      }
+      
+      const filePath = path.join(bugReportsDir, filename);
+      fs.writeFileSync(filePath, JSON.stringify(bugReport, null, 2));
+      
+      console.log(`🐛 Bug report saved: ${filename}`);
+      
+      res.json({ success: true, message: "Bug report submitted successfully" });
+    } catch (error: any) {
+      console.error('Error saving bug report:', error);
+      res.status(500).json({ error: "Failed to save bug report" });
+    }
+  });
+
+  // =============================================
   // HTTP SERVER SETUP
   // =============================================
   

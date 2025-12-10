@@ -1,0 +1,13 @@
+{
+  "id": "c0fef153-9258-4f29-81ae-4293936f00d8",
+  "title": "Second Test Bug",
+  "description": "Testing that user details are now properly populated.",
+  "submittedAt": "2025-12-10T05:53:40.243Z",
+  "user": {
+    "id": "1764873247759-aecinrbny",
+    "email": "jack@upyourperformance.org",
+    "name": "Jack Meadows"
+  },
+  "userAgent": "curl/8.14.1",
+  "platform": "unknown"
+}

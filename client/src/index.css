@@ -370,9 +370,14 @@
     color: #ffffff !important;
   }
 
-  /* Scrollable page container - enables scrolling on desktop */
+  /* Scrollable page container - enables scrolling on iOS and desktop */
   .scrollable-page {
-    @apply min-h-full;
+    min-height: 100%;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 
   /* Mobile-first responsive utilities */

@@ -129,9 +129,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div 
-      className="ios-fixed-page bg-gradient-to-br from-gray-900 via-gray-800 to-black"
-    >
+    <>
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER */}
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
+      
+      {/* Main Content Wrapper */}
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
       {/* Back Button */}
       <div 
         className="fixed top-4 left-4 z-50"
@@ -306,6 +312,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

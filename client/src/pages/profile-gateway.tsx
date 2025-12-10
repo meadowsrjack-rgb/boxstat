@@ -119,11 +119,14 @@ export default function ProfileGateway() {
 
   return (
     <>
-      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
 
       {/* Main Content Wrapper */}
-      <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-y-none z-10 bg-transparent">
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
       {/* Settings gear icon - absolutely positioned within the fixed container */}
       <div className="absolute top-4 right-4 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <DropdownMenu>

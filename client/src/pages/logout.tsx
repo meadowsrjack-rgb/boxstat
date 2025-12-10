@@ -15,11 +15,14 @@ export default function Logout() {
 
   return (
     <>
-      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
-      <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full bg-black z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
-      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none flex items-center justify-center">
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
           <p>Logging out...</p>

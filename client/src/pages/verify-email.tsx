@@ -64,11 +64,14 @@ export default function VerifyEmail() {
 
   return (
     <>
-      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
-      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 z-0 pointer-events-none" />
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
-      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none flex items-center justify-center p-4">
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

@@ -102,8 +102,9 @@ export default function ResetPasswordPage() {
   if (isVerifying) {
     return (
       <>
+        <div className="ios-full-bleed" />
         <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
-        <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none flex items-center justify-center">
+        <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
         </div>
       </>
@@ -112,11 +113,14 @@ export default function ResetPasswordPage() {
 
   return (
     <>
-      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
-      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none">
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
         <div className="fixed top-6 left-6 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
           <button
             onClick={() => setLocation("/login")}

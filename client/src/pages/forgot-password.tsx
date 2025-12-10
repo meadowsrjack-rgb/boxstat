@@ -45,11 +45,14 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
+      <div className="ios-full-bleed" />
+      
+      {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
-      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none">
+      <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
         <div className="fixed top-6 left-6 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
           <button
             onClick={() => setLocation("/login")}

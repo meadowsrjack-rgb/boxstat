@@ -441,7 +441,10 @@ export default function CoachDashboard() {
   });
 
   return (
-    <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-y-none z-0">
+    <>
+      <div className="ios-full-bleed" />
+      <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
+      <div className="scrollable-page relative z-10 bg-transparent">
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
         <div className="max-w-md mx-auto px-4 py-3">
@@ -709,7 +712,8 @@ export default function CoachDashboard() {
           isCoach={true}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

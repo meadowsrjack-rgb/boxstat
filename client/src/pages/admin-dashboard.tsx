@@ -196,12 +196,6 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/notifications"],
   });
 
-  // Fetch program memberships for the user being edited
-  const { data: editingUserProgramMemberships = [] } = useQuery<any[]>({
-    queryKey: ["/api/users", editingUser?.id, "program-memberships"],
-    enabled: !!editingUser?.id,
-  });
-
   const isLoading = orgLoading || usersLoading || teamsLoading || eventsLoading || programsLoading || awardDefinitionsLoading || paymentsLoading || divisionsLoading || evaluationsLoading || notificationsLoading;
 
   // Calculate stats
@@ -575,6 +569,12 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     queryKey: ['/api/users', viewingUser?.id, 'awards'],
     queryFn: () => apiRequest(`/api/users/${viewingUser!.id}/awards`),
     enabled: !!viewingUser && detailTab === 'performance',
+  });
+
+  // Fetch program memberships for the user being edited
+  const { data: editingUserProgramMemberships = [] } = useQuery<any[]>({
+    queryKey: ["/api/users", editingUser?.id, "program-memberships"],
+    enabled: !!editingUser?.id,
   });
 
   const createUserSchema = z.object({

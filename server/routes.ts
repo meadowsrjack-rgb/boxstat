@@ -3615,6 +3615,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.deleteTeam(req.params.id);
     res.json({ success: true });
   });
+
+  // Get team roster (simple version for edit dialogs)
+  app.get('/api/teams/:teamId/roster', requireAuth, async (req: any, res) => {
+    try {
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: 'Invalid team ID' });
+      }
+
+      // Get active team memberships for players
+      const memberships = await db.select({
+        playerId: teamMemberships.profileId,
+        role: teamMemberships.role,
+      })
+        .from(teamMemberships)
+        .where(
+          and(
+            eq(teamMemberships.teamId, teamId),
+            eq(teamMemberships.status, 'active'),
+            eq(teamMemberships.role, 'player')
+          )
+        );
+
+      res.json(memberships);
+    } catch (error: any) {
+      console.error('Error fetching team roster:', error);
+      res.status(500).json({ message: 'Failed to fetch team roster' });
+    }
+  });
+
+  // Update team roster (bulk update)
+  app.put('/api/teams/:teamId/roster', requireAuth, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Only admins and coaches can update rosters' });
+      }
+
+      const teamId = parseInt(req.params.teamId);
+      if (isNaN(teamId)) {
+        return res.status(400).json({ message: 'Invalid team ID' });
+      }
+
+      const { playerIds } = req.body;
+      if (!Array.isArray(playerIds)) {
+        return res.status(400).json({ message: 'playerIds must be an array' });
+      }
+
+      // Get the team to verify it exists
+      const team = await storage.getTeam(String(teamId));
+      if (!team) {
+        return res.status(404).json({ message: 'Team not found' });
+      }
+
+      // Get current player memberships
+      const currentMemberships = await db.select({ playerId: teamMemberships.profileId })
+        .from(teamMemberships)
+        .where(
+          and(
+            eq(teamMemberships.teamId, teamId),
+            eq(teamMemberships.status, 'active'),
+            eq(teamMemberships.role, 'player')
+          )
+        );
+      const currentPlayerIds = currentMemberships.map(m => m.playerId);
+
+      // Players to remove
+      for (const oldPlayerId of currentPlayerIds) {
+        if (!playerIds.includes(oldPlayerId)) {
+          await db.update(teamMemberships)
+            .set({ status: 'inactive' })
+            .where(
+              and(
+                eq(teamMemberships.teamId, teamId),
+                eq(teamMemberships.profileId, oldPlayerId),
+                eq(teamMemberships.role, 'player')
+              )
+            );
+
+          // Cancel enrollment if team has a program
+          if (team.programId) {
+            await db.update(productEnrollments)
+              .set({ status: 'cancelled' })
+              .where(
+                and(
+                  eq(productEnrollments.programId, team.programId),
+                  eq(productEnrollments.profileId, oldPlayerId)
+                )
+              );
+          }
+        }
+      }
+
+      // Players to add
+      for (const newPlayerId of playerIds) {
+        if (!currentPlayerIds.includes(newPlayerId)) {
+          const player = await storage.getUser(newPlayerId);
+          if (!player) continue;
+
+          // Add to team_memberships
+          await db.insert(teamMemberships)
+            .values({
+              teamId,
+              profileId: newPlayerId,
+              role: 'player',
+              status: 'active',
+              jerseyNumber: player.jerseyNumber,
+              position: player.position,
+            })
+            .onConflictDoUpdate({
+              target: [teamMemberships.teamId, teamMemberships.profileId],
+              set: { status: 'active', role: 'player' },
+            });
+
+          // Auto-enroll in program if team has one
+          if (team.programId) {
+            const accountHolderId = player.accountHolderId || player.id;
+            const existingEnrollments = await storage.getEnrollmentsByAccountHolder(accountHolderId);
+            const alreadyEnrolled = existingEnrollments.some(
+              (e: any) => e.programId === team.programId && e.profileId === newPlayerId && e.status === 'active'
+            );
+
+            if (!alreadyEnrolled) {
+              await storage.createEnrollment({
+                organizationId: team.organizationId || organizationId,
+                programId: team.programId,
+                accountHolderId,
+                profileId: newPlayerId,
+                status: 'active',
+              });
+            }
+          }
+        }
+      }
+
+      // Invalidate caches by returning success
+      res.json({ success: true, playerIds });
+    } catch (error: any) {
+      console.error('Error updating team roster:', error);
+      res.status(500).json({ message: 'Failed to update team roster' });
+    }
+  });
   
   // Get team roster including Notion-synced players
   app.get('/api/teams/:teamId/roster-with-notion', requireAuth, async (req: any, res) => {

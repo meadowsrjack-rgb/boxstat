@@ -3097,6 +3097,9 @@ class DatabaseStorage implements IStorage {
       }
     }
     
+    // Clear user team_id references to this team
+    await db.update(schema.users).set({ teamId: null }).where(eq(schema.users.teamId, teamId));
+    
     // Delete team memberships first (in case CASCADE doesn't work)
     await db.delete(schema.teamMemberships).where(eq(schema.teamMemberships.teamId, teamId));
     
@@ -3855,6 +3858,8 @@ class DatabaseStorage implements IStorage {
     // Delete all teams associated with this program and their memberships
     const programTeams = await db.select({ id: schema.teams.id }).from(schema.teams).where(eq(schema.teams.programId, id));
     for (const team of programTeams) {
+      // Clear user team_id references to this team
+      await db.update(schema.users).set({ teamId: null }).where(eq(schema.users.teamId, team.id));
       await db.delete(schema.teamMemberships).where(eq(schema.teamMemberships.teamId, team.id));
     }
     await db.delete(schema.teams).where(eq(schema.teams.programId, id));

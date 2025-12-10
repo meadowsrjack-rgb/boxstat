@@ -735,10 +735,24 @@ export default function UnifiedAccount() {
     }
   }, [setLocation]);
 
-  // Check for payment success in URL
+  // Check for payment success in URL (including iOS auth token restoration)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionId = urlParams.get('session_id');
+    const authToken = urlParams.get('auth_token');
+    
+    // If auth_token is present (iOS Stripe redirect), restore session first
+    const isIOSRedirect = !!authToken;
+    if (authToken) {
+      console.log('[iOS Payment] Auth token detected, restoring session...');
+      localStorage.setItem('authToken', authToken);
+      // Clean the auth token from URL immediately for security
+      urlParams.delete('auth_token');
+      const newUrl = urlParams.toString() 
+        ? `${window.location.pathname}?${urlParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
     
     if (urlParams.get('payment') === 'success' && sessionId) {
       // Verify the session and create payment record
@@ -750,13 +764,22 @@ export default function UnifiedAccount() {
           if (data.success) {
             toast({
               title: "Payment Successful!",
-              description: "Your payment has been processed successfully.",
+              description: "Your new player has been added. Welcome to the team!",
             });
             
             // Refetch payment data
             queryClient.invalidateQueries({ queryKey: ['/api/payments'] });
             queryClient.invalidateQueries({ queryKey: ['/api/payments/history'] });
             queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+            
+            // For iOS, redirect to profile gateway to show the new player
+            if (isIOSRedirect) {
+              console.log('[iOS Payment] Redirecting to profile gateway...');
+              setTimeout(() => {
+                setLocation('/profile-selection');
+              }, 1500);
+            }
           } else {
             toast({
               title: "Payment Verification",
@@ -774,8 +797,10 @@ export default function UnifiedAccount() {
           });
         })
         .finally(() => {
-          // Clean up the URL
-          window.history.replaceState({}, '', '/unified-account');
+          // Clean up the URL (only if not iOS redirect, which navigates away)
+          if (!isIOSRedirect) {
+            window.history.replaceState({}, '', '/unified-account');
+          }
         });
     } else if (urlParams.get('payment') === 'success') {
       // Fallback for old URLs without session_id

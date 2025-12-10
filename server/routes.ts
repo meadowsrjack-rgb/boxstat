@@ -2312,6 +2312,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get origin for URLs
       const origin = `${req.protocol}://${req.get('host')}`;
       
+      // Check if request is from iOS native app (needs auth token in redirect URL)
+      const isIOSApp = req.headers['x-client-platform'] === 'ios';
+      
+      // Generate short-lived auth token for iOS Stripe redirects
+      let iosAuthToken = '';
+      if (isIOSApp) {
+        iosAuthToken = jwt.sign(
+          { 
+            userId: user.id, 
+            organizationId: user.organizationId, 
+            role: user.role,
+            purpose: 'stripe_success'
+          },
+          process.env.JWT_SECRET!,
+          { expiresIn: '10m' } // Short-lived token
+        );
+      }
+      
       // Build line items starting with the program
       const lineItems: any[] = [{
         price_data: {
@@ -2346,12 +2364,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Build success URL - include auth token for iOS to restore session after redirect
+      const successUrl = isIOSApp 
+        ? `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}&auth_token=${iosAuthToken}`
+        : `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`;
+      
       // Create Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
         line_items: lineItems,
         mode: 'payment',
-        success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        success_url: successUrl,
         cancel_url: `${origin}/add-player?step=5&payment=cancelled`,
         metadata: {
           type: 'add_player',

@@ -56,6 +56,10 @@ export async function apiRequest(
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+  // Add platform header for iOS-specific handling (e.g., Stripe redirects)
+  if (Capacitor.isNativePlatform()) {
+    headers["X-Client-Platform"] = Capacitor.getPlatform(); // 'ios' or 'android'
+  }
 
   const res = await fetch(getFullUrl(url), {
     method,

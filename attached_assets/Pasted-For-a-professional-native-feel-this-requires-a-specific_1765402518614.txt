@@ -1,0 +1,172 @@
+For a professional, "native" feel, this requires a specific 3-step "Handoff" strategy:
+
+Native Splash (Capacitor): Shows immediately (managed by the OS).
+
+HTML Splash (The Bridge): Matches the Native Splash exactly but is rendered in HTML. This handles the split-second while React "wakes up."
+
+The Handoff: Your React code manually tells the Native Splash to fade out only when the data is ready.
+
+Here is how to implement this for BoxStat to get that seamless, dark-themed launch.
+
+Step 1: Configure Native Behavior (capacitor.config.ts)
+
+We need to tell iOS/Android: "Don't auto-hide the splash screen. Wait for my command." This prevents the screen from disappearing too early and showing a glitchy, half-loaded UI.
+
+Update your plugins section in capacitor.config.ts:
+
+TypeScript
+  plugins: {
+    SplashScreen: {
+      backgroundColor: "#000000", // Matches your app theme
+      launchShowDuration: 20000, // Max wait time (we will hide it manually sooner)
+      launchAutoHide: false,     // CRITICAL: Don't hide until we say so
+      showSpinner: true,         // Optional: Native spinner
+      androidSpinnerStyle: "large",
+      iosSpinnerStyle: "small",
+      spinnerColor: "#d82428",   // BoxStat Red
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    // ... other plugins
+  },
+Step 2: The HTML "Bridge" (index.html)
+
+While the native splash is showing, the WebView loads. We put an identical design in index.html so that when we hide the native splash, the user sees this identical HTML layer underneath, making the transition invisible.
+
+Add this strictly inside the <body> but before the <div id="root">:
+
+HTML
+<body>
+  <div id="startup-loader">
+    <div class="loader-content">
+      <div class="logo-placeholder">BoxStat</div>
+      
+      <div class="pulse-ring"></div>
+    </div>
+  </div>
+
+  <style>
+    /* Ensure the loader covers the whole screen */
+    #startup-loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      z-index: 99999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 0.5s ease-out; /* Smooth fade out */
+    }
+
+    /* Center content wrapper */
+    .loader-content {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Placeholder Text Style (Delete this if using an <img> tag) */
+    .logo-placeholder {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-weight: 900;
+      font-size: 2rem;
+      color: #ffffff;
+      letter-spacing: -0.05em;
+      margin-bottom: 20px;
+      z-index: 2;
+    }
+
+    /* The Red Pulsing Ring */
+    .pulse-ring {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 2px solid #d82428; /* BoxStat Red */
+      animation: pulse 2s infinite ease-out;
+      z-index: 1;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    /* Class used to hide the loader via JS */
+    .loader-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+Step 3: The Manual Handoff (App.tsx or main.tsx)
+
+Now, inside your React code, you wait until everything is ready (auth checked, initial data fetched), and then you hide both the Native Splash and the HTML Bridge.
+
+TypeScript
+import { useEffect } from "react";
+import { SplashScreen } from "@capacitor/splash-screen";
+
+function App() {
+  const { isLoading } = useAuth(); // Your existing auth check
+
+  useEffect(() => {
+    // Only run this logic when the app is actually ready (not loading)
+    if (!isLoading) {
+      const performHandoff = async () => {
+        // 1. Tell React "We are ready" (This renders your dashboard behind the splash)
+        
+        // 2. Hide the HTML Bridge (Fade it out using CSS class)
+        const loader = document.getElementById('startup-loader');
+        if (loader) {
+          loader.classList.add('loader-hidden');
+          
+          // Remove it from DOM after transition ensures better performance
+          setTimeout(() => {
+            loader.remove();
+          }, 500);
+        }
+
+        // 3. Hide the Native Splash Screen (The OS layer)
+        // We add a tiny delay to ensure the HTML layer is fully rendered underneath
+        await SplashScreen.hide();
+      };
+
+      performHandoff();
+    }
+  }, [isLoading]);
+
+  if (isLoading) {
+    // While loading, we can return null because the 
+    // HTML #startup-loader in index.html is still covering the screen.
+    return null; 
+  }
+
+  // ... Rest of your App render
+  return <Switch>...</Switch>;
+}
+Summary of the Effect
+
+Tap Icon: Native Black Screen appears instantly (Native Config).
+
+App Loads: The Native Screen stays visible (because launchAutoHide: false).
+
+React Mounts: React renders your Dashboard silently in the background.
+
+Handoff: SplashScreen.hide() triggers. The Native screen vanishes, revealing your Dashboard instantly.
+
+This creates the "Apple-like" instant launch feel with zero white flashes or layout jumps.

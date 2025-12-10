@@ -40,6 +40,79 @@
     </style>
   </head>
   <body>
+    <!-- Native Splash Screen Bridge (HTML Layer) -->
+    <div id="startup-loader">
+      <div class="loader-content">
+        <div class="logo-placeholder">BoxStat</div>
+        <div class="pulse-ring"></div>
+      </div>
+    </div>
+
+    <style>
+      /* Ensure the loader covers the whole screen */
+      #startup-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #000000;
+        z-index: 99999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 0.5s ease-out;
+      }
+
+      /* Center content wrapper */
+      .loader-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Logo Text Style */
+      .logo-placeholder {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 900;
+        font-size: 2rem;
+        color: #ffffff;
+        letter-spacing: -0.05em;
+        margin-bottom: 20px;
+        z-index: 2;
+      }
+
+      /* The Red Pulsing Ring */
+      .pulse-ring {
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 2px solid #d82428;
+        animation: pulse 2s infinite ease-out;
+        z-index: 1;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(0.8);
+          opacity: 0.8;
+        }
+        100% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
+      }
+
+      /* Class used to hide the loader via JS */
+      .loader-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+
     <div id="root"></div>
     <script type="module" src="/src/main.tsx?v=20251112-1"></script>
     <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>

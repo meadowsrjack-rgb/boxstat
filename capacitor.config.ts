@@ -25,10 +25,16 @@ const config: CapacitorConfig = {
       resizeOnFullScreen: true,
     },
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 20000,
       // FIX 3: Match splash screen to app theme
-      backgroundColor: '#000000', 
-      showSpinner: false,
+      backgroundColor: '#000000',
+      launchAutoHide: false,
+      showSpinner: true,
+      androidSpinnerStyle: 'large',
+      iosSpinnerStyle: 'small',
+      spinnerColor: '#d82428',
+      splashFullScreen: true,
+      splashImmersive: true,
     },
     Geolocation: {},
     PushNotifications: {

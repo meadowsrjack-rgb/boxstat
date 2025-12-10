@@ -28,6 +28,8 @@ PostgreSQL, hosted on Neon serverless, is used with Drizzle ORM. The schema is o
 -   **Admin Panel**: Comprehensive CRUD for system entities, detailed user views, and a calendar for event management. Includes dedicated tabs for Overview, Users, Programs, Events, Awards, Store, Waivers, and Notifications. Programs serve as a central management hub.
 -   **Notifications**: Multi-channel (in-app, email, push) notification system with advanced recipient targeting and web push support. Features scheduled and recurring messaging with campaign management.
 -   **Legacy Migration System**: Supports migration of subscriptions from a legacy system, including auto-detection during registration and assignment to player profiles.
+-   **Native iOS Launch Experience**: Implements Capacitor Splash Screen with 3-step "Handoff" strategy (Native Splash → HTML Bridge → React App) for seamless Apple-like instant launch feel. Includes red pulsing ring animation, manual hide triggers, and zero white-flash transitions.
+-   **iOS Scroll & Keyboard Fixes**: Uses "Fixed Curtain" pattern (detached background layer + transparent content wrapper) across all pages to prevent white gaps during iOS keyboard appearance and overscroll. Applies to all auth pages, dashboards, and profile gateway.
 
 ## External Dependencies
 

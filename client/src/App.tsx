@@ -251,6 +251,33 @@ function AppRouter() {
   // Check if user needs profile setup
   const needsProfileSetup = isAuthenticated && user && !(user as any)?.profileCompleted;
 
+  // Handle Splash Screen Handoff
+  useEffect(() => {
+    if (!isLoading) {
+      const performHandoff = async () => {
+        // Hide the HTML Bridge (Fade it out using CSS class)
+        const loader = document.getElementById('startup-loader');
+        if (loader) {
+          loader.classList.add('loader-hidden');
+          // Remove it from DOM after transition for better performance
+          setTimeout(() => {
+            loader.remove();
+          }, 500);
+        }
+
+        // Hide the Native Splash Screen (The OS layer)
+        try {
+          const { SplashScreen } = await import('@capacitor/splash-screen');
+          await SplashScreen.hide();
+        } catch (error) {
+          console.log('SplashScreen not available (likely web):', error);
+        }
+      };
+
+      performHandoff();
+    }
+  }, [isLoading]);
+
   // Register service worker for PWA and initialize deep links
   useEffect(() => {
     if ('serviceWorker' in navigator) {

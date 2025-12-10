@@ -26,20 +26,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-      html {
-        background-color: #000000; /* Prevents white background on bounce */
-        height: 100%;
-      }
-      body {
-        background-color: #000000; /* Matches app dark mode */
+      html, body {
+        background-color: #000000;
         margin: 0;
         padding: 0;
-        min-height: 100vh;
-        /* This ensures your content doesn't get covered by the home bar */
-        padding-bottom: env(safe-area-inset-bottom); 
+        height: 100%;
+        overflow: hidden;
+        -webkit-overflow-scrolling: touch;
       }
       #root {
         height: 100%;
+        overflow: hidden;
       }
     </style>
   </head>

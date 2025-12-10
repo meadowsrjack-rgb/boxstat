@@ -8,23 +8,28 @@ export default function Landing() {
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col overflow-hidden"
+      className="fixed inset-0 flex flex-col"
       style={{
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#1a1a2e',
-        // iOS safe area: extend background behind safe areas
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        overflow: 'hidden',
+        touchAction: 'none',
       }}
     >
 
-      {/* Content Layer - Flex to fill space */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8">
+      {/* Content Layer - Flex to fill space with safe area padding */}
+      <div 
+        className="relative z-10 flex-1 flex flex-col items-center justify-start"
+        style={{
+          paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
         {/* Logo at Top */}
-        <div className="flex-shrink-0 pt-8">
+        <div className="flex-shrink-0 pt-4">
           <img 
             src={logo} 
             alt="BoxStat Logo" 
@@ -37,7 +42,7 @@ export default function Landing() {
         <div className="flex-1"></div>
 
         {/* Bottom Content - Both button and sign in text */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full flex-shrink-0 mb-6">
+        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-4 w-full flex-shrink-0">
           {/* Primary CTA Button */}
           <Button 
             size="lg" 

@@ -129,9 +129,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex flex-col"
+      style={{ overflow: 'hidden', touchAction: 'none' }}
+    >
       {/* Back Button */}
-      <div className="fixed top-6 left-6 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div 
+        className="absolute top-4 left-4 z-50"
+        style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <button
           onClick={() => setLocation("/")}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -141,7 +147,13 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <div className="flex flex-col justify-center min-h-screen px-8" style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div 
+        className="flex-1 flex flex-col justify-center px-8 overflow-y-auto"
+        style={{ 
+          paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))', 
+          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' 
+        }}
+      >
         <div className="w-full max-w-sm mx-auto space-y-8">
           {/* Header */}
           <div className="space-y-3">

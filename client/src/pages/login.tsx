@@ -130,12 +130,11 @@ export default function LoginPage() {
 
   return (
     <div 
-      className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black flex flex-col"
-      style={{ overflow: 'hidden', touchAction: 'none' }}
+      className="scrollable-page bg-gradient-to-br from-gray-900 via-gray-800 to-black"
     >
       {/* Back Button */}
       <div 
-        className="absolute top-4 left-4 z-50"
+        className="fixed top-4 left-4 z-50"
         style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <button
@@ -148,10 +147,11 @@ export default function LoginPage() {
       </div>
 
       <div 
-        className="flex-1 flex flex-col justify-center px-8 overflow-y-auto"
+        className="flex flex-col justify-center min-h-screen px-8"
         style={{ 
-          paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))', 
-          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' 
+          minHeight: '100dvh',
+          paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
         <div className="w-full max-w-sm mx-auto space-y-8">

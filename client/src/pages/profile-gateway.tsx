@@ -116,11 +116,9 @@ export default function ProfileGateway() {
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col overflow-hidden"
+      className="scrollable-page flex flex-col"
       style={{ 
         background: 'linear-gradient(to bottom, #111827, #000000)',
-        paddingTop: 'env(safe-area-inset-top, 0px)',
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}
     >
       {/* Settings gear icon - absolutely positioned within the fixed container */}
@@ -156,9 +154,15 @@ export default function ProfileGateway() {
         </DropdownMenu>
       </div>
       
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
-        <div className="max-w-md mx-auto pt-8 pb-8">
+      {/* Content area with safe area padding */}
+      <div 
+        className="flex-1 px-6"
+        style={{ 
+          paddingTop: 'calc(3rem + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        <div className="max-w-md mx-auto pt-4 pb-8">
           <div className="text-center mb-10">
             <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
           </div>

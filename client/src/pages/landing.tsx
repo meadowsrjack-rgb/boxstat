@@ -8,22 +8,22 @@ export default function Landing() {
 
   return (
     <div 
-      className="fixed inset-0 flex flex-col"
+      className="scrollable-page flex flex-col"
       style={{
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#1a1a2e',
-        overflow: 'hidden',
-        touchAction: 'none',
+        backgroundAttachment: 'fixed',
       }}
     >
 
       {/* Content Layer - Flex to fill space with safe area padding */}
       <div 
-        className="relative z-10 flex-1 flex flex-col items-center justify-start"
+        className="relative z-10 flex-1 flex flex-col items-center justify-start min-h-screen"
         style={{
+          minHeight: '100dvh',
           paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
         }}

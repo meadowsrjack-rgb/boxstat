@@ -1037,7 +1037,7 @@ function PlayerInfoStep({
                         defaultYear={defaultYear}
                         defaultMonth={defaultMonth}
                         defaultDay={defaultDay}
-                        startYear={2000}
+                        startYear={1950}
                         endYear={new Date().getFullYear()}
                         dateTimeFormatOptions={{ month: 'short' }}
                         highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}

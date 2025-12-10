@@ -366,7 +366,7 @@ export default function ManageChildren() {
                                 defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
                                 defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
                                 defaultDay={field.value ? new Date(field.value).getDate() : 1}
-                                startYear={2000}
+                                startYear={1950}
                                 endYear={new Date().getFullYear()}
                                 dateTimeFormatOptions={{ month: 'short' }}
                                 highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}
@@ -626,7 +626,7 @@ export default function ManageChildren() {
                             defaultYear={field.value ? new Date(field.value).getFullYear() : 2015}
                             defaultMonth={(field.value ? new Date(field.value).getMonth() : 0) + 1}
                             defaultDay={field.value ? new Date(field.value).getDate() : 1}
-                            startYear={2000}
+                            startYear={1950}
                             endYear={new Date().getFullYear()}
                             dateTimeFormatOptions={{ month: 'short' }}
                             highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}

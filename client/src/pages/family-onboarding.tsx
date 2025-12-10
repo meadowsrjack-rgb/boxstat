@@ -382,7 +382,7 @@ export default function FamilyOnboarding() {
                                   defaultYear={player.dob ? new Date(player.dob).getFullYear() : 2015}
                                   defaultMonth={(player.dob ? new Date(player.dob).getMonth() : 0) + 1}
                                   defaultDay={player.dob ? new Date(player.dob).getDate() : 1}
-                                  startYear={2000}
+                                  startYear={1950}
                                   endYear={new Date().getFullYear()}
                                   dateTimeFormatOptions={{ month: 'short' }}
                                   highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}

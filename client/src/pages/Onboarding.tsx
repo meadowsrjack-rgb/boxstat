@@ -210,7 +210,7 @@ export default function Onboarding() {
                         defaultYear={pl.dob ? new Date(pl.dob).getFullYear() : 2015}
                         defaultMonth={(pl.dob ? new Date(pl.dob).getMonth() : 0) + 1}
                         defaultDay={pl.dob ? new Date(pl.dob).getDate() : 1}
-                        startYear={2000}
+                        startYear={1950}
                         endYear={new Date().getFullYear()}
                         dateTimeFormatOptions={{ month: 'short' }}
                         highlightOverlayStyle={{ backgroundColor: 'transparent', border: 'none' }}

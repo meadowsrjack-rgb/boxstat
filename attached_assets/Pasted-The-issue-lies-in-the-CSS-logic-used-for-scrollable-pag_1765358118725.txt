@@ -1,0 +1,68 @@
+The issue lies in the CSS logic used for .scrollable-page.
+
+The Root Cause: You are using min-height: 100dvh in your CSS.
+
+How min-height works: It allows the container to grow to fit the content. If your content is 2000px tall, the container becomes 2000px tall.
+
+The Scroll Logic: For overflow-y: auto to work, the container must be shorter than the content inside it. Because your container is growing to match the content size, it thinks it doesn't need to scroll.
+
+Why it freezes: The body likely has overflow: hidden (to prevent the white gap/bounce), so the body clips your 2000px container, and the container itself has no reason to scroll internally.
+
+The Fix: You must switch from min-height to a fixed height so the container is forced to be the size of the screen, causing the content inside to overflow and trigger the scroll.
+
+Here is the fix applied directly to your player-dashboard.tsx file.
+
+Step 1: Update the Return Statement
+
+Locate the main return ( statement (around line 893) and replace the opening div. We will use Tailwind classes to force the height and overflow behavior, overriding the faulty .scrollable-page class.
+
+Change this:
+
+TypeScript
+return (
+  <div className="scrollable-page bg-gray-50 safe-bottom">
+To this:
+
+TypeScript
+return (
+  // h-[100dvh] restricts height to screen size.
+  // overflow-y-auto allows internal scrolling.
+  // overscroll-contain prevents the whole page from bouncing (rubber-banding).
+  <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain">
+Step 2: (Optional) Fix the Header
+
+Currently, your header is inside the scrollable area, meaning it will scroll off the screen when the user scrolls down. In native apps, the header usually stays at the top.
+
+If you want the header to stick to the top, add sticky top-0 z-50 to the header tag (around line 895):
+
+TypeScript
+<header className="bg-white shadow-sm safe-top sticky top-0 z-50">
+Step 3: Explanation of the changes
+
+h-[100dvh]: This forces the dashboard container to be exactly the height of the mobile viewport. It stops the div from growing larger than the screen.
+
+overflow-y-auto: Since the content is now taller than the container (because we fixed the container height), this forces the browser to create a scroll area.
+
+overscroll-contain: This tells iOS, "If the user scrolls past the edge of this area, do not pass that scroll event to the parent/body." This fixes the "stuck" feeling.
+
+Summary of Changes for player-dashboard.tsx
+
+TypeScript
+// ... imports and logic ...
+
+  /* =================== UI =================== */
+  return (
+    // FIX APPLIED HERE:
+    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain">
+      
+      {/* Top Bar - Added sticky positioning so it doesn't scroll away */}
+      <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
+        <div className="max-w-md mx-auto px-4 py-3">
+          {/* ... header content ... */}
+        </div>
+      </header>
+      
+      {/* Main */}
+      <main className="max-w-md mx-auto pb-24"> 
+         {/* Added pb-24 to main to ensure bottom content isn't cut off by safe areas */}
+         {/* ... rest of your code ... */}

@@ -267,8 +267,10 @@ function AppRouter() {
 
         // Hide the Native Splash Screen (The OS layer)
         try {
-          const { SplashScreen } = await import('@capacitor/splash-screen');
-          await SplashScreen.hide();
+          // Use window.Capacitor if available (global API)
+          if ((window as any).Capacitor?.Plugins?.SplashScreen) {
+            await (window as any).Capacitor.Plugins.SplashScreen.hide();
+          }
         } catch (error) {
           console.log('SplashScreen not available (likely web):', error);
         }

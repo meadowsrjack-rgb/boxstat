@@ -115,9 +115,16 @@ export default function ProfileGateway() {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col overflow-y-auto overflow-x-hidden">
-      {/* Settings gear icon in top right - fixed position with high z-index */}
-      <div className="fixed top-6 right-6 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <div 
+      className="fixed inset-0 flex flex-col overflow-hidden"
+      style={{ 
+        background: 'linear-gradient(to bottom, #111827, #000000)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
+    >
+      {/* Settings gear icon - absolutely positioned within the fixed container */}
+      <div className="absolute top-4 right-4 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button 
@@ -148,10 +155,13 @@ export default function ProfileGateway() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="max-w-md mx-auto pt-12 flex-1 pb-8">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
-        </div>
+      
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
+        <div className="max-w-md mx-auto pt-8 pb-8">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
+          </div>
 
         <div className="space-y-4">
           {/* Account Card - styled like other profiles */}
@@ -304,6 +314,7 @@ export default function ProfileGateway() {
               <UserPlus className="w-8 h-8 text-gray-500" />
             </button>
           </div>
+        </div>
         </div>
       </div>
 

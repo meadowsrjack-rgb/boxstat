@@ -116,7 +116,7 @@ export default function ProfileGateway() {
 
   return (
     <div 
-      className="scrollable-page flex flex-col"
+      className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-contain"
       style={{ 
         background: 'linear-gradient(to bottom, #111827, #000000)',
       }}

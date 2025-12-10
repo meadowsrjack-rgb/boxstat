@@ -441,9 +441,9 @@ export default function CoachDashboard() {
   });
 
   return (
-    <div className="scrollable-page bg-gray-50 safe-bottom">
+    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain">
       {/* Top Bar */}
-      <header className="bg-white shadow-sm safe-top">
+      <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-1">
             <Button

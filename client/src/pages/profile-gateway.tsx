@@ -116,7 +116,7 @@ export default function ProfileGateway() {
 
   return (
     <div 
-      className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-contain"
+      className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-y-none z-0"
       style={{ 
         background: 'linear-gradient(to bottom, #111827, #000000)',
       }}

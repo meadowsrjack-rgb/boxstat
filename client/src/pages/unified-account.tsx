@@ -913,14 +913,14 @@ export default function UnifiedAccount() {
 
   if (playersLoading) {
     return (
-      <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain flex items-center justify-center">
+      <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-y-none z-0 flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain">
+    <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-y-none z-0">
       {/* Header */}
       <div className="bg-white border-b safe-top sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

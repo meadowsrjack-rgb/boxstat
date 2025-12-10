@@ -66,13 +66,14 @@
     @apply border-border;
   }
 
-  /* Global base styles - natural document scrolling */
+  /* Global base styles - prevent iOS rubber-band bouncing */
   html {
     padding: 0;
     margin: 0;
-    min-height: 100%;
-    min-height: 100dvh;
-    background-color: #000000;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #f9fafb; /* Match bg-gray-50 so gaps aren't stark white */
   }
 
   body {
@@ -80,16 +81,18 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    min-height: 100%;
-    min-height: 100dvh;
-    background-color: #000000;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #f9fafb; /* Match bg-gray-50 so gaps aren't stark white */
   }
 
-  /* Root container - uses min-height for natural scrolling */
+  /* Root container - fixed sizing to prevent page scrolling */
   #root {
-    min-height: 100%;
-    min-height: 100dvh;
-    background-color: #000000;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background-color: #f9fafb;
   }
 
   /* Custom scrollbar */
@@ -364,18 +367,21 @@
     color: #ffffff !important;
   }
 
-  /* Scrollable page container - controlled internal scroll for dashboards */
-  /* CRITICAL: Using fixed height (not min-height) forces container to screen size,
-     causing content to overflow and trigger internal scrolling on iOS */
+  /* Scrollable page container - fixed positioning to prevent iOS rubber-band bounce */
+  /* CRITICAL: Using 'fixed inset-0' locks container to viewport so browser can't scroll.
+     'overscroll-behavior-y: none' completely disables the rubber-band bounce on iOS. */
   .scrollable-page {
-    height: 100vh;
-    height: 100dvh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
+    z-index: 0;
   }
   
   /* iOS auth page fix - fixed positioning for auth pages to prevent white bleed on keyboard close */
@@ -388,7 +394,7 @@
     overflow-y: scroll;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: none;
     touch-action: pan-y;
     /* Fallback background for portal consistency */
     background-color: inherit;

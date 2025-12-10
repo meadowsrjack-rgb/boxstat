@@ -441,7 +441,7 @@ export default function CoachDashboard() {
   });
 
   return (
-    <div className="h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-contain">
+    <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-y-none z-0">
       {/* Top Bar */}
       <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
         <div className="max-w-md mx-auto px-4 py-3">

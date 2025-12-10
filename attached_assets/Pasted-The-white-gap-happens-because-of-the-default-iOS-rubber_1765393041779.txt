@@ -1,0 +1,45 @@
+The "white gap" happens because of the default iOS "rubber-band" scrolling effect. When you scroll past the top or bottom, iOS pulls the entire page away from the edge, revealing the <body> background color underneath (which defaults to white).
+Since you are building a native-style app, you usually want to disable this "whole page" bounce and only allow the content to scroll.
+The Fix
+You need to change overscroll-contain to overscroll-none (or overscroll-y-none) and ensure the main container is fixed to the screen so the browser itself doesn't scroll.
+1. Update player-dashboard.tsx
+Go back to the return ( statement we modified.
+Change: overscroll-contain
+To: overscroll-y-none fixed inset-0
+Updated code block:
+return (
+  // Changes made:
+  // 1. 'fixed inset-0': Locks the container to the viewport edges so the browser window can't scroll.
+  // 2. 'overscroll-y-none': Completely disables the rubber-band bounce effect on iOS.
+  // 3. 'z-0': Ensures it sits at the base level.
+  <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden bg-gray-50 safe-bottom overscroll-y-none z-0">
+    
+    {/* Header - kept sticky */}
+    <header className="bg-white shadow-sm safe-top sticky top-0 z-50">
+       {/* ... header content ... */}
+    </header>
+
+    {/* ... rest of your content ... */}
+  </div>
+);
+
+2. (Crucial) Global Safety Fix
+If the white gap persists, it means the <body> tag of your HTML is still visible behind your app. You should match the background color of the body to your app's header color or black to hide any potential gaps.
+In your client/src/index.css (or wherever your global styles are):
+/* Ensure the browser window itself never scrolls */
+html, body {
+  overflow: hidden; /* Stops the whole page from bouncing */
+  background-color: #f9fafb; /* Match your bg-gray-50 so gaps aren't stark white */
+  height: 100%;
+  width: 100%;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+Why this works:
+ * fixed inset-0: Pins the div to the four corners of the screen. It can no longer be "pulled" away from the edges.
+ * overscroll-y-none: Explicitly tells iOS Safari "do not bounce this element when the user hits the limit."
+ * overflow: hidden (on body): Acts as a final safeguard to ensure the parent document never scrolls, only your designated dashboard div does.

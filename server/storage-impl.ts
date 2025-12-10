@@ -5166,6 +5166,11 @@ class DatabaseStorage implements IStorage {
       inventorySizes: dbProgram.inventorySizes || [],
       inventoryCount: dbProgram.inventoryCount,
       shippingRequired: dbProgram.shippingRequired ?? false,
+      // Waiver requirements
+      requireAAUMembership: dbProgram.requireAAUMembership ?? false,
+      requireConcussionWaiver: dbProgram.requireConcussionWaiver ?? false,
+      requireClubAgreement: dbProgram.requireClubAgreement ?? false,
+      requiredWaivers: dbProgram.requiredWaivers || [],
     };
   }
   

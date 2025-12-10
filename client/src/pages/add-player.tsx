@@ -150,8 +150,11 @@ export default function AddPlayer() {
     return 0;
   });
 
-  // Group programs by category
-  const programsByCategory = programs.reduce((acc, program) => {
+  // Filter programs to exclude goods (store items) - only show enrollable programs
+  const enrollablePrograms = programs.filter((p: any) => p.productCategory !== 'goods');
+
+  // Group programs by category (excluding goods/store items)
+  const programsByCategory = enrollablePrograms.reduce((acc, program) => {
     const category = program.category || "Other";
     if (!acc[category]) acc[category] = [];
     acc[category].push(program);
@@ -313,7 +316,7 @@ export default function AddPlayer() {
           {currentStepName === "package" && (
             <PackageSelectionStep
               defaultValues={{ packageId: playerData.packageId || "" }}
-              programs={programs}
+              programs={enrollablePrograms}
               programsByCategory={programsByCategory}
               isLoading={programsLoading}
               onSubmit={(data) => {

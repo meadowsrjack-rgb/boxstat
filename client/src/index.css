@@ -73,7 +73,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background-color: #f9fafb; /* Match bg-gray-50 so gaps aren't stark white */
+    background-color: #000000; /* Black background - prevents white gaps on iOS overscroll for all pages */
   }
 
   body {
@@ -84,7 +84,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background-color: #f9fafb; /* Match bg-gray-50 so gaps aren't stark white */
+    background-color: #000000; /* Black background - prevents white gaps on iOS overscroll */
   }
 
   /* Root container - fixed sizing to prevent page scrolling */
@@ -92,7 +92,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background-color: #f9fafb;
+    background-color: #000000; /* Black background - page content will overlay with its own bg */
   }
 
   /* Custom scrollbar */

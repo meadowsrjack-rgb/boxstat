@@ -70,10 +70,11 @@
   html {
     padding: 0;
     margin: 0;
-    height: 100%;
+    height: 100vh;
     width: 100%;
     overflow: hidden;
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll for all pages */
+    position: fixed;
   }
 
   body {
@@ -81,18 +82,20 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    height: 100%;
+    height: 100vh;
     width: 100%;
     overflow: hidden;
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll */
+    position: fixed;
   }
 
   /* Root container - fixed sizing to prevent page scrolling */
   #root {
-    height: 100%;
+    height: 100vh;
     width: 100%;
     overflow: hidden;
     background-color: #000000; /* Black background - page content will overlay with its own bg */
+    position: fixed;
   }
 
   /* Custom scrollbar */

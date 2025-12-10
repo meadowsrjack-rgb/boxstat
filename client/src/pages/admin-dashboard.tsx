@@ -433,15 +433,25 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
   };
   
   const getPaymentTypeBadge = (payment: any) => {
-    const isSubscription = payment.paymentType === "subscription" || 
+    // Check payment type (case-insensitive) and also check the associated program's type
+    const paymentTypeLC = (payment.paymentType || '').toLowerCase();
+    const isSubscription = paymentTypeLC === "subscription" || 
+      payment.paymentType === "Subscription" ||
       (payment.billingModel && payment.billingModel === "Subscription");
+    
+    // Also check if the linked program is a subscription
+    const program = payment.programId ? programs.find((p: any) => String(p.id) === String(payment.programId)) : null;
+    const programIsSubscription = program?.type === "Subscription";
+    
+    const showAsSubscription = isSubscription || programIsSubscription;
+    
     return (
       <Badge 
         variant="outline" 
-        className={isSubscription ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}
+        className={showAsSubscription ? "bg-purple-50 text-purple-700 border-purple-200" : "bg-blue-50 text-blue-700 border-blue-200"}
         data-testid={`badge-type-${payment.id}`}
       >
-        {isSubscription ? "Subscription" : "One-Time"}
+        {showAsSubscription ? "Subscription" : "One-Time"}
       </Badge>
     );
   };

@@ -3010,6 +3010,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    // Handle program enrollment changes (enrollmentsToAdd and enrollmentsToRemove)
+    if (updateData.enrollmentsToRemove && Array.isArray(updateData.enrollmentsToRemove)) {
+      const user = await storage.getUser(userId);
+      for (const enrollmentId of updateData.enrollmentsToRemove) {
+        console.log(`[PATCH] Removing enrollment ${enrollmentId} for user ${userId}`);
+        // Handle both numeric and string IDs
+        const numericId = parseInt(String(enrollmentId).replace('new-', ''), 10);
+        if (!isNaN(numericId) && !String(enrollmentId).startsWith('new-')) {
+          await db.update(productEnrollments)
+            .set({ status: 'cancelled' })
+            .where(eq(productEnrollments.id, numericId));
+        }
+      }
+    }
+    
+    if (updateData.enrollmentsToAdd && Array.isArray(updateData.enrollmentsToAdd)) {
+      const user = await storage.getUser(userId);
+      const accountHolderId = user?.accountHolderId || userId;
+      
+      for (const programId of updateData.enrollmentsToAdd) {
+        console.log(`[PATCH] Adding enrollment for user ${userId} in program ${programId}`);
+        
+        // Check if enrollment already exists
+        const existingEnrollment = await db.select({ id: productEnrollments.id })
+          .from(productEnrollments)
+          .where(
+            and(
+              eq(productEnrollments.profileId, userId),
+              eq(productEnrollments.programId, programId),
+              eq(productEnrollments.status, 'active')
+            )
+          )
+          .limit(1);
+        
+        if (existingEnrollment.length === 0) {
+          await db.insert(productEnrollments)
+            .values({
+              organizationId: organizationId,
+              programId: programId,
+              accountHolderId: accountHolderId,
+              profileId: userId,
+              status: 'active',
+              source: 'admin',
+            });
+          console.log(`[PATCH] Created enrollment for user ${userId} in program ${programId}`);
+        }
+      }
+    }
+    
+    // Clean up enrollment-related fields from updateData before saving to users table
+    delete updateData.enrollmentsToRemove;
+    delete updateData.enrollmentsToAdd;
+    delete updateData.pendingEnrollments;
+    delete updateData.activeTeams;
+    
     const updated = await storage.updateUser(userId, updateData);
     console.log(`[PATCH] User ${userId} updated successfully`);
     res.json(updated);

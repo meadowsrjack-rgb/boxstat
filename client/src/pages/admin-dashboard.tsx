@@ -1080,7 +1080,9 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                       const teamsWithoutProgram = teams?.filter((t: any) => !t.programId) || [];
                       
                       // Program enrollments (from productEnrollments table)
-                      const programEnrollments = editingUserProgramMemberships || [];
+                      const originalEnrollments = editingUserProgramMemberships || [];
+                      // Use pendingEnrollments for display if there are local changes
+                      const programEnrollments = editingUser.pendingEnrollments || originalEnrollments;
                       
                       return (
                         <div className="space-y-3">
@@ -1099,12 +1101,73 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-blue-600 capitalize">{enrollment.status}</span>
+                                      <button
+                                        type="button"
+                                        className="text-red-500 hover:text-red-700 text-sm font-medium px-1"
+                                        onClick={() => {
+                                          // Mark enrollment for removal in local state
+                                          setEditingUser({
+                                            ...editingUser,
+                                            enrollmentsToRemove: [...(editingUser.enrollmentsToRemove || []), enrollment.enrollmentId],
+                                            pendingEnrollments: (editingUser.pendingEnrollments || programEnrollments).filter((e: any) => e.enrollmentId !== enrollment.enrollmentId)
+                                          });
+                                        }}
+                                        data-testid={`button-remove-enrollment-${enrollment.enrollmentId}`}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
                             </div>
                           )}
+                          
+                          {/* Enroll in Program Section */}
+                          <div className="mt-2">
+                            <p className="text-xs font-semibold text-gray-600 mb-2">Enroll in Program:</p>
+                            <div className="border rounded-md max-h-32 overflow-y-auto">
+                              {programs?.filter((p: any) => 
+                                p.productCategory === 'program' && 
+                                !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
+                              ).map((program: any) => (
+                                <div key={program.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0 hover:bg-gray-50">
+                                  <span className="text-sm">{program.name}</span>
+                                  <button
+                                    type="button"
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                    onClick={() => {
+                                      // Add enrollment to pending
+                                      const newEnrollment = {
+                                        enrollmentId: `new-${program.id}`,
+                                        programId: program.id,
+                                        programName: program.name,
+                                        status: 'active',
+                                        teams: [],
+                                        isNew: true
+                                      };
+                                      setEditingUser({
+                                        ...editingUser,
+                                        pendingEnrollments: [...(editingUser.pendingEnrollments || programEnrollments), newEnrollment],
+                                        enrollmentsToAdd: [...(editingUser.enrollmentsToAdd || []), program.id]
+                                      });
+                                    }}
+                                    data-testid={`button-enroll-${program.id}`}
+                                  >
+                                    + Enroll
+                                  </button>
+                                </div>
+                              ))}
+                              {programs?.filter((p: any) => 
+                                p.productCategory === 'program' && 
+                                !(editingUser.pendingEnrollments || programEnrollments).some((e: any) => e.programId === p.id)
+                              ).length === 0 && (
+                                <p className="text-xs text-gray-500 px-3 py-2">Already enrolled in all available programs</p>
+                              )}
+                            </div>
+                          </div>
                           
                           {/* Current Team Assignments - Clear display of what teams user is on */}
                           {activeTeams.length > 0 ? (

@@ -3849,10 +3849,15 @@ class DatabaseStorage implements IStorage {
     await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.programId, id));
     await db.delete(schema.programSuggestedAddOns).where(eq(schema.programSuggestedAddOns.productId, id));
     
-    // Cancel all enrollments for this program
-    await db.update(schema.productEnrollments)
-      .set({ status: 'cancelled', autoRenew: false, updatedAt: new Date().toISOString() })
-      .where(eq(schema.productEnrollments.programId, id));
+    // Delete all enrollments for this program (must delete, not just cancel, due to foreign key)
+    await db.delete(schema.productEnrollments).where(eq(schema.productEnrollments.programId, id));
+    
+    // Delete all teams associated with this program and their memberships
+    const programTeams = await db.select({ id: schema.teams.id }).from(schema.teams).where(eq(schema.teams.programId, id));
+    for (const team of programTeams) {
+      await db.delete(schema.teamMemberships).where(eq(schema.teamMemberships.teamId, team.id));
+    }
+    await db.delete(schema.teams).where(eq(schema.teams.programId, id));
     
     // Now delete the program itself
     await db.delete(schema.programs).where(eq(schema.programs.id, id));

@@ -1309,11 +1309,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   paymentType: 'add_player',
                   status: 'completed',
                   description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
+                  programId: packageId,
                 });
                 console.log(`✅ Created payment record for player ${playerId}`);
               } catch (paymentError: any) {
                 console.error("Error creating payment record:", paymentError);
                 // Don't fail the webhook if payment record creation fails
+              }
+            }
+            
+            // Create program enrollment for the player
+            if (packageId) {
+              try {
+                const program = await storage.getProgram(packageId);
+                if (program) {
+                  // Check for existing enrollment
+                  const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+                  const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
+                  
+                  if (!hasEnrollment) {
+                    await storage.createEnrollment({
+                      organizationId: updatedPlayer.organizationId,
+                      accountHolderId: accountHolderId,
+                      profileId: playerId,
+                      programId: packageId,
+                      status: 'active',
+                      source: 'payment',
+                      remainingCredits: program.sessionCount ?? undefined,
+                      totalCredits: program.sessionCount ?? undefined,
+                    });
+                    console.log(`✅ Created enrollment for player ${playerId} in program ${packageId}`);
+                  } else {
+                    console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
+                  }
+                } else {
+                  console.warn(`⚠️ Program ${packageId} not found, cannot create enrollment`);
+                }
+              } catch (enrollError: any) {
+                console.error("Error creating enrollment:", enrollError);
+                // Don't fail the webhook if enrollment creation fails
               }
             }
           } else {
@@ -1511,6 +1545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           if (updatedPlayer && session.amount_total) {
+            const packageId = session.metadata.packageId;
             await storage.createPayment({
               organizationId: updatedPlayer.organizationId,
               userId: playerId,
@@ -1520,8 +1555,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status: 'completed',
               description: `Player Registration: ${updatedPlayer.firstName} ${updatedPlayer.lastName}`,
               stripePaymentId: session.payment_intent as string,
+              programId: packageId,
             });
             console.log(`✅ Created add_player payment record via callback for player ${playerId}`);
+            
+            // Create program enrollment for the player
+            if (packageId) {
+              try {
+                const program = await storage.getProgram(packageId);
+                if (program) {
+                  // Check for existing enrollment
+                  const existingEnrollments = await storage.getActiveEnrollmentsWithCredits(playerId);
+                  const hasEnrollment = existingEnrollments.some(e => e.programId === packageId);
+                  
+                  if (!hasEnrollment) {
+                    await storage.createEnrollment({
+                      organizationId: updatedPlayer.organizationId,
+                      accountHolderId: accountHolderId,
+                      profileId: playerId,
+                      programId: packageId,
+                      status: 'active',
+                      source: 'payment',
+                      remainingCredits: program.sessionCount ?? undefined,
+                      totalCredits: program.sessionCount ?? undefined,
+                    });
+                    console.log(`✅ Created enrollment for player ${playerId} in program ${packageId} via callback`);
+                  } else {
+                    console.log(`ℹ️ Player ${playerId} already has enrollment for program ${packageId}`);
+                  }
+                }
+              } catch (enrollError: any) {
+                console.error("Error creating enrollment via callback:", enrollError);
+              }
+            }
           }
         } else {
           console.log(`ℹ️ Payment already processed for player ${playerId}`);

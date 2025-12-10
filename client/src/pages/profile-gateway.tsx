@@ -72,19 +72,19 @@ export default function ProfileGateway() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col">
-      {/* Settings gear icon in top right */}
-      <div className="absolute top-6 right-6 safe-top">
+    <div className="h-screen bg-gradient-to-b from-gray-900 to-black p-6 safe-top safe-bottom flex flex-col overflow-y-auto overflow-x-hidden">
+      {/* Settings gear icon in top right - fixed position with high z-index */}
+      <div className="fixed top-6 right-6 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button 
-              className="p-2 text-gray-500 hover:text-gray-300 transition-colors"
+              className="p-2 text-gray-500 hover:text-gray-300 transition-colors bg-gray-900/80 rounded-full backdrop-blur-sm"
               data-testid="button-settings-menu"
             >
               <Settings className="w-5 h-5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700">
+          <DropdownMenuContent align="end" className="bg-gray-800 border-gray-700 z-50">
             <DropdownMenuItem 
               onClick={handleSignOut}
               className="text-gray-300 hover:text-white hover:bg-gray-700 cursor-pointer"
@@ -96,7 +96,7 @@ export default function ProfileGateway() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="max-w-md mx-auto pt-12 flex-1">
+      <div className="max-w-md mx-auto pt-12 flex-1 pb-8">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white mb-2" data-testid="text-who-is-watching">Who's ball?</h1>
         </div>

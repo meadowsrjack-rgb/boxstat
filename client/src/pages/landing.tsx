@@ -14,11 +14,12 @@ export default function Landing() {
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
+        backgroundColor: '#1a1a2e', // Fallback color matching the image
       }}
     >
 
-      {/* Content Layer - Flex to fill space */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8 safe-top">
+      {/* Content Layer - Flex to fill space, with proper safe area handling */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-start" style={{ paddingTop: 'max(2rem, env(safe-area-inset-top, 0px))' }}>
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-8">
           <img 

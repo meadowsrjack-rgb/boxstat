@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-gradient-to-br from-gray-900 via-gray-800 to-black safe-bottom">
-      <div className="absolute top-6 left-6 safe-top">
+    <div className="ios-fixed-page bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+      <div className="absolute top-6 left-6" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <button
           onClick={() => setLocation("/login")}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"

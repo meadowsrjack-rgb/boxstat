@@ -913,14 +913,14 @@ export default function UnifiedAccount() {
 
   if (playersLoading) {
     return (
-      <div className="flex-1 bg-gray-50 safe-bottom flex items-center justify-center">
+      <div className="scrollable-page bg-gray-50 safe-bottom flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-gray-50 safe-bottom overflow-y-auto">
+    <div className="scrollable-page bg-gray-50 safe-bottom">
       {/* Header */}
       <div className="bg-white border-b safe-top">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

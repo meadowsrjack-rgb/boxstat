@@ -8,14 +8,13 @@ export default function Landing() {
 
   return (
     <div 
-      className="scrollable-page flex flex-col"
+      className="ios-fixed-page flex flex-col"
       style={{
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center center',
         backgroundRepeat: 'no-repeat',
         backgroundColor: '#1a1a2e',
-        backgroundAttachment: 'fixed',
       }}
     >
 

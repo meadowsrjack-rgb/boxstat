@@ -7,26 +7,29 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div 
-      className="ios-fixed-page flex flex-col"
-      style={{
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#1a1a2e',
-      }}
-    >
-
-      {/* Content Layer - Flex to fill space with safe area padding */}
+    <>
+      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
       <div 
-        className="relative z-10 flex-1 flex flex-col items-center justify-start min-h-screen"
+        className="fixed inset-0 w-full h-full z-0 pointer-events-none"
         style={{
-          minHeight: '100dvh',
-          paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',
-          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#1a1a2e',
         }}
-      >
+      />
+
+      {/* Main Content Wrapper */}
+      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none flex flex-col">
+        {/* Content Layer - Flex to fill space with safe area padding */}
+        <div 
+          className="relative z-10 flex-1 flex flex-col items-center justify-start min-h-full"
+          style={{
+            paddingTop: 'calc(2rem + env(safe-area-inset-top, 0px))',
+            paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
         {/* Logo at Top */}
         <div className="flex-shrink-0 pt-4">
           <img 
@@ -64,7 +67,8 @@ export default function Landing() {
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

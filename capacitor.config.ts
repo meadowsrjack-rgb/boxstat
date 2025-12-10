@@ -1,13 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
-// Check if we're in dev mode (uses local bundle) or production mode (uses remote URL)
 const isDevMode = process.env.CAPACITOR_MODE !== 'production';
 
 const config: CapacitorConfig = {
   appId: 'com.boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
-  // Only set server.url in production mode - dev mode uses local bundled assets
   ...(isDevMode ? {} : {
     server: {
       url: 'https://boxstat.app',
@@ -16,16 +14,23 @@ const config: CapacitorConfig = {
   }),
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#FFFFFF',
+    // FIX 1: Change native background from White to Black
+    backgroundColor: '#000000', 
   },
   plugins: {
+    Keyboard: {
+      // FIX 2: Control keyboard resize behavior
+      resize: 'body',
+      style: 'DARK',
+      resizeOnFullScreen: true,
+    },
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#FFFFFF',
+      // FIX 3: Match splash screen to app theme
+      backgroundColor: '#000000', 
       showSpinner: false,
     },
-    Geolocation: {
-    },
+    Geolocation: {},
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },

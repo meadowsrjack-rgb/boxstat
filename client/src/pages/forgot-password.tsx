@@ -44,18 +44,23 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="ios-fixed-page bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      <div className="absolute top-6 left-6" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
-        <button
-          onClick={() => setLocation("/login")}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          data-testid="button-back-to-login"
-        >
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-      </div>
+    <>
+      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
-      <div className="flex flex-col justify-center min-h-screen-safe px-8 py-16 safe-top">
+      {/* Main Content Wrapper */}
+      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none">
+        <div className="fixed top-6 left-6 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
+          <button
+            onClick={() => setLocation("/login")}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            data-testid="button-back-to-login"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+        </div>
+
+        <div className="flex flex-col justify-center min-h-full px-8 py-16 safe-top">
         <div className="w-full max-w-sm mx-auto space-y-8">
           {!emailSent ? (
             <>
@@ -137,7 +142,8 @@ export default function ForgotPasswordPage() {
             </p>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

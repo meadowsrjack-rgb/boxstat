@@ -81,7 +81,12 @@ export default function MagicLinkLogin() {
   }, [isIOSBrowser]);
 
   return (
-    <div className="ios-fixed-page bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <>
+      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-blue-50 to-indigo-100 z-0 pointer-events-none" />
+
+      {/* Main Content Wrapper */}
+      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -132,6 +137,7 @@ export default function MagicLinkLogin() {
           </CardContent>
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

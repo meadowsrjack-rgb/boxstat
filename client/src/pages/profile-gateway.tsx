@@ -68,9 +68,12 @@ export default function ProfileGateway() {
 
   if (isLoading || playersLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
-      </div>
+      <>
+        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
+        <div className="fixed inset-0 w-full h-full z-10 flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
+        </div>
+      </>
     );
   }
 
@@ -115,12 +118,12 @@ export default function ProfileGateway() {
   };
 
   return (
-    <div 
-      className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-y-none z-0"
-      style={{ 
-        background: 'linear-gradient(to bottom, #111827, #000000)',
-      }}
-    >
+    <>
+      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
+
+      {/* Main Content Wrapper */}
+      <div className="fixed inset-0 h-[100dvh] w-full overflow-y-auto overflow-x-hidden flex flex-col overscroll-y-none z-10 bg-transparent">
       {/* Settings gear icon - absolutely positioned within the fixed container */}
       <div className="absolute top-4 right-4 z-50" style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <DropdownMenu>
@@ -375,6 +378,7 @@ export default function ProfileGateway() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </>
   );
 }

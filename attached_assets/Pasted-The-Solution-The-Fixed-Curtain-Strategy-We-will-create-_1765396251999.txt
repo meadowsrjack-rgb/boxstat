@@ -1,3 +1,16 @@
+The Solution: The "Fixed Curtain" Strategy We will create a separate div just for the background. We will pin it to the screen edges (fixed inset-0) and place it behind the content (z-0). This way, even if the keyboard crushes your login form, the background stays perfectly still and covers 100% of the screen.
+
+Here is the updated LoginPage.tsx.
+
+Key Changes Made:
+
+Detached Background: Added a standalone <div className="fixed inset-0 ..."> at the top. This acts as a permanent wallpaper that ignores keyboard resizing.
+
+Transparent Container: The main wrapper (ios-fixed-page) now has bg-transparent so the wallpaper shows through.
+
+Overscroll Fix: Added overscroll-none to stop the whole page from bouncing and revealing white space.
+
+TypeScript
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

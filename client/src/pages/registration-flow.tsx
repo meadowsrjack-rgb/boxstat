@@ -230,30 +230,33 @@ export default function RegistrationFlow() {
   };
 
   return (
-    <div 
-      className="ios-fixed-page bg-gradient-to-br from-gray-900 via-gray-800 to-black"
-    >
-      {/* Back Button */}
-      <div 
-        className="fixed top-4 left-4 z-50"
-        style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <button
-          onClick={() => currentStep === 1 ? setLocation("/") : handleBack()}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          data-testid="button-back"
-        >
-          <ChevronLeft className="w-5 h-5 text-white" />
-        </button>
-      </div>
+    <>
+      {/* FIX: DETACHED BACKGROUND LAYER - never moves with keyboard */}
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
 
-      <div 
-        className="flex flex-col px-8"
-        style={{ 
-          paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))',
-          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
-        }}
-      >
+      {/* Main Content Wrapper */}
+      <div className="ios-fixed-page relative z-10 w-full h-full bg-transparent overscroll-none">
+        {/* Back Button */}
+        <div 
+          className="fixed top-4 left-4 z-50"
+          style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <button
+            onClick={() => currentStep === 1 ? setLocation("/") : handleBack()}
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+        </div>
+
+        <div 
+          className="flex flex-col px-8"
+          style={{ 
+            paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))',
+            paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
         <div className="w-full max-w-lg mx-auto flex-1 flex flex-col">
           {/* Progress Bar */}
           <div className="flex items-center justify-between mb-8 pt-8">
@@ -416,8 +419,9 @@ export default function RegistrationFlow() {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

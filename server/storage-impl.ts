@@ -60,6 +60,8 @@ import {
   type InsertUserAwardRecord,
   type SelectMigrationLookup,
   type SelectSubscription,
+  type BugReport,
+  bugReports,
 } from "@shared/schema";
 
 // =============================================
@@ -292,6 +294,12 @@ export interface IStorage {
   deleteNotificationTriggerRule(id: number): Promise<void>;
   createTriggeredNotificationLog(data: InsertTriggeredNotificationLog): Promise<TriggeredNotificationLog>;
   getTriggeredNotificationLogsByUser(userId: string): Promise<TriggeredNotificationLog[]>;
+  
+  // Bug Report operations
+  getBugReport(id: string): Promise<BugReport | undefined>;
+  getBugReportsByOrganization(organizationId: string): Promise<BugReport[]>;
+  createBugReport(data: { id: string; organizationId: string; userId: string; userEmail?: string; userName?: string; title: string; description: string; userAgent?: string; platform?: string; status?: string }): Promise<BugReport>;
+  updateBugReport(id: string, updates: Partial<BugReport>): Promise<BugReport | undefined>;
 }
 
 // =============================================
@@ -2236,6 +2244,44 @@ class MemStorage implements IStorage {
   
   async getTriggeredNotificationLogsByUser(userId: string): Promise<TriggeredNotificationLog[]> {
     return Array.from(this.triggeredLogsStore.values()).filter(l => l.recipientUserId === userId);
+  }
+  
+  // Bug Report operations (MemStorage - not persisted)
+  private bugReportsStore: Map<string, BugReport> = new Map();
+  
+  async getBugReport(id: string): Promise<BugReport | undefined> {
+    return this.bugReportsStore.get(id);
+  }
+  
+  async getBugReportsByOrganization(organizationId: string): Promise<BugReport[]> {
+    return Array.from(this.bugReportsStore.values()).filter(b => b.organizationId === organizationId);
+  }
+  
+  async createBugReport(data: { id: string; organizationId: string; userId: string; userEmail?: string; userName?: string; title: string; description: string; userAgent?: string; platform?: string; status?: string }): Promise<BugReport> {
+    const bugReport: BugReport = {
+      id: data.id,
+      organizationId: data.organizationId,
+      userId: data.userId,
+      userEmail: data.userEmail || null,
+      userName: data.userName || null,
+      title: data.title,
+      description: data.description,
+      userAgent: data.userAgent || null,
+      platform: data.platform || null,
+      status: data.status || 'open',
+      createdAt: new Date().toISOString(),
+      resolvedAt: null,
+    };
+    this.bugReportsStore.set(bugReport.id, bugReport);
+    return bugReport;
+  }
+  
+  async updateBugReport(id: string, updates: Partial<BugReport>): Promise<BugReport | undefined> {
+    const bugReport = this.bugReportsStore.get(id);
+    if (!bugReport) return undefined;
+    const updated = { ...bugReport, ...updates };
+    this.bugReportsStore.set(id, updated);
+    return updated;
   }
 }
 
@@ -5298,6 +5344,44 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.triggeredNotificationLog.recipientUserId, userId))
       .orderBy(desc(schema.triggeredNotificationLog.createdAt));
     return results as TriggeredNotificationLog[];
+  }
+  
+  // Bug Report operations
+  async getBugReport(id: string): Promise<BugReport | undefined> {
+    const results = await db.select().from(schema.bugReports)
+      .where(eq(schema.bugReports.id, id));
+    return results[0] as BugReport | undefined;
+  }
+  
+  async getBugReportsByOrganization(organizationId: string): Promise<BugReport[]> {
+    const results = await db.select().from(schema.bugReports)
+      .where(eq(schema.bugReports.organizationId, organizationId))
+      .orderBy(desc(schema.bugReports.createdAt));
+    return results as BugReport[];
+  }
+  
+  async createBugReport(data: { id: string; organizationId: string; userId: string; userEmail?: string; userName?: string; title: string; description: string; userAgent?: string; platform?: string; status?: string }): Promise<BugReport> {
+    const [result] = await db.insert(schema.bugReports).values({
+      id: data.id,
+      organizationId: data.organizationId,
+      userId: data.userId,
+      userEmail: data.userEmail || null,
+      userName: data.userName || null,
+      title: data.title,
+      description: data.description,
+      userAgent: data.userAgent || null,
+      platform: data.platform || null,
+      status: data.status || 'open',
+    }).returning();
+    return result as BugReport;
+  }
+  
+  async updateBugReport(id: string, updates: Partial<BugReport>): Promise<BugReport | undefined> {
+    const [result] = await db.update(schema.bugReports)
+      .set(updates)
+      .where(eq(schema.bugReports.id, id))
+      .returning();
+    return result as BugReport | undefined;
   }
 }
 

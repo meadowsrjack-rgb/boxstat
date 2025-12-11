@@ -2135,3 +2135,31 @@ export const insertTriggeredNotificationLogSchema = createInsertSchema(triggered
 
 export type InsertTriggeredNotificationLog = z.infer<typeof insertTriggeredNotificationLogSchema>;
 export type TriggeredNotificationLog = typeof triggeredNotificationLog.$inferSelect;
+
+// =============================================
+// Bug Reports Schema
+// =============================================
+
+export const bugReports = pgTable("bug_reports", {
+  id: varchar().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  userEmail: varchar("user_email"),
+  userName: varchar("user_name"),
+  title: varchar().notNull(),
+  description: text().notNull(),
+  userAgent: varchar("user_agent"),
+  platform: varchar(),
+  status: varchar().default('open').notNull(), // open, in_progress, resolved, closed
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  resolvedAt: timestamp("resolved_at", { mode: 'string' }),
+});
+
+export const insertBugReportSchema = createInsertSchema(bugReports).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+});
+
+export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
+export type BugReport = typeof bugReports.$inferSelect;

@@ -8359,6 +8359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userId = req.user?.id || 'anonymous';
+      const organizationId = req.user?.organizationId || 'default-org';
       
       // Fetch full user details from storage
       const fullUser = userId !== 'anonymous' ? await storage.getUser(userId) : null;
@@ -8367,38 +8368,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `${fullUser.firstName} ${fullUser.lastName}` 
         : 'Unknown User';
       
-      const timestamp = new Date().toISOString();
-      const fileTimestamp = timestamp.replace(/[:.]/g, '-');
-      const filename = `bug-${fileTimestamp}.json`;
-      
-      const bugReport = {
+      // Save to database
+      const bugReport = await storage.createBugReport({
         id: crypto.randomUUID(),
+        organizationId,
+        userId,
+        userEmail,
+        userName,
         title,
         description,
-        submittedAt: timestamp,
-        user: {
-          id: userId,
-          email: userEmail,
-          name: userName,
-        },
         userAgent: req.headers['user-agent'] || 'unknown',
         platform: req.headers['sec-ch-ua-platform'] || 'unknown',
-      };
+        status: 'open',
+      });
       
-      const bugReportsDir = path.join(process.cwd(), 'bug-reports');
-      if (!fs.existsSync(bugReportsDir)) {
-        fs.mkdirSync(bugReportsDir, { recursive: true });
-      }
+      console.log(`🐛 Bug report saved to database: ${bugReport.id}`);
       
-      const filePath = path.join(bugReportsDir, filename);
-      fs.writeFileSync(filePath, JSON.stringify(bugReport, null, 2));
-      
-      console.log(`🐛 Bug report saved: ${filename}`);
-      
-      res.json({ success: true, message: "Bug report submitted successfully" });
+      res.json({ success: true, message: "Bug report submitted successfully", id: bugReport.id });
     } catch (error: any) {
       console.error('Error saving bug report:', error);
       res.status(500).json({ error: "Failed to save bug report" });
+    }
+  });
+  
+  // Get all bug reports (admin only)
+  app.get("/api/bug-reports", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      
+      if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can view bug reports" });
+      }
+      
+      const reports = await storage.getBugReportsByOrganization(organizationId);
+      res.json(reports);
+    } catch (error: any) {
+      console.error('Error fetching bug reports:', error);
+      res.status(500).json({ error: "Failed to fetch bug reports" });
+    }
+  });
+  
+  // Update bug report status (admin only)
+  app.patch("/api/bug-reports/:id", requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (role !== 'admin') {
+        return res.status(403).json({ error: "Only admins can update bug reports" });
+      }
+      
+      const updates: any = { status };
+      if (status === 'resolved' || status === 'closed') {
+        updates.resolvedAt = new Date().toISOString();
+      }
+      
+      const updated = await storage.updateBugReport(id, updates);
+      if (!updated) {
+        return res.status(404).json({ error: "Bug report not found" });
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating bug report:', error);
+      res.status(500).json({ error: "Failed to update bug report" });
     }
   });
 

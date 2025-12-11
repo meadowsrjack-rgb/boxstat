@@ -4133,7 +4133,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/coaches/:coachId/teams', requireAuth, async (req: any, res) => {
     try {
       const teams = await storage.getTeamsByCoach(req.params.coachId);
-      res.json(teams);
+      
+      // Enrich teams with program information
+      const enrichedTeams = await Promise.all(teams.map(async (team) => {
+        let programName = null;
+        if (team.programId) {
+          const program = await storage.getProgram(String(team.programId));
+          if (program) {
+            programName = program.name;
+          }
+        }
+        return {
+          ...team,
+          programName,
+        };
+      }));
+      
+      res.json(enrichedTeams);
     } catch (error: any) {
       console.error('Error fetching coach teams:', error);
       res.status(500).json({ message: 'Failed to fetch coach teams' });

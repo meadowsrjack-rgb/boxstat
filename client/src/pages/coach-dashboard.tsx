@@ -63,6 +63,8 @@ type CoachTeam = {
   name: string;
   ageGroup?: string;
   program?: string;
+  programName?: string; // From enriched API response
+  programId?: number;
   inviteCode?: string;
   roster: Array<{
     id: number;
@@ -186,7 +188,7 @@ export default function CoachDashboard() {
   });
 
   // Query for coach's assigned teams
-  const { data: assignedTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup: string}>>({
+  const { data: assignedTeams = [] } = useQuery<Array<{id: number; name: string; ageGroup: string; programName?: string; programId?: number}>>({
     queryKey: [`/api/coaches/${coachProfileId}/teams`],
     enabled: !!coachProfileId,
     queryFn: async () => {
@@ -768,7 +770,7 @@ function RosterTab({
 }: {
   team?: CoachTeam | null;
   roster: any[];
-  assignedTeams: Array<{id: number; name: string; ageGroup: string}>;
+  assignedTeams: Array<{id: number; name: string; ageGroup: string; programName?: string}>;
   allTeams: Array<{id: string; name: string; ageGroup?: string}>;
   selectedTeamFilter: 'my-team' | number;
   onTeamFilterChange: (filter: 'my-team' | number) => void;
@@ -892,6 +894,8 @@ function RosterTab({
                   <div>
                     <div className="font-semibold text-gray-900">{team.name}</div>
                     <div className="text-sm text-gray-500">
+                      {team.programName && <span className="text-red-600 font-medium">{team.programName}</span>}
+                      {team.programName && team.ageGroup && <span className="mx-1">•</span>}
                       {team.ageGroup}
                     </div>
                   </div>
@@ -927,7 +931,11 @@ function RosterTab({
           Back to Teams
         </Button>
         <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
-        <p className="text-sm text-gray-500">{selectedTeam?.ageGroup}</p>
+        <p className="text-sm text-gray-500">
+          {selectedTeam?.programName && <span className="text-red-600 font-medium">{selectedTeam.programName}</span>}
+          {selectedTeam?.programName && selectedTeam?.ageGroup && <span className="mx-1">•</span>}
+          {selectedTeam?.ageGroup}
+        </p>
       </div>
 
       {/* Roster */}

@@ -4298,7 +4298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     divisionIds: (string | number)[],
     programIds: (string | number)[],
     targetUserId: string,
-    debug = false
+    debug = false,
+    hasLinkedPlayers = false
   ) {
     return events.filter((event: any) => {
       const visibility = event.visibility || {};
@@ -4312,6 +4313,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (visibility.roles?.includes(role) || assignTo.roles?.includes(role)) {
         if (debug) console.log(`    ✅ MATCH: Role "${role}"`);
         return true;
+      }
+      
+      // Parents with linked players should also see events targeted at 'player' role
+      // This allows parents to see their children's events
+      if (role === 'parent' && hasLinkedPlayers) {
+        if (visibility.roles?.includes('player') || assignTo.roles?.includes('player')) {
+          if (debug) console.log(`    ✅ MATCH: Parent sees player-targeted event (has linked players)`);
+          return true;
+        }
       }
       
       // Check team-based visibility (check all team IDs)
@@ -4386,8 +4396,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('  targetUserId:', targetUserId);
     console.log('  Total events to filter:', allEvents.length);
     
+    // For parents, check if they have linked players (to show player-targeted events)
+    // Check both team/program membership AND direct player links
+    let hasLinkedPlayers = false;
+    if (role === 'parent') {
+      // First check if there are teams/programs (players with assignments)
+      hasLinkedPlayers = teamIds.length > 0 || programIds.length > 0 || divisionIds.length > 0;
+      
+      // Also check for linked players directly (even if they don't have team assignments yet)
+      if (!hasLinkedPlayers) {
+        const linkedPlayers = await storage.getPlayersByParent(userId);
+        hasLinkedPlayers = linkedPlayers.length > 0;
+      }
+    }
+    console.log('  hasLinkedPlayers:', hasLinkedPlayers);
+    
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, true);
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, true, hasLinkedPlayers);
     
     console.log('  Filtered result:', filteredEvents.length, 'events shown');
     console.log('🔍 EVENT FILTERING DEBUG - End\n');
@@ -4413,8 +4438,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       childProfileId as string | undefined
     );
     
+    // For parents, check if they have linked players (including those without team assignments)
+    let hasLinkedPlayers = false;
+    if (role === 'parent') {
+      hasLinkedPlayers = teamIds.length > 0 || programIds.length > 0 || divisionIds.length > 0;
+      if (!hasLinkedPlayers) {
+        const linkedPlayers = await storage.getPlayersByParent(userId);
+        hasLinkedPlayers = linkedPlayers.length > 0;
+      }
+    }
+    
     // Filter events using shared helper
-    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false);
+    const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false, hasLinkedPlayers);
     
     res.json(filteredEvents);
   });

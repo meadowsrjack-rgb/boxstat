@@ -24,6 +24,7 @@ import {
   Calendar,
   Trophy,
   User,
+  Users,
   MapPin,
   Clock,
   Target,
@@ -37,6 +38,10 @@ import {
   LogOut,
   ChevronLeft,
   ShoppingBag,
+  Phone,
+  Mail,
+  Award,
+  Shirt,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
@@ -706,6 +711,155 @@ function EnhancedPlayerCard({
   );
 }
 
+// Player Profile Card with comprehensive details for Profile tab
+function PlayerProfileCard({ player }: { player: any }) {
+  const { data: teamsData = [] } = useQuery<Array<{id: number; name: string; ageGroup: string; program: string}>>({
+    queryKey: [`/api/users/${player.id}/teams`],
+    enabled: !!player.id,
+  });
+
+  const { data: awardsData } = useQuery<any>({
+    queryKey: [`/api/users/${player.id}/awards`],
+    enabled: !!player.id,
+  });
+
+  const totalAwards = typeof awardsData?.totalBadges === 'number' && typeof awardsData?.totalTrophies === 'number'
+    ? awardsData.totalBadges + awardsData.totalTrophies
+    : (awardsData?.totalBadges || 0) + (awardsData?.totalTrophies || 0) || 0;
+
+  return (
+    <Card className="border-0 shadow-sm" data-testid={`player-profile-card-${player.id}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-4">
+          <Avatar className="w-14 h-14 flex-shrink-0">
+            <AvatarImage src={player.profileImageUrl} alt={`${player.firstName} ${player.lastName}`} />
+            <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-lg font-bold">
+              {player.firstName?.[0]}{player.lastName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="font-semibold text-lg text-gray-900" data-testid={`player-profile-name-${player.id}`}>
+                {player.firstName} {player.lastName}
+              </h3>
+              <Badge variant="outline" className="capitalize text-xs">
+                {player.role || 'Player'}
+              </Badge>
+            </div>
+            
+            {teamsData.length > 0 && (
+              <div className="flex items-center gap-1 mt-1 text-sm text-gray-600">
+                <Users className="w-3.5 h-3.5" />
+                <span>{teamsData.map(t => t.name).join(', ')}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
+          {player.jerseyNumber && (
+            <div className="flex items-center gap-2">
+              <Shirt className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="text-xs text-gray-500 block">Jersey</span>
+                <span className="text-sm font-medium">#{player.jerseyNumber}</span>
+              </div>
+            </div>
+          )}
+          
+          {player.position && (
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="text-xs text-gray-500 block">Position</span>
+                <span className="text-sm font-medium">{player.position}</span>
+              </div>
+            </div>
+          )}
+          
+          {player.age && (
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="text-xs text-gray-500 block">Age</span>
+                <span className="text-sm font-medium">{player.age}</span>
+              </div>
+            </div>
+          )}
+          
+          {player.dateOfBirth && (
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="text-xs text-gray-500 block">DOB</span>
+                <span className="text-sm font-medium">
+                  {new Date(player.dateOfBirth).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-2">
+            <Award className="w-4 h-4 text-yellow-500" />
+            <div>
+              <span className="text-xs text-gray-500 block">Awards</span>
+              <span className="text-sm font-medium">{totalAwards}</span>
+            </div>
+          </div>
+          
+          {player.schoolGrade && (
+            <div className="flex items-center gap-2">
+              <User className="w-4 h-4 text-gray-400" />
+              <div>
+                <span className="text-xs text-gray-500 block">Grade</span>
+                <span className="text-sm font-medium">{player.schoolGrade}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {(player.emergencyContact || player.medicalInfo || player.allergies) && (
+          <div className="mt-4 pt-4 border-t space-y-2">
+            {player.emergencyContact && (
+              <div className="flex items-start gap-2 text-sm">
+                <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
+                <div>
+                  <span className="text-gray-500">Emergency: </span>
+                  <span className="font-medium">{player.emergencyContact}</span>
+                  {player.emergencyPhone && (
+                    <span className="text-gray-500"> - {player.emergencyPhone}</span>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {player.medicalInfo && (
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5" />
+                <div>
+                  <span className="text-gray-500">Medical: </span>
+                  <span className="font-medium">{player.medicalInfo}</span>
+                </div>
+              </div>
+            )}
+            
+            {player.allergies && (
+              <div className="flex items-start gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5" />
+                <div>
+                  <span className="text-gray-500">Allergies: </span>
+                  <span className="font-medium">{player.allergies}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -971,6 +1125,10 @@ export default function UnifiedAccount() {
               <TabsTrigger value="messages" data-testid="tab-messages" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 Messages
+              </TabsTrigger>
+              <TabsTrigger value="profile" data-testid="tab-profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <User className="w-4 h-4 mr-2" />
+                Profile
               </TabsTrigger>
               <TabsTrigger value="settings" data-testid="tab-settings" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
                 <Settings className="w-4 h-4 mr-2" />
@@ -1410,6 +1568,102 @@ export default function UnifiedAccount() {
             </Card>
           </TabsContent>
 
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            {/* Parent Profile Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  My Profile
+                </CardTitle>
+                <CardDescription>Your account information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-16 h-16">
+                    <AvatarImage src={user?.profileImageUrl} alt={`${user?.firstName} ${user?.lastName}`} />
+                    <AvatarFallback className="bg-gradient-to-br from-red-500 to-red-600 text-white text-xl font-bold">
+                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="text-lg font-semibold" data-testid="profile-parent-name">
+                      {user?.firstName} {user?.lastName}
+                    </h3>
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {user?.role || 'Parent'}
+                    </Badge>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="text-xs text-gray-500 block">Email</span>
+                      <span className="text-sm font-medium" data-testid="profile-parent-email">{user?.email || '-'}</span>
+                    </div>
+                    {user?.phoneNumber && (
+                      <div>
+                        <span className="text-xs text-gray-500 block">Phone</span>
+                        <span className="text-sm font-medium" data-testid="profile-parent-phone">{user?.phoneNumber}</span>
+                      </div>
+                    )}
+                    {user?.address && (
+                      <div>
+                        <span className="text-xs text-gray-500 block">Address</span>
+                        <span className="text-sm font-medium">{user?.address}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3">
+                    {user?.city && (
+                      <div>
+                        <span className="text-xs text-gray-500 block">City</span>
+                        <span className="text-sm font-medium">{user?.city}</span>
+                      </div>
+                    )}
+                    {user?.emergencyContact && (
+                      <div>
+                        <span className="text-xs text-gray-500 block">Emergency Contact</span>
+                        <span className="text-sm font-medium">{user?.emergencyContact}</span>
+                      </div>
+                    )}
+                    {user?.emergencyPhone && (
+                      <div>
+                        <span className="text-xs text-gray-500 block">Emergency Phone</span>
+                        <span className="text-sm font-medium">{user?.emergencyPhone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Linked Players Section */}
+            <div>
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Linked Players ({players.length})
+              </h2>
+              {players.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <h3 className="text-lg font-semibold mb-2">No Players Linked</h3>
+                    <p className="text-gray-600">You don't have any players linked to your account yet.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {players.map((player: any) => (
+                    <PlayerProfileCard key={player.id} player={player} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
             <Card>
@@ -1467,8 +1721,8 @@ export default function UnifiedAccount() {
         title="Set Lock PIN"
         description={`Create a 4-digit PIN to lock this device to ${players.find((p: any) => p.id === playerToLock)?.firstName}'s dashboard`}
       />
-      {/* Event Detail Modal */}
-      {selectedChildForModal && (
+      {/* Event Detail Modal - always render but handle no child selected case */}
+      {selectedChildForModal ? (
         <>
           <EventDetailModal
             event={selectedEvent}
@@ -1488,6 +1742,44 @@ export default function UnifiedAccount() {
             </div>
           )}
         </>
+      ) : (
+        <Dialog open={eventDetailOpen} onOpenChange={setEventDetailOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{selectedEvent?.title || 'Event Details'}</DialogTitle>
+              <DialogDescription>
+                {selectedEvent?.startTime && (
+                  <>
+                    {new Date(selectedEvent.startTime).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-6 text-center">
+              <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-semibold mb-2">No Players Linked</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                You need to link players to your account before you can RSVP or check in to events.
+              </p>
+              <Button 
+                onClick={() => {
+                  setEventDetailOpen(false);
+                  setLocation('/unified-account?tab=profile');
+                }}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Link a Player
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
       </div>
     </>

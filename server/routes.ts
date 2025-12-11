@@ -4348,8 +4348,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check user-specific assignment
-      if (assignTo.users?.includes(targetUserId) || visibility.users?.includes(targetUserId)) {
+      // Check user-specific assignment (handle both string and number IDs)
+      const userIdStr = String(targetUserId);
+      const assignToUsers = assignTo.users?.map((id: any) => String(id)) || [];
+      const visibilityUsers = visibility.users?.map((id: any) => String(id)) || [];
+      
+      if (assignToUsers.includes(userIdStr) || visibilityUsers.includes(userIdStr)) {
         if (debug) console.log(`    ✅ MATCH: User ${targetUserId}`);
         return true;
       }
@@ -4452,6 +4456,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const filteredEvents = filterEventsByScope(allEvents, role, teamIds, divisionIds, programIds, targetUserId, false, hasLinkedPlayers);
     
     res.json(filteredEvents);
+  });
+  
+  // Get coach's primary team
+  app.get('/api/coach/team', requireAuth, async (req: any, res) => {
+    const { id: userId, role } = req.user;
+    
+    // Only coaches can access this endpoint
+    if (role !== 'coach') {
+      return res.status(403).json({ message: 'Only coaches can access this endpoint' });
+    }
+    
+    try {
+      // Get all teams the coach is assigned to
+      const coachTeams = await storage.getTeamsByCoach(userId);
+      
+      if (coachTeams.length === 0) {
+        return res.json(null);
+      }
+      
+      // Return the first team as the "primary" team
+      // Include program info if available
+      const primaryTeam = coachTeams[0];
+      let programName = null;
+      
+      if (primaryTeam.programId) {
+        const program = await storage.getProgram(String(primaryTeam.programId));
+        if (program) {
+          programName = program.name;
+        }
+      }
+      
+      res.json({
+        id: primaryTeam.id,
+        name: primaryTeam.name,
+        ageGroup: primaryTeam.ageGroup || null,
+        programId: primaryTeam.programId,
+        programName: programName,
+        divisionId: primaryTeam.divisionId,
+        coachId: primaryTeam.coachId,
+        assistantCoachIds: primaryTeam.assistantCoachIds || [],
+      });
+    } catch (error: any) {
+      console.error('Error fetching coach primary team:', error);
+      res.status(500).json({ message: 'Failed to fetch coach team' });
+    }
   });
   
   // Coach-specific events endpoint (delegates to shared filtering logic)

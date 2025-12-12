@@ -1236,12 +1236,36 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                 <div className="p-6 bg-white rounded-lg shadow-sm">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Profile Information</h3>
                   <div className="space-y-4">
-                    {/* Basic Info */}
+                    {/* Editable Fields - Height, From, Position, Jersey Number */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
+                        <Select value={editableProfile.height || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, height: v }))}>
+                          <SelectTrigger className="w-full" data-testid="select-height">
+                            <SelectValue placeholder="Select height" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {HEIGHT_OPTIONS.map((h) => (
+                              <SelectItem key={h} value={h}>
+                                {h}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
+                        <CityTypeahead
+                          value={editableProfile.city}
+                          onChange={(city) => setEditableProfile((p) => ({ ...p, city: city, location: city }))}
+                        />
+                      </div>
+                      
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
                         <Select value={editableProfile.position || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, position: v }))}>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full" data-testid="select-position">
                             <SelectValue placeholder="Select position" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1257,7 +1281,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Jersey Number</label>
                         <Select value={editableProfile.jerseyNumber || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, jerseyNumber: v }))}>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full" data-testid="select-jersey">
                             <SelectValue placeholder="Select number" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1269,29 +1293,38 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           </SelectContent>
                         </Select>
                       </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Height</label>
-                        <Select value={editableProfile.height || ""} onValueChange={(v) => setEditableProfile((p) => ({ ...p, height: v }))}>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select height" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {HEIGHT_OPTIONS.map((h) => (
-                              <SelectItem key={h} value={h}>
-                                {h}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                        <CityTypeahead
-                          value={editableProfile.city}
-                          onChange={(city) => setEditableProfile((p) => ({ ...p, city: city, location: city }))}
-                        />
+                    </div>
+                    
+                    {/* Read-only Fields - Greyed Out */}
+                    <div className="pt-4 border-t">
+                      <h4 className="text-md font-medium text-gray-500 mb-3">Other Info <span className="text-xs font-normal">(edit in parent settings)</span></h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">First Name</label>
+                          <div className="w-full px-3 py-2 bg-gray-100 text-gray-500 rounded-md border border-gray-200">
+                            {displayProfile?.firstName || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Last Name</label>
+                          <div className="w-full px-3 py-2 bg-gray-100 text-gray-500 rounded-md border border-gray-200">
+                            {displayProfile?.lastName || "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Date of Birth</label>
+                          <div className="w-full px-3 py-2 bg-gray-100 text-gray-500 rounded-md border border-gray-200">
+                            {displayProfile?.dateOfBirth 
+                              ? new Date(displayProfile.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                              : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                          <div className="w-full px-3 py-2 bg-gray-100 text-gray-500 rounded-md border border-gray-200 truncate">
+                            {displayProfile?.email || "—"}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
@@ -1320,6 +1353,7 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                             privacySettings.discoverable ? 'bg-red-600' : 'bg-gray-200'
                           }`}
+                          data-testid="toggle-discoverable"
                         >
                           <span
                             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${

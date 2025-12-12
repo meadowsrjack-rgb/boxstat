@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -454,6 +455,148 @@ function FamilyCalendar({
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// Player Emergency & Medical Info Editor Component
+function PlayerInfoEditor({ player }: { player: any }) {
+  const { toast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    emergencyContact: player.emergencyContact || "",
+    emergencyPhone: player.emergencyPhone || "",
+    medicalInfo: player.medicalInfo || "",
+    allergies: player.allergies || "",
+  });
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/users/${player.id}/emergency-medical`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(formData),
+      });
+      
+      if (res.ok) {
+        toast({ title: "Saved", description: `Updated info for ${player.firstName}` });
+        setIsEditing(false);
+        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
+      } else {
+        const data = await res.json();
+        toast({ title: "Error", description: data.message || "Failed to save", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="border rounded-lg p-4 bg-gray-50" data-testid={`player-info-editor-${player.id}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={player.profileImageUrl} />
+            <AvatarFallback className="bg-red-100 text-red-600 font-semibold">
+              {player.firstName?.[0]}{player.lastName?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-semibold">{player.firstName} {player.lastName}</div>
+            <div className="text-xs text-gray-500">
+              {player.dateOfBirth 
+                ? new Date(player.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                : "No DOB set"}
+            </div>
+          </div>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setIsEditing(!isEditing)}
+          data-testid={`button-edit-player-info-${player.id}`}
+        >
+          {isEditing ? "Cancel" : "Edit"}
+        </Button>
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
+              <Input
+                value={formData.emergencyContact}
+                onChange={(e) => setFormData(prev => ({ ...prev, emergencyContact: e.target.value }))}
+                placeholder="e.g., Mom - Jane Doe"
+                data-testid={`input-emergency-contact-${player.id}`}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
+              <Input
+                value={formData.emergencyPhone}
+                onChange={(e) => setFormData(prev => ({ ...prev, emergencyPhone: e.target.value }))}
+                placeholder="(555) 123-4567"
+                data-testid={`input-emergency-phone-${player.id}`}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
+            <Input
+              value={formData.allergies}
+              onChange={(e) => setFormData(prev => ({ ...prev, allergies: e.target.value }))}
+              placeholder="e.g., Peanuts, Bee stings"
+              data-testid={`input-allergies-${player.id}`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Medical Information</label>
+            <Textarea
+              value={formData.medicalInfo}
+              onChange={(e) => setFormData(prev => ({ ...prev, medicalInfo: e.target.value }))}
+              placeholder="Any medical conditions, medications, or special needs..."
+              rows={3}
+              data-testid={`input-medical-info-${player.id}`}
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid={`button-save-player-info-${player.id}`}
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <span className="text-gray-500">Emergency Contact:</span>
+            <div className="font-medium">{formData.emergencyContact || "Not set"}</div>
+          </div>
+          <div>
+            <span className="text-gray-500">Emergency Phone:</span>
+            <div className="font-medium">{formData.emergencyPhone || "Not set"}</div>
+          </div>
+          <div>
+            <span className="text-gray-500">Allergies:</span>
+            <div className="font-medium">{formData.allergies || "None listed"}</div>
+          </div>
+          <div>
+            <span className="text-gray-500">Medical Info:</span>
+            <div className="font-medium">{formData.medicalInfo || "None listed"}</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1705,6 +1848,24 @@ export default function UnifiedAccount() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Player Emergency & Medical Info */}
+            {players.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Player Information
+                  </CardTitle>
+                  <CardDescription>Emergency contacts and medical information for each player</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {players.map((player: any) => (
+                    <PlayerInfoEditor key={player.id} player={player} />
+                  ))}
+                </CardContent>
+              </Card>
+            )}
             
             {/* Danger Zone */}
             <SettingsDangerZone user={user} />

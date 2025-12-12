@@ -3242,6 +3242,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update emergency contact and medical info for a player (parent can update their children)
+  app.patch('/api/users/:id/emergency-medical', requireAuth, async (req: any, res) => {
+    try {
+      const { id: requesterId, role } = req.user;
+      const targetUserId = req.params.id;
+      const { emergencyContact, emergencyPhone, medicalInfo, allergies } = req.body;
+      
+      // Get the target user
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Authorization: parent can update their children, user can update themselves, admin can update anyone
+      const isOwnProfile = requesterId === targetUserId;
+      const isParentOfChild = targetUser.accountHolderId === requesterId;
+      const isAdmin = role === 'admin';
+      
+      if (!isOwnProfile && !isParentOfChild && !isAdmin) {
+        return res.status(403).json({ message: 'Not authorized to update this user' });
+      }
+      
+      // Update only the emergency/medical fields
+      const updated = await storage.updateUser(targetUserId, {
+        emergencyContact,
+        emergencyPhone,
+        medicalInfo,
+        allergies,
+      });
+      
+      res.json({ success: true, user: updated });
+    } catch (error: any) {
+      console.error('Error updating emergency/medical info:', error);
+      res.status(500).json({ message: 'Failed to update emergency/medical info', error: error.message });
+    }
+  });
+  
   app.delete('/api/users/:id', requireAuth, async (req: any, res) => {
     const { role, organizationId } = req.user;
     if (role !== 'admin') {

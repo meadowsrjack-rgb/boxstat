@@ -256,9 +256,7 @@ export default function TrophiesBadgesPage() {
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              My Trophies & Badges
-            </h1>
+            <h1 className="text-3xl font-bold" data-testid="text-page-title">Awards</h1>
             <p className="text-sm text-gray-400 mt-1" data-testid="text-page-subtitle">
               Track your achievements and earn rewards for your dedication
             </p>

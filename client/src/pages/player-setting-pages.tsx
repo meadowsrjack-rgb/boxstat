@@ -91,14 +91,15 @@ export function PlayerProfilePage() {
         credentials: "include",
         body: JSON.stringify({ settings: { searchable: visible } }),
       });
-      if (!response.ok) throw new Error("Failed to update visibility");
-      return response.json();
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error("Failed to update visibility");
+      return { ...data, newValue: visible };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/privacy'] });
       toast({ 
-        title: isVisible ? "Profile Hidden" : "Profile Visible", 
-        description: isVisible ? "Your player card is now hidden from other accounts" : "Your player card is now visible to other accounts"
+        title: data.newValue ? "Profile Visible" : "Profile Hidden", 
+        description: data.newValue ? "Your player card is now visible to others" : "Your player card is now hidden"
       });
     },
     onError: () => {
@@ -262,14 +263,14 @@ export function PlayerProfilePage() {
             <button
               onClick={toggleVisibility}
               disabled={visibilityMutation.isPending}
-              className="absolute top-2 left-2 p-1 cursor-pointer focus:outline-none z-10"
+              className="absolute top-4 left-4 p-1 cursor-pointer focus:outline-none z-10"
               data-testid="button-toggle-visibility"
               type="button"
             >
               {isVisible ? (
-                <Eye className="h-4 w-4 text-gray-400" />
+                <Eye className="h-4 w-4" style={{ color: '#374151' }} />
               ) : (
-                <EyeOff className="h-4 w-4 text-gray-400" />
+                <EyeOff className="h-4 w-4" style={{ color: '#374151' }} />
               )}
             </button>
             <CardContent className="py-6">

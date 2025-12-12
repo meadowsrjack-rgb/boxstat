@@ -72,7 +72,11 @@ export function PlayerProfilePage() {
   
   // Fetch privacy settings
   const { data: privacySettings } = useQuery<any>({
-    queryKey: ['/api/privacy'],
+    queryKey: ['/api/privacy', profileId],
+    queryFn: async () => {
+      const res = await fetch(`/api/privacy?profileId=${profileId}`, { credentials: 'include' });
+      return res.json();
+    },
     enabled: !!profileId,
   });
   
@@ -89,14 +93,14 @@ export function PlayerProfilePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ settings: { searchable: visible } }),
+        body: JSON.stringify({ profileId, settings: { searchable: visible } }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error("Failed to update visibility");
       return { ...data, newValue: visible };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/privacy'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/privacy', profileId] });
       toast({ 
         title: data.newValue ? "Profile Visible" : "Profile Hidden", 
         description: data.newValue ? "Your player card is now visible to others" : "Your player card is now hidden"

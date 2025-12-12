@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, User, Upload, Camera, LogOut, Users, Mail, Key, Smartphone, MapPin, Globe, Shield, FileText, Clock, Eye, AlertTriangle, Trash2 } from "lucide-react";
+import { ArrowLeft, User, Upload, Camera, LogOut, Users, Mail, Key, Smartphone, MapPin, Globe, Shield, FileText, Clock, Eye, EyeOff, AlertTriangle, Trash2 } from "lucide-react";
 
 const POSITION_OPTIONS = [
   { value: "PG", label: "PG - Point Guard" },
@@ -66,6 +66,52 @@ export function PlayerProfilePage() {
       });
     }
   }, [activeProfile, user]);
+
+  // Visibility state - controls whether player card is visible to other accounts
+  const [isVisible, setIsVisible] = useState(true);
+  
+  // Fetch privacy settings
+  const { data: privacySettings } = useQuery<any>({
+    queryKey: ['/api/privacy'],
+    enabled: !!profileId,
+  });
+  
+  React.useEffect(() => {
+    if (privacySettings?.searchable !== undefined) {
+      setIsVisible(privacySettings.searchable);
+    }
+  }, [privacySettings]);
+  
+  // Mutation to toggle visibility
+  const visibilityMutation = useMutation({
+    mutationFn: async (visible: boolean) => {
+      const response = await fetch("/api/privacy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ settings: { searchable: visible } }),
+      });
+      if (!response.ok) throw new Error("Failed to update visibility");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/privacy'] });
+      toast({ 
+        title: isVisible ? "Profile Hidden" : "Profile Visible", 
+        description: isVisible ? "Your player card is now hidden from other accounts" : "Your player card is now visible to other accounts"
+      });
+    },
+    onError: () => {
+      setIsVisible(!isVisible); // Revert on error
+      toast({ title: "Error", description: "Failed to update visibility", variant: "destructive" });
+    },
+  });
+  
+  const toggleVisibility = () => {
+    const newValue = !isVisible;
+    setIsVisible(newValue);
+    visibilityMutation.mutate(newValue);
+  };
 
   // Profile picture upload state
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,20 +257,39 @@ export function PlayerProfilePage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Profile Picture */}
+          {/* Profile Picture with Visibility Toggle */}
           <Card>
             <CardContent className="py-6">
               <div className="flex flex-col items-center">
-                <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage 
-                    src={previewUrl || activeProfile?.profileImageUrl} 
-                    alt="Profile"
-                    className="object-cover w-full h-full"
-                  />
-                  <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
-                    {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage 
+                      src={previewUrl || activeProfile?.profileImageUrl} 
+                      alt="Profile"
+                      className="object-cover w-full h-full"
+                    />
+                    <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
+                      {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={`absolute -right-2 -bottom-2 h-8 w-8 rounded-full border-2 ${isVisible ? 'bg-green-100 border-green-500 hover:bg-green-200' : 'bg-gray-100 border-gray-400 hover:bg-gray-200'}`}
+                    onClick={toggleVisibility}
+                    disabled={visibilityMutation.isPending}
+                    data-testid="button-toggle-visibility"
+                  >
+                    {isVisible ? (
+                      <Eye className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-gray-500" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  {isVisible ? "Your player card is visible to others" : "Your player card is hidden"}
+                </p>
               </div>
             </CardContent>
           </Card>

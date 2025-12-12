@@ -261,35 +261,28 @@ export function PlayerProfilePage() {
           <Card>
             <CardContent className="py-6">
               <div className="flex flex-col items-center">
-                <div className="relative">
+                <button
+                  onClick={toggleVisibility}
+                  disabled={visibilityMutation.isPending}
+                  className="cursor-pointer focus:outline-none"
+                  data-testid="button-toggle-visibility"
+                >
                   <Avatar className="h-20 w-20">
                     <AvatarImage 
                       src={previewUrl || activeProfile?.profileImageUrl} 
                       alt="Profile"
                       className="object-cover w-full h-full"
                     />
-                    <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
+                    <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600 flex items-center justify-center gap-1">
                       {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
+                      {isVisible ? (
+                        <Eye className="h-3 w-3 text-gray-500" />
+                      ) : (
+                        <EyeOff className="h-3 w-3 text-gray-500" />
+                      )}
                     </AvatarFallback>
                   </Avatar>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className={`absolute -right-2 -bottom-2 h-8 w-8 rounded-full border-2 ${isVisible ? 'bg-green-100 border-green-500 hover:bg-green-200' : 'bg-gray-100 border-gray-400 hover:bg-gray-200'}`}
-                    onClick={toggleVisibility}
-                    disabled={visibilityMutation.isPending}
-                    data-testid="button-toggle-visibility"
-                  >
-                    {isVisible ? (
-                      <Eye className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500 mt-3">
-                  {isVisible ? "Your player card is visible to others" : "Your player card is hidden"}
-                </p>
+                </button>
               </div>
             </CardContent>
           </Card>

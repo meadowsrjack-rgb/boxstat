@@ -49,36 +49,20 @@ export function PlayerProfilePage() {
   });
 
   const [profile, setProfile] = useState({
-    firstName: "",
-    lastName: "",
     position: "",
     jerseyNumber: "",
     city: "",
-    age: "",
     height: "",
-    phoneNumber: "",
-    emergencyContact: "",
-    emergencyPhone: "",
-    medicalInfo: "",
-    allergies: "",
   });
 
   // Update profile state when active profile loads
   React.useEffect(() => {
     if (activeProfile) {
       setProfile({
-        firstName: activeProfile.firstName || "",
-        lastName: activeProfile.lastName || "",
         position: activeProfile.position || "",
         jerseyNumber: activeProfile.jerseyNumber?.toString() || "",
         city: (activeProfile as any)?.city || activeProfile.address || "",
-        age: (activeProfile as any)?.age || "",
         height: (activeProfile as any)?.height || "",
-        phoneNumber: activeProfile.phoneNumber || "",
-        emergencyContact: activeProfile.emergencyContact || "",
-        emergencyPhone: activeProfile.emergencyPhone || "",
-        medicalInfo: activeProfile.medicalInfo || "",
-        allergies: activeProfile.allergies || "",
       });
     }
   }, [activeProfile, user]);
@@ -146,10 +130,12 @@ export function PlayerProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (data: typeof profile) => {
+      // Only send editable basketball fields
       const updateData = {
-        ...data,
-        address: data.city,
+        position: data.position,
         jerseyNumber: data.jerseyNumber ? parseInt(data.jerseyNumber) : null,
+        address: data.city,
+        height: data.height,
       };
       
       return await apiRequest(`/api/profile/${profileId}`, {
@@ -160,18 +146,10 @@ export function PlayerProfilePage() {
     onSuccess: (updatedProfile) => {
       // Update local profile state with server response
       setProfile({
-        firstName: updatedProfile.firstName || "",
-        lastName: updatedProfile.lastName || "",
         position: updatedProfile.position || "",
         jerseyNumber: updatedProfile.jerseyNumber?.toString() || "",
         city: updatedProfile.address || "",
-        age: updatedProfile.age || "",
         height: updatedProfile.height || "",
-        phoneNumber: updatedProfile.phoneNumber || "",
-        emergencyContact: updatedProfile.emergencyContact || "",
-        emergencyPhone: updatedProfile.emergencyPhone || "",
-        medicalInfo: updatedProfile.medicalInfo || "",
-        allergies: updatedProfile.allergies || "",
       });
       
       // Update caches with new data for immediate UI sync
@@ -233,25 +211,18 @@ export function PlayerProfilePage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Personal Information */}
+          {/* Profile Picture */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Personal Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Profile Picture */}
-              <div className="flex flex-col items-center py-4 border-b border-gray-200 dark:border-gray-700 mb-4">
-                <Avatar className="h-16 w-16 mb-4">
+            <CardContent className="py-6">
+              <div className="flex flex-col items-center">
+                <Avatar className="h-20 w-20 mb-4">
                   <AvatarImage 
                     src={previewUrl || activeProfile?.profileImageUrl} 
                     alt="Profile"
                     className="object-cover w-full h-full"
                   />
-                  <AvatarFallback className="text-sm font-bold bg-gray-300 dark:bg-gray-600">
-                    {`${profile.firstName?.[0] || ''}${profile.lastName?.[0] || ''}`.toUpperCase()}
+                  <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
+                    {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex gap-2">
@@ -276,42 +247,17 @@ export function PlayerProfilePage() {
                   data-testid="input-profile-photo"
                 />
               </div>
-              
+            </CardContent>
+          </Card>
+
+          {/* Editable Basketball Info - TOP SECTION */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Basketball Information</CardTitle>
+              <p className="text-sm text-gray-500">You can edit these fields</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
-                  <Input
-                    value={profile.firstName}
-                    onChange={(e) => setProfile(p => ({ ...p, firstName: e.target.value }))}
-                    placeholder="Enter first name"
-                    data-testid="input-first-name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
-                  <Input
-                    value={profile.lastName}
-                    onChange={(e) => setProfile(p => ({ ...p, lastName: e.target.value }))}
-                    placeholder="Enter last name"
-                    data-testid="input-last-name"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Age</label>
-                  <Select value={profile.age} onValueChange={(value) => setProfile(p => ({ ...p, age: value }))}>
-                    <SelectTrigger data-testid="select-age">
-                      <SelectValue placeholder="Select age" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AGE_OPTIONS.map((age) => (
-                        <SelectItem key={age} value={age}>{age}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Height</label>
                   <Select value={profile.height} onValueChange={(value) => setProfile(p => ({ ...p, height: value }))}>
@@ -325,36 +271,17 @@ export function PlayerProfilePage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">From (City)</label>
+                  <Input
+                    value={profile.city}
+                    onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
+                    placeholder="Enter your city"
+                    data-testid="input-city"
+                  />
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">City (From)</label>
-                <Input
-                  value={profile.city}
-                  onChange={(e) => setProfile(p => ({ ...p, city: e.target.value }))}
-                  placeholder="Enter your city"
-                  data-testid="input-city"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone Number</label>
-                <Input
-                  value={profile.phoneNumber}
-                  onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
-                  placeholder="Enter phone number"
-                  data-testid="input-phone"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Basketball Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Basketball Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>
@@ -387,63 +314,58 @@ export function PlayerProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Emergency Information */}
-          <Card>
+          {/* Read-only Personal Information - BOTTOM SECTION */}
+          <Card className="bg-gray-50 dark:bg-gray-800/50">
             <CardHeader>
-              <CardTitle>Emergency Contact Information</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+              <p className="text-sm text-gray-500">(edit in parent settings)</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Emergency Contact Name</label>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">First Name</label>
                   <Input
-                    value={profile.emergencyContact}
-                    onChange={(e) => setProfile(p => ({ ...p, emergencyContact: e.target.value }))}
-                    placeholder="Enter emergency contact name"
-                    data-testid="input-emergency-contact"
+                    value={activeProfile?.firstName || ""}
+                    disabled
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    data-testid="input-first-name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Emergency Phone</label>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</label>
                   <Input
-                    value={profile.emergencyPhone}
-                    onChange={(e) => setProfile(p => ({ ...p, emergencyPhone: e.target.value }))}
-                    placeholder="Enter emergency phone number"
-                    data-testid="input-emergency-phone"
+                    value={activeProfile?.lastName || ""}
+                    disabled
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    data-testid="input-last-name"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Medical Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Medical Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Medical Information</label>
-                <Textarea
-                  value={profile.medicalInfo}
-                  onChange={(e) => setProfile(p => ({ ...p, medicalInfo: e.target.value }))}
-                  placeholder="Enter any medical information coaches should know about"
-                  rows={3}
-                  data-testid="textarea-medical-info"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">Include any conditions, medications, or medical notes</p>
-              </div>
               
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Allergies</label>
-                <Textarea
-                  value={profile.allergies}
-                  onChange={(e) => setProfile(p => ({ ...p, allergies: e.target.value }))}
-                  placeholder="Enter any allergies"
-                  rows={2}
-                  data-testid="textarea-allergies"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400">List any known allergies or dietary restrictions</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Date of Birth</label>
+                  <Input
+                    value={activeProfile?.dateOfBirth 
+                      ? new Date(activeProfile.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                      : "Not set"}
+                    disabled
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    data-testid="input-dob"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                  <Input
+                    value={activeProfile?.email || "Not set"}
+                    disabled
+                    className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    data-testid="input-email"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

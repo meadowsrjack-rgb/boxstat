@@ -38,12 +38,17 @@ import {
   AlertTriangle,
   LogOut,
   ChevronLeft,
+  ChevronDown,
   ShoppingBag,
   Phone,
   Mail,
   Award,
   Shirt,
+  Heart,
+  AlertCircle,
+  Ruler,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEffect, useState, useRef } from "react";
 import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -459,148 +464,6 @@ function FamilyCalendar({
   );
 }
 
-// Player Emergency & Medical Info Editor Component
-function PlayerInfoEditor({ player }: { player: any }) {
-  const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    emergencyContact: player.emergencyContact || "",
-    emergencyPhone: player.emergencyPhone || "",
-    medicalInfo: player.medicalInfo || "",
-    allergies: player.allergies || "",
-  });
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/users/${player.id}/emergency-medical`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(formData),
-      });
-      
-      if (res.ok) {
-        toast({ title: "Saved", description: `Updated info for ${player.firstName}` });
-        setIsEditing(false);
-        queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
-      } else {
-        const data = await res.json();
-        toast({ title: "Error", description: data.message || "Failed to save", variant: "destructive" });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="border rounded-lg p-4 bg-gray-50" data-testid={`player-info-editor-${player.id}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={player.profileImageUrl} />
-            <AvatarFallback className="bg-red-100 text-red-600 font-semibold">
-              {player.firstName?.[0]}{player.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="font-semibold">{player.firstName} {player.lastName}</div>
-            <div className="text-xs text-gray-500">
-              {player.dateOfBirth 
-                ? new Date(player.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : "No DOB set"}
-            </div>
-          </div>
-        </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setIsEditing(!isEditing)}
-          data-testid={`button-edit-player-info-${player.id}`}
-        >
-          {isEditing ? "Cancel" : "Edit"}
-        </Button>
-      </div>
-
-      {isEditing ? (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Contact Name</label>
-              <Input
-                value={formData.emergencyContact}
-                onChange={(e) => setFormData(prev => ({ ...prev, emergencyContact: e.target.value }))}
-                placeholder="e.g., Mom - Jane Doe"
-                data-testid={`input-emergency-contact-${player.id}`}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
-              <Input
-                value={formData.emergencyPhone}
-                onChange={(e) => setFormData(prev => ({ ...prev, emergencyPhone: e.target.value }))}
-                placeholder="(555) 123-4567"
-                data-testid={`input-emergency-phone-${player.id}`}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
-            <Input
-              value={formData.allergies}
-              onChange={(e) => setFormData(prev => ({ ...prev, allergies: e.target.value }))}
-              placeholder="e.g., Peanuts, Bee stings"
-              data-testid={`input-allergies-${player.id}`}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Medical Information</label>
-            <Textarea
-              value={formData.medicalInfo}
-              onChange={(e) => setFormData(prev => ({ ...prev, medicalInfo: e.target.value }))}
-              placeholder="Any medical conditions, medications, or special needs..."
-              rows={3}
-              data-testid={`input-medical-info-${player.id}`}
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving}
-              className="bg-red-600 hover:bg-red-700"
-              data-testid={`button-save-player-info-${player.id}`}
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div>
-            <span className="text-gray-500">Emergency Contact:</span>
-            <div className="font-medium">{formData.emergencyContact || "Not set"}</div>
-          </div>
-          <div>
-            <span className="text-gray-500">Emergency Phone:</span>
-            <div className="font-medium">{formData.emergencyPhone || "Not set"}</div>
-          </div>
-          <div>
-            <span className="text-gray-500">Allergies:</span>
-            <div className="font-medium">{formData.allergies || "None listed"}</div>
-          </div>
-          <div>
-            <span className="text-gray-500">Medical Info:</span>
-            <div className="font-medium">{formData.medicalInfo || "None listed"}</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // Settings Danger Zone Component for Account Deletion
 function SettingsDangerZone({ user }: { user: any }) {
   const { toast } = useToast();
@@ -856,6 +719,8 @@ function EnhancedPlayerCard({
 
 // Player Profile Card with comprehensive details for Profile tab
 function PlayerProfileCard({ player }: { player: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  
   const { data: teamsData = [] } = useQuery<Array<{id: number; name: string; ageGroup: string; program: string}>>({
     queryKey: [`/api/users/${player.id}/teams`],
     enabled: !!player.id,
@@ -900,104 +765,127 @@ function PlayerProfileCard({ player }: { player: any }) {
           </div>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 pt-4 border-t">
-          {player.jerseyNumber && (
-            <div className="flex items-center gap-2">
-              <Shirt className="w-4 h-4 text-gray-400" />
-              <div>
-                <span className="text-xs text-gray-500 block">Jersey</span>
-                <span className="text-sm font-medium">#{player.jerseyNumber}</span>
-              </div>
-            </div>
-          )}
+        {/* Collapsible Details Dropdown */}
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-4">
+          <CollapsibleTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg"
+              data-testid={`toggle-player-details-${player.id}`}
+            >
+              <span className="text-sm font-medium text-gray-700">View Details</span>
+              <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
           
-          {player.position && (
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-gray-400" />
-              <div>
-                <span className="text-xs text-gray-500 block">Position</span>
-                <span className="text-sm font-medium">{player.position}</span>
+          <CollapsibleContent className="mt-3">
+            <div className="space-y-4 pt-2 border-t">
+              {/* Basic Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                {player.dateOfBirth && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">Date of Birth</span>
+                      <span className="text-sm font-medium">
+                        {new Date(player.dateOfBirth).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {player.jerseyNumber && (
+                  <div className="flex items-center gap-2">
+                    <Shirt className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">Jersey</span>
+                      <span className="text-sm font-medium">#{player.jerseyNumber}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {player.position && (
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">Position</span>
+                      <span className="text-sm font-medium">{player.position}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {player.height && (
+                  <div className="flex items-center gap-2">
+                    <Ruler className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">Height</span>
+                      <span className="text-sm font-medium">{player.height}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {(player.city || player.address) && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">From</span>
+                      <span className="text-sm font-medium">{player.city || player.address}</span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Award className="w-4 h-4 text-yellow-500" />
+                  <div>
+                    <span className="text-xs text-gray-500 block">Awards</span>
+                    <span className="text-sm font-medium">{totalAwards}</span>
+                  </div>
+                </div>
+                
+                {player.schoolGrade && (
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-400" />
+                    <div>
+                      <span className="text-xs text-gray-500 block">Grade</span>
+                      <span className="text-sm font-medium">{player.schoolGrade}</span>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-          
-          {player.age && (
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <div>
-                <span className="text-xs text-gray-500 block">Age</span>
-                <span className="text-sm font-medium">{player.age}</span>
-              </div>
-            </div>
-          )}
-          
-          {player.dateOfBirth && (
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <div>
-                <span className="text-xs text-gray-500 block">DOB</span>
-                <span className="text-sm font-medium">
-                  {new Date(player.dateOfBirth).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          )}
-          
-          <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-yellow-500" />
-            <div>
-              <span className="text-xs text-gray-500 block">Awards</span>
-              <span className="text-sm font-medium">{totalAwards}</span>
-            </div>
-          </div>
-          
-          {player.schoolGrade && (
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-400" />
-              <div>
-                <span className="text-xs text-gray-500 block">Grade</span>
-                <span className="text-sm font-medium">{player.schoolGrade}</span>
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {(player.emergencyContact || player.medicalInfo || player.allergies) && (
-          <div className="mt-4 pt-4 border-t space-y-2">
-            {player.emergencyContact && (
-              <div className="flex items-start gap-2 text-sm">
-                <Phone className="w-4 h-4 text-gray-400 mt-0.5" />
-                <div>
-                  <span className="text-gray-500">Emergency: </span>
-                  <span className="font-medium">{player.emergencyContact}</span>
-                  {player.emergencyPhone && (
-                    <span className="text-gray-500"> - {player.emergencyPhone}</span>
-                  )}
+              
+              {/* Emergency & Medical Section */}
+              <div className="pt-3 border-t space-y-3">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-red-500" />
+                  Emergency & Medical Info
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-xs text-gray-500 block mb-1">Emergency Contact</span>
+                    <span className="font-medium">{player.emergencyContact || "Not set"}</span>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-xs text-gray-500 block mb-1">Emergency Phone</span>
+                    <span className="font-medium">{player.emergencyPhone || "Not set"}</span>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-xs text-gray-500 block mb-1">Allergies</span>
+                    <span className="font-medium">{player.allergies || "None listed"}</span>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-xs text-gray-500 block mb-1">Medical Info</span>
+                    <span className="font-medium">{player.medicalInfo || "None listed"}</span>
+                  </div>
                 </div>
               </div>
-            )}
-            
-            {player.medicalInfo && (
-              <div className="flex items-start gap-2 text-sm">
-                <AlertTriangle className="w-4 h-4 text-orange-400 mt-0.5" />
-                <div>
-                  <span className="text-gray-500">Medical: </span>
-                  <span className="font-medium">{player.medicalInfo}</span>
-                </div>
-              </div>
-            )}
-            
-            {player.allergies && (
-              <div className="flex items-start gap-2 text-sm">
-                <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5" />
-                <div>
-                  <span className="text-gray-500">Allergies: </span>
-                  <span className="font-medium">{player.allergies}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
@@ -1849,23 +1737,6 @@ export default function UnifiedAccount() {
               </CardContent>
             </Card>
 
-            {/* Player Emergency & Medical Info */}
-            {players.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Player Information
-                  </CardTitle>
-                  <CardDescription>Emergency contacts and medical information for each player</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {players.map((player: any) => (
-                    <PlayerInfoEditor key={player.id} player={player} />
-                  ))}
-                </CardContent>
-              </Card>
-            )}
             
             {/* Danger Zone */}
             <SettingsDangerZone user={user} />

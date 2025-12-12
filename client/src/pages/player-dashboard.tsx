@@ -1690,9 +1690,6 @@ function ProgramCard({
             <h3 className="font-bold text-gray-900" data-testid={`text-program-name-${membership.programId}`}>
               {membership.programName}
             </h3>
-            {membership.programType && (
-              <p className="text-sm text-gray-600">{membership.programType}</p>
-            )}
             {membership.remainingCredits !== null && (
               <div className="text-xs text-gray-500 mt-1">
                 {membership.remainingCredits} of {membership.totalCredits} credits remaining

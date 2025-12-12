@@ -6879,7 +6879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Build response combining enrollments with team info, social settings, and members
-      const memberships = enrollments.map(({ enrollment, product }) => {
+      const memberships = await Promise.all(enrollments.map(async ({ enrollment, product }) => {
         // Find teams linked to this program
         const programTeams = userTeamMemberships.filter(
           ({ team }) => team?.programId === enrollment.programId
@@ -6900,7 +6900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           remainingCredits: enrollment.remainingCredits,
           totalCredits: enrollment.totalCredits,
           // Team/group assignments within this program, with member data
-          teams: programTeams.map(({ membership, team }) => {
+          teams: await Promise.all(programTeams.map(async ({ membership, team }) => {
             // Get members for this team
             const teamMembers = allTeamMembers
               .filter(m => m.membership.teamId === team?.id)
@@ -6911,16 +6911,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 profilePic: user?.profilePic,
               }));
             
+            // Get head coach name
+            let coachName: string | null = null;
+            if (team?.coachId) {
+              const coach = await storage.getUser(team.coachId);
+              if (coach) {
+                coachName = `${coach.firstName || ''} ${coach.lastName || ''}`.trim() || null;
+              }
+            }
+            
+            // Get assistant coach names
+            const assistantCoaches: Array<{ id: string; name: string }> = [];
+            if (team?.assistantCoachIds && team.assistantCoachIds.length > 0) {
+              for (const assistantId of team.assistantCoachIds) {
+                const assistant = await storage.getUser(assistantId);
+                if (assistant) {
+                  assistantCoaches.push({
+                    id: assistantId,
+                    name: `${assistant.firstName || ''} ${assistant.lastName || ''}`.trim(),
+                  });
+                }
+              }
+            }
+            
             return {
               teamId: team?.id,
               teamName: team?.name,
               memberRole: membership.role,
               coachId: team?.coachId,
+              coachName,
+              assistantCoachIds: team?.assistantCoachIds || [],
+              assistantCoaches,
               members: teamMembers,
             };
-          }),
+          })),
         };
-      });
+      }));
       
       res.json(memberships);
     } catch (error: any) {

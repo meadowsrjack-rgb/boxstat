@@ -1641,6 +1641,9 @@ interface ProgramMembership {
     teamName: string | null;
     memberRole: string;
     coachId: string | null;
+    coachName: string | null;
+    assistantCoachIds: string[];
+    assistantCoaches: Array<{ id: string; name: string }>;
     members?: Array<{
       id: string | undefined;
       name: string | undefined;
@@ -1789,14 +1792,21 @@ function SubgroupCard({
         onClick={onToggle}
         data-testid={`subgroup-header-${team.teamId}`}
       >
-        <div className="flex items-center gap-3">
-          <span className={`px-2 py-1 text-xs font-medium rounded ${subgroupColor}`}>
-            {team.teamName}
-          </span>
-          {team.coachId && (
-            <span className="text-xs text-gray-500">
-              with Coach
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-1 text-xs font-medium rounded ${subgroupColor}`}>
+              {team.teamName}
             </span>
+          </div>
+          {team.coachName && (
+            <div className="text-xs text-gray-500 mt-1">
+              Head Coach: {team.coachName}
+            </div>
+          )}
+          {team.assistantCoaches && team.assistantCoaches.length > 0 && (
+            <div className="text-xs text-gray-400 mt-0.5">
+              Assistant{team.assistantCoaches.length > 1 ? 's' : ''}: {team.assistantCoaches.map(c => c.name).join(', ')}
+            </div>
           )}
         </div>
         <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />

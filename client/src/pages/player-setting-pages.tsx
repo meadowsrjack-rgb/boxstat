@@ -254,7 +254,6 @@ export function PlayerProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Basketball Information</CardTitle>
-              <p className="text-sm text-gray-500">You can edit these fields</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

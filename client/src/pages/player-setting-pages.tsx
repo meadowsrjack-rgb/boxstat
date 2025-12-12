@@ -225,27 +225,6 @@ export function PlayerProfilePage() {
                     {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadMutation.isPending}
-                    data-testid="button-upload-profile-photo"
-                  >
-                    <Camera className="h-4 w-4 mr-2" />
-                    {uploadMutation.isPending ? "Uploading..." : "Change Photo"}
-                  </Button>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  data-testid="input-profile-photo"
-                />
               </div>
             </CardContent>
           </Card>

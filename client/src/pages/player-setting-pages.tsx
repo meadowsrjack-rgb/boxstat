@@ -258,34 +258,32 @@ export function PlayerProfilePage() {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Profile Picture with Visibility Toggle */}
-          <Card>
+          <Card className="relative">
+            <button
+              onClick={toggleVisibility}
+              disabled={visibilityMutation.isPending}
+              className="absolute top-2 left-2 p-1 cursor-pointer focus:outline-none z-10"
+              data-testid="button-toggle-visibility"
+              type="button"
+            >
+              {isVisible ? (
+                <Eye className="h-4 w-4 text-gray-400" />
+              ) : (
+                <EyeOff className="h-4 w-4 text-gray-400" />
+              )}
+            </button>
             <CardContent className="py-6">
               <div className="flex flex-col items-center">
-                <div className="relative">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage 
-                      src={previewUrl || activeProfile?.profileImageUrl} 
-                      alt="Profile"
-                      className="object-cover w-full h-full"
-                    />
-                    <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
-                      {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <button
-                    onClick={toggleVisibility}
-                    disabled={visibilityMutation.isPending}
-                    className="absolute -top-1 -left-1 p-1 cursor-pointer focus:outline-none"
-                    data-testid="button-toggle-visibility"
-                    type="button"
-                  >
-                    {isVisible ? (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
+                <Avatar className="h-20 w-20">
+                  <AvatarImage 
+                    src={previewUrl || activeProfile?.profileImageUrl} 
+                    alt="Profile"
+                    className="object-cover w-full h-full"
+                  />
+                  <AvatarFallback className="text-lg font-bold bg-gray-300 dark:bg-gray-600">
+                    {`${activeProfile?.firstName?.[0] || ''}${activeProfile?.lastName?.[0] || ''}`.toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </div>
             </CardContent>
           </Card>

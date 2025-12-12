@@ -109,8 +109,9 @@ export default function TrophiesBadgesPage() {
   const { data: userAwardRecords, isLoading: loadingUserAwards } = useQuery<UserAwardRecord[]>({
     queryKey: ["/api/user-awards", viewingUserId],
     queryFn: async () => {
-      const endpoint = activeProfileId 
-        ? `/api/user-awards?userId=${activeProfileId}`
+      // Always pass the userId we want to view - this handles parent viewing child's awards
+      const endpoint = viewingUserId && viewingUserId !== user?.id
+        ? `/api/user-awards?userId=${viewingUserId}`
         : "/api/user-awards";
       const res = await fetch(endpoint, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch user awards");

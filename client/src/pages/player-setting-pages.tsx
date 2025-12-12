@@ -316,8 +316,7 @@ export function PlayerProfilePage() {
           {/* Read-only Personal Information - BOTTOM SECTION */}
           <Card className="bg-gray-50 dark:bg-gray-800/50">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                <User className="h-5 w-5" />
+              <CardTitle className="text-gray-600 dark:text-gray-400">
                 Personal Information
               </CardTitle>
             </CardHeader>

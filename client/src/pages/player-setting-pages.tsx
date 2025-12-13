@@ -74,7 +74,13 @@ export function PlayerProfilePage() {
   const { data: privacySettings } = useQuery<any>({
     queryKey: ['/api/privacy', profileId],
     queryFn: async () => {
-      const res = await fetch(`/api/privacy?profileId=${profileId}`, { credentials: 'include' });
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`/api/privacy?profileId=${profileId}`, { 
+        credentials: 'include',
+        headers 
+      });
       return res.json();
     },
     enabled: !!profileId,
@@ -89,9 +95,12 @@ export function PlayerProfilePage() {
   // Mutation to toggle visibility
   const visibilityMutation = useMutation({
     mutationFn: async (visible: boolean) => {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch("/api/privacy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         credentials: "include",
         body: JSON.stringify({ profileId, settings: { searchable: visible } }),
       });

@@ -8,6 +8,7 @@ import * as emailService from "./email";
 import crypto from "crypto";
 import cron from "node-cron";
 import searchRoutes from "./routes/search";
+import privacyRoutes from "./routes/privacy";
 import { setupNotificationRoutes } from "./routes/notifications";
 import { setupAdminNotificationRoutes } from "./routes/adminNotifications";
 import { requireAuth, isAdmin, isCoachOrAdmin } from "./auth";
@@ -258,6 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // =============================================
   
   app.use('/api/search', searchRoutes);
+  app.use('/api/privacy', privacyRoutes);
   
   // =============================================
   // NOTIFICATION ROUTES

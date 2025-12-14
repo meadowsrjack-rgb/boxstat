@@ -29,21 +29,17 @@ export default function Landing() {
         }}
       />
 
-      {/* CONTENT LAYER
-        - Removed 'overflow-hidden' (This brings your text back!)
-        - Changed 'justify-start' to 'justify-between' for better spacing
-        - min-h-[100dvh]: Ensures full height on mobile
-      */}
+      {/* CONTENT LAYER - Fixed positioning for iOS compatibility */}
       <div 
-        className="relative z-10 w-full min-h-[100dvh] flex flex-col items-center justify-between"
+        className="fixed inset-0 z-10 w-full h-full flex flex-col items-center justify-between"
         style={{
-          paddingTop: 'calc(2rem + env(safe-area-inset-top, 20px))', 
-          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 20px))',
+          paddingTop: 'calc(3rem + env(safe-area-inset-top, 0px))', 
+          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
         }}
       >
         
         {/* TOP: Logo Section */}
-        <div className="flex-shrink-0 pt-4 animate-in fade-in zoom-in duration-500">
+        <div className="flex-shrink-0 animate-in fade-in zoom-in duration-500">
           <img 
             src={logo} 
             alt="BoxStat Logo" 
@@ -53,7 +49,7 @@ export default function Landing() {
         </div>
 
         {/* BOTTOM: Action Section */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-6 w-full flex-shrink-0 pb-4">
+        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-5 w-full flex-shrink-0">
           
           {/* Main Button */}
           <Button 
@@ -66,7 +62,7 @@ export default function Landing() {
           </Button>
 
           {/* Sign In Link */}
-          <div className="text-white text-sm font-medium tracking-wide pb-2">
+          <div className="text-white text-sm font-medium tracking-wide">
             <span className="opacity-80">HAVE AN ACCOUNT? </span>
             <button 
               onClick={() => setLocation('/login')}

@@ -86,13 +86,12 @@ export default function CoachSettingsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-dashboard")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-dashboard"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Coach Settings</div>

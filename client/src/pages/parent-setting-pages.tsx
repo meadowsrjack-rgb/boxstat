@@ -205,13 +205,12 @@ export function ParentProfilePage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -440,13 +439,12 @@ export function ParentFamilyPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -658,13 +656,12 @@ export function ParentPrivacyPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -894,13 +891,12 @@ export function ParentNotificationsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1294,13 +1290,12 @@ export function ParentSecurityPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1502,13 +1497,12 @@ export function ParentConnectionsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1704,13 +1698,12 @@ export function ParentBillingPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -2005,13 +1998,12 @@ export function ParentLegalPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -2273,13 +2265,12 @@ export function ParentDevicesPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -2559,13 +2550,12 @@ export function ParentDangerPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/parent-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">

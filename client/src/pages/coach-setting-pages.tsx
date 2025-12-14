@@ -222,13 +222,12 @@ export function CoachProfilePage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/unified-account")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-account"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Account
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -522,13 +521,12 @@ export function CoachCoachingPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -694,13 +692,12 @@ export function CoachPrivacyPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -852,13 +849,12 @@ export function CoachNotificationsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1057,13 +1053,12 @@ export function CoachSecurityPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1359,13 +1354,12 @@ export function CoachConnectionsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1518,13 +1512,12 @@ export function CoachBillingPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -1825,13 +1818,12 @@ export function CoachLegalPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">
@@ -2029,13 +2021,12 @@ export function CoachDangerPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-settings"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Settings
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
               <div className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid="page-title">

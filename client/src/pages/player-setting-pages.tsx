@@ -271,21 +271,8 @@ export function PlayerProfilePage() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Profile Picture with Visibility Toggle */}
-          <Card className="relative">
-            <button
-              onClick={toggleVisibility}
-              disabled={visibilityMutation.isPending}
-              className="absolute top-4 left-4 p-1 cursor-pointer focus:outline-none z-10"
-              data-testid="button-toggle-visibility"
-              type="button"
-            >
-              {isVisible ? (
-                <Eye className="h-4 w-4" style={{ color: '#374151' }} />
-              ) : (
-                <EyeOff className="h-4 w-4" style={{ color: '#374151' }} />
-              )}
-            </button>
+          {/* Profile Picture */}
+          <Card>
             <CardContent className="py-6">
               <div className="flex flex-col items-center">
                 <Avatar className="h-20 w-20">

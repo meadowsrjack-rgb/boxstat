@@ -70,7 +70,7 @@ export default function Landing() {
             <span className="opacity-80">HAVE AN ACCOUNT? </span>
             <button 
               onClick={() => setLocation('/login')}
-              className="text-white ml-2 font-bold underline underline-offset-4 hover:text-red-400 transition-colors"
+              className="text-white ml-2 font-bold hover:text-red-400 transition-colors"
               data-testid="button-sign-in"
             >
               SIGN IN

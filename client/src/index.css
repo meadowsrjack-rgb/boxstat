@@ -64,17 +64,18 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent; /* Remove gray highlight on iOS tap */
   }
 
   /* Global base styles - prevent iOS rubber-band bouncing */
   html {
     padding: 0;
     margin: 0;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll for all pages */
-    position: fixed;
+    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding */
   }
 
   body {
@@ -82,20 +83,20 @@
     font-family: 'Inter', system-ui, sans-serif;
     padding: 0;
     margin: 0;
-    height: 100vh;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll */
-    position: fixed;
+    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding */
   }
 
-  /* Root container - fixed sizing to prevent page scrolling */
+  /* Root container - uses dynamic viewport height for iOS address bar */
   #root {
-    height: 100vh;
+    min-height: 100dvh; /* Dynamic Viewport Height - adapts to Safari address bar */
     width: 100%;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     background-color: #000000; /* Black background - page content will overlay with its own bg */
-    position: fixed;
   }
 
   /* Custom scrollbar */

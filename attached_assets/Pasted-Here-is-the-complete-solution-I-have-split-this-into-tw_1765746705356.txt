@@ -1,3 +1,36 @@
+Here is the complete solution. I have split this into two parts: the CSS hacks (to fix the browser behavior) and the React Component (to fix the layout and sizing).
+
+Part 1: The CSS (safari-hacks.css)
+
+Add these rules to your global stylesheet (e.g., index.css or globals.css). This is the "Safety Net" that prevents the white gaps even if the content bounces.
+
+CSS
+/* 1. Prevent the "White Flash" on rubber-band scroll */
+html, body {
+  background-color: #000000; /* Must match your landing page background color */
+  overscroll-behavior-y: none; /* Disables the vertical bounce/rubber-banding */
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 2. Remove the gray highlight box when tapping buttons on iOS */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 3. Ensure the root container handles height correctly */
+#root {
+  min-height: 100dvh; /* Dynamic Viewport Height */
+  display: flex;
+  flex-direction: column;
+}
+Part 2: The Component (Landing.jsx)
+
+I have updated this to use min-h-[100dvh] to fix the address bar resizing issue and cleaned up the structure to ensure the safe areas apply correctly.
+
+JavaScript
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import backgroundImage from "@assets/landing-background.png";
@@ -31,6 +64,7 @@ export default function Landing() {
       <div 
         className="relative z-10 w-full min-h-[100dvh] flex flex-col items-center overflow-hidden"
         style={{
+          // These use CSS environment variables to respect the Notch and Home Indicator
           paddingTop: 'calc(2rem + env(safe-area-inset-top, 20px))', 
           paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 20px))',
         }}
@@ -78,3 +112,18 @@ export default function Landing() {
     </>
   );
 }
+Vital Check: index.html
+
+For any of the env(safe-area-inset-top) padding to work, ensure your index.html head tag has this exact meta tag. If you miss viewport-fit=cover, you will get white bars on the notch.
+
+HTML
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+Summary of Fixes Applied:
+
+Address Bar Bleed: Switched min-h-full to min-h-[100dvh].
+
+White Gaps: Added bg-black fallback to the background div.
+
+Rubber Banding: Added overscroll-behavior-y: none to the CSS.
+
+Touch Feel: Added active:scale-95 to the button for better tactile feedback on mobile.

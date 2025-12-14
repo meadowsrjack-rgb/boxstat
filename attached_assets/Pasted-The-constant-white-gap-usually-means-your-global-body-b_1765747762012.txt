@@ -1,3 +1,16 @@
+The "constant white gap" usually means your global `body` background is white, and the "missing text" is happening because `overflow-hidden` is chopping off the content that doesn't fit on the screen.
+
+Here is the fixed code.
+
+### The Fix Explained
+
+1.  **Removed `overflow-hidden`**: This was the main culprit. It was cutting off your "Sign In" text because the content + padding was slightly taller than the screen height on your specific device.
+2.  **Global Background Color**: I added a style to the outer container to force the background to black immediately. **Crucially**, you still need to ensure your `index.css` or `globals.css` sets `body { background-color: #000; }` to eliminate that white gap permanently during "overscroll" (when you pull the page up/down).
+3.  **Adjusted Flex Layout**: I switched to `justify-between`. This is safer than using a spacer `div` because it distributes space evenly without forcing elements off-screen as aggressively.
+
+### The Code
+
+```javascript
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import backgroundImage from "@assets/landing-background.png";
@@ -37,6 +50,7 @@ export default function Landing() {
       <div 
         className="relative z-10 w-full min-h-[100dvh] flex flex-col items-center justify-between"
         style={{
+          // Safe area padding
           paddingTop: 'calc(2rem + env(safe-area-inset-top, 20px))', 
           paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 20px))',
         }}
@@ -51,6 +65,10 @@ export default function Landing() {
             data-testid="img-logo"
           />
         </div>
+
+        {/* MIDDLE: Spacer is removed. 
+           justify-between on the parent handles the spacing now.
+        */}
 
         {/* BOTTOM: Action Section */}
         <div className="px-4 sm:px-6 lg:px-8 text-center space-y-6 w-full flex-shrink-0 pb-4">
@@ -81,3 +99,12 @@ export default function Landing() {
     </>
   );
 }
+```
+
+### Final Checklist for "White Gaps"
+
+If you *still* see a white gap at the very bottom, it means your `index.html` meta tag is missing the viewport-fit property. Ensure this is in your `index.html`:
+
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+```

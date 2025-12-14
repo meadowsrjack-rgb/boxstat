@@ -305,12 +305,11 @@ export default function FamilyManagement() {
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setLocation("/parent-settings")}
             className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Settings
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
             <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">Family Management</div>

@@ -922,13 +922,12 @@ function RosterTab({
       <div>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={() => setSelectedTeamId(null)}
           className="mb-2 text-gray-600 hover:text-gray-900"
           data-testid="button-back-to-teams"
         >
-          <ChevronRight className="h-4 w-4 mr-1 rotate-180" />
-          Back to Teams
+          <ChevronRight className="h-5 w-5 rotate-180" />
         </Button>
         <h3 className="text-lg font-bold text-gray-900">{selectedTeam?.name}</h3>
         <p className="text-sm text-gray-500">

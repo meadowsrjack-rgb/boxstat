@@ -52,9 +52,8 @@ export default function TeamDetailPage() {
           {/* Navigation */}
           <Link href="/search">
             <a>
-              <Button variant="ghost" className="mb-6 hover:bg-red-100 dark:hover:bg-red-900/20" data-testid="button-back">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Search
+              <Button variant="ghost" size="icon" className="mb-6 hover:bg-red-100 dark:hover:bg-red-900/20" data-testid="button-back">
+                <ArrowLeft className="h-5 w-5" />
               </Button>
             </a>
           </Link>

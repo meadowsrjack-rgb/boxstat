@@ -14,7 +14,8 @@ import {
   CheckCircle,
   DollarSign,
   Trophy,
-  Target
+  Target,
+  ArrowLeft
 } from "lucide-react";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -166,10 +167,11 @@ export default function Training() {
             </div>
             <Button 
               variant="ghost" 
+              size="icon"
               onClick={() => setLocation('/')}
               className="text-gray-600 hover:text-gray-900"
             >
-              Back to Dashboard
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </div>
         </div>

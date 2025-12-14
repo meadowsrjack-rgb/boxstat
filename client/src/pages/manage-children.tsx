@@ -266,12 +266,11 @@ export default function ManageChildren() {
             <div className="flex items-center">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setLocation("/")}
                 className="mr-4"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="flex items-center space-x-3">
                 <img src={logoPath} alt="BoxStat" className="h-8 w-8" />

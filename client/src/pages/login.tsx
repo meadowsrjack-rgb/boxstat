@@ -264,12 +264,12 @@ export default function LoginPage() {
 
               <Button
                 variant="ghost"
-                className="w-full text-gray-400 hover:text-white hover:bg-white/5"
+                size="icon"
+                className="text-gray-400 hover:text-white hover:bg-white/5"
                 onClick={() => setShowMagicLink(false)}
                 data-testid="button-back-to-password"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Back to Password Login
+                <ChevronLeft className="w-5 h-5" />
               </Button>
             </>
           )}

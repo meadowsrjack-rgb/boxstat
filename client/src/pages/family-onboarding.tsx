@@ -594,13 +594,13 @@ export default function FamilyOnboarding() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 justify-between pt-4">
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setCurrentStep(1)}
-                  className="border-white/20 text-white hover:bg-white/10"
+                  className="text-white hover:bg-white/10"
                   data-testid="button-back-to-players"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Player Info
+                  <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <Button
                   onClick={handleStepTwoSubmit}

@@ -120,13 +120,13 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
               <Button
-                variant="outline"
-                className="w-full h-12 bg-transparent border-white/20 text-white hover:bg-white/10"
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/10"
                 onClick={() => setLocation("/login")}
                 data-testid="button-back-to-login-success"
               >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Back to Login
+                <ChevronLeft className="w-5 h-5" />
               </Button>
             </div>
           )}

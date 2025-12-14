@@ -126,12 +126,11 @@ export default function CoachTeamMessages() {
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setLocation('/admin-dashboard')}
                 className="text-gray-600 hover:text-gray-900"
               >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">Team Messages</h1>

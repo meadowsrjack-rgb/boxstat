@@ -211,12 +211,12 @@ export default function AccountClaim() {
           <div className="flex items-center justify-center">
             <Button
               variant="ghost"
+              size="icon"
               onClick={() => setLocation("/")}
               className="text-gray-500 hover:text-gray-700"
               data-testid="button-back-home"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </div>
         </CardContent>

@@ -1179,10 +1179,9 @@ function PlayerListStep({
       <div>
         <button 
           onClick={() => setEditingPlayer(null)}
-          className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+          className="flex items-center justify-center w-10 h-10 text-gray-400 hover:text-white mb-6 transition-colors rounded-md hover:bg-white/10"
         >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to player list
+          <ChevronLeft className="w-5 h-5" />
         </button>
         <PlayerInfoStep
           onSubmit={savePlayer}

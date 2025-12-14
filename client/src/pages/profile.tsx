@@ -91,11 +91,11 @@ export default function Profile() {
             </div>
             <Button 
               variant="ghost" 
+              size="icon"
               onClick={() => setLocation('/')}
               className="text-gray-600 hover:text-gray-900"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+              <ArrowLeft className="h-5 w-5" />
             </Button>
           </div>
         </div>

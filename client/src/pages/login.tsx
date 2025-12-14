@@ -132,10 +132,8 @@ export default function LoginPage() {
     <>
       {/* iOS FULL BLEED - extends into all safe areas to prevent white gaps */}
       <div className="ios-full-bleed" />
-      
       {/* DETACHED BACKGROUND LAYER */}
       <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-black z-0 pointer-events-none" />
-      
       {/* Main Content Wrapper */}
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex flex-col">
       {/* Back Button */}
@@ -217,7 +215,7 @@ export default function LoginPage() {
 
               <div className="relative">
                 <Separator className="bg-white/10" />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900 px-4 text-sm text-gray-500">
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 px-4 text-sm text-gray-500 bg-[#11182700] mt-[15px] mb-[15px]">
                   or
                 </span>
               </div>

@@ -7,33 +7,37 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div className="relative w-full min-h-[100lvh] bg-black">
-      {/* FIXED CURTAIN BACKGROUND - Extends beyond viewport to cover iOS gaps */}
+    <>
+      {/* FULL BLEED BACKGROUND - Covers entire screen including safe areas */}
       <div 
-        className="fixed pointer-events-none z-0"
+        className="fixed inset-0 w-screen h-screen bg-black"
         style={{
-          top: 'calc(-1 * env(safe-area-inset-top, 0px) - 150px)',
-          left: 'calc(-1 * env(safe-area-inset-left, 0px) - 50px)',
-          right: 'calc(-1 * env(safe-area-inset-right, 0px) - 50px)',
-          bottom: 'calc(-1 * env(safe-area-inset-bottom, 0px) - 150px)',
           backgroundImage: `url(${backgroundImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center center',
           backgroundRepeat: 'no-repeat',
-          backgroundColor: '#000000',
+        }}
+      />
+      
+      {/* Extended curtain for iOS overscroll */}
+      <div 
+        className="fixed bg-black pointer-events-none"
+        style={{
+          top: '-200px',
+          left: '-50px',
+          right: '-50px',
+          bottom: '-200px',
+          zIndex: -1,
         }}
       />
 
-      {/* CONTENT LAYER - Natural flex layout that can compress with viewport */}
-      <div 
-        className="relative z-10 w-full min-h-[100lvh] flex flex-col items-center justify-between"
-        style={{
-          paddingTop: 'calc(3rem + env(safe-area-inset-top, 0px))', 
-          paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))',
-        }}
-      >
-        {/* TOP: Logo Section */}
-        <div className="flex-shrink-0 animate-in fade-in zoom-in duration-500">
+      {/* CONTENT - Absolute positioning from bottom to ensure visibility */}
+      <div className="fixed inset-0 flex flex-col items-center z-10">
+        {/* Logo - positioned from top with safe area */}
+        <div 
+          className="animate-in fade-in zoom-in duration-500 mt-20"
+          style={{ marginTop: 'calc(80px + env(safe-area-inset-top, 0px))' }}
+        >
           <img 
             src={logo} 
             alt="BoxStat Logo" 
@@ -42,9 +46,14 @@ export default function Landing() {
           />
         </div>
 
-        {/* BOTTOM: Action Section */}
-        <div className="px-4 sm:px-6 lg:px-8 text-center space-y-5 w-full flex-shrink-0">
-          
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Bottom Actions - positioned from bottom with generous margin */}
+        <div 
+          className="px-4 text-center space-y-4 w-full pb-8"
+          style={{ marginBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))' }}
+        >
           {/* Main Button */}
           <Button 
             size="lg" 
@@ -55,8 +64,8 @@ export default function Landing() {
             LET'S GO
           </Button>
 
-          {/* Sign In Link */}
-          <div className="text-white text-sm font-medium tracking-wide">
+          {/* Sign In Link - MUST be visible */}
+          <div className="text-white text-sm font-medium tracking-wide py-2">
             <span className="opacity-80">HAVE AN ACCOUNT? </span>
             <button 
               onClick={() => setLocation('/login')}
@@ -68,6 +77,6 @@ export default function Landing() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

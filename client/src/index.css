@@ -67,15 +67,15 @@
     -webkit-tap-highlight-color: transparent; /* Remove gray highlight on iOS tap */
   }
 
-  /* Global base styles - prevent iOS rubber-band bouncing */
+  /* Global base styles - allow natural scrolling, black background for iOS gap prevention */
   html {
     padding: 0;
     margin: 0;
     height: 100%;
     width: 100%;
-    overflow: hidden;
+    overflow: auto; /* Allow scrolling so content remains reachable on iOS */
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll for all pages */
-    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding */
+    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding but allows scroll */
   }
 
   body {
@@ -85,9 +85,9 @@
     margin: 0;
     height: 100%;
     width: 100%;
-    overflow: hidden;
+    overflow: auto; /* Allow scrolling so content remains reachable on iOS */
     background-color: #000000; /* Black background - prevents white gaps on iOS overscroll */
-    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding */
+    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding but allows scroll */
   }
 
   /* Root container - uses dynamic viewport height for iOS address bar */

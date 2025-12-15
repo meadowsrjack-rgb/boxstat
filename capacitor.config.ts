@@ -6,6 +6,10 @@ const config: CapacitorConfig = {
   appId: 'com.boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
+  
+  // Root-level backgroundColor ensures WebView background is black during rubber-banding
+  backgroundColor: '#000000',
+
   ...(isDevMode ? {} : {
     server: {
       url: 'https://boxstat.app',
@@ -13,13 +17,16 @@ const config: CapacitorConfig = {
     },
   }),
   ios: {
-    contentInset: 'automatic',
-    // FIX 1: Change native background from White to Black
-    backgroundColor: '#000000', 
+    // 'never' allows app to go full-bleed behind notch, letting CSS env() handle safe areas
+    contentInset: 'never',
   },
   plugins: {
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#000000',
+      overlaysWebView: true,
+    },
     Keyboard: {
-      // FIX 2: Control keyboard resize behavior
       resize: 'body',
       style: 'DARK',
       resizeOnFullScreen: true,

@@ -1,0 +1,90 @@
+You are absolutely right to check this file. There are **two major issues** in your `capacitor.config.ts` that are causing the white gaps and preventing the "Full Bleed" effect on the iPhone 15.
+
+Here is the corrected file and the explanation of why your current settings are fighting your CSS.
+
+### The Fix
+
+```typescript
+import type { CapacitorConfig } from '@capacitor/cli';
+
+const isDevMode = process.env.CAPACITOR_MODE !== 'production';
+
+const config: CapacitorConfig = {
+  appId: 'com.boxstat.app',
+  appName: 'BoxStat',
+  webDir: 'dist/public',
+  
+  // FIX 1: Move backgroundColor to the ROOT level.
+  // When inside the 'ios' object, it is often ignored by the WebView itself.
+  // This sets the background of the underlying view to black, fixing the "bounce" gap.
+  backgroundColor: '#000000', 
+
+  ...(isDevMode ? {} : {
+    server: {
+      url: 'https://boxstat.app',
+      cleartext: false,
+    },
+  }),
+
+  ios: {
+    // FIX 2: Change 'automatic' to 'never'.
+    // 'automatic' pushes your app down below the notch (creating a white bar).
+    // 'never' allows your app to go BEHIND the notch (Full Bleed), 
+    // which allows your CSS 'env(safe-area-inset-top)' to work correctly.
+    contentInset: 'never', 
+    
+    // (You can remove backgroundColor from here since we moved it to root)
+  },
+
+  plugins: {
+    Keyboard: {
+      resize: 'body',
+      style: 'DARK',
+      resizeOnFullScreen: true,
+    },
+    SplashScreen: {
+      launchShowDuration: 3000,
+      autoHide: false,
+      backgroundColor: '#000000', 
+      showSpinner: true,
+      androidSpinnerStyle: 'large',
+      spinnerColor: '#d82428',
+    },
+    Geolocation: {},
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
+};
+
+export default config;
+```
+
+### Why this fixes it:
+
+1.  **`contentInset: 'never'` vs `'automatic'`**:
+
+      * **The Problem:** You are currently using `'automatic'`. On an iPhone 15, this tells iOS, "Please safely push my web content *below* the notch so it doesn't get covered." This creates a permanent gap at the top.
+      * **The Solution (`never`):** Since you added `padding-top: env(safe-area-inset-top)` in your React code, you are manually handling the notch. You need to tell Capacitor to **stop** handling it for you. `'never'` lets the webview expand to the very top edge of the screen.
+
+2.  **`backgroundColor` Placement**:
+
+      * **The Problem:** You had `backgroundColor` inside the `ios: {}` object. While valid for some native view controller configs, Capacitor primarily looks for `backgroundColor` at the **root** of the config object to set the global WebView background.
+      * **The Solution:** Moving it to the root ensures that if the user scrolls past the edge of your app (rubber banding), they see black, not white.
+
+### One Final Check (Status Bar)
+
+If you apply these changes and *still* see a white bar at the top, it means the **Status Bar** plugin is forcing a white background.
+
+If that happens, install the Status Bar plugin:
+`npm install @capacitor/status-bar`
+
+And add this to your `plugins` object in the config above:
+
+```typescript
+StatusBar: {
+  style: 'DARK',
+  backgroundColor: '#000000',
+  overlaysWebView: true, // This forces the status bar to float ON TOP of your content, not push it down.
+},
+```

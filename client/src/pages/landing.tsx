@@ -1,38 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
 import backgroundImage from "@assets/landing-background.png";
 import logo from "@assets/logo2_1762477206651.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [height, setHeight] = useState('100vh');
-
-  useEffect(() => {
-    const updateHeight = () => {
-      setHeight(`${window.innerHeight}px`);
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    window.addEventListener('orientationchange', updateHeight);
-    const timer = setTimeout(updateHeight, 100);
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      window.removeEventListener('orientationchange', updateHeight);
-      clearTimeout(timer);
-    };
-  }, []);
 
   return (
     <div 
       style={{
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         width: '100%',
-        height: height,
+        height: '100%',
         backgroundColor: '#000000',
         backgroundImage: `url(${backgroundImage})`,
         backgroundSize: 'cover',
@@ -43,6 +26,8 @@ export default function Landing() {
         alignItems: 'center',
         justifyItems: 'center',
         overflow: 'hidden',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}
     >
       {/* Row 1: Empty spacer */}

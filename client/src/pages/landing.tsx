@@ -1,50 +1,49 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { useEffect, useState } from "react";
 import backgroundImage from "@assets/landing-background.png";
 import logo from "@assets/logo2_1762477206651.png";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
-  const [height, setHeight] = useState('100vh');
-
-  useEffect(() => {
-    const updateHeight = () => {
-      setHeight(`${window.innerHeight}px`);
-    };
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    window.addEventListener('orientationchange', updateHeight);
-    const timer = setTimeout(updateHeight, 100);
-    return () => {
-      window.removeEventListener('resize', updateHeight);
-      window.removeEventListener('orientationchange', updateHeight);
-      clearTimeout(timer);
-    };
-  }, []);
 
   return (
-    <div 
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100%',
-        height: height,
-        backgroundColor: '#000000',
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-        display: 'grid',
-        gridTemplateRows: '1fr auto 1fr auto',
-        alignItems: 'center',
-        justifyItems: 'center',
-        overflow: 'hidden',
-      }}
-    >
+    <>
+      {/* Black curtain layer - extends beyond safe area to cover any gaps */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: '-100px',
+          left: '-100px',
+          right: '-100px',
+          bottom: '-100px',
+          backgroundColor: '#000000',
+          zIndex: -1,
+        }}
+      />
+      
+      {/* Main content */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100dvh',
+          minHeight: '-webkit-fill-available',
+          backgroundColor: '#000000',
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat',
+          display: 'grid',
+          gridTemplateRows: '1fr auto 1fr auto',
+          alignItems: 'center',
+          justifyItems: 'center',
+          overflow: 'hidden',
+        }}
+      >
       {/* Row 1: Empty spacer */}
       <div />
 
@@ -122,5 +121,6 @@ export default function Landing() {
         </p>
       </div>
     </div>
+    </>
   );
 }

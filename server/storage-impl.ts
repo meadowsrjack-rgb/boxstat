@@ -2071,7 +2071,10 @@ class MemStorage implements IStorage {
     
     for (const enrollment of enrollments) {
       const program = this.programs.get(enrollment.programId);
-      const accessTag = program?.accessTag;
+      // Use accessTag if set, otherwise derive from product type
+      const accessTag = program?.accessTag || 
+        (program?.type === 'Subscription' ? 'club_member' : 
+         program?.type === 'Pack' ? 'pack_holder' : null);
       
       if (accessTag === 'club_member') {
         hasSubscription = true;
@@ -4819,7 +4822,10 @@ class DatabaseStorage implements IStorage {
       let hasLowBalance = false;
       
       for (const { enrollment, product } of allPlayerEnrollments) {
-        const accessTag = product?.accessTag;
+        // Use accessTag if set, otherwise derive from product type
+        const accessTag = product?.accessTag || 
+          (product?.type === 'Subscription' ? 'club_member' : 
+           product?.type === 'Pack' ? 'pack_holder' : null);
         if (accessTag === 'club_member') {
           hasSubscription = true;
         } else if (accessTag === 'pack_holder' && enrollment.remainingCredits) {

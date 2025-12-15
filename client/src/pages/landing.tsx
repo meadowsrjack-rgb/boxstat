@@ -74,6 +74,27 @@ export default function Landing() {
           width: '100%',
         }}
       >
+        {/* LET'S GO button */}
+        <Button 
+          size="lg" 
+          onClick={() => setLocation('/registration')}
+          style={{
+            backgroundColor: 'rgba(0,0,0,0.2)',
+            color: 'white',
+            fontWeight: 'bold',
+            padding: '24px 48px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(8px)',
+            minWidth: '280px',
+            fontSize: '14px',
+            letterSpacing: '0.1em',
+          }}
+          data-testid="button-lets-go"
+        >
+          LET'S GO
+        </Button>
+
         {/* Sign in link */}
         <p style={{ 
           color: 'white', 
@@ -99,27 +120,6 @@ export default function Landing() {
             SIGN IN
           </button>
         </p>
-
-        {/* LET'S GO button */}
-        <Button 
-          size="lg" 
-          onClick={() => setLocation('/registration')}
-          style={{
-            backgroundColor: 'rgba(0,0,0,0.2)',
-            color: 'white',
-            fontWeight: 'bold',
-            padding: '24px 48px',
-            borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(8px)',
-            minWidth: '280px',
-            fontSize: '14px',
-            letterSpacing: '0.1em',
-          }}
-          data-testid="button-lets-go"
-        >
-          LET'S GO
-        </Button>
       </div>
     </div>
   );

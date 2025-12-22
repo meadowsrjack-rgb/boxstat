@@ -8,28 +8,13 @@ export default function Landing() {
 
   return (
     <>
-      {/* Black curtain behind content to prevent white gaps */}
+      {/* Full-bleed black background extending beyond all safe areas */}
+      <div className="ios-full-bleed" style={{ backgroundColor: '#000000' }} />
+      
+      {/* Main content container */}
       <div 
+        className="scrollable-page"
         style={{
-          position: 'fixed',
-          top: '-100px',
-          left: '-100px',
-          right: '-100px',
-          bottom: '-100px',
-          backgroundColor: '#000000',
-          zIndex: -1,
-        }}
-      />
-      <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#000000',
           backgroundImage: `url(${backgroundImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center center',
@@ -38,9 +23,6 @@ export default function Landing() {
           gridTemplateRows: '1fr auto 1fr auto',
           alignItems: 'center',
           justifyItems: 'center',
-          overflow: 'hidden',
-          paddingTop: 'env(safe-area-inset-top)',
-          paddingBottom: 'env(safe-area-inset-bottom)',
         }}
       >
       {/* Row 1: Empty spacer */}
@@ -63,12 +45,13 @@ export default function Landing() {
 
       {/* Row 4: Bottom CTA section */}
       <div 
+        className="safe-bottom"
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '16px',
-          paddingBottom: '60px',
+          paddingBottom: 'max(40px, env(safe-area-inset-bottom, 40px))',
           width: '100%',
         }}
       >

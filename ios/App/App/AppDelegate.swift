@@ -7,6 +7,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Set window background to black to prevent white gaps during overscroll/bounce
+        window?.backgroundColor = UIColor.black
+        
+        // Access the Capacitor bridge to set WebView backgrounds
+        if let rootVC = window?.rootViewController as? CAPBridgeViewController {
+            rootVC.view.backgroundColor = UIColor.black
+            
+            // Set WebView scroll view background and disable bouncing
+            if let webView = rootVC.webView {
+                webView.backgroundColor = UIColor.black
+                webView.scrollView.backgroundColor = UIColor.black
+                webView.scrollView.bounces = false
+                webView.isOpaque = false
+            }
+        }
+        
         return true
     }
 

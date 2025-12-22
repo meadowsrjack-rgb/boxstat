@@ -67,15 +67,15 @@
     -webkit-tap-highlight-color: transparent; /* Remove gray highlight on iOS tap */
   }
 
-  /* Global base styles - allow natural scrolling, black background for iOS gap prevention */
+  /* Global base styles - FIXED positioning prevents iOS rubber-banding white gaps */
   html {
     padding: 0;
     margin: 0;
     height: 100%;
     width: 100%;
-    overflow: auto; /* Allow scrolling so content remains reachable on iOS */
-    background-color: #000000; /* Black background - prevents white gaps on iOS overscroll for all pages */
-    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding but allows scroll */
+    overflow: hidden; /* CRITICAL: Prevents document from bouncing */
+    position: fixed; /* CRITICAL: Locks document in place */
+    background-color: #000000;
   }
 
   body {
@@ -85,18 +85,20 @@
     margin: 0;
     height: 100%;
     width: 100%;
-    overflow: auto; /* Allow scrolling so content remains reachable on iOS */
-    background-color: #000000; /* Black background - prevents white gaps on iOS overscroll */
-    overscroll-behavior-y: none; /* Disables vertical bounce/rubber-banding but allows scroll */
+    overflow: hidden; /* CRITICAL: Prevents document from bouncing */
+    position: fixed; /* CRITICAL: Locks document in place */
+    background-color: #000000;
   }
 
-  /* Root container - uses dynamic viewport height for iOS address bar */
+  /* Root container - full viewport, enables internal scrolling */
   #root {
-    min-height: 100dvh; /* Dynamic Viewport Height - adapts to Safari address bar */
+    height: 100%;
     width: 100%;
-    display: flex;
-    flex-direction: column;
-    background-color: #000000; /* Black background - page content will overlay with its own bg */
+    overflow-y: auto; /* Scrolling happens here, not at document level */
+    overflow-x: hidden;
+    background-color: #000000;
+    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling */
+    overscroll-behavior-y: contain; /* Prevents bounce from propagating up */
   }
 
   /* Custom scrollbar */

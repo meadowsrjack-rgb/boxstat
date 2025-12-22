@@ -27,9 +27,8 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
     },
     Keyboard: {
-      resize: 'body',
+      resize: 'none', /* Prevents the whole screen from shoving up when keyboard appears */
       style: 'DARK',
-      resizeOnFullScreen: true,
     },
     SplashScreen: {
       launchShowDuration: 3000,

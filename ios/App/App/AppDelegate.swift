@@ -7,23 +7,40 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Set window background to black to prevent white gaps during overscroll/bounce
+        // Set window background to black immediately
         window?.backgroundColor = UIColor.black
         
-        // Access the Capacitor bridge to set WebView backgrounds
-        if let rootVC = window?.rootViewController as? CAPBridgeViewController {
-            rootVC.view.backgroundColor = UIColor.black
-            
-            // Set WebView scroll view background and disable bouncing
-            if let webView = rootVC.webView {
-                webView.backgroundColor = UIColor.black
-                webView.scrollView.backgroundColor = UIColor.black
-                webView.scrollView.bounces = false
-                webView.isOpaque = false
-            }
+        // Defer WebView configuration until after Capacitor initializes it
+        DispatchQueue.main.async { [weak self] in
+            self?.configureWebView()
         }
         
         return true
+    }
+    
+    // Configure WebView after Capacitor has set it up
+    private func configureWebView() {
+        guard let rootVC = window?.rootViewController as? CAPBridgeViewController,
+              let webView = rootVC.webView else {
+            return
+        }
+        
+        // Set all backgrounds to black
+        rootVC.view.backgroundColor = UIColor.black
+        webView.backgroundColor = UIColor.black
+        webView.scrollView.backgroundColor = UIColor.black
+        
+        // Set layer backgrounds for complete coverage
+        webView.layer.backgroundColor = UIColor.black.cgColor
+        webView.scrollView.layer.backgroundColor = UIColor.black.cgColor
+        
+        // Disable rubber-banding/bouncing
+        webView.scrollView.bounces = false
+        webView.scrollView.alwaysBounceVertical = false
+        webView.scrollView.alwaysBounceHorizontal = false
+        
+        // Make WebView non-opaque so background shows through
+        webView.isOpaque = false
     }
 
     // ---------------------------------------------------------------------------

@@ -7,38 +7,44 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}>
+    // The "Canvas": Completely fixed and unmovable
+    <div style={{ 
+      position: 'fixed', 
+      inset: 0, 
+      overflow: 'hidden', 
+      backgroundColor: '#000000' 
+    }}>
       
-      {/* LAYER 1: The Static Background (Never Moves) */}
+      {/* LAYER 1: The Static Background */}
       <div 
         style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          position: 'absolute',
+          inset: 0,
           zIndex: 0,
           backgroundImage: `url(${backgroundImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
+          userSelect: 'none',
+          pointerEvents: 'none',
         }}
       />
 
-      {/* LAYER 2: The Content (Detached & Animated) */}
+      {/* LAYER 2: The UI Layer */}
       <div 
         className="animate-fade-in"
         style={{
           position: 'relative',
           zIndex: 1,
           width: '100%',
-          height: '100vh',
+          height: '100%',
           display: 'grid',
           gridTemplateRows: '1fr auto 1fr auto',
           alignItems: 'center',
           justifyItems: 'center',
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
+          touchAction: 'none',
         }}
       >
         {/* Row 1: Spacer */}

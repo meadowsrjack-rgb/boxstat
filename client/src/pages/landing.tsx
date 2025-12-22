@@ -7,29 +7,42 @@ export default function Landing() {
   const [, setLocation] = useLocation();
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: '#000000',
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center center',
-        backgroundRepeat: 'no-repeat',
-        display: 'grid',
-        gridTemplateRows: '1fr auto 1fr auto',
-        alignItems: 'center',
-        justifyItems: 'center',
-        overflow: 'hidden',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
+    <>
+      {/* Black curtain behind content to prevent white gaps */}
+      <div 
+        style={{
+          position: 'fixed',
+          top: '-100px',
+          left: '-100px',
+          right: '-100px',
+          bottom: '-100px',
+          backgroundColor: '#000000',
+          zIndex: -1,
+        }}
+      />
+      <div 
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#000000',
+          backgroundImage: `url(${backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center center',
+          backgroundRepeat: 'no-repeat',
+          display: 'grid',
+          gridTemplateRows: '1fr auto 1fr auto',
+          alignItems: 'center',
+          justifyItems: 'center',
+          overflow: 'hidden',
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
       {/* Row 1: Empty spacer */}
       <div />
 
@@ -107,5 +120,6 @@ export default function Landing() {
         </p>
       </div>
     </div>
+    </>
   );
 }

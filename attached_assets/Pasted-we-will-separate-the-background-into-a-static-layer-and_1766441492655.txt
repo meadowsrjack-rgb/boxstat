@@ -1,3 +1,45 @@
+we will separate the background into a static layer and the UI into an animated "floating" layer. This ensures that the background never moves, even if the user interacts with the buttons or triggers an overscroll bounce.
+
+1. Global Setup (The Foundation)
+
+You must ensure these two files are updated to prevent the "white gap" and allow the app to use the full screen.
+
+index.html Add viewport-fit=cover to your meta tag:
+
+HTML
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+index.css (Global Styles) This locks the root container so the "rubber band" effect doesn't show the browser background:
+
+CSS
+html, body {
+  background-color: #000000;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed; /* Prevents the document from bouncing */
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+2. The Integrated Landing Component
+
+This implementation uses the "Dual-Layer" approach with the requested fade-in animation.
+
+TypeScript
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import backgroundImage from "@assets/landing-background.png";
@@ -37,6 +79,7 @@ export default function Landing() {
           gridTemplateRows: '1fr auto 1fr auto',
           alignItems: 'center',
           justifyItems: 'center',
+          // Safe area ensures content doesn't hit notch/home bar
           paddingTop: 'env(safe-area-inset-top)',
           paddingBottom: 'env(safe-area-inset-bottom)',
         }}
@@ -53,7 +96,6 @@ export default function Landing() {
             height: 'auto',
             filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))',
           }}
-          data-testid="img-logo"
         />
 
         {/* Row 3: Spacer */}
@@ -66,6 +108,7 @@ export default function Landing() {
             flexDirection: 'column',
             alignItems: 'center',
             gap: '16px',
+            // max() ensures a minimum of 60px padding OR the safe area height
             paddingBottom: 'max(60px, env(safe-area-inset-bottom))', 
             width: '100%',
           }}
@@ -85,7 +128,6 @@ export default function Landing() {
               fontSize: '14px',
               letterSpacing: '0.1em',
             }}
-            data-testid="button-lets-go"
           >
             LET'S GO
           </Button>
@@ -99,11 +141,9 @@ export default function Landing() {
                 fontWeight: 'bold',
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
                 marginLeft: '4px',
                 fontSize: '14px',
               }}
-              data-testid="button-sign-in"
             >
               SIGN IN
             </button>
@@ -113,3 +153,12 @@ export default function Landing() {
     </div>
   );
 }
+Why this works for iOS:
+
+No Gaps: viewport-fit=cover tells iOS to fill the screen, and the position: fixed background layer acts as a permanent canvas.
+
+Home Bar/Notch Protection: env(safe-area-inset-bottom) pushes the "Sign In" text up just enough so the iPhone's home swipe bar doesn't cover it.
+
+Visual Polish: The animate-fade-in class (defined in CSS) makes the UI slide up and fade in over the static background, giving it a premium app feel.
+
+Rubber-band Protection: Because the background is in its own fixed layer (Layer 1), even if the content (Layer 2) "bounces," the image stays perfectly still behind it.

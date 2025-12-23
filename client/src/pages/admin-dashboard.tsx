@@ -699,7 +699,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   });
 
   const downloadUserTemplate = () => {
-    const csvContent = "First name,Last name,Email,Phone,Address,Role,Status,Program/Division,Team,Awards,Rating\nJohn,Doe,player@example.com,555-0100,123 Main St,player,active,Basketball Academy,Thunder U12,5,4.5\nJane,Smith,coach@example.com,555-0101,456 Oak Ave,coach,active,,,10,5.0\nBob,Johnson,parent@example.com,555-0102,789 Elm St,parent,active,,,,";
+    const csvContent = "First name,Last name,Email,Phone,Role,Status,Team\nJohn,Doe,player@example.com,555-0100,player,active,Thunder U12\nJane,Smith,coach@example.com,555-0101,coach,active,\nBob,Johnson,parent@example.com,555-0102,parent,active,";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -736,25 +736,21 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
       let errorCount = 0;
       
       for (const line of dataLines) {
-        const values = line.split(',').map(v => v.trim());
+        const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
         const userData: any = {};
         
         headers.forEach((header, index) => {
           userData[header] = values[index] || '';
         });
         
-        // Map CSV column names to our data model
+        // Map CSV column names to our data model (matching template: First name,Last name,Email,Phone,Role,Status,Team)
         const firstName = userData['first name'] || userData['firstname'] || '';
         const lastName = userData['last name'] || userData['lastname'] || '';
         const email = userData['email'] || '';
         const phone = userData['phone'] || userData['phonenumber'] || '';
-        const address = userData['address'] || '';
         const role = userData['role'] || 'player';
         const status = userData['status'] || 'active';
-        const program = userData['program/division'] || userData['program'] || '';
         const teamName = userData['team'] || '';
-        const awards = userData['awards'] || '';
-        const rating = userData['rating'] || '';
         
         // Find team by name if provided
         let teamId = undefined;
@@ -773,8 +769,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
             lastName: lastName,
             role: role,
             phoneNumber: phone || undefined,
-            address: address || undefined,
-            program: program || undefined,
             teamId: teamId,
             isActive: status.toLowerCase() === 'active',
             verified: false,

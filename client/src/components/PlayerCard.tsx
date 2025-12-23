@@ -220,14 +220,34 @@ export default function PlayerCard({
   });
 
   // Calculate overall skill score from latest evaluation
-  const overallSkillScore = latestEvaluation?.skillsData 
-    ? Math.round(
-        Object.values(latestEvaluation.skillsData as Record<string, number>)
-          .filter((val): val is number => typeof val === 'number')
-          .reduce((sum, val) => sum + val, 0) / 
-        Object.keys(latestEvaluation.skillsData).length * 20
-      )
-    : 0;
+  // Handles both flat scores {shooting: 4.35} and nested scores {SHOOTING: {LAYUP: 4, 2PT: 3}}
+  const calculateOverallScore = (skillsData: any): number => {
+    if (!skillsData || typeof skillsData !== 'object') return 0;
+    
+    const allScores: number[] = [];
+    
+    Object.values(skillsData).forEach((value: any) => {
+      if (typeof value === 'number') {
+        // Flat format: {shooting: 4.35}
+        allScores.push(value);
+      } else if (typeof value === 'object' && value !== null) {
+        // Nested format: {SHOOTING: {LAYUP: 4, 2PT: 3}}
+        Object.values(value).forEach((subValue: any) => {
+          if (typeof subValue === 'number') {
+            allScores.push(subValue);
+          }
+        });
+      }
+    });
+    
+    if (allScores.length === 0) return 0;
+    
+    // Calculate average and convert to 0-100 scale (scores are 1-5, so multiply by 20)
+    const average = allScores.reduce((sum, val) => sum + val, 0) / allScores.length;
+    return Math.round(average * 20);
+  };
+  
+  const overallSkillScore = calculateOverallScore(latestEvaluation?.skillsData);
 
   // Prepare rings data for trophy display (each needs earned/total format)
   const ringsData = awardsSummary ? {

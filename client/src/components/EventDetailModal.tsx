@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { 
   MapPin, Calendar, Clock, 
   CheckCircle2, XCircle, Circle, Navigation,
-  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList
+  MapPinOff, QrCode, Locate, Users, Loader2, Settings, RefreshCw, HelpCircle, UserCheck, ClipboardList, ArrowLeft
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RSVPWheel, CheckInWheel, RsvpData, CheckInData } from '@/components/RSVPCheckInWheels';
@@ -262,9 +262,20 @@ export default function EventDetailModal({
     },
     onError: (error: any) => {
       console.error('RSVP mutation error:', error);
+      let errorMessage = 'Failed to update RSVP. Please try again.';
+      if (error?.message) {
+        try {
+          const parsed = JSON.parse(error.message.replace(/^\d+:\s*/, ''));
+          errorMessage = parsed.error || parsed.message || errorMessage;
+        } catch {
+          errorMessage = error.message.includes(':') 
+            ? error.message.split(':').slice(1).join(':').trim() 
+            : error.message;
+        }
+      }
       toast({ 
         title: 'RSVP Failed', 
-        description: error?.message || 'Failed to update RSVP. Please try again.',
+        description: errorMessage,
         variant: 'destructive'
       });
     },
@@ -664,7 +675,16 @@ export default function EventDetailModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-0" data-testid="event-detail-modal">
           <div className="sticky top-0 bg-white z-10 px-6 pt-6 pb-4 border-b">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 shrink-0 -ml-2"
+                onClick={() => onOpenChange(false)}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
               <div className="flex-1">
                 <DialogTitle className="text-xl font-bold text-gray-900">
                   {event.title}

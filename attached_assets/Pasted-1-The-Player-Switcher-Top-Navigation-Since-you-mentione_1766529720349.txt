@@ -1,0 +1,60 @@
+1. The "Player Switcher" (Top Navigation)
+
+Since you mentioned accessing programs by clicking on the player, place a horizontal Player Carousel at the very top.
+
+How it works: Icons with the player's name (e.g., "Jack Jr.", "Alex").
+
+The Benefit: When a parent taps a player, the store filters to show only what is relevant to them (e.g., "U12 Jerseys" or "Advanced Skills Academy").
+
+2. Category-Based Storefront
+
+Instead of a "Make a Payment" button that opens a generic dropdown, use visual Category Tiles. This makes the app feel like a premium academy.
+
+Category	Item Types
+Club & Subscriptions	Youth Club, monthly dues, recurring memberships.
+Training & Camps	Private 10-packs, single sessions, summer camps.
+Gear & Apparel	Jerseys, shooting shirts, water bottles.
+Digital Academy	Online training programs (accessible in-app).
+3. "My Active Programs" (The Management Piece)
+
+Keep the "Active Subscriptions" section, but move it below the store or into a "Manage" toggle.
+
+Current UI Fix: Instead of a long list of "test sub" boxes, use a summary card for each player.
+
+Example: A card for "Jack Player" that, when tapped, expands to show his active Youth Club sub, his remaining 4/10 private training sessions, and his jersey order status.
+
+Suggested Visual Layout
+
+[ Header: Payments & Store ]
+
+Player Filter: ( All ) ( Jack Player ) ( Player 2 ) [ + Add Player ]
+
+Featured/New: A small banner for "Summer Camp 2026 - Register Now!"
+
+The Shop (Grid Layout):
+
+[Icon] Registration & Dues
+
+[Icon] Private Training
+
+[Icon] Team Gear
+
+[Icon] Video Drills
+
+Current Status (Collapsible):
+
+⌄ Your Active Programs
+
+Youth Club (Jack Player) - Active
+
+Private Training - 4 Sessions Remaining
+
+Specific Recommendations for your Items:
+
+Private Training (10-packs): Use a "Punch Card" visual. Parents love seeing "6 sessions left" rather than just a "Completed" payment receipt.
+
+Jerseys: Include a "Size Guide" link directly in the product view to reduce friction.
+
+Online Programs: Since these are accessible in-app, add a "Start Training" button directly on the receipt/subscription card once they buy it, so they don't have to hunt for the content.
+
+Pro Tip: Change the button text from "Make a Payment" to "Browse Programs & Gear." It shifts the psychology from "I'm losing money" to "I'm investing in my kid's hobby."

@@ -47,6 +47,7 @@ import {
   Heart,
   AlertCircle,
   Ruler,
+  Crown,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEffect, useState, useRef } from "react";
@@ -911,6 +912,10 @@ export default function UnifiedAccount() {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   
+  // Store tab state
+  const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
+  const [selectedStoreCategory, setSelectedStoreCategory] = useState<string>("");
+  
   // Check if device is locked - redirect to player dashboard if so
   useEffect(() => {
     const lockedPlayerId = localStorage.getItem("deviceLockedToPlayer");
@@ -1022,6 +1027,11 @@ export default function UnifiedAccount() {
   // Fetch programs (packages)
   const { data: programs = [] } = useQuery<Program[]>({
     queryKey: ["/api/programs"],
+  });
+
+  // Fetch player enrollments
+  const { data: playerEnrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments"],
   });
 
   const upcomingEvents = events
@@ -1298,30 +1308,314 @@ export default function UnifiedAccount() {
             />
           </TabsContent>
 
-          {/* Payments Tab */}
-          <TabsContent value="payments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Make a Payment</CardTitle>
-                    <CardDescription>Purchase packages and memberships</CardDescription>
+          {/* Payments Tab - Redesigned with Category-Based Storefront */}
+          <TabsContent value="payments" className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold" data-testid="heading-payments-store">Programs & Gear</h2>
+                <p className="text-gray-500 text-sm">Browse programs and invest in your player's development</p>
+              </div>
+            </div>
+
+            {/* Player Switcher Carousel */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
+              <Button
+                variant={!selectedStorePlayer ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStorePlayer("")}
+                className="flex-shrink-0 rounded-full"
+                data-testid="player-filter-all"
+              >
+                All Players
+              </Button>
+              {players?.map((player: any) => (
+                <Button
+                  key={player.id}
+                  variant={selectedStorePlayer === player.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStorePlayer(player.id)}
+                  className="flex-shrink-0 rounded-full gap-2"
+                  data-testid={`player-filter-${player.id}`}
+                >
+                  <Avatar className="w-5 h-5">
+                    <AvatarImage src={player.profileImageUrl} />
+                    <AvatarFallback className="text-xs bg-red-100 text-red-700">
+                      {(player.firstName?.[0] || "")}{(player.lastName?.[0] || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  {player.firstName}
+                </Button>
+              ))}
+            </div>
+
+            {/* Category-Based Store Tiles */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="store-categories">
+              {[
+                { id: "membership", label: "Club & Subscriptions", icon: <Crown className="w-8 h-8" />, color: "from-amber-500 to-amber-600", desc: "Youth Club, monthly dues", typeMatch: ["Subscription"] },
+                { id: "training", label: "Training & Camps", icon: <Target className="w-8 h-8" />, color: "from-blue-500 to-blue-600", desc: "Private sessions, camps", typeMatch: ["Pack", "One-Time"] },
+                { id: "gear", label: "Gear & Apparel", icon: <Shirt className="w-8 h-8" />, color: "from-purple-500 to-purple-600", desc: "Jerseys, equipment", productCategory: "goods" },
+                { id: "digital", label: "Digital Academy", icon: <Trophy className="w-8 h-8" />, color: "from-green-500 to-green-600", desc: "Online training programs", typeMatch: ["Program"] },
+              ].map((category) => {
+                const categoryItems = programs?.filter((p: any) => {
+                  const tags = p.tags || [];
+                  const isActive = p.isActive !== false;
+                  const hasPrice = p.price && p.price > 0;
+                  if (!isActive || !hasPrice) return false;
+                  
+                  // First check tags if available
+                  if (tags.length > 0 && tags.includes(category.id)) return true;
+                  
+                  // Fallback: match by type or productCategory
+                  if ((category as any).productCategory && p.productCategory === (category as any).productCategory) return true;
+                  if ((category as any).typeMatch && (category as any).typeMatch.includes(p.type)) return true;
+                  
+                  return false;
+                }) || [];
+                
+                return (
+                  <div
+                    key={category.id}
+                    className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${category.color} p-4 cursor-pointer hover:scale-105 transition-transform shadow-lg`}
+                    onClick={() => setSelectedStoreCategory(selectedStoreCategory === category.id ? "" : category.id)}
+                    data-testid={`category-tile-${category.id}`}
+                  >
+                    <div className="text-white/90 mb-2">{category.icon}</div>
+                    <h3 className="text-white font-bold text-sm">{category.label}</h3>
+                    <p className="text-white/70 text-xs">{category.desc}</p>
+                    {categoryItems.length > 0 && (
+                      <Badge className="absolute top-2 right-2 bg-white/20 text-white border-0">
+                        {categoryItems.length}
+                      </Badge>
+                    )}
                   </div>
-                  <Dialog open={paymentDialogOpen} onOpenChange={(open) => {
-                    setPaymentDialogOpen(open);
-                    if (!open) {
-                      setIsStoreItemPurchase(false);
-                      setSelectedPackage("");
-                      setSelectedPlayer("");
-                    }
-                  }}>
-                    <DialogTrigger asChild>
-                      <Button data-testid="button-make-payment" onClick={() => setIsStoreItemPurchase(false)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Make Payment
+                );
+              })}
+            </div>
+
+            {/* Products Grid - Filtered by Category */}
+            {(() => {
+              const categoryConfig: Record<string, { typeMatch?: string[], productCategory?: string }> = {
+                membership: { typeMatch: ["Subscription"] },
+                training: { typeMatch: ["Pack", "One-Time"] },
+                gear: { productCategory: "goods" },
+                digital: { typeMatch: ["Program"] },
+              };
+              
+              const filteredProducts = programs?.filter((p: any) => {
+                const tags = p.tags || [];
+                const isActive = p.isActive !== false;
+                const hasPrice = p.price && p.price > 0;
+                if (!isActive || !hasPrice) return false;
+                
+                if (!selectedStoreCategory) return true; // Show all when no filter
+                
+                // Check tags first
+                if (tags.length > 0 && tags.includes(selectedStoreCategory)) return true;
+                
+                // Fallback to type/productCategory matching
+                const config = categoryConfig[selectedStoreCategory];
+                if (config?.productCategory && p.productCategory === config.productCategory) return true;
+                if (config?.typeMatch && config.typeMatch.includes(p.type)) return true;
+                
+                return false;
+              }) || [];
+              
+              if (filteredProducts.length === 0 && selectedStoreCategory) {
+                return (
+                  <Card className="border-dashed">
+                    <CardContent className="py-8 text-center">
+                      <ShoppingBag className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                      <p className="text-gray-500">No items in this category yet</p>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedStoreCategory("")} className="mt-2">
+                        View All Items
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md" data-testid="dialog-make-payment">
+                    </CardContent>
+                  </Card>
+                );
+              }
+              
+              if (filteredProducts.length === 0) return null;
+              
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">
+                      {selectedStoreCategory ? 
+                        {membership: "Club & Subscriptions", training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
+                        : "All Products"}
+                    </h3>
+                    {selectedStoreCategory && (
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedStoreCategory("")}>
+                        Clear Filter
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredProducts.map((item: any) => {
+                      const isSubscription = item.type === "Subscription";
+                      const isPack = item.type === "Pack";
+                      const isStore = item.productCategory === "goods";
+                      
+                      return (
+                        <Card 
+                          key={item.id} 
+                          className="hover:border-red-300 transition-colors cursor-pointer overflow-hidden"
+                          onClick={() => {
+                            setSelectedPackage(item.id);
+                            setIsStoreItemPurchase(isStore);
+                            setPaymentDialogOpen(true);
+                          }}
+                          data-testid={`product-card-${item.id}`}
+                        >
+                          {item.coverImageUrl && (
+                            <div className="h-32 overflow-hidden">
+                              <img src={item.coverImageUrl} alt={item.name} className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <CardContent className={item.coverImageUrl ? "p-4" : "p-4"}>
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-semibold">{item.name}</h4>
+                              {isSubscription && <Badge className="bg-amber-100 text-amber-700 border-0">Subscription</Badge>}
+                              {isPack && <Badge className="bg-blue-100 text-blue-700 border-0">{item.sessionCount || ""} Pack</Badge>}
+                              {isStore && <Badge className="bg-purple-100 text-purple-700 border-0">Store</Badge>}
+                            </div>
+                            {item.description && (
+                              <p className="text-sm text-gray-500 mb-3 line-clamp-2">{item.description}</p>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-xl font-bold">${(item.price / 100).toFixed(2)}</span>
+                                {isSubscription && item.billingCycle && (
+                                  <span className="text-gray-400 text-sm">/{item.billingCycle.toLowerCase()}</span>
+                                )}
+                              </div>
+                              <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                                {isStore ? "Buy" : "Enroll"}
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* My Active Programs - Collapsible Section */}
+            <Collapsible defaultOpen={true}>
+              <Card>
+                <CollapsibleTrigger className="w-full">
+                  <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-gray-50 rounded-t-lg">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-green-600" />
+                      <CardTitle className="text-lg">Your Active Programs</CardTitle>
+                    </div>
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="pt-0">
+                    {(() => {
+                      // Get enrollments for selected player or all players
+                      const relevantEnrollments = playerEnrollments?.filter((e: any) => 
+                        e.status === 'active' && 
+                        (!selectedStorePlayer || e.playerId === selectedStorePlayer || e.userId === user?.id)
+                      ) || [];
+                      
+                      if (relevantEnrollments.length === 0) {
+                        return (
+                          <div className="text-center py-6 text-gray-500">
+                            <Target className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                            <p>No active programs yet</p>
+                            <p className="text-sm">Browse the store above to get started!</p>
+                          </div>
+                        );
+                      }
+                      
+                      // Group enrollments by player
+                      const playerGroups: Record<string, any[]> = {};
+                      relevantEnrollments.forEach((enrollment: any) => {
+                        const playerId = enrollment.playerId || 'family';
+                        if (!playerGroups[playerId]) playerGroups[playerId] = [];
+                        playerGroups[playerId].push(enrollment);
+                      });
+                      
+                      return (
+                        <div className="space-y-4">
+                          {Object.entries(playerGroups).map(([playerId, enrollments]) => {
+                            const player = players?.find((p: any) => p.id === playerId);
+                            const playerName = player ? `${player.firstName} ${player.lastName}` : "Family Programs";
+                            
+                            return (
+                              <div key={playerId} className="border rounded-lg p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Avatar className="w-8 h-8">
+                                    <AvatarImage src={player?.profileImageUrl} />
+                                    <AvatarFallback className="bg-red-100 text-red-700 text-xs">
+                                      {player ? `${player.firstName?.[0]}${player.lastName?.[0]}` : "F"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="font-medium">{playerName}</span>
+                                </div>
+                                <div className="space-y-2">
+                                  {enrollments.map((enrollment: any) => {
+                                    const program = programs?.find((p: any) => p.id === enrollment.programId);
+                                    const isPack = program?.type === "Pack";
+                                    const remainingCredits = enrollment.remainingCredits || 0;
+                                    const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
+                                    
+                                    return (
+                                      <div key={enrollment.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                                        <div className="flex items-center gap-3">
+                                          {isPack ? (
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                                              <Target className="w-4 h-4 text-blue-600" />
+                                            </div>
+                                          ) : (
+                                            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                              <Crown className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                          )}
+                                          <div>
+                                            <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
+                                            {isPack && totalCredits > 0 && (
+                                              <div className="flex items-center gap-2">
+                                                <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
+                                                <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                          Active
+                                        </Badge>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+
+            {/* Payment Dialog */}
+            <Dialog open={paymentDialogOpen} onOpenChange={(open) => {
+              setPaymentDialogOpen(open);
+              if (!open) {
+                setIsStoreItemPurchase(false);
+                setSelectedPackage("");
+                setSelectedPlayer("");
+              }
+            }}>
+              <DialogContent className="max-w-md" data-testid="dialog-make-payment">
                       <DialogHeader>
                         <DialogTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DialogTitle>
                         <DialogDescription>
@@ -1530,57 +1824,6 @@ export default function UnifiedAccount() {
                       </div>
                     </DialogContent>
                   </Dialog>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Suggested Add-ons - Store Items */}
-            {(() => {
-              const storeItems = programs?.filter((p: any) => p.productCategory === 'goods' && p.isActive !== false && p.price && p.price > 0) || [];
-              if (storeItems.length === 0) return null;
-              
-              return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShoppingBag className="w-5 h-5" />
-                      Merchandise & Add-ons
-                    </CardTitle>
-                    <CardDescription>Physical products and gear</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {storeItems.slice(0, 6).map((item: any) => (
-                        <div 
-                          key={item.id} 
-                          className="border rounded-lg p-4 hover:border-red-300 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedPackage(item.id);
-                            setIsStoreItemPurchase(true);
-                            setPaymentDialogOpen(true);
-                          }}
-                          data-testid={`store-item-${item.id}`}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-sm">{item.name}</h4>
-                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Store</span>
-                          </div>
-                          {item.description && (
-                            <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.description}</p>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold">${(item.price / 100).toFixed(2)}</span>
-                            <Button size="sm" variant="outline" className="text-xs">
-                              Buy
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
             
             {/* Payment History Component */}
             <PaymentHistory />

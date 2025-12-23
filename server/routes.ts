@@ -5862,9 +5862,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const userAwardRecords = await storage.getUserAwardRecords(userId);
+      console.log(`[Awards API] User ${userId}: Found ${userAwardRecords.length} user award records`);
       
       // Fetch award definitions to get tier information
       const allAwardDefinitions = await storage.getAwardDefinitions(organizationId);
+      console.log(`[Awards API] Org ${organizationId}: Found ${allAwardDefinitions.length} award definitions`);
       const awardDefMap = new Map(allAwardDefinitions.map(ad => [ad.id, ad]));
       
       // Enrich user awards with award definition data
@@ -5888,6 +5890,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const starterBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Starter').length;
       const prospectBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Prospect').length;
       const rookieBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Rookie').length;
+      
+      console.log(`[Awards API] Counts - Trophy:${trophiesCount}, HOF:${hallOfFameBadgesCount}, Superstar:${superstarBadgesCount}, All-Star:${allStarBadgesCount}, Starter:${starterBadgesCount}, Prospect:${prospectBadgesCount}`);
       
       res.json({
         trophiesCount,
@@ -7482,6 +7486,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const evaluations = await storage.getEvaluationsByPlayer(playerId);
+      console.log(`[Eval API] Player ${playerId}: Found ${evaluations?.length || 0} evaluations`);
       if (!evaluations || evaluations.length === 0) {
         return res.json(null);
       }
@@ -7494,6 +7499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const latest = sorted[0];
+      console.log(`[Eval API] Latest: Q${latest.quarter} ${latest.year}, scores:`, latest.scores);
       res.json({
         id: latest.id,
         playerId: latest.playerId,

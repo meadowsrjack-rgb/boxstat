@@ -5880,15 +5880,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Return summary with counts for frontend display
-      const badges = enrichedAwards.filter((a: any) => a.tier === 'Badge');
-      const trophies = enrichedAwards.filter((a: any) => a.tier === 'Trophy');
+      // Return summary with counts for frontend display - count by prestige level
+      const trophiesCount = enrichedAwards.filter((a: any) => a.prestige === 'Trophy').length;
+      const hallOfFameBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Hall of Fame').length;
+      const superstarBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Superstar').length;
+      const allStarBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'All-Star').length;
+      const starterBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Starter').length;
+      const prospectBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Prospect').length;
+      const rookieBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Rookie').length;
       
       res.json({
-        totalBadges: badges.length,
-        totalTrophies: trophies.length,
-        badges,
-        trophies,
+        trophiesCount,
+        hallOfFameBadgesCount,
+        superstarBadgesCount,
+        allStarBadgesCount,
+        starterBadgesCount,
+        prospectBadgesCount,
+        rookieBadgesCount,
         allAwards: enrichedAwards,
       });
     } catch (error: any) {
@@ -7459,6 +7467,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error deleting evaluation:', error);
       res.status(500).json({ error: 'Failed to delete evaluation', message: error.message });
+    }
+  });
+  
+  // Latest evaluation for a player (used by PlayerCard)
+  app.get('/api/players/:playerId/latest-evaluation', requireAuth, async (req: any, res) => {
+    try {
+      const { playerId } = req.params;
+      const { id: currentUserId, role, organizationId } = req.user;
+      
+      // Authorization: users can view their own, admins/coaches can view any
+      if (playerId !== currentUserId && role !== 'admin' && role !== 'coach') {
+        return res.status(403).json({ message: 'Not authorized to view this evaluation' });
+      }
+      
+      const evaluations = await storage.getEvaluationsByPlayer(playerId);
+      if (!evaluations || evaluations.length === 0) {
+        return res.json(null);
+      }
+      
+      // Sort by year and quarter descending to get latest
+      const sorted = evaluations.sort((a: any, b: any) => {
+        if (b.year !== a.year) return b.year - a.year;
+        const quarterOrder: Record<string, number> = { Q4: 4, Q3: 3, Q2: 2, Q1: 1 };
+        return (quarterOrder[b.quarter] || 0) - (quarterOrder[a.quarter] || 0);
+      });
+      
+      const latest = sorted[0];
+      res.json({
+        id: latest.id,
+        playerId: latest.playerId,
+        coachId: latest.coachId,
+        quarter: latest.quarter,
+        year: latest.year,
+        skillsData: latest.scores, // Map scores to skillsData for frontend compatibility
+        notes: latest.notes,
+        createdAt: latest.createdAt,
+      });
+    } catch (error: any) {
+      console.error('Error fetching latest evaluation:', error);
+      res.status(500).json({ error: 'Failed to fetch latest evaluation', message: error.message });
     }
   });
   

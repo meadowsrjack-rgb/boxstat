@@ -2714,6 +2714,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Upload product image
+  app.post('/api/upload/product-image', requireAuth, upload.single('image'), async (req: any, res) => {
+    const uploadedFilePath = req.file ? path.join(uploadDir, req.file.filename) : null;
+    
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Only admins can upload product images
+      if (req.user.role !== 'admin') {
+        if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+          fs.unlinkSync(uploadedFilePath);
+        }
+        return res.status(403).json({ error: 'Only admins can upload product images' });
+      }
+      
+      const filename = req.file.filename;
+      const imageUrl = `/uploads/${filename}`;
+      
+      res.json({ 
+        success: true, 
+        imageUrl,
+        message: 'Product image uploaded successfully' 
+      });
+    } catch (error: any) {
+      console.error('Product image upload error:', error);
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        try {
+          fs.unlinkSync(uploadedFilePath);
+        } catch (unlinkError) {
+          console.error('Failed to delete uploaded file:', unlinkError);
+        }
+      }
+      res.status(500).json({ error: 'Failed to upload product image', message: error.message });
+    }
+  });
+
   // Update player profile (for parents updating child profiles or players updating self)
   app.patch('/api/profile/:id', requireAuth, async (req: any, res) => {
     try {

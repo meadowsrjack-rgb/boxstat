@@ -53,6 +53,8 @@ import {
   ShoppingBag,
   Package,
   Gift,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -5669,6 +5671,8 @@ function StoreTab({ organization }: any) {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [selectedSuggestedPrograms, setSelectedSuggestedPrograms] = useState<string[]>([]);
+  const [productImageUrl, setProductImageUrl] = useState<string>("");
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const { data: allProducts, isLoading } = useQuery<any[]>({
     queryKey: ["/api/programs"],
@@ -5680,6 +5684,13 @@ function StoreTab({ organization }: any) {
   // Filter to only show programs (services) for the suggested add-ons selector
   const programOptions = allProducts?.filter((p: any) => p.productCategory === 'service' && p.isActive !== false) || [];
 
+  const STORE_CATEGORIES = [
+    { value: "gear", label: "Gear & Apparel" },
+    { value: "training", label: "Training & Camps" },
+    { value: "digital", label: "Digital Academy" },
+    { value: "membership", label: "Club & Subscriptions" },
+  ];
+
   const form = useForm({
     resolver: zodResolver(z.object({
       organizationId: z.string(),
@@ -5690,6 +5701,7 @@ function StoreTab({ organization }: any) {
       inventoryCount: z.number().optional(),
       shippingRequired: z.boolean().default(false),
       isActive: z.boolean().default(true),
+      storeCategory: z.string().optional(),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
@@ -5700,6 +5712,7 @@ function StoreTab({ organization }: any) {
       inventoryCount: 0,
       shippingRequired: false,
       isActive: true,
+      storeCategory: "gear",
     },
   });
 
@@ -5710,6 +5723,8 @@ function StoreTab({ organization }: any) {
         organizationId: organization?.id,
         productCategory: "goods",
         type: "One-Time",
+        coverImageUrl: productImageUrl || null,
+        tags: data.storeCategory ? [data.storeCategory] : [],
       };
       let productId = editingProduct?.id;
       
@@ -5735,6 +5750,7 @@ function StoreTab({ organization }: any) {
       setIsDialogOpen(false);
       setEditingProduct(null);
       setSelectedSuggestedPrograms([]);
+      setProductImageUrl("");
       form.reset();
     },
     onError: () => {
@@ -5758,6 +5774,7 @@ function StoreTab({ organization }: any) {
 
   const handleEdit = async (product: any) => {
     setEditingProduct(product);
+    setProductImageUrl(product.coverImageUrl || "");
     form.reset({
       organizationId: product.organizationId,
       name: product.name,
@@ -5767,6 +5784,7 @@ function StoreTab({ organization }: any) {
       inventoryCount: product.inventoryCount || 0,
       shippingRequired: product.shippingRequired || false,
       isActive: product.isActive ?? true,
+      storeCategory: product.tags?.[0] || "gear",
     });
     
     // Fetch current suggested programs for this product
@@ -5788,6 +5806,7 @@ function StoreTab({ organization }: any) {
   const handleCreate = () => {
     setEditingProduct(null);
     setSelectedSuggestedPrograms([]);
+    setProductImageUrl("");
     form.reset({
       organizationId: organization?.id || "",
       name: "",
@@ -5797,8 +5816,38 @@ function StoreTab({ organization }: any) {
       inventoryCount: 0,
       shippingRequired: false,
       isActive: true,
+      storeCategory: "gear",
     });
     setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+      const response = await fetch('/api/upload/product-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload image');
+      }
+      
+      const data = await response.json();
+      setProductImageUrl(data.imageUrl);
+      toast({ title: "Image uploaded successfully" });
+    } catch (error) {
+      toast({ title: "Failed to upload image", variant: "destructive" });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const formatPrice = (cents: number) => {
@@ -5951,11 +6000,12 @@ function StoreTab({ organization }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Image</TableHead>
                 <TableHead>Product</TableHead>
+                <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Sizes</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Shipping</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -5964,11 +6014,33 @@ function StoreTab({ organization }: any) {
               {storeProducts.map((product: any) => (
                 <TableRow key={product.id} data-testid={`row-store-${product.id}`}>
                   <TableCell>
+                    {product.coverImageUrl ? (
+                      <img 
+                        src={product.coverImageUrl} 
+                        alt={product.name} 
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Package className="w-5 h-5 text-gray-400" />
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <div className="font-medium" data-testid={`text-store-name-${product.id}`}>
                       {product.name}
                     </div>
                     {product.description && (
                       <div className="text-xs text-gray-500 truncate max-w-[200px]">{product.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {product.tags?.[0] ? (
+                      <Badge variant="outline" className="capitalize">
+                        {STORE_CATEGORIES.find(c => c.value === product.tags[0])?.label || product.tags[0]}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
                     )}
                   </TableCell>
                   <TableCell className="font-medium">
@@ -5995,13 +6067,6 @@ function StoreTab({ organization }: any) {
                       </Badge>
                     ) : (
                       <span className="text-gray-400 text-sm">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {product.shippingRequired ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700">Required</Badge>
-                    ) : (
-                      <span className="text-gray-400 text-sm">Pickup</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -6073,6 +6138,63 @@ function StoreTab({ organization }: any) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="storeCategory"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "gear"}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-store-category">
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {STORE_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-2">
+                <Label>Product Image</Label>
+                <div className="flex items-center gap-4">
+                  {productImageUrl ? (
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden border">
+                      <img src={productImageUrl} alt="Product" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setProductImageUrl("")}
+                        className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                      <ImageIcon className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      data-testid="input-product-image"
+                    />
+                    {uploadingImage && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+                  </div>
+                </div>
+              </div>
 
               <FormField
                 control={form.control}

@@ -859,6 +859,30 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
   }) : users;
 
 
+  const downloadUsersData = () => {
+    const csvHeaders = "First name,Last name,Email,Phone,Role,Status,Team";
+    const csvRows = users.map((user: any) => {
+      const team = teams.find((t: any) => t.id === user.teamId);
+      return [
+        user.firstName || "",
+        user.lastName || "",
+        user.email || "",
+        user.phoneNumber || "",
+        user.role || "",
+        user.isActive !== false ? "active" : "inactive",
+        team?.name || ""
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'users-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -867,12 +891,11 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
             <CardTitle>User Management</CardTitle>
             <CardDescription>Manage players, coaches, parents, and admins</CardDescription>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex gap-2">
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-bulk-upload-users" className="w-full sm:w-auto">
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Upload
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-users">
+                <Upload className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -880,7 +903,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 <DialogTitle>Bulk Upload Users</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: First name, Last name, Email, Phone, Address, Role, Status, Program/Division, Team, Awards, Rating</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: First name, Last name, Email, Phone, Role, Status, Team</p>
                 <Input
                   type="file"
                   accept=".csv"
@@ -895,11 +918,14 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
             </DialogContent>
           </Dialog>
           
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadUsersData} data-testid="button-download-users">
+            <Download className="w-4 h-4" />
+          </Button>
+          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-add-new-user" className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
-                Add User
+              <Button size="icon" title="Add User" data-testid="button-add-new-user">
+                <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -3403,12 +3429,39 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
   }, [editingEvent]);
 
   const downloadEventTemplate = () => {
-    const csvContent = "Title,Type,Start Time,End Time,Location,Description\nTeam Practice,practice,2025-01-15T10:00,2025-01-15T12:00,Main Gym,Weekly team practice\nChampionship Game,game,2025-01-20T18:00,2025-01-20T20:00,Arena Stadium,Final game";
+    const csvContent = "Title,Type,Start Time,End Time,Location,Team\nTeam Practice,practice,2025-01-15T10:00,2025-01-15T12:00,Main Gym,Thunder U12\nChampionship Game,game,2025-01-20T18:00,2025-01-20T20:00,Arena Stadium,Varsity";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'events-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadEventsData = () => {
+    const csvHeaders = "Title,Type,Start Time,End Time,Location,Team";
+    const csvRows = events.map((event: any) => {
+      const assignedTeams = event.assignTo?.teams || [];
+      const teamNames = assignedTeams.map((tid: string) => {
+        const team = teams.find((t: any) => String(t.id) === tid);
+        return team?.name || "";
+      }).join(";");
+      return [
+        event.title || "",
+        event.eventType || event.type || "",
+        event.startTime || "",
+        event.endTime || "",
+        event.location || "",
+        teamNames
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'events-data.csv';
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -3485,8 +3538,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
           <CardTitle>Event Management</CardTitle>
           <CardDescription>Schedule practices, games, and other events</CardDescription>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex border rounded-lg">
+        <div className="flex gap-2">
+          <div className="flex border rounded-lg mr-2">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
@@ -3507,9 +3560,8 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
           
           <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-bulk-upload-events" className="w-full sm:w-auto">
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Upload
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-events">
+                <Upload className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -3517,7 +3569,7 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
                 <DialogTitle>Bulk Upload Events</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Upload a CSV file with columns: Title, Type, Start Time, End Time, Location, Description</p>
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Title, Type, Start Time, End Time, Location, Team</p>
                 <Input
                   type="file"
                   accept=".csv"
@@ -3532,11 +3584,14 @@ function EventsTab({ events, teams, programs, organization, currentUser }: any) 
             </DialogContent>
           </Dialog>
           
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadEventsData} data-testid="button-download-events">
+            <Download className="w-4 h-4" />
+          </Button>
+          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-event" className="w-full sm:w-auto">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Event
+              <Button size="icon" title="Create Event" data-testid="button-create-event">
+                <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
@@ -4709,6 +4764,76 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     setIsDialogOpen(true);
   };
 
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  const downloadAwardTemplate = () => {
+    const csvContent = "Name,Category,Points,Description,Image URL\nHeart & Hustle Award,Gold,100,For players who show exceptional effort,\nMVP Badge,Purple,250,Most Valuable Player award,";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'awards-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadAwardsData = () => {
+    const csvHeaders = "Name,Category,Points,Description,Image URL";
+    const csvRows = sortedAwards.map((award: any) => {
+      return [
+        award.name || "",
+        award.tier || "",
+        award.threshold || 0,
+        award.description || "",
+        award.imageUrl || ""
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'awards-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+      return;
+    }
+    const dataLines = lines.slice(1);
+    let successCount = 0;
+    for (const line of dataLines) {
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      if (values.length >= 1 && values[0]) {
+        try {
+          await apiRequest("POST", "/api/awards", {
+            organizationId: organization?.id,
+            name: values[0],
+            tier: values[1] || "Grey",
+            threshold: parseInt(values[2]) || 0,
+            description: values[3] || "",
+            imageUrl: values[4] || "",
+            active: true,
+            triggerCategory: "manual",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create award:", error);
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/awards"] });
+    toast({ title: `Bulk upload complete`, description: `Created ${successCount} awards` });
+    setIsBulkUploadOpen(false);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -4717,6 +4842,36 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
           <CardDescription>Manage awards for your organization</CardDescription>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-awards">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Awards</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Category, Points, Description, Image URL</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUpload}
+                  data-testid="input-award-csv-upload"
+                />
+                <Button variant="outline" className="w-full" onClick={downloadAwardTemplate} data-testid="button-download-award-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadAwardsData} data-testid="button-download-awards">
+            <Download className="w-4 h-4" />
+          </Button>
+          
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
@@ -4725,9 +4880,8 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             }
           }}>
             <DialogTrigger asChild>
-              <Button data-testid="button-create-award">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Award
+              <Button size="icon" title="Create Award" data-testid="button-create-award">
+                <Plus className="w-4 h-4" />
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -5658,6 +5812,79 @@ function StoreTab({ organization }: any) {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  const downloadStoreTemplate = () => {
+    const csvContent = "Name,Type,Description,Price,Credits,Access Tag,Is Active\nTeam Jersey,goods,Official team jersey,4999,0,none,true\nWater Bottle,goods,Team branded bottle,1499,0,none,true";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'store-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadStoreData = () => {
+    const csvHeaders = "Name,Type,Description,Price,Credits,Access Tag,Is Active";
+    const csvRows = storeProducts.map((product: any) => {
+      return [
+        product.name || "",
+        product.productCategory || "goods",
+        product.description || "",
+        product.price || 0,
+        product.sessionCount || 0,
+        product.accessTag || "none",
+        product.isActive !== false ? "true" : "false"
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'store-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUploadStore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+      return;
+    }
+    const dataLines = lines.slice(1);
+    let successCount = 0;
+    for (const line of dataLines) {
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      if (values.length >= 1 && values[0]) {
+        try {
+          await apiRequest("POST", "/api/programs", {
+            organizationId: organization?.id,
+            name: values[0],
+            productCategory: "goods",
+            type: "One-Time",
+            description: values[2] || "",
+            price: parseInt(values[3]) || 0,
+            sessionCount: parseInt(values[4]) || 0,
+            accessTag: values[5] || "none",
+            isActive: values[6]?.toLowerCase() !== "false",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create product:", error);
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    toast({ title: `Bulk upload complete`, description: `Created ${successCount} products` });
+    setIsBulkUploadOpen(false);
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -5682,10 +5909,41 @@ function StoreTab({ organization }: any) {
             <CardTitle>Store - Merchandise & Gear</CardTitle>
             <CardDescription>Physical products like jerseys, equipment, and merchandise</CardDescription>
           </div>
-          <Button onClick={handleCreate} data-testid="button-create-store-product">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-store">
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Products</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Type, Description, Price, Credits, Access Tag, Is Active</p>
+                  <Input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleBulkUploadStore}
+                    data-testid="input-store-csv-upload"
+                  />
+                  <Button variant="outline" className="w-full" onClick={downloadStoreTemplate} data-testid="button-download-store-template">
+                    <Download className="w-4 h-4 mr-2" />
+                    Download CSV Template
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            
+            <Button variant="outline" size="icon" title="Download Data" onClick={downloadStoreData} data-testid="button-download-store">
+              <Download className="w-4 h-4" />
+            </Button>
+            
+            <Button size="icon" title="Add Product" onClick={handleCreate} data-testid="button-create-store-product">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -6157,6 +6415,82 @@ function ProgramsTab({ programs, teams, organization }: any) {
     return teams.filter((t: any) => t.programId === programId);
   };
 
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  const downloadProgramTemplate = () => {
+    const csvContent = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Is Active\nHigh School Club,Competitive basketball program,Subscription,15000,Monthly,club_member,365,true\n10-Session Pack,Credit-based training,Pack,5000,,pack_holder,,true";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'programs-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadProgramsData = () => {
+    const csvHeaders = "Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Is Active";
+    const servicePrograms = programs.filter((p: any) => p.productCategory === 'service' || !p.productCategory);
+    const csvRows = servicePrograms.map((program: any) => {
+      return [
+        program.name || "",
+        program.description || "",
+        program.type || "Subscription",
+        program.price || 0,
+        program.billingCycle || "",
+        program.accessTag || "club_member",
+        program.durationDays || "",
+        program.isActive !== false ? "true" : "false"
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'programs-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUploadPrograms = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+      return;
+    }
+    const dataLines = lines.slice(1);
+    let successCount = 0;
+    for (const line of dataLines) {
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      if (values.length >= 1 && values[0]) {
+        try {
+          await apiRequest("POST", "/api/programs", {
+            organizationId: organization?.id,
+            name: values[0],
+            description: values[1] || "",
+            type: values[2] || "Subscription",
+            price: parseInt(values[3]) || 0,
+            billingCycle: values[4] || "Monthly",
+            accessTag: values[5] || "club_member",
+            durationDays: values[6] ? parseInt(values[6]) : undefined,
+            isActive: values[7]?.toLowerCase() !== "false",
+            productCategory: "service",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create program:", error);
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
+    toast({ title: `Bulk upload complete`, description: `Created ${successCount} programs` });
+    setIsBulkUploadOpen(false);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -6164,13 +6498,43 @@ function ProgramsTab({ programs, teams, organization }: any) {
           <CardTitle>Manage Programs</CardTitle>
           <CardDescription>Create and manage programs with teams/groups and social settings</CardDescription>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-program">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Program
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-programs">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Programs</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Name, Description, Type, Price, Billing Cycle, Access Tag, Duration Days, Is Active</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUploadPrograms}
+                  data-testid="input-program-csv-upload"
+                />
+                <Button variant="outline" className="w-full" onClick={downloadProgramTemplate} data-testid="button-download-program-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadProgramsData} data-testid="button-download-programs">
+            <Download className="w-4 h-4" />
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+            <DialogTrigger asChild>
+              <Button size="icon" title="Create Program" data-testid="button-create-program">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProgram ? "Edit Program" : "Create New Program"}</DialogTitle>
@@ -6606,6 +6970,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div ref={tableRef} className="overflow-x-auto">
@@ -7185,6 +7550,76 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
     return "-";
   };
 
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  const downloadNotificationTemplate = () => {
+    const csvContent = "Title,Message,Delivery,Target Type,Scheduled Time\nWelcome Message,Welcome to our program!,in_app,everyone,\nPractice Reminder,Don't forget practice tomorrow,push,teams,";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'notifications-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadNotificationsData = () => {
+    const csvHeaders = "Title,Message,Delivery,Target Type,Scheduled Time";
+    const csvRows = notifications.map((notification: any) => {
+      return [
+        notification.title || "",
+        notification.message || "",
+        notification.deliveryChannels?.join(";") || "in_app",
+        notification.recipientTarget || "everyone",
+        notification.scheduledAt || ""
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'notifications-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUploadNotifications = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+      return;
+    }
+    const dataLines = lines.slice(1);
+    let successCount = 0;
+    for (const line of dataLines) {
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      if (values.length >= 2 && values[0]) {
+        try {
+          await apiRequest("POST", "/api/admin/notifications", {
+            organizationId: organization?.id,
+            title: values[0],
+            message: values[1] || "",
+            deliveryChannels: values[2]?.split(";") || ["in_app"],
+            recipientTarget: values[3] || "everyone",
+            types: ["message"],
+            sentBy: currentUser?.id,
+            status: "pending",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create notification:", error);
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/notifications"] });
+    toast({ title: `Bulk upload complete`, description: `Created ${successCount} messages` });
+    setIsBulkUploadOpen(false);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -7192,13 +7627,43 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
           <CardTitle>Manage Messages</CardTitle>
           <CardDescription>Send and manage messages to users</CardDescription>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-create-notification">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Message
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-notifications">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Messages</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Title, Message, Delivery, Target Type, Scheduled Time</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUploadNotifications}
+                  data-testid="input-notification-csv-upload"
+                />
+                <Button variant="outline" className="w-full" onClick={downloadNotificationTemplate} data-testid="button-download-notification-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadNotificationsData} data-testid="button-download-notifications">
+            <Download className="w-4 h-4" />
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+            <DialogTrigger asChild>
+              <Button size="icon" title="Create Message" data-testid="button-create-notification">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Message</DialogTitle>
@@ -7600,6 +8065,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -8084,6 +8550,74 @@ function WaiversTab({ organization }: any) {
     setIsDialogOpen(true);
   };
 
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+
+  const downloadWaiverTemplate = () => {
+    const csvContent = "Title,Content,Required,Is Active\nLiability Waiver,By signing this waiver you agree to...,true,true\nMedia Release,I consent to the use of my photo...,false,true";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'waivers-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const downloadWaiversData = () => {
+    const csvHeaders = "Title,Content,Required,Is Active";
+    const csvRows = waivers.map((waiver: any) => {
+      return [
+        waiver.title || waiver.name || "",
+        waiver.content || "",
+        waiver.requiresCheckbox ? "true" : "false",
+        waiver.isActive !== false ? "true" : "false"
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'waivers-data.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkUploadWaivers = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length < 2) {
+      toast({ title: "Invalid CSV", description: "File must have a header row and at least one data row", variant: "destructive" });
+      return;
+    }
+    const dataLines = lines.slice(1);
+    let successCount = 0;
+    for (const line of dataLines) {
+      const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      if (values.length >= 1 && values[0]) {
+        try {
+          await apiRequest("POST", "/api/waivers", {
+            name: values[0],
+            title: values[0],
+            content: values[1] || "",
+            requiresCheckbox: values[2]?.toLowerCase() !== "false",
+            isActive: values[3]?.toLowerCase() !== "false",
+            requiresScroll: true,
+            checkboxLabel: "I have read and agree to the terms above",
+          });
+          successCount++;
+        } catch (error) {
+          console.error("Failed to create waiver:", error);
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ["/api/waivers"] });
+    toast({ title: `Bulk upload complete`, description: `Created ${successCount} waivers` });
+    setIsBulkUploadOpen(false);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -8091,10 +8625,41 @@ function WaiversTab({ organization }: any) {
           <CardTitle data-testid="title-waivers">Waivers & Agreements</CardTitle>
           <CardDescription>Create and manage waivers that can be required for products</CardDescription>
         </div>
-        <Button onClick={handleCreate} data-testid="button-create-waiver">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Waiver
-        </Button>
+        <div className="flex gap-2">
+          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-waivers">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Upload Waivers</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">Upload a CSV file with columns: Title, Content, Required, Is Active</p>
+                <Input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUploadWaivers}
+                  data-testid="input-waiver-csv-upload"
+                />
+                <Button variant="outline" className="w-full" onClick={downloadWaiverTemplate} data-testid="button-download-waiver-template">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download CSV Template
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="outline" size="icon" title="Download Data" onClick={downloadWaiversData} data-testid="button-download-waivers">
+            <Download className="w-4 h-4" />
+          </Button>
+          
+          <Button size="icon" title="Create Waiver" onClick={handleCreate} data-testid="button-create-waiver">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (

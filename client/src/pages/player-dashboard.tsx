@@ -2066,10 +2066,14 @@ function SaveProfile({
     onSuccess: () => {
       toast({ title: "Profile updated", description: "Changes saved." });
       // Invalidate all profile-related queries to force refresh
+      // Use both string format and array format to ensure all queries are invalidated
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${profileId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile", profileId] });
       queryClient.invalidateQueries({ queryKey: [`/api/profile/${currentUser.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/profile", currentUser.id] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/child-profiles", currentUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
       setIsEditingProfile(false);
     },
     onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),

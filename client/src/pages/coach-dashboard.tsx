@@ -612,8 +612,10 @@ export default function CoachDashboard() {
 
               onEvaluate={(p) => {
                 // Transform roster player to PlayerLite format
+                // Use appAccountId (the BoxStat user ID) not id (roster row ID)
+                const playerId = p.appAccountId || p.id;
                 const playerLite: PlayerLite = {
-                  id: String(p.id),
+                  id: String(playerId),
                   firstName: p.firstName,
                   lastName: p.lastName,
                   teamName: p.teamName,
@@ -629,8 +631,10 @@ export default function CoachDashboard() {
 
               onReward={(p) => {
                 // Transform roster player to PlayerLite format
+                // Use appAccountId (the BoxStat user ID) not id (roster row ID)
+                const playerId = p.appAccountId || p.id;
                 const playerLite: PlayerLite = {
-                  id: String(p.id),
+                  id: String(playerId),
                   firstName: p.firstName,
                   lastName: p.lastName,
                   teamName: p.teamName,

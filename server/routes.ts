@@ -7467,6 +7467,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       const evaluation = await storage.createEvaluation(evaluationData);
+      
+      // Calculate OVR from scores and update player's rating
+      if (evaluationData.playerId && evaluationData.scores) {
+        try {
+          const scores = evaluationData.scores;
+          let totalScore = 0;
+          let scoreCount = 0;
+          
+          // Flatten nested scores structure: { CATEGORY: { SKILL: score, ... }, ... }
+          for (const category of Object.values(scores)) {
+            if (category && typeof category === 'object') {
+              for (const score of Object.values(category as Record<string, number>)) {
+                if (typeof score === 'number' && score > 0) {
+                  totalScore += score;
+                  scoreCount++;
+                }
+              }
+            }
+          }
+          
+          // Calculate average OVR (scores are 1-5, multiply by 20 to get 0-100 scale)
+          if (scoreCount > 0) {
+            const avgScore = totalScore / scoreCount;
+            const ovrRating = Math.round(avgScore * 20); // Convert 1-5 to 0-100
+            
+            // Update player's rating
+            await storage.updateUser(evaluationData.playerId, { 
+              rating: ovrRating,
+              skillsAssessments: scores // Also store latest skills on player record
+            });
+            console.log(`[Eval] Updated player ${evaluationData.playerId} OVR to ${ovrRating} (avg: ${avgScore.toFixed(2)} from ${scoreCount} skills)`);
+          }
+        } catch (ovrError: any) {
+          console.error('[Eval] Failed to update player OVR (non-fatal):', ovrError.message);
+        }
+      }
+      
       res.status(201).json(evaluation);
     } catch (error: any) {
       console.error('Error creating evaluation:', error);

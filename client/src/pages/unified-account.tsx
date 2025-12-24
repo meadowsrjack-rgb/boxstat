@@ -1379,12 +1379,20 @@ export default function UnifiedAccount() {
                 
                 if (!selectedStoreCategory) return true; // Show all when no filter
                 
-                // Check tags first
+                // Check tags first - explicit tag match takes priority
                 if (tags.length > 0 && tags.includes(selectedStoreCategory)) return true;
                 
-                // Fallback to type/productCategory matching
+                // For gear (apparel) - only match products with 'gear' tag OR goods without other category tags
+                if (selectedStoreCategory === 'gear') {
+                  const otherCategoryTags = ['training', 'membership', 'digital'];
+                  const hasOtherCategoryTag = tags.some((t: string) => otherCategoryTags.includes(t));
+                  // Only include if it's a goods product WITHOUT training/membership/digital tags
+                  if (p.productCategory === 'goods' && !hasOtherCategoryTag) return true;
+                  return false;
+                }
+                
+                // Fallback to type/productCategory matching for other categories
                 const config = categoryConfig[selectedStoreCategory];
-                if (config?.productCategory && p.productCategory === config.productCategory) return true;
                 if (config?.typeMatch && config.typeMatch.includes(p.type)) return true;
                 
                 return false;

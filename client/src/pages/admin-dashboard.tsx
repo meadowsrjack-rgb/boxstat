@@ -5702,6 +5702,7 @@ function StoreTab({ organization }: any) {
       shippingRequired: z.boolean().default(false),
       isActive: z.boolean().default(true),
       storeCategory: z.string().optional(),
+      sessionCount: z.number().optional(),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
@@ -5713,18 +5714,27 @@ function StoreTab({ organization }: any) {
       shippingRequired: false,
       isActive: true,
       storeCategory: "gear",
+      sessionCount: undefined as number | undefined,
     },
   });
 
+  const selectedStoreCategory = form.watch("storeCategory");
+
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
+      const isTraining = data.storeCategory === "training";
+      const isGear = data.storeCategory === "gear";
       const payload = {
         ...data,
         organizationId: organization?.id,
         productCategory: "goods",
-        type: "One-Time",
+        type: isTraining ? "Pack" : "One-Time",
         coverImageUrl: productImageUrl || null,
         tags: data.storeCategory ? [data.storeCategory] : [],
+        sessionCount: isTraining ? (data.sessionCount || 0) : null,
+        inventorySizes: isGear ? (data.inventorySizes || []) : [],
+        inventoryCount: isGear ? (data.inventoryCount || 0) : null,
+        shippingRequired: isGear ? (data.shippingRequired || false) : false,
       };
       let productId = editingProduct?.id;
       
@@ -5785,6 +5795,7 @@ function StoreTab({ organization }: any) {
       shippingRequired: product.shippingRequired || false,
       isActive: product.isActive ?? true,
       storeCategory: product.tags?.[0] || "gear",
+      sessionCount: product.sessionCount,
     });
     
     // Fetch current suggested programs for this product
@@ -6237,76 +6248,106 @@ function StoreTab({ organization }: any) {
                 }}
               />
 
-              <FormField
-                control={form.control}
-                name="inventorySizes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Available Sizes</FormLabel>
-                    <FormDescription>Select which sizes are available</FormDescription>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {["XS", "S", "M", "L", "XL", "2XL", "3XL", "YS", "YM", "YL"].map((size) => (
-                        <div key={size} className="flex items-center space-x-1">
-                          <Checkbox
-                            checked={(field.value || []).includes(size)}
-                            onCheckedChange={(checked) => {
-                              const current = field.value || [];
-                              if (checked) {
-                                field.onChange([...current, size]);
-                              } else {
-                                field.onChange(current.filter((s: string) => s !== size));
-                              }
-                            }}
-                            data-testid={`checkbox-size-${size.toLowerCase()}`}
-                          />
-                          <Label className="text-sm font-normal">{size}</Label>
+              {/* Apparel-specific fields: sizes, stock, shipping */}
+              {selectedStoreCategory === "gear" && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="inventorySizes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Available Sizes</FormLabel>
+                        <FormDescription>Select which sizes are available</FormDescription>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {["XS", "S", "M", "L", "XL", "2XL", "3XL", "YS", "YM", "YL"].map((size) => (
+                            <div key={size} className="flex items-center space-x-1">
+                              <Checkbox
+                                checked={(field.value || []).includes(size)}
+                                onCheckedChange={(checked) => {
+                                  const current = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...current, size]);
+                                  } else {
+                                    field.onChange(current.filter((s: string) => s !== size));
+                                  }
+                                }}
+                                data-testid={`checkbox-size-${size.toLowerCase()}`}
+                              />
+                              <Label className="text-sm font-normal">{size}</Label>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="inventoryCount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Stock Count</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="50"
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
-                        value={field.value || ""}
-                        data-testid="input-stock-count"
-                      />
-                    </FormControl>
-                    <FormDescription>Leave empty for unlimited</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="inventoryCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stock Count</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            placeholder="50"
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                            value={field.value || ""}
+                            data-testid="input-stock-count"
+                          />
+                        </FormControl>
+                        <FormDescription>Leave empty for unlimited</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="shippingRequired"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        data-testid="checkbox-shipping-required"
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">Shipping Required</FormLabel>
-                    <FormDescription className="!mt-0 ml-2 text-xs">(vs. pickup only)</FormDescription>
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="shippingRequired"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-shipping-required"
+                          />
+                        </FormControl>
+                        <FormLabel className="!mt-0">Shipping Required</FormLabel>
+                        <FormDescription className="!mt-0 ml-2 text-xs">(vs. pickup only)</FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+
+              {/* Training-specific fields: session count */}
+              {selectedStoreCategory === "training" && (
+                <FormField
+                  control={form.control}
+                  name="sessionCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Sessions</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="10"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value || "0"))}
+                          value={field.value || ""}
+                          data-testid="input-store-session-count"
+                        />
+                      </FormControl>
+                      <FormDescription>Sessions remaining decreases with each check-in</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

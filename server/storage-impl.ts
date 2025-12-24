@@ -3833,6 +3833,7 @@ class DatabaseStorage implements IStorage {
       inventorySizes: program.inventorySizes ?? [],
       inventoryCount: program.inventoryCount,
       shippingRequired: program.shippingRequired ?? false,
+      sessionCount: program.sessionCount,
       createdAt: now,
     };
 
@@ -3880,6 +3881,7 @@ class DatabaseStorage implements IStorage {
       inventorySizes: updates.inventorySizes,
       inventoryCount: updates.inventoryCount,
       shippingRequired: updates.shippingRequired,
+      sessionCount: updates.sessionCount,
     };
 
     // Remove undefined values
@@ -5218,6 +5220,7 @@ class DatabaseStorage implements IStorage {
       inventorySizes: dbProgram.inventorySizes || [],
       inventoryCount: dbProgram.inventoryCount,
       shippingRequired: dbProgram.shippingRequired ?? false,
+      sessionCount: dbProgram.sessionCount,
       // Waiver requirements
       requireAAUMembership: dbProgram.requireAAUMembership ?? false,
       requireConcussionWaiver: dbProgram.requireConcussionWaiver ?? false,

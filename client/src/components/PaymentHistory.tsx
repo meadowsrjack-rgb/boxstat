@@ -48,9 +48,19 @@ interface EnrichedPayment {
   playerInfo: PlayerInfo | null;
 }
 
-export function PaymentHistory() {
+interface PaymentHistoryProps {
+  selectedPlayer?: string; // empty string or undefined = all players
+}
+
+export function PaymentHistory({ selectedPlayer }: PaymentHistoryProps = {}) {
   const { data: payments, isLoading, isError, error } = useQuery<EnrichedPayment[]>({
     queryKey: ['/api/payments/history'],
+  });
+  
+  // Filter payments by selected player
+  const filteredPayments = payments?.filter(payment => {
+    if (!selectedPlayer) return true; // Show all if no filter
+    return payment.playerId === selectedPlayer;
   });
 
   if (isLoading) {
@@ -86,7 +96,7 @@ export function PaymentHistory() {
     );
   }
 
-  if (!payments || payments.length === 0) {
+  if (!filteredPayments || filteredPayments.length === 0) {
     return (
       <Card data-testid="payment-history-empty">
         <CardHeader>
@@ -98,7 +108,9 @@ export function PaymentHistory() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Your payment history will appear here after making your first payment.
+            {selectedPlayer 
+              ? "No payments found for this player."
+              : "Your payment history will appear here after making your first payment."}
           </p>
         </CardContent>
       </Card>
@@ -154,7 +166,7 @@ export function PaymentHistory() {
   };
 
   // Sort payments by date (most recent first)
-  const sortedPayments = [...payments].sort((a, b) => 
+  const sortedPayments = [...filteredPayments].sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 

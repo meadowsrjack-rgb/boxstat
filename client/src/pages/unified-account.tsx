@@ -1318,37 +1318,6 @@ export default function UnifiedAccount() {
               </div>
             </div>
 
-            {/* Player Switcher Carousel */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
-              <Button
-                variant={!selectedStorePlayer ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStorePlayer("")}
-                className="flex-shrink-0 rounded-full"
-                data-testid="player-filter-all"
-              >
-                All Players
-              </Button>
-              {players?.map((player: any) => (
-                <Button
-                  key={player.id}
-                  variant={selectedStorePlayer === player.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedStorePlayer(player.id)}
-                  className="flex-shrink-0 rounded-full gap-2"
-                  data-testid={`player-filter-${player.id}`}
-                >
-                  <Avatar className="w-5 h-5">
-                    <AvatarImage src={player.profileImageUrl} />
-                    <AvatarFallback className="text-xs bg-red-100 text-red-700">
-                      {(player.firstName?.[0] || "")}{(player.lastName?.[0] || "")}
-                    </AvatarFallback>
-                  </Avatar>
-                  {player.firstName}
-                </Button>
-              ))}
-            </div>
-
             {/* Category-Based Store Tiles */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="store-categories">
               {[
@@ -1502,6 +1471,37 @@ export default function UnifiedAccount() {
                 </div>
               );
             })()}
+
+            {/* Player Switcher Carousel - filters Active Programs and Payment History */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide" data-testid="player-switcher">
+              <Button
+                variant={!selectedStorePlayer ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStorePlayer("")}
+                className="flex-shrink-0 rounded-full"
+                data-testid="player-filter-all"
+              >
+                All Players
+              </Button>
+              {players?.map((player: any) => (
+                <Button
+                  key={player.id}
+                  variant={selectedStorePlayer === player.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStorePlayer(player.id)}
+                  className="flex-shrink-0 rounded-full gap-2"
+                  data-testid={`player-filter-${player.id}`}
+                >
+                  <Avatar className="w-5 h-5">
+                    <AvatarImage src={player.profileImageUrl} />
+                    <AvatarFallback className="text-xs bg-red-100 text-red-700">
+                      {(player.firstName?.[0] || "")}{(player.lastName?.[0] || "")}
+                    </AvatarFallback>
+                  </Avatar>
+                  {player.firstName}
+                </Button>
+              ))}
+            </div>
 
             {/* My Active Programs - Collapsible Section */}
             <Collapsible defaultOpen={true}>
@@ -1826,7 +1826,7 @@ export default function UnifiedAccount() {
                   </Dialog>
             
             {/* Payment History Component */}
-            <PaymentHistory />
+            <PaymentHistory selectedPlayer={selectedStorePlayer} />
           </TabsContent>
 
           {/* Messages Tab */}

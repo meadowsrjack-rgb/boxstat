@@ -378,9 +378,10 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
 
   // Calculate overall skill average from evaluation scores
   const calculateOverallSkillAverage = (evaluation: any): number => {
-    if (!evaluation?.scores) return 0;
+    // API returns skillsData (not scores) for compatibility with PlayerCard
+    if (!evaluation?.skillsData) return 0;
     
-    const scores = evaluation.scores;
+    const scores = evaluation.skillsData;
     let totalScore = 0;
     let totalSkills = 0;
     

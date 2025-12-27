@@ -3834,6 +3834,11 @@ class DatabaseStorage implements IStorage {
       inventoryCount: program.inventoryCount,
       shippingRequired: program.shippingRequired ?? false,
       sessionCount: program.sessionCount,
+      // Waiver requirements
+      requireAAUMembership: program.requireAAUMembership ?? false,
+      requireConcussionWaiver: program.requireConcussionWaiver ?? false,
+      requireClubAgreement: program.requireClubAgreement ?? false,
+      requiredWaivers: program.requiredWaivers ?? [],
       createdAt: now,
     };
 
@@ -3882,6 +3887,11 @@ class DatabaseStorage implements IStorage {
       inventoryCount: updates.inventoryCount,
       shippingRequired: updates.shippingRequired,
       sessionCount: updates.sessionCount,
+      // Waiver requirements
+      requireAAUMembership: updates.requireAAUMembership,
+      requireConcussionWaiver: updates.requireConcussionWaiver,
+      requireClubAgreement: updates.requireClubAgreement,
+      requiredWaivers: updates.requiredWaivers,
     };
 
     // Remove undefined values

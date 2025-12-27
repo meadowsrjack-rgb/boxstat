@@ -5684,6 +5684,11 @@ function StoreTab({ organization }: any) {
   // Filter to only show programs (services) for the suggested add-ons selector
   const programOptions = allProducts?.filter((p: any) => p.productCategory === 'service' && p.isActive !== false) || [];
 
+  // Fetch waivers for waiver attachment option
+  const { data: storeWaivers = [] } = useQuery<any[]>({
+    queryKey: ["/api/waivers"],
+  });
+
   const STORE_CATEGORIES = [
     { value: "gear", label: "Gear & Apparel" },
     { value: "training", label: "Training & Camps" },
@@ -5704,6 +5709,7 @@ function StoreTab({ organization }: any) {
       sessionCount: z.number().optional(),
       isRecurring: z.boolean().default(false),
       billingCycle: z.string().optional(),
+      requiredWaivers: z.array(z.string()).default([]),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
@@ -5718,6 +5724,7 @@ function StoreTab({ organization }: any) {
       sessionCount: undefined as number | undefined,
       isRecurring: false,
       billingCycle: "Monthly",
+      requiredWaivers: [] as string[],
     },
   });
 
@@ -5740,6 +5747,7 @@ function StoreTab({ organization }: any) {
         inventorySizes: isGear ? (data.inventorySizes || []) : [],
         inventoryCount: isGear ? (data.inventoryCount || 0) : null,
         shippingRequired: isGear ? (data.shippingRequired || false) : false,
+        requiredWaivers: data.requiredWaivers || [],
       };
       let productId = editingProduct?.id;
       
@@ -5803,6 +5811,7 @@ function StoreTab({ organization }: any) {
       sessionCount: product.sessionCount,
       isRecurring: product.type === "Subscription",
       billingCycle: product.billingCycle || "Monthly",
+      requiredWaivers: product.requiredWaivers || [],
     });
     
     // Fetch current suggested programs for this product
@@ -5837,6 +5846,7 @@ function StoreTab({ organization }: any) {
       storeCategory: "gear",
       isRecurring: false,
       billingCycle: "Monthly",
+      requiredWaivers: [],
     });
     setIsDialogOpen(true);
   };
@@ -6436,6 +6446,39 @@ function StoreTab({ organization }: any) {
                   </FormItem>
                 )}
               />
+
+              {/* Required Waivers */}
+              {storeWaivers.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="requiredWaivers"
+                  render={({ field }) => (
+                    <FormItem className="pt-4 border-t">
+                      <FormLabel>Required Waivers</FormLabel>
+                      <div className="space-y-2 border rounded-md p-3">
+                        {storeWaivers.map((waiver: any) => (
+                          <div key={waiver.id} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={field.value?.includes(waiver.id)}
+                              onCheckedChange={(checked) => {
+                                const current = field.value || [];
+                                if (checked) {
+                                  field.onChange([...current, waiver.id]);
+                                } else {
+                                  field.onChange(current.filter((id: string) => id !== waiver.id));
+                                }
+                              }}
+                              data-testid={`checkbox-waiver-${waiver.id}`}
+                            />
+                            <span className="text-sm">{waiver.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <FormDescription>Customers must sign these waivers before purchasing</FormDescription>
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Suggested Add-on for Programs */}
               <div className="space-y-2 pt-4 border-t">

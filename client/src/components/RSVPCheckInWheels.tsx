@@ -25,6 +25,8 @@ interface RSVPWheelProps {
   onRsvpClick?: () => void;
   userResponse?: 'attending' | 'not_attending' | 'no_response';
   disabled?: boolean;
+  attendingNames?: string[];
+  notAttendingNames?: string[];
 }
 
 interface CheckInWheelProps {
@@ -42,7 +44,9 @@ export function RSVPWheel({
   closeTime, 
   onRsvpClick, 
   userResponse = 'no_response',
-  disabled = false 
+  disabled = false,
+  attendingNames = [],
+  notAttendingNames = [],
 }: RSVPWheelProps) {
   const status = getWindowStatus(openTime, closeTime);
   
@@ -130,20 +134,29 @@ export function RSVPWheel({
             <span data-testid="text-rsvp-status">{statusMessage}</span>
           </div>
 
-          {userResponse !== 'no_response' && (
-            <div className="p-3 rounded-lg bg-gray-50 text-sm" data-testid="user-rsvp-status">
-              {userResponse === 'attending' && (
-                <div className="flex items-center gap-2 text-green-700">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>You're attending this event</span>
+          {/* Show attending names */}
+          {attendingNames.length > 0 && (
+            <div className="p-3 rounded-lg bg-green-50 text-sm" data-testid="attending-names-status">
+              <div className="flex items-start gap-2 text-green-700">
+                <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">Attending: </span>
+                  <span>{attendingNames.join(', ')}</span>
                 </div>
-              )}
-              {userResponse === 'not_attending' && (
-                <div className="flex items-center gap-2 text-red-700">
-                  <XCircle className="h-4 w-4" />
-                  <span>You're not attending this event</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Show not attending names */}
+          {notAttendingNames.length > 0 && (
+            <div className="p-3 rounded-lg bg-red-50 text-sm" data-testid="not-attending-names-status">
+              <div className="flex items-start gap-2 text-red-700">
+                <XCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-medium">Not Attending: </span>
+                  <span>{notAttendingNames.join(', ')}</span>
                 </div>
-              )}
+              </div>
             </div>
           )}
 

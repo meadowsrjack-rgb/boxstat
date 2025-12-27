@@ -5143,8 +5143,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Location check for proxy check-ins (if event has coordinates)
-      if (event.latitude != null && event.longitude != null && latitude != null && longitude != null) {
+      // Location validation for proxy check-ins (required when event has coordinates)
+      // Admins can bypass location check
+      if (role !== 'admin' && event.latitude != null && event.longitude != null) {
+        // Require location coordinates for proxy check-in
+        if (latitude == null || longitude == null) {
+          return res.status(400).json({
+            error: 'Location required',
+            message: 'Your location is required to check in a player at this event. Please enable location access or use QR code check-in.',
+          });
+        }
+        
         const { distanceMeters } = await import('./utils/geo.js');
         const distance = distanceMeters(
           { lat: latitude, lng: longitude },

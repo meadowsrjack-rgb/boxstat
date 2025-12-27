@@ -493,6 +493,64 @@ export default function EventDetailModal({
     };
   }, [attendances, users]);
 
+  // Sort users by status: checked-in > going > not going > no response
+  const sortedUsers = useMemo(() => {
+    return [...users].sort((a, b) => {
+      const aAttendance = attendances.find(att => att.userId === a.id);
+      const bAttendance = attendances.find(att => att.userId === b.id);
+      const aRsvp = rsvps.find(r => r.userId === a.id);
+      const bRsvp = rsvps.find(r => r.userId === b.id);
+      
+      // Priority: 0 = checked-in, 1 = attending, 2 = not attending, 3 = no response
+      const getPriority = (hasAttendance: boolean, rsvpResponse?: string) => {
+        if (hasAttendance) return 0;
+        if (rsvpResponse === 'attending') return 1;
+        if (rsvpResponse === 'not_attending') return 2;
+        return 3;
+      };
+      
+      const aPriority = getPriority(!!aAttendance, aRsvp?.response);
+      const bPriority = getPriority(!!bAttendance, bRsvp?.response);
+      
+      return aPriority - bPriority;
+    });
+  }, [users, attendances, rsvps]);
+
+  // Compute RSVP names for display (for parent: show linked players + self)
+  const rsvpNames = useMemo(() => {
+    const attendingNames: string[] = [];
+    const notAttendingNames: string[] = [];
+    
+    if (isParent) {
+      // Check parent's own RSVP
+      if (userRsvp?.response === 'attending') {
+        attendingNames.push('Me');
+      } else if (userRsvp?.response === 'not_attending') {
+        notAttendingNames.push('Me');
+      }
+      
+      // Check linked players
+      for (const player of linkedPlayers) {
+        const playerRsvp = rsvps.find(r => r.userId === player.id);
+        const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
+        if (playerRsvp?.response === 'attending') {
+          attendingNames.push(playerName);
+        } else if (playerRsvp?.response === 'not_attending') {
+          notAttendingNames.push(playerName);
+        }
+      }
+    } else {
+      // For non-parent, just show their own status
+      if (userRsvp?.response === 'attending') {
+        attendingNames.push('Me');
+      } else if (userRsvp?.response === 'not_attending') {
+        notAttendingNames.push('Me');
+      }
+    }
+    
+    return { attendingNames, notAttendingNames };
+  }, [isParent, userRsvp, linkedPlayers, rsvps]);
+
   // Window status for proxy actions
   const windowStatus = useMemo(() => {
     const now = new Date();
@@ -523,10 +581,21 @@ export default function EventDetailModal({
   };
 
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
-    // For parents with linked players, show player selection popup
-    if (isParent && linkedPlayers.length > 0) {
-      // Pre-select all players by default
-      setSelectedPlayersForRsvp(new Set(linkedPlayers.map(p => p.id)));
+    // For parents, show player selection popup (includes self-RSVP option)
+    if (isParent) {
+      // Only pre-select players who already have an RSVP for this event
+      const playersWithRsvp = linkedPlayers.filter(p => {
+        const rsvp = getPlayerRsvp(p.id);
+        return rsvp && (rsvp.response === 'attending' || rsvp.response === 'not_attending');
+      });
+      // Also check if parent themselves has an RSVP
+      const parentHasRsvp = userRsvp && (userRsvp.response === 'attending' || userRsvp.response === 'not_attending');
+      
+      const preSelected = new Set(playersWithRsvp.map(p => p.id));
+      if (parentHasRsvp) {
+        preSelected.add(userId); // Add parent's own ID if they have RSVPed
+      }
+      setSelectedPlayersForRsvp(preSelected);
       setShowPlayerSelect('rsvp');
       return;
     }
@@ -540,10 +609,10 @@ export default function EventDetailModal({
   // State to track bulk RSVP progress
   const [isBulkRsvpPending, setIsBulkRsvpPending] = useState(false);
   
-  // Handle bulk RSVP submission for selected players
+  // Handle bulk RSVP submission for selected players (and optionally parent self)
   const handleBulkRsvp = async (response: 'attending' | 'not_attending') => {
     if (selectedPlayersForRsvp.size === 0) {
-      toast({ title: 'No players selected', description: 'Please select at least one player.', variant: 'destructive' });
+      toast({ title: 'No one selected', description: 'Please select at least one person.', variant: 'destructive' });
       return;
     }
     
@@ -551,19 +620,28 @@ export default function EventDetailModal({
     const selectedArray = Array.from(selectedPlayersForRsvp);
     const eventId = event?.id ? String(event.id) : null;
     
-    // Submit RSVP for each selected player using raw API call (not mutation)
-    // This avoids triggering onSuccess after each call
     let successCount = 0;
-    for (const playerId of selectedArray) {
+    for (const selectedId of selectedArray) {
       try {
-        await apiRequest('POST', '/api/rsvp/proxy', {
-          eventId,
-          playerId,
-          response,
-        });
+        // Check if this is the parent's own ID (self-RSVP)
+        if (selectedId === userId) {
+          // Use regular RSVP endpoint for self
+          await apiRequest('POST', '/api/rsvp', {
+            eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
+            userId: String(userId),
+            response,
+          });
+        } else {
+          // Use proxy endpoint for linked players
+          await apiRequest('POST', '/api/rsvp/proxy', {
+            eventId,
+            playerId: selectedId,
+            response,
+          });
+        }
         successCount++;
       } catch (e) {
-        console.error(`Failed to RSVP for player ${playerId}:`, e);
+        console.error(`Failed to RSVP for ${selectedId}:`, e);
       }
     }
     
@@ -579,7 +657,7 @@ export default function EventDetailModal({
     if (successCount > 0) {
       toast({ 
         title: 'RSVPs Updated', 
-        description: `${successCount} player${successCount > 1 ? 's' : ''} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
+        description: `${successCount} ${successCount > 1 ? 'people' : 'person'} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
       });
     } else {
       toast({ title: 'RSVP Failed', description: 'Failed to update RSVPs. Please try again.', variant: 'destructive' });
@@ -674,21 +752,60 @@ export default function EventDetailModal({
       return;
     }
 
+    // Verify event has location coordinates
+    if (event?.latitude == null || event?.longitude == null) {
+      toast({
+        title: 'Location Required',
+        description: 'This event does not have GPS coordinates set. Please use QR code check-in.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsCheckingLocation(true);
     try {
       // Get parent's location for the proxy check-in
       const userLocation = await getOnce();
       
+      if (!userLocation) {
+        toast({
+          title: 'Location Access Denied',
+          description: 'Please enable location permissions to check in, or use QR code check-in.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Validate distance before allowing check-in
+      const distance = distanceMeters(
+        userLocation,
+        { lat: event.latitude, lng: event.longitude }
+      );
+
+      const radiusMeters = event.checkInRadius ?? 200;
+
+      if (distance > radiusMeters) {
+        toast({
+          title: 'Too Far Away',
+          description: `You must be within ${radiusMeters}m of the event location to check in ${playerName}. You are ${Math.round(distance)}m away. Try QR code check-in instead.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       proxyCheckInMutation.mutate({
         playerId,
         playerName,
-        latitude: userLocation?.lat,
-        longitude: userLocation?.lng,
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
       });
     } catch (error) {
       console.error('Proxy check-in location error:', error);
-      // Still attempt proxy check-in without location
-      proxyCheckInMutation.mutate({ playerId, playerName });
+      toast({
+        title: 'Location Error',
+        description: 'Failed to get your location. Please try QR code check-in.',
+        variant: 'destructive',
+      });
     } finally {
       setIsCheckingLocation(false);
     }
@@ -892,6 +1009,8 @@ export default function EventDetailModal({
                 onRsvpClick={handleRsvpClick}
                 userResponse={userRsvp?.response || 'no_response'}
                 disabled={rsvpMutation.isPending}
+                attendingNames={rsvpNames.attendingNames}
+                notAttendingNames={rsvpNames.notAttendingNames}
               />
 
               <CheckInWheel
@@ -1075,7 +1194,7 @@ export default function EventDetailModal({
                 </h4>
                 
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {users.map((user) => {
+                  {sortedUsers.map((user) => {
                     const userRsvpResponse = rsvps.find(r => r.userId === user.id);
                     const userAttendance = attendances.find(a => a.userId === user.id);
                     const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
@@ -1278,6 +1397,44 @@ export default function EventDetailModal({
           )}
           
           <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+            {/* Parent self-RSVP option */}
+            <div
+              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                selectedPlayersForRsvp.has(userId) ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+              }`}
+              onClick={() => {
+                setSelectedPlayersForRsvp(prev => {
+                  const newSet = new Set(prev);
+                  if (newSet.has(userId)) {
+                    newSet.delete(userId);
+                  } else {
+                    newSet.add(userId);
+                  }
+                  return newSet;
+                });
+              }}
+              data-testid="select-player-self"
+            >
+              <Checkbox 
+                checked={selectedPlayersForRsvp.has(userId)}
+                className="pointer-events-none"
+              />
+              <Avatar className="h-10 w-10 bg-blue-100">
+                <AvatarFallback className="bg-blue-100 text-blue-700">Me</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="font-medium">Myself (Parent)</p>
+                <p className="text-xs text-gray-500">
+                  {userRsvp?.response === 'attending' 
+                    ? 'RSVP: Attending' 
+                    : userRsvp?.response === 'not_attending'
+                      ? 'RSVP: Not attending'
+                      : 'No RSVP yet'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Linked players */}
             {linkedPlayers.map(player => {
               const playerRsvp = getPlayerRsvp(player.id);
               const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';

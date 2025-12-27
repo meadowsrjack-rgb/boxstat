@@ -172,7 +172,7 @@ export default function CoachDashboard() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
+      <div className="min-h-screen-safe bg-white safe-bottom flex items-center justify-center">
         <BanterLoader />
       </div>
     );

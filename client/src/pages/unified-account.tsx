@@ -1065,7 +1065,7 @@ export default function UnifiedAccount() {
     return (
       <>
         <div className="ios-full-bleed" />
-        <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
+        <div className="fixed inset-0 w-full h-full bg-white z-0 pointer-events-none" />
         <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
           <BanterLoader />
         </div>

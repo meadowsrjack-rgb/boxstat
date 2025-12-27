@@ -99,7 +99,7 @@ export default function DashboardDispatcher() {
   }, [user, isLoading, players, playersLoading, setLocation]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-white flex items-center justify-center">
       <BanterLoader />
     </div>
   );

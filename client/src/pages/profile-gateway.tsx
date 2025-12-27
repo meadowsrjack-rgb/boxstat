@@ -70,7 +70,7 @@ export default function ProfileGateway() {
   if (isLoading || playersLoading) {
     return (
       <>
-        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
+        <div className="fixed inset-0 w-full h-full z-0 pointer-events-none bg-white" />
         <div className="fixed inset-0 w-full h-full z-10 flex items-center justify-center">
           <BanterLoader />
         </div>

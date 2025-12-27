@@ -116,7 +116,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (isLoading) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />
       </div>
     );
@@ -194,7 +194,7 @@ function AccountRoute() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />
       </div>
     );
@@ -324,7 +324,7 @@ function AppRouter() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />
       </div>
     );

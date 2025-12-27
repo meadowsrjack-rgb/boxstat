@@ -20,13 +20,13 @@ export default function Logout() {
       <div className="ios-full-bleed" />
       
       {/* DETACHED BACKGROUND LAYER - never moves with keyboard */}
-      <div className="fixed inset-0 w-full h-full bg-black z-0 pointer-events-none" />
+      <div className="fixed inset-0 w-full h-full bg-white z-0 pointer-events-none" />
 
       {/* Main Content Wrapper */}
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
         <div className="flex flex-col items-center">
           <BanterLoader />
-          <p className="mt-6 text-white">Logging out...</p>
+          <p className="mt-6 text-gray-600">Logging out...</p>
         </div>
       </div>
     </>

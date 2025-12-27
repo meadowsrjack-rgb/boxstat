@@ -115,6 +115,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   const [, setLocation] = useLocation();
 
   if (isLoading) {
+    // Don't show React loader if HTML startup-loader is still visible
+    const htmlLoader = document.getElementById('startup-loader');
+    if (htmlLoader) {
+      return null;
+    }
     return (
       <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />
@@ -193,6 +198,11 @@ function AccountRoute() {
   const [, setLocation] = useLocation();
 
   if (isLoading) {
+    // Don't show React loader if HTML startup-loader is still visible
+    const htmlLoader = document.getElementById('startup-loader');
+    if (htmlLoader) {
+      return null;
+    }
     return (
       <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />
@@ -216,8 +226,14 @@ function DashboardRoute() {
     setLocation("/home");
   }, [setLocation]);
 
+  // Don't show React loader if HTML startup-loader is still visible
+  const htmlLoader = document.getElementById('startup-loader');
+  if (htmlLoader) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen-safe bg-white flex items-center justify-center">
       <BanterLoader />
     </div>
   );
@@ -322,7 +338,14 @@ function AppRouter() {
     }
   }, [isAuthenticated, user]);
 
+  // Don't show React loader if HTML startup-loader is still visible
+  // This prevents double loading screens
   if (isLoading) {
+    const htmlLoader = document.getElementById('startup-loader');
+    if (htmlLoader) {
+      // HTML loader is still showing, don't render React loader
+      return null;
+    }
     return (
       <div className="min-h-screen-safe bg-white flex items-center justify-center">
         <BanterLoader />

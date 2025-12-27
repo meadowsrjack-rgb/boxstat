@@ -237,16 +237,10 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
 // Interactive Family Calendar Component
 function FamilyCalendar({ 
   events, 
-  players,
-  selectedChildPerEvent,
-  setSelectedChildPerEvent,
   onEventClick 
 }: { 
   events: any[];
-  players: any[];
-  selectedChildPerEvent: Record<string, string>;
-  setSelectedChildPerEvent: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  onEventClick: (event: any, playerId: string) => void;
+  onEventClick: (event: any) => void;
 }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -383,78 +377,40 @@ function FamilyCalendar({
                 <p className="text-sm text-gray-500 py-4 text-center">No events on this day</p>
               ) : (
                 <div className="space-y-2">
-                  {selectedDateEvents.map((event: any) => {
-                    const eventId = String(event.id);
-                    const selectedChildId = selectedChildPerEvent[eventId] || players[0]?.id;
-                    const selectedChild = players.find((p: any) => p.id === selectedChildId);
-                    
-                    return (
-                      <div
-                        key={event.id}
-                        className="p-3 bg-gray-50 rounded-lg"
-                        data-testid={`calendar-event-${event.id}`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-sm">{event.title}</p>
-                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                              <Clock className="w-3 h-3" />
-                              {new Date(event.startTime).toLocaleTimeString('en-US', {
-                                hour: 'numeric',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                          <Badge variant="outline" className="text-[10px]">
-                            {event.eventType || 'Event'}
-                          </Badge>
+                  {selectedDateEvents.map((event: any) => (
+                    <div
+                      key={event.id}
+                      className="p-3 bg-gray-50 rounded-lg"
+                      data-testid={`calendar-event-${event.id}`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{event.title}</p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(event.startTime).toLocaleTimeString('en-US', {
+                              hour: 'numeric',
+                              minute: '2-digit'
+                            })}
+                          </p>
                         </div>
-                        
-                        {/* Player Selection for multi-child families */}
-                        {players.length > 1 && (
-                          <div className="mt-2 pt-2 border-t">
-                            <Select
-                              value={selectedChildId}
-                              onValueChange={(value) => 
-                                setSelectedChildPerEvent(prev => ({ ...prev, [eventId]: value }))
-                              }
-                            >
-                              <SelectTrigger className="h-7 text-xs" data-testid={`calendar-select-child-${event.id}`}>
-                                <User className="w-3 h-3 mr-1" />
-                                <SelectValue placeholder="Select player" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {players.map((player: any) => (
-                                  <SelectItem key={player.id} value={player.id}>
-                                    {player.firstName} {player.lastName}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        
-                        {/* Single player display */}
-                        {players.length === 1 && (
-                          <div className="mt-2 pt-2 border-t flex items-center gap-1 text-xs text-gray-500">
-                            <User className="w-3 h-3" />
-                            <span>{selectedChild?.firstName} {selectedChild?.lastName}</span>
-                          </div>
-                        )}
-                        
-                        {/* View Details Button - explicit action to open modal */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full mt-2 h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => onEventClick(event, selectedChildId)}
-                          data-testid={`calendar-view-event-${event.id}`}
-                        >
-                          View Details & RSVP
-                        </Button>
+                        <Badge variant="outline" className="text-[10px]">
+                          {event.eventType || 'Event'}
+                        </Badge>
                       </div>
-                    );
-                  })}
+                      
+                      {/* View Details Button - player selection happens inside modal */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full mt-2 h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => onEventClick(event)}
+                        data-testid={`calendar-view-event-${event.id}`}
+                      >
+                        View Details & RSVP
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -895,10 +851,8 @@ function PlayerProfileCard({ player }: { player: any }) {
 export default function UnifiedAccount() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [selectedChildPerEvent, setSelectedChildPerEvent] = useState<Record<string, string>>({});
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
-  const [selectedChildForModal, setSelectedChildForModal] = useState<string>("");
   const tabsRef = useDragScroll();
   
   // PIN dialog state
@@ -1197,97 +1151,54 @@ export default function UnifiedAccount() {
                 </Card>
               ) : (
                 <div className="space-y-4">
-                  {allUpcomingEvents.slice(0, 5).map((event: any) => {
-                    const eventId = String(event.id);
-                    const selectedChildId = selectedChildPerEvent[eventId] || players[0]?.id;
-                    const selectedChild = players.find((p: any) => p.id === selectedChildId);
-
-                    return (
-                      <Card 
-                        key={event.id} 
-                        className="cursor-pointer hover:border-red-500 transition-colors" 
-                        data-testid={`event-card-${event.id}`}
-                        onClick={() => {
-                          // Create a clean copy to avoid cyclic structure issues from React Query cache
-                          const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
-                          setSelectedEvent(cleanEvent);
-                          setSelectedChildForModal(selectedChildId);
-                          setEventDetailOpen(true);
-                        }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold" data-testid={`event-title-${event.id}`}>
-                                  {event.title}
-                                </h3>
-                                <Badge variant="outline" className="text-xs" data-testid={`event-type-${event.id}`}>
-                                  {event.eventType || "Event"}
-                                </Badge>
+                  {allUpcomingEvents.slice(0, 5).map((event: any) => (
+                    <Card 
+                      key={event.id} 
+                      className="cursor-pointer hover:border-red-500 transition-colors" 
+                      data-testid={`event-card-${event.id}`}
+                      onClick={() => {
+                        // Create a clean copy to avoid cyclic structure issues from React Query cache
+                        const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
+                        setSelectedEvent(cleanEvent);
+                        setEventDetailOpen(true);
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold" data-testid={`event-title-${event.id}`}>
+                                {event.title}
+                              </h3>
+                              <Badge variant="outline" className="text-xs" data-testid={`event-type-${event.id}`}>
+                                {event.eventType || "Event"}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span data-testid={`event-time-${event.id}`}>
+                                  {new Date(event.startTime).toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: 'numeric',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
                               </div>
-                              <div className="flex items-center gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  <span data-testid={`event-time-${event.id}`}>
-                                    {new Date(event.startTime).toLocaleDateString('en-US', {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: 'numeric',
-                                      minute: '2-digit'
-                                    })}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="w-3.5 h-3.5" />
-                                  <span className="truncate max-w-[150px]" data-testid={`event-location-${event.id}`}>
-                                    {event.location}
-                                  </span>
-                                </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3.5 h-3.5" />
+                                <span className="truncate max-w-[150px]" data-testid={`event-location-${event.id}`}>
+                                  {event.location}
+                                </span>
                               </div>
-                              
-                              {/* Player Selection for multi-child families */}
-                              {players.length > 1 && (
-                                <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                                  <Select
-                                    value={selectedChildId}
-                                    onValueChange={(value) => 
-                                      setSelectedChildPerEvent(prev => ({ ...prev, [eventId]: value }))
-                                    }
-                                  >
-                                    <SelectTrigger className="h-8 text-xs w-auto" data-testid={`select-child-${event.id}`}>
-                                      <User className="w-3 h-3 mr-1" />
-                                      <SelectValue placeholder="Select player" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {players.map((player: any) => (
-                                        <SelectItem 
-                                          key={player.id} 
-                                          value={player.id}
-                                          data-testid={`select-child-option-${event.id}-${player.id}`}
-                                        >
-                                          {player.firstName} {player.lastName}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              )}
-                              
-                              {/* Single player display */}
-                              {players.length === 1 && (
-                                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                                  <User className="w-3 h-3" />
-                                  <span>{selectedChild?.firstName} {selectedChild?.lastName}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </div>
@@ -1295,14 +1206,10 @@ export default function UnifiedAccount() {
             {/* Interactive Calendar Section */}
             <FamilyCalendar 
               events={events} 
-              players={players}
-              selectedChildPerEvent={selectedChildPerEvent}
-              setSelectedChildPerEvent={setSelectedChildPerEvent}
-              onEventClick={(event, playerId) => {
+              onEventClick={(event) => {
                 // Create a clean copy to avoid cyclic structure issues from React Query cache
                 const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
                 setSelectedEvent(cleanEvent);
-                setSelectedChildForModal(playerId);
                 setEventDetailOpen(true);
               }}
             />
@@ -2004,27 +1911,15 @@ export default function UnifiedAccount() {
         title="Set Lock PIN"
         description={`Create a 4-digit PIN to lock this device to ${players.find((p: any) => p.id === playerToLock)?.firstName}'s dashboard`}
       />
-      {/* Event Detail Modal - always render but handle no child selected case */}
-      {selectedChildForModal ? (
-        <>
-          <EventDetailModal
-            event={selectedEvent}
-            userId={selectedChildForModal}
-            userRole="parent"
-            open={eventDetailOpen}
-            onOpenChange={setEventDetailOpen}
-          />
-          {eventDetailOpen && selectedEvent && (
-            <div className="fixed bottom-4 right-4 bg-white shadow-lg rounded-lg p-4 border-2 border-blue-500 z-50">
-              <p className="text-sm font-medium text-gray-700">
-                RSVP/Check-In for: <span className="text-blue-600 font-semibold">
-                  {players.find((p: any) => p.id === selectedChildForModal)?.firstName}{' '}
-                  {players.find((p: any) => p.id === selectedChildForModal)?.lastName}
-                </span>
-              </p>
-            </div>
-          )}
-        </>
+      {/* Event Detail Modal - pass parent user ID, player selection happens inside modal */}
+      {players.length > 0 ? (
+        <EventDetailModal
+          event={selectedEvent}
+          userId={user?.id || ''}
+          userRole="parent"
+          open={eventDetailOpen}
+          onOpenChange={setEventDetailOpen}
+        />
       ) : (
         <Dialog open={eventDetailOpen} onOpenChange={setEventDetailOpen}>
           <DialogContent className="max-w-md">

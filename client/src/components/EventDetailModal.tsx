@@ -75,6 +75,7 @@ export default function EventDetailModal({
   // Parent player selection popup state
   const [showPlayerSelect, setShowPlayerSelect] = useState<'rsvp' | 'checkin' | null>(null);
   const [pendingRsvpResponse, setPendingRsvpResponse] = useState<'attending' | 'not_attending' | null>(null);
+  const [selectedPlayersForRsvp, setSelectedPlayersForRsvp] = useState<Set<string>>(new Set());
   
   // Coach roster check-in state
   const [selectedRosterPlayers, setSelectedRosterPlayers] = useState<Set<string>>(new Set());
@@ -524,8 +525,8 @@ export default function EventDetailModal({
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
     // For parents with linked players, show player selection popup
     if (isParent && linkedPlayers.length > 0) {
-      const newResponse = response || (userRsvp?.response === 'attending' ? 'not_attending' : 'attending');
-      setPendingRsvpResponse(newResponse);
+      // Pre-select all players by default
+      setSelectedPlayersForRsvp(new Set(linkedPlayers.map(p => p.id)));
       setShowPlayerSelect('rsvp');
       return;
     }
@@ -534,6 +535,33 @@ export default function EventDetailModal({
     const currentResponse = userRsvp?.response;
     const newResponse = response || (currentResponse === 'attending' ? 'not_attending' : 'attending');
     rsvpMutation.mutate(newResponse);
+  };
+  
+  // Handle bulk RSVP submission for selected players
+  const handleBulkRsvp = async (response: 'attending' | 'not_attending') => {
+    if (selectedPlayersForRsvp.size === 0) {
+      toast({ title: 'No players selected', description: 'Please select at least one player.', variant: 'destructive' });
+      return;
+    }
+    
+    // Submit RSVP for each selected player sequentially
+    const selectedArray = Array.from(selectedPlayersForRsvp);
+    for (const playerId of selectedArray) {
+      const player = linkedPlayers.find(p => p.id === playerId);
+      const playerName = player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Player';
+      try {
+        await proxyRsvpMutation.mutateAsync({ playerId, playerName, response });
+      } catch (e) {
+        console.error(`Failed to RSVP for player ${playerId}:`, e);
+      }
+    }
+    
+    setShowPlayerSelect(null);
+    setSelectedPlayersForRsvp(new Set());
+    toast({ 
+      title: 'RSVPs Updated', 
+      description: `${selectedArray.length} player${selectedArray.length > 1 ? 's' : ''} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
+    });
   };
 
   const handleCheckInClick = async () => {
@@ -1208,31 +1236,118 @@ export default function EventDetailModal({
         </DialogContent>
       </Dialog>
 
-      {/* Parent Player Selection Popup */}
-      <AlertDialog open={showPlayerSelect !== null} onOpenChange={(open) => !open && setShowPlayerSelect(null)}>
+      {/* Parent Player Selection Popup - RSVP with multi-select */}
+      <AlertDialog open={showPlayerSelect === 'rsvp'} onOpenChange={(open) => !open && setShowPlayerSelect(null)}>
         <AlertDialogContent data-testid="dialog-player-select">
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {showPlayerSelect === 'rsvp' 
-                ? (pendingRsvpResponse === 'attending' ? 'RSVP as Attending' : 'RSVP as Not Attending')
-                : 'Check In Player'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>RSVP for Event</AlertDialogTitle>
             <AlertDialogDescription>
-              {showPlayerSelect === 'rsvp' 
-                ? 'Select which player you are RSVPing for:'
-                : 'Select which player you are checking in:'}
+              Select which players to RSVP, then choose attending or not attending.
             </AlertDialogDescription>
           </AlertDialogHeader>
           
           {/* Window Status Warning */}
-          {showPlayerSelect === 'rsvp' && !windowStatus.rsvpOpen && (
+          {!windowStatus.rsvpOpen && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
               <p className="text-sm text-amber-800">
                 RSVP window {windowStatus.rsvpStatus}
               </p>
             </div>
           )}
-          {showPlayerSelect === 'checkin' && !windowStatus.checkinOpen && (
+          
+          <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+            {linkedPlayers.map(player => {
+              const playerRsvp = getPlayerRsvp(player.id);
+              const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
+              const isSelected = selectedPlayersForRsvp.has(player.id);
+              
+              return (
+                <div
+                  key={player.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    isSelected ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:bg-gray-50'
+                  }`}
+                  onClick={() => {
+                    setSelectedPlayersForRsvp(prev => {
+                      const newSet = new Set(prev);
+                      if (newSet.has(player.id)) {
+                        newSet.delete(player.id);
+                      } else {
+                        newSet.add(player.id);
+                      }
+                      return newSet;
+                    });
+                  }}
+                  data-testid={`select-player-${player.id}`}
+                >
+                  <Checkbox 
+                    checked={isSelected}
+                    className="pointer-events-none"
+                  />
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={player.profileImageUrl || undefined} />
+                    <AvatarFallback>
+                      {(player.firstName?.[0] || '') + (player.lastName?.[0] || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium">{playerName}</p>
+                    <p className="text-xs text-gray-500">
+                      {playerRsvp?.response === 'attending' 
+                        ? 'RSVP: Attending' 
+                        : playerRsvp?.response === 'not_attending'
+                          ? 'RSVP: Not attending'
+                          : 'No RSVP yet'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowPlayerSelect(null)}
+              data-testid="button-cancel-player-select"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => handleBulkRsvp('not_attending')}
+              disabled={selectedPlayersForRsvp.size === 0 || proxyRsvpMutation.isPending || !windowStatus.rsvpOpen}
+              data-testid="button-rsvp-not-attending"
+            >
+              {proxyRsvpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+              Not Attending
+            </Button>
+            <Button
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => handleBulkRsvp('attending')}
+              disabled={selectedPlayersForRsvp.size === 0 || proxyRsvpMutation.isPending || !windowStatus.rsvpOpen}
+              data-testid="button-rsvp-attending"
+            >
+              {proxyRsvpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              Attending
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Parent Player Selection Popup - Check-in (single select) */}
+      <AlertDialog open={showPlayerSelect === 'checkin'} onOpenChange={(open) => !open && setShowPlayerSelect(null)}>
+        <AlertDialogContent data-testid="dialog-checkin-select">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Check In Player</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select which player you are checking in:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          {!windowStatus.checkinOpen && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
               <p className="text-sm text-amber-800">
                 Check-in window {windowStatus.checkinStatus}
@@ -1242,32 +1357,19 @@ export default function EventDetailModal({
           
           <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
             {linkedPlayers.map(player => {
-              const playerRsvp = getPlayerRsvp(player.id);
               const playerCheckIn = getPlayerCheckIn(player.id);
               const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
               const isAlreadyCheckedIn = !!playerCheckIn;
-              const isWindowClosed = (showPlayerSelect === 'rsvp' && !windowStatus.rsvpOpen) || 
-                                     (showPlayerSelect === 'checkin' && !windowStatus.checkinOpen);
-              const isDisabled = (showPlayerSelect === 'checkin' && isAlreadyCheckedIn) || isWindowClosed;
+              const isDisabled = isAlreadyCheckedIn || !windowStatus.checkinOpen;
               
               return (
                 <Button
                   key={player.id}
                   variant="outline"
                   className={`w-full justify-start gap-3 h-auto py-3 ${isDisabled ? 'opacity-50' : ''}`}
-                  disabled={isDisabled || proxyRsvpMutation.isPending || proxyCheckInMutation.isPending}
-                  onClick={() => {
-                    if (showPlayerSelect === 'rsvp' && pendingRsvpResponse) {
-                      proxyRsvpMutation.mutate({ 
-                        playerId: player.id, 
-                        playerName,
-                        response: pendingRsvpResponse 
-                      });
-                    } else if (showPlayerSelect === 'checkin') {
-                      handleProxyCheckIn(player.id, playerName);
-                    }
-                  }}
-                  data-testid={`select-player-${player.id}`}
+                  disabled={isDisabled || proxyCheckInMutation.isPending}
+                  onClick={() => handleProxyCheckIn(player.id, playerName)}
+                  data-testid={`checkin-player-${player.id}`}
                 >
                   <Avatar className="h-10 w-10">
                     <AvatarImage src={player.profileImageUrl || undefined} />
@@ -1278,16 +1380,10 @@ export default function EventDetailModal({
                   <div className="flex-1 text-left">
                     <p className="font-medium">{playerName}</p>
                     <p className="text-xs text-gray-500">
-                      {isAlreadyCheckedIn 
-                        ? 'Already checked in'
-                        : playerRsvp?.response === 'attending' 
-                          ? 'RSVP: Attending' 
-                          : playerRsvp?.response === 'not_attending'
-                            ? 'RSVP: Not attending'
-                            : 'No RSVP yet'}
+                      {isAlreadyCheckedIn ? 'Already checked in' : 'Tap to check in'}
                     </p>
                   </div>
-                  {(proxyRsvpMutation.isPending || proxyCheckInMutation.isPending) && (
+                  {proxyCheckInMutation.isPending && (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                 </Button>
@@ -1296,7 +1392,7 @@ export default function EventDetailModal({
           </div>
           
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-player-select">Cancel</AlertDialogCancel>
+            <AlertDialogCancel data-testid="button-cancel-checkin-select">Cancel</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

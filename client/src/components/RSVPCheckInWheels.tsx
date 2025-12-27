@@ -148,7 +148,7 @@ export function RSVPWheel({
           )}
 
           <Button
-            onClick={onRsvpClick}
+            onClick={() => onRsvpClick?.()}
             disabled={isButtonDisabled}
             className="w-full"
             data-testid="button-rsvp-action"
@@ -255,7 +255,7 @@ export function CheckInWheel({
           </div>
 
           <Button
-            onClick={onCheckInClick}
+            onClick={() => onCheckInClick?.()}
             disabled={isButtonDisabled}
             className="w-full"
             variant={isUserCheckedIn ? "outline" : "default"}

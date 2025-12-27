@@ -537,6 +537,9 @@ export default function EventDetailModal({
     rsvpMutation.mutate(newResponse);
   };
   
+  // State to track bulk RSVP progress
+  const [isBulkRsvpPending, setIsBulkRsvpPending] = useState(false);
+  
   // Handle bulk RSVP submission for selected players
   const handleBulkRsvp = async (response: 'attending' | 'not_attending') => {
     if (selectedPlayersForRsvp.size === 0) {
@@ -544,24 +547,43 @@ export default function EventDetailModal({
       return;
     }
     
-    // Submit RSVP for each selected player sequentially
+    setIsBulkRsvpPending(true);
     const selectedArray = Array.from(selectedPlayersForRsvp);
+    const eventId = event?.id ? String(event.id) : null;
+    
+    // Submit RSVP for each selected player using raw API call (not mutation)
+    // This avoids triggering onSuccess after each call
+    let successCount = 0;
     for (const playerId of selectedArray) {
-      const player = linkedPlayers.find(p => p.id === playerId);
-      const playerName = player ? `${player.firstName || ''} ${player.lastName || ''}`.trim() : 'Player';
       try {
-        await proxyRsvpMutation.mutateAsync({ playerId, playerName, response });
+        await apiRequest('POST', '/api/rsvp/proxy', {
+          eventId,
+          playerId,
+          response,
+        });
+        successCount++;
       } catch (e) {
         console.error(`Failed to RSVP for player ${playerId}:`, e);
       }
     }
     
+    // Invalidate queries once at the end
+    queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
+    queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    
+    setIsBulkRsvpPending(false);
     setShowPlayerSelect(null);
     setSelectedPlayersForRsvp(new Set());
-    toast({ 
-      title: 'RSVPs Updated', 
-      description: `${selectedArray.length} player${selectedArray.length > 1 ? 's' : ''} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
-    });
+    
+    if (successCount > 0) {
+      toast({ 
+        title: 'RSVPs Updated', 
+        description: `${successCount} player${successCount > 1 ? 's' : ''} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
+      });
+    } else {
+      toast({ title: 'RSVP Failed', description: 'Failed to update RSVPs. Please try again.', variant: 'destructive' });
+    }
   };
 
   const handleCheckInClick = async () => {
@@ -1310,6 +1332,7 @@ export default function EventDetailModal({
               variant="outline"
               className="flex-1"
               onClick={() => setShowPlayerSelect(null)}
+              disabled={isBulkRsvpPending}
               data-testid="button-cancel-player-select"
             >
               Cancel
@@ -1318,19 +1341,19 @@ export default function EventDetailModal({
               variant="outline"
               className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
               onClick={() => handleBulkRsvp('not_attending')}
-              disabled={selectedPlayersForRsvp.size === 0 || proxyRsvpMutation.isPending || !windowStatus.rsvpOpen}
+              disabled={selectedPlayersForRsvp.size === 0 || isBulkRsvpPending || !windowStatus.rsvpOpen}
               data-testid="button-rsvp-not-attending"
             >
-              {proxyRsvpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+              {isBulkRsvpPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
               Not Attending
             </Button>
             <Button
               className="flex-1 bg-green-600 hover:bg-green-700"
               onClick={() => handleBulkRsvp('attending')}
-              disabled={selectedPlayersForRsvp.size === 0 || proxyRsvpMutation.isPending || !windowStatus.rsvpOpen}
+              disabled={selectedPlayersForRsvp.size === 0 || isBulkRsvpPending || !windowStatus.rsvpOpen}
               data-testid="button-rsvp-attending"
             >
-              {proxyRsvpMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              {isBulkRsvpPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Attending
             </Button>
           </div>

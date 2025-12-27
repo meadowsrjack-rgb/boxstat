@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { queryClient } from "@/lib/queryClient";
+import { BanterLoader } from "@/components/BanterLoader";
 
 export default function Logout() {
   useEffect(() => {
@@ -23,9 +24,9 @@ export default function Logout() {
 
       {/* Main Content Wrapper */}
       <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p>Logging out...</p>
+        <div className="flex flex-col items-center">
+          <BanterLoader />
+          <p className="mt-6 text-white">Logging out...</p>
         </div>
       </div>
     </>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -290,9 +291,9 @@ export default function FamilyManagement() {
   if (isLoading) {
     return (
       <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p>Loading family members...</p>
+        <div className="flex flex-col items-center">
+          <BanterLoader />
+          <p className="mt-6 text-gray-600">Loading family members...</p>
         </div>
       </div>
     );

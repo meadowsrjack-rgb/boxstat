@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -1066,7 +1067,7 @@ export default function UnifiedAccount() {
         <div className="ios-full-bleed" />
         <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
         <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          <BanterLoader />
         </div>
       </>
     );
@@ -1139,7 +1140,7 @@ export default function UnifiedAccount() {
               <h2 className="text-2xl font-bold mb-4">Upcoming Events</h2>
               {eventsLoading ? (
                 <div className="flex justify-center py-8" data-testid="loading-events">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+                  <BanterLoader />
                 </div>
               ) : allUpcomingEvents.length === 0 ? (
                 <Card>

@@ -71,6 +71,7 @@ import PhotoUpload from "@/pages/photo-upload";
 import SupportPage from "@/pages/support";
 import NotificationsPage from "@/pages/notifications-page";
 import Logout from "@/pages/logout";
+import { BanterLoader } from "@/components/BanterLoader";
 
 // Individual Setting Pages
 import { 
@@ -116,7 +117,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   if (isLoading) {
     return (
       <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <BanterLoader />
       </div>
     );
   }
@@ -194,7 +195,7 @@ function AccountRoute() {
   if (isLoading) {
     return (
       <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <BanterLoader />
       </div>
     );
   }
@@ -217,7 +218,7 @@ function DashboardRoute() {
 
   return (
     <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
-      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <BanterLoader />
     </div>
   );
 }
@@ -324,7 +325,7 @@ function AppRouter() {
   if (isLoading) {
     return (
       <div className="min-h-screen-safe bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <BanterLoader />
       </div>
     );
   }

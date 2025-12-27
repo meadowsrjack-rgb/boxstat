@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -223,7 +224,7 @@ export default function AdminDashboard() {
         <div className="ios-full-bleed" />
         <div className="fixed inset-0 w-full h-full bg-gray-50 z-0 pointer-events-none" />
         <div className="ios-fixed-page relative z-10 w-full bg-transparent flex items-center justify-center" data-testid="loading-admin-dashboard">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+          <BanterLoader />
         </div>
       </>
     );
@@ -5966,8 +5967,8 @@ function StoreTab({ organization }: any) {
           <CardDescription>Manage physical products and inventory</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" data-testid="loading-store" />
+          <div className="flex items-center justify-center py-12" data-testid="loading-store">
+            <BanterLoader />
           </div>
         </CardContent>
       </Card>

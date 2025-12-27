@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { BanterLoader } from "@/components/BanterLoader";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -469,9 +470,9 @@ export function ParentFamilyPage() {
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-                  <div className="text-gray-500">Loading player information...</div>
+                <div className="flex flex-col items-center justify-center py-8">
+                  <BanterLoader />
+                  <div className="mt-6 text-gray-500">Loading player information...</div>
                 </div>
               ) : typedLinkedPlayers.length === 0 ? (
                 <div className="text-center py-8">

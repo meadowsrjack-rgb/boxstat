@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { BanterLoader } from "@/components/BanterLoader";
 
 export default function DashboardDispatcher() {
   const { user, isLoading } = useAuth();
@@ -99,7 +100,7 @@ export default function DashboardDispatcher() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      <BanterLoader />
     </div>
   );
 }

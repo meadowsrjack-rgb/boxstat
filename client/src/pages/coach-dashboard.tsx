@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import PlayerCalendar from "@/components/PlayerCalendar";
 import EventDetailModal from "@/components/EventDetailModal";
+import { BanterLoader } from "@/components/BanterLoader";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -172,7 +173,7 @@ export default function CoachDashboard() {
   if (!currentUser) {
     return (
       <div className="min-h-screen-safe bg-gray-50 safe-bottom flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        <BanterLoader />
       </div>
     );
   }

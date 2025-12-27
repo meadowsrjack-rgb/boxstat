@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Shield, ChevronRight, Settings, UserPlus, LogOut, Crown, Bug } from "lucide-react";
+import { BanterLoader } from "@/components/BanterLoader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,7 +72,7 @@ export default function ProfileGateway() {
       <>
         <div className="fixed inset-0 w-full h-full z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #111827, #000000)' }} />
         <div className="fixed inset-0 w-full h-full z-10 flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
+          <BanterLoader />
         </div>
       </>
     );

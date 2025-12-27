@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BanterLoader } from "@/components/BanterLoader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -150,9 +151,9 @@ export default function RosterManagement() {
   if (eventsLoading || requestsLoading) {
     return (
       <div className="p-6 space-y-6">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p>Loading roster management data...</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <BanterLoader />
+          <p className="mt-6 text-gray-600">Loading roster management data...</p>
         </div>
       </div>
     );

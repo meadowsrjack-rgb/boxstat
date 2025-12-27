@@ -1532,17 +1532,17 @@ export default function UnifiedAccount() {
                       <DialogHeader>
                         <DialogTitle>{isStoreItemPurchase ? "Purchase Item" : "Make a Payment"}</DialogTitle>
                         <DialogDescription>
-                          {isStoreItemPurchase ? "Complete your store purchase" : "Select a package and player to purchase"}
+                          {isStoreItemPurchase ? "Complete your store purchase" : "Select a program and player to enroll"}
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-4 py-4">
-                        {/* Package Selection - only show for program purchases */}
+                        {/* Program Selection - only show for program purchases */}
                         {!isStoreItemPurchase && (
                           <div className="space-y-2">
-                            <label className="text-sm font-medium">Package</label>
+                            <label className="text-sm font-medium">Program</label>
                             <Select value={selectedPackage} onValueChange={setSelectedPackage}>
                               <SelectTrigger data-testid="select-package">
-                                <SelectValue placeholder="Select a package" />
+                                <SelectValue placeholder="Select a program" />
                               </SelectTrigger>
                               <SelectContent>
                                 {programs?.filter((p: any) => p.price && p.price > 0 && p.productCategory === 'service').map((program: any) => (
@@ -1584,7 +1584,7 @@ export default function UnifiedAccount() {
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-gray-600">
-                                This is a per-player package. Select which player this payment is for.
+                                This is a per-player program. Select which player this payment is for.
                               </p>
                             </div>
                           );
@@ -1660,7 +1660,7 @@ export default function UnifiedAccount() {
                               if (!selectedPackage) {
                                 toast({
                                   title: "Error",
-                                  description: "Please select a package or item",
+                                  description: "Please select a program or item",
                                   variant: "destructive",
                                 });
                                 return;
@@ -1687,7 +1687,7 @@ export default function UnifiedAccount() {
                                 if (requiresPlayerSelection && !selectedPlayer) {
                                   toast({
                                     title: "Error",
-                                    description: "Please select a player for this per-player package",
+                                    description: "Please select a player for this per-player program",
                                     variant: "destructive",
                                   });
                                   return;

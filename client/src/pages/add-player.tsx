@@ -28,7 +28,7 @@ const dobSchema = z.object({
 });
 
 const genderSchema = z.object({
-  gender: z.enum(["male", "female", "other"], {
+  gender: z.enum(["male", "female"], {
     required_error: "Please select a gender",
   }),
 });
@@ -663,7 +663,6 @@ function GenderStep({
                 <SelectContent>
                   <SelectItem value="male" data-testid="option-male">Male</SelectItem>
                   <SelectItem value="female" data-testid="option-female">Female</SelectItem>
-                  <SelectItem value="other" data-testid="option-other">Other</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage className="text-red-400" />
@@ -1507,12 +1506,12 @@ function PaymentSummaryStep({
           </div>
         </div>
 
-        {/* Package Information */}
+        {/* Program Information */}
         {selectedProgram && (
           <div className="border border-red-900 rounded-lg p-4 bg-red-950/30">
             <h4 className="font-medium text-gray-300 mb-2 flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
-              Selected Package
+              Selected Program
             </h4>
             <div className="space-y-1">
               <div className="flex justify-between items-center">

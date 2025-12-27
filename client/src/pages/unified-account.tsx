@@ -1226,9 +1226,8 @@ export default function UnifiedAccount() {
             </div>
 
             {/* Category-Based Store Tiles */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4" data-testid="store-categories">
+            <div className="grid grid-cols-3 gap-4" data-testid="store-categories">
               {[
-                { id: "membership", label: "Club & Subscriptions", icon: <Crown className="w-8 h-8" />, color: "from-amber-500 to-amber-600", desc: "Youth Club, monthly dues", typeMatch: ["Subscription"] },
                 { id: "training", label: "Training & Camps", icon: <Target className="w-8 h-8" />, color: "from-blue-500 to-blue-600", desc: "Private sessions, camps", typeMatch: ["Pack", "One-Time"] },
                 { id: "gear", label: "Gear & Apparel", icon: <Shirt className="w-8 h-8" />, color: "from-purple-500 to-purple-600", desc: "Jerseys, equipment", productCategory: "goods" },
                 { id: "digital", label: "Digital Academy", icon: <Trophy className="w-8 h-8" />, color: "from-green-500 to-green-600", desc: "Online training programs", typeMatch: ["Program"] },
@@ -1272,7 +1271,6 @@ export default function UnifiedAccount() {
             {/* Products Grid - Filtered by Category */}
             {(() => {
               const categoryConfig: Record<string, { typeMatch?: string[], productCategory?: string }> = {
-                membership: { typeMatch: ["Subscription"] },
                 training: { typeMatch: ["Pack", "One-Time"] },
                 gear: { productCategory: "goods" },
                 digital: { typeMatch: ["Program"] },
@@ -1326,7 +1324,7 @@ export default function UnifiedAccount() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">
                       {selectedStoreCategory ? 
-                        {membership: "Club & Subscriptions", training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
+                        {training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
                         : "All Products"}
                     </h3>
                     {selectedStoreCategory && (

@@ -5688,7 +5688,6 @@ function StoreTab({ organization }: any) {
     { value: "gear", label: "Gear & Apparel" },
     { value: "training", label: "Training & Camps" },
     { value: "digital", label: "Digital Academy" },
-    { value: "membership", label: "Club & Subscriptions" },
   ];
 
   const form = useForm({
@@ -5703,6 +5702,8 @@ function StoreTab({ organization }: any) {
       isActive: z.boolean().default(true),
       storeCategory: z.string().optional(),
       sessionCount: z.number().optional(),
+      isRecurring: z.boolean().default(false),
+      billingCycle: z.string().optional(),
     })),
     defaultValues: {
       organizationId: organization?.id || "",
@@ -5715,10 +5716,13 @@ function StoreTab({ organization }: any) {
       isActive: true,
       storeCategory: "gear",
       sessionCount: undefined as number | undefined,
+      isRecurring: false,
+      billingCycle: "Monthly",
     },
   });
 
   const selectedStoreCategory = form.watch("storeCategory");
+  const isRecurring = form.watch("isRecurring");
 
   const createProduct = useMutation({
     mutationFn: async (data: any) => {
@@ -5728,7 +5732,8 @@ function StoreTab({ organization }: any) {
         ...data,
         organizationId: organization?.id,
         productCategory: "goods",
-        type: isTraining ? "Pack" : "One-Time",
+        type: data.isRecurring ? "Subscription" : (isTraining ? "Pack" : "One-Time"),
+        billingCycle: data.isRecurring ? (data.billingCycle || "Monthly") : null,
         coverImageUrl: productImageUrl || null,
         tags: data.storeCategory ? [data.storeCategory] : [],
         sessionCount: isTraining ? (data.sessionCount || 0) : null,
@@ -5796,6 +5801,8 @@ function StoreTab({ organization }: any) {
       isActive: product.isActive ?? true,
       storeCategory: product.tags?.[0] || "gear",
       sessionCount: product.sessionCount,
+      isRecurring: product.type === "Subscription",
+      billingCycle: product.billingCycle || "Monthly",
     });
     
     // Fetch current suggested programs for this product
@@ -5828,6 +5835,8 @@ function StoreTab({ organization }: any) {
       shippingRequired: false,
       isActive: true,
       storeCategory: "gear",
+      isRecurring: false,
+      billingCycle: "Monthly",
     });
     setIsDialogOpen(true);
   };
@@ -6015,6 +6024,7 @@ function StoreTab({ organization }: any) {
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Price</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Sizes</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
@@ -6056,6 +6066,18 @@ function StoreTab({ organization }: any) {
                   </TableCell>
                   <TableCell className="font-medium">
                     {formatPrice(product.price)}
+                    {product.type === "Subscription" && product.billingCycle && (
+                      <span className="text-xs text-gray-500 block">/{product.billingCycle.toLowerCase()}</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {product.type === "Subscription" ? (
+                      <Badge className="bg-amber-100 text-amber-700 border-0">Subscription</Badge>
+                    ) : product.type === "Pack" ? (
+                      <Badge className="bg-blue-100 text-blue-700 border-0">Pack</Badge>
+                    ) : (
+                      <Badge variant="outline">One-Time</Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {product.inventorySizes?.length > 0 ? (
@@ -6247,6 +6269,55 @@ function StoreTab({ organization }: any) {
                   );
                 }}
               />
+
+              {/* Payment Options - Recurring Toggle and Billing Cycle */}
+              <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                <Label className="text-sm font-medium">Payment Options</Label>
+                
+                <FormField
+                  control={form.control}
+                  name="isRecurring"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="checkbox-is-recurring"
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0">Recurring Payment (Subscription)</FormLabel>
+                    </FormItem>
+                  )}
+                />
+
+                {isRecurring && (
+                  <FormField
+                    control={form.control}
+                    name="billingCycle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Billing Cycle</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "Monthly"}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-billing-cycle">
+                              <SelectValue placeholder="Select billing cycle" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                            <SelectItem value="Quarterly">Quarterly (every 3 months)</SelectItem>
+                            <SelectItem value="6-Month">6-Month</SelectItem>
+                            <SelectItem value="Yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
 
               {/* Apparel-specific fields: sizes, stock, shipping */}
               {selectedStoreCategory === "gear" && (

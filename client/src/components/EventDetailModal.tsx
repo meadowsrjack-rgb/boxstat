@@ -74,8 +74,6 @@ export default function EventDetailModal({
   
   // Parent player selection popup state
   const [showPlayerSelect, setShowPlayerSelect] = useState<'rsvp' | 'checkin' | null>(null);
-  const [pendingRsvpResponse, setPendingRsvpResponse] = useState<'attending' | 'not_attending' | null>(null);
-  const [selectedPlayersForRsvp, setSelectedPlayersForRsvp] = useState<Set<string>>(new Set());
   
   // Coach roster check-in state
   const [selectedRosterPlayers, setSelectedRosterPlayers] = useState<Set<string>>(new Set());
@@ -230,6 +228,35 @@ export default function EventDetailModal({
     return participantsData as UserType[];
   }, [participantsData]);
 
+  // Fetch current user info (for displaying name in RSVP)
+  // This is a nice-to-have; if it fails, we'll fall back to "Me"
+  const { data: currentUser } = useQuery<UserType | null>({
+    queryKey: ['/api/auth/user'],
+    queryFn: async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const response = await fetch('/api/auth/user', {
+          headers,
+          credentials: 'include',
+        });
+        if (!response.ok) return null;
+        return response.json();
+      } catch {
+        return null;
+      }
+    },
+    enabled: open && isParent,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const currentUserName = useMemo(() => {
+    if (!currentUser) return 'Me';
+    return `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || 'Me';
+  }, [currentUser]);
+
   // For parents: fetch linked players
   const { data: linkedPlayers = [] } = useQuery<UserType[]>({
     queryKey: ['/api/parent/linked-players'],
@@ -356,7 +383,6 @@ export default function EventDetailModal({
       queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       setShowPlayerSelect(null);
-      setPendingRsvpResponse(null);
       const playerName = response?.playerName || 'Player';
       const isAttending = response?.response === 'attending';
       toast({ 
@@ -581,21 +607,8 @@ export default function EventDetailModal({
   };
 
   const handleRsvpClick = (response?: 'attending' | 'not_attending') => {
-    // For parents, show player selection popup (includes self-RSVP option)
+    // For parents, show RSVP popup with inline buttons for each person
     if (isParent) {
-      // Only pre-select players who already have an RSVP for this event
-      const playersWithRsvp = linkedPlayers.filter(p => {
-        const rsvp = getPlayerRsvp(p.id);
-        return rsvp && (rsvp.response === 'attending' || rsvp.response === 'not_attending');
-      });
-      // Also check if parent themselves has an RSVP
-      const parentHasRsvp = userRsvp && (userRsvp.response === 'attending' || userRsvp.response === 'not_attending');
-      
-      const preSelected = new Set(playersWithRsvp.map(p => p.id));
-      if (parentHasRsvp) {
-        preSelected.add(userId); // Add parent's own ID if they have RSVPed
-      }
-      setSelectedPlayersForRsvp(preSelected);
       setShowPlayerSelect('rsvp');
       return;
     }
@@ -606,61 +619,44 @@ export default function EventDetailModal({
     rsvpMutation.mutate(newResponse);
   };
   
-  // State to track bulk RSVP progress
-  const [isBulkRsvpPending, setIsBulkRsvpPending] = useState(false);
+  // State to track individual RSVP progress (map of personId -> pending state)
+  const [pendingRsvps, setPendingRsvps] = useState<Record<string, boolean>>({});
   
-  // Handle bulk RSVP submission for selected players (and optionally parent self)
-  const handleBulkRsvp = async (response: 'attending' | 'not_attending') => {
-    if (selectedPlayersForRsvp.size === 0) {
-      toast({ title: 'No one selected', description: 'Please select at least one person.', variant: 'destructive' });
-      return;
-    }
+  // Handle individual RSVP for a specific person
+  const handleIndividualRsvp = async (personId: string, response: 'attending' | 'not_attending') => {
+    setPendingRsvps(prev => ({ ...prev, [personId]: true }));
     
-    setIsBulkRsvpPending(true);
-    const selectedArray = Array.from(selectedPlayersForRsvp);
-    const eventId = event?.id ? String(event.id) : null;
-    
-    let successCount = 0;
-    for (const selectedId of selectedArray) {
-      try {
-        // Check if this is the parent's own ID (self-RSVP)
-        if (selectedId === userId) {
-          // Use regular RSVP endpoint for self
-          await apiRequest('POST', '/api/rsvp', {
-            eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
-            userId: String(userId),
-            response,
-          });
-        } else {
-          // Use proxy endpoint for linked players
-          await apiRequest('POST', '/api/rsvp/proxy', {
-            eventId,
-            playerId: selectedId,
-            response,
-          });
-        }
-        successCount++;
-      } catch (e) {
-        console.error(`Failed to RSVP for ${selectedId}:`, e);
+    try {
+      if (personId === userId) {
+        // Use regular RSVP endpoint for self
+        await apiRequest('POST', '/api/rsvp', {
+          eventId: typeof event?.id === 'number' ? event.id : parseInt(String(event?.id)),
+          userId: String(userId),
+          response,
+        });
+      } else {
+        // Use proxy endpoint for linked players
+        await apiRequest('POST', '/api/rsvp/proxy', {
+          eventId: event?.id ? String(event.id) : null,
+          playerId: personId,
+          response,
+        });
       }
-    }
-    
-    // Invalidate queries once at the end
-    queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
-    queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    
-    setIsBulkRsvpPending(false);
-    setShowPlayerSelect(null);
-    setSelectedPlayersForRsvp(new Set());
-    
-    if (successCount > 0) {
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp/event', event?.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/rsvp'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      
       toast({ 
-        title: 'RSVPs Updated', 
-        description: `${successCount} ${successCount > 1 ? 'people' : 'person'} marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
+        title: 'RSVP Updated', 
+        description: `Marked as ${response === 'attending' ? 'attending' : 'not attending'}.`
       });
-    } else {
-      toast({ title: 'RSVP Failed', description: 'Failed to update RSVPs. Please try again.', variant: 'destructive' });
+    } catch (e) {
+      console.error(`Failed to RSVP for ${personId}:`, e);
+      toast({ title: 'RSVP Failed', description: 'Failed to update RSVP. Please try again.', variant: 'destructive' });
+    } finally {
+      setPendingRsvps(prev => ({ ...prev, [personId]: false }));
     }
   };
 
@@ -1377,13 +1373,13 @@ export default function EventDetailModal({
         </DialogContent>
       </Dialog>
 
-      {/* Parent Player Selection Popup - RSVP with multi-select */}
+      {/* Parent RSVP Popup - Inline buttons for each person */}
       <AlertDialog open={showPlayerSelect === 'rsvp'} onOpenChange={(open) => !open && setShowPlayerSelect(null)}>
-        <AlertDialogContent data-testid="dialog-player-select">
+        <AlertDialogContent data-testid="dialog-player-select" className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>RSVP for Event</AlertDialogTitle>
             <AlertDialogDescription>
-              Select which players to RSVP, then choose attending or not attending.
+              Choose attending or not attending for each person.
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -1396,41 +1392,45 @@ export default function EventDetailModal({
             </div>
           )}
           
-          <div className="space-y-2 py-4 max-h-64 overflow-y-auto">
+          <div className="space-y-3 py-4 max-h-80 overflow-y-auto">
             {/* Parent self-RSVP option */}
-            <div
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                selectedPlayersForRsvp.has(userId) ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:bg-gray-50'
-              }`}
-              onClick={() => {
-                setSelectedPlayersForRsvp(prev => {
-                  const newSet = new Set(prev);
-                  if (newSet.has(userId)) {
-                    newSet.delete(userId);
-                  } else {
-                    newSet.add(userId);
-                  }
-                  return newSet;
-                });
-              }}
-              data-testid="select-player-self"
-            >
-              <Checkbox 
-                checked={selectedPlayersForRsvp.has(userId)}
-                className="pointer-events-none"
-              />
-              <Avatar className="h-10 w-10 bg-blue-100">
-                <AvatarFallback className="bg-blue-100 text-blue-700">Me</AvatarFallback>
+            <div className="flex items-center gap-3 p-3 rounded-lg border bg-white border-gray-200" data-testid="rsvp-row-self">
+              <Avatar className="h-10 w-10 bg-blue-100 flex-shrink-0">
+                <AvatarFallback className="bg-blue-100 text-blue-700">
+                  {(currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || 'M')}
+                </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <p className="font-medium">Myself (Parent)</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{currentUserName}</p>
                 <p className="text-xs text-gray-500">
                   {userRsvp?.response === 'attending' 
-                    ? 'RSVP: Attending' 
+                    ? 'Attending' 
                     : userRsvp?.response === 'not_attending'
-                      ? 'RSVP: Not attending'
-                      : 'No RSVP yet'}
+                      ? 'Not attending'
+                      : 'No response'}
                 </p>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  size="sm"
+                  variant={userRsvp?.response === 'not_attending' ? 'default' : 'outline'}
+                  className={`h-8 px-2 ${userRsvp?.response === 'not_attending' ? 'bg-red-600 hover:bg-red-700' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
+                  disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
+                  onClick={() => handleIndividualRsvp(userId, 'not_attending')}
+                  data-testid="rsvp-self-not-attending"
+                >
+                  {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={userRsvp?.response === 'attending' ? 'default' : 'outline'}
+                  className={`h-8 px-2 ${userRsvp?.response === 'attending' ? 'bg-green-600 hover:bg-green-700' : 'border-green-300 text-green-700 hover:bg-green-50'}`}
+                  disabled={pendingRsvps[userId] || !windowStatus.rsvpOpen}
+                  onClick={() => handleIndividualRsvp(userId, 'attending')}
+                  data-testid="rsvp-self-attending"
+                >
+                  {pendingRsvps[userId] ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                </Button>
               </div>
             </div>
             
@@ -1438,80 +1438,65 @@ export default function EventDetailModal({
             {linkedPlayers.map(player => {
               const playerRsvp = getPlayerRsvp(player.id);
               const playerName = `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Unknown';
-              const isSelected = selectedPlayersForRsvp.has(player.id);
+              const isPending = pendingRsvps[player.id];
               
               return (
                 <div
                   key={player.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    isSelected ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:bg-gray-50'
-                  }`}
-                  onClick={() => {
-                    setSelectedPlayersForRsvp(prev => {
-                      const newSet = new Set(prev);
-                      if (newSet.has(player.id)) {
-                        newSet.delete(player.id);
-                      } else {
-                        newSet.add(player.id);
-                      }
-                      return newSet;
-                    });
-                  }}
-                  data-testid={`select-player-${player.id}`}
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-white border-gray-200"
+                  data-testid={`rsvp-row-${player.id}`}
                 >
-                  <Checkbox 
-                    checked={isSelected}
-                    className="pointer-events-none"
-                  />
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarImage src={player.profileImageUrl || undefined} />
                     <AvatarFallback>
                       {(player.firstName?.[0] || '') + (player.lastName?.[0] || '')}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <p className="font-medium">{playerName}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{playerName}</p>
                     <p className="text-xs text-gray-500">
                       {playerRsvp?.response === 'attending' 
-                        ? 'RSVP: Attending' 
+                        ? 'Attending' 
                         : playerRsvp?.response === 'not_attending'
-                          ? 'RSVP: Not attending'
-                          : 'No RSVP yet'}
+                          ? 'Not attending'
+                          : 'No response'}
                     </p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant={playerRsvp?.response === 'not_attending' ? 'default' : 'outline'}
+                      className={`h-8 px-2 ${playerRsvp?.response === 'not_attending' ? 'bg-red-600 hover:bg-red-700' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
+                      disabled={isPending || !windowStatus.rsvpOpen}
+                      onClick={() => handleIndividualRsvp(player.id, 'not_attending')}
+                      data-testid={`rsvp-${player.id}-not-attending`}
+                    >
+                      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={playerRsvp?.response === 'attending' ? 'default' : 'outline'}
+                      className={`h-8 px-2 ${playerRsvp?.response === 'attending' ? 'bg-green-600 hover:bg-green-700' : 'border-green-300 text-green-700 hover:bg-green-50'}`}
+                      disabled={isPending || !windowStatus.rsvpOpen}
+                      onClick={() => handleIndividualRsvp(player.id, 'attending')}
+                      data-testid={`rsvp-${player.id}-attending`}
+                    >
+                      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                    </Button>
                   </div>
                 </div>
               );
             })}
           </div>
           
-          <div className="flex gap-3 pt-2">
+          <div className="pt-2">
             <Button
               variant="outline"
-              className="flex-1"
+              className="w-full"
               onClick={() => setShowPlayerSelect(null)}
-              disabled={isBulkRsvpPending}
-              data-testid="button-cancel-player-select"
+              data-testid="button-close-rsvp"
             >
-              Cancel
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 border-red-300 text-red-700 hover:bg-red-50"
-              onClick={() => handleBulkRsvp('not_attending')}
-              disabled={selectedPlayersForRsvp.size === 0 || isBulkRsvpPending || !windowStatus.rsvpOpen}
-              data-testid="button-rsvp-not-attending"
-            >
-              {isBulkRsvpPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
-              Not Attending
-            </Button>
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={() => handleBulkRsvp('attending')}
-              disabled={selectedPlayersForRsvp.size === 0 || isBulkRsvpPending || !windowStatus.rsvpOpen}
-              data-testid="button-rsvp-attending"
-            >
-              {isBulkRsvpPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-              Attending
+              Done
             </Button>
           </div>
         </AlertDialogContent>

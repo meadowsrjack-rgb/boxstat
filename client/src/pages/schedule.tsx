@@ -198,7 +198,9 @@ export default function SchedulePage() {
                   key={event.id} 
                   className="bg-red-50 border-l-4 border-red-600 px-4 py-3 mb-3 rounded-lg cursor-pointer hover:bg-red-100 transition"
                   onClick={() => {
-                    setSelectedEvent(event);
+                    // Create a clean copy to avoid cyclic structure issues from React Query cache
+                    const cleanEvent = JSON.parse(JSON.stringify(event));
+                    setSelectedEvent(cleanEvent);
                     setEventDetailOpen(true);
                   }}
                   data-testid={`event-item-${event.id}`}

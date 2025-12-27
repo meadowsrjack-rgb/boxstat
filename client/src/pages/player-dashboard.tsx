@@ -974,7 +974,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event);
+                          // Create a clean copy to avoid cyclic structure issues from React Query cache
+                          const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
+                          setSelectedEvent(cleanEvent);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`event-item-${event.id}`}
@@ -1008,7 +1010,9 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
                         key={event.id} 
                         className="flex items-center justify-between p-3 bg-white rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 transition-colors"
                         onClick={() => {
-                          setSelectedEvent(event);
+                          // Create a clean copy to avoid cyclic structure issues from React Query cache
+                          const cleanEvent = JSON.parse(JSON.stringify(event)) as Event;
+                          setSelectedEvent(cleanEvent);
                           setEventDetailOpen(true);
                         }}
                         data-testid={`upcoming-event-item-${event.id}`}

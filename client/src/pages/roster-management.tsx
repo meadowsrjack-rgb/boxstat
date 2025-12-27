@@ -246,7 +246,11 @@ export default function RosterManagement() {
                                     <Button 
                                       size="sm" 
                                       variant="outline"
-                                      onClick={() => setSelectedEvent(event)}
+                                      onClick={() => {
+                                        // Create a clean copy to avoid cyclic structure issues from React Query cache
+                                        const cleanEvent = JSON.parse(JSON.stringify(event));
+                                        setSelectedEvent(cleanEvent);
+                                      }}
                                     >
                                       Respond
                                     </Button>

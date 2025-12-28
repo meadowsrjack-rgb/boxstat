@@ -45,5 +45,3 @@ integrations = ["javascript_stripe:1.0.0", "javascript_log_in_with_replit:1.0.0"
 [userenv]
 
 [userenv.shared]
-TESTING_VITE_STRIPE_PUBLIC_KEY = "pk_test_AcZbEJ061cssjF7mcFcSk19Y00Ck61PB8E"
-TESTING_STRIPE_SECRET_KEY = "sk_test_kePKia7cTI6sorUla93zCPM600YpmbkRQ1"

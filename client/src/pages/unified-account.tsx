@@ -1227,8 +1227,9 @@ export default function UnifiedAccount() {
             </div>
 
             {/* Category-Based Store Tiles */}
-            <div className="grid grid-cols-3 gap-4" data-testid="store-categories">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4" data-testid="store-categories">
               {[
+                { id: "programs", label: "Programs", icon: <Crown className="w-8 h-8" />, color: "from-red-500 to-red-600", desc: "Memberships & subscriptions", typeMatch: ["Subscription", "Program"] },
                 { id: "training", label: "Training & Camps", icon: <Target className="w-8 h-8" />, color: "from-blue-500 to-blue-600", desc: "Private sessions, camps", typeMatch: ["Pack", "One-Time"] },
                 { id: "gear", label: "Gear & Apparel", icon: <Shirt className="w-8 h-8" />, color: "from-purple-500 to-purple-600", desc: "Jerseys, equipment", productCategory: "goods" },
                 { id: "digital", label: "Digital Academy", icon: <Trophy className="w-8 h-8" />, color: "from-green-500 to-green-600", desc: "Online training programs", typeMatch: ["Program"] },
@@ -1272,6 +1273,7 @@ export default function UnifiedAccount() {
             {/* Products Grid - Filtered by Category */}
             {(() => {
               const categoryConfig: Record<string, { typeMatch?: string[], productCategory?: string }> = {
+                programs: { typeMatch: ["Subscription", "Program"] },
                 training: { typeMatch: ["Pack", "One-Time"] },
                 gear: { productCategory: "goods" },
                 digital: { typeMatch: ["Program"] },
@@ -1325,7 +1327,7 @@ export default function UnifiedAccount() {
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-lg">
                       {selectedStoreCategory ? 
-                        {training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
+                        {programs: "Programs", training: "Training & Camps", gear: "Gear & Apparel", digital: "Digital Academy"}[selectedStoreCategory] || "All Products" 
                         : "All Products"}
                     </h3>
                     {selectedStoreCategory && (
@@ -1448,67 +1450,49 @@ export default function UnifiedAccount() {
                         );
                       }
                       
-                      // Group enrollments by player
-                      const playerGroups: Record<string, any[]> = {};
-                      relevantEnrollments.forEach((enrollment: any) => {
-                        const playerId = enrollment.playerId || 'family';
-                        if (!playerGroups[playerId]) playerGroups[playerId] = [];
-                        playerGroups[playerId].push(enrollment);
-                      });
-                      
+                      // Flat list of enrollments with user/player name next to each
                       return (
-                        <div className="space-y-4">
-                          {Object.entries(playerGroups).map(([playerId, enrollments]) => {
-                            const player = players?.find((p: any) => p.id === playerId);
-                            const playerName = player ? `${player.firstName} ${player.lastName}` : "Family Programs";
+                        <div className="space-y-2">
+                          {relevantEnrollments.map((enrollment: any) => {
+                            const program = programs?.find((p: any) => p.id === enrollment.programId);
+                            const isPack = program?.type === "Pack";
+                            const remainingCredits = enrollment.remainingCredits || 0;
+                            const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
+                            
+                            // Get player or user name
+                            const player = players?.find((p: any) => p.id === enrollment.playerId);
+                            const enrolleeName = player 
+                              ? `${player.firstName} ${player.lastName}` 
+                              : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';
                             
                             return (
-                              <div key={playerId} className="border rounded-lg p-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarImage src={player?.profileImageUrl} />
-                                    <AvatarFallback className="bg-red-100 text-red-700 text-xs">
-                                      {player ? `${player.firstName?.[0]}${player.lastName?.[0]}` : "F"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-medium">{playerName}</span>
-                                </div>
-                                <div className="space-y-2">
-                                  {enrollments.map((enrollment: any) => {
-                                    const program = programs?.find((p: any) => p.id === enrollment.programId);
-                                    const isPack = program?.type === "Pack";
-                                    const remainingCredits = enrollment.remainingCredits || 0;
-                                    const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
-                                    
-                                    return (
-                                      <div key={enrollment.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                                        <div className="flex items-center gap-3">
-                                          {isPack ? (
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                              <Target className="w-4 h-4 text-blue-600" />
-                                            </div>
-                                          ) : (
-                                            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-                                              <Crown className="w-4 h-4 text-amber-600" />
-                                            </div>
-                                          )}
-                                          <div>
-                                            <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
-                                            {isPack && totalCredits > 0 && (
-                                              <div className="flex items-center gap-2">
-                                                <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
-                                                <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                          Active
-                                        </Badge>
+                              <div key={enrollment.id} className="flex items-center justify-between py-3 px-4 border rounded-lg">
+                                <div className="flex items-center gap-3">
+                                  {isPack ? (
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                      <Target className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                      <Crown className="w-5 h-5 text-amber-600" />
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-sm">{program?.name || "Unknown Program"}</p>
+                                      <span className="text-xs text-gray-500">• {enrolleeName}</span>
+                                    </div>
+                                    {isPack && totalCredits > 0 && (
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <Progress value={(remainingCredits / totalCredits) * 100} className="w-24 h-2" />
+                                        <span className="text-xs text-gray-500">{remainingCredits}/{totalCredits} sessions</span>
                                       </div>
-                                    );
-                                  })}
+                                    )}
+                                  </div>
                                 </div>
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  Active
+                                </Badge>
                               </div>
                             );
                           })}

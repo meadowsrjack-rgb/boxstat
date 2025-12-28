@@ -943,7 +943,7 @@ export default function AdminProgramDetail() {
                               <p className="text-xs font-semibold text-blue-700 mb-2">Currently Assigned:</p>
                               <div className="flex flex-wrap gap-1">
                                 {teamRoster.map(playerId => {
-                                  const player = players.find((p: any) => p.id === playerId);
+                                  const player = allPlayers.find((p: any) => p.id === playerId);
                                   return player ? (
                                     <div key={playerId} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                                       <span>{player.firstName} {player.lastName}</span>
@@ -965,10 +965,10 @@ export default function AdminProgramDetail() {
                           {/* Available Players */}
                           <div className="p-2 space-y-1">
                             <p className="text-xs font-semibold text-gray-500 mb-2">Add Players:</p>
-                            {players.length === 0 ? (
+                            {allPlayers.length === 0 ? (
                               <p className="text-sm text-gray-500">No players available</p>
                             ) : (
-                              players.map((player: any) => {
+                              allPlayers.map((player: any) => {
                                 const isOnRoster = teamRoster.includes(player.id);
                                 return (
                                   <div key={player.id} className="flex items-center space-x-2">

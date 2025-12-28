@@ -32,8 +32,6 @@ export default function LoginPage() {
         password,
       });
 
-      console.log("✅ Login response received:", response);
-
       if (response.success) {
         console.log("🎯 Login success branch - token present?", !!response.token);
 

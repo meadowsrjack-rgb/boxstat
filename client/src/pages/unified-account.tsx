@@ -1005,14 +1005,15 @@ export default function UnifiedAccount() {
   const selectedProgram = (programs as any[])?.find((p: any) => p.id === selectedPackage);
 
   // Fetch suggested add-ons for the selected program
-  const { data: suggestedAddOns = [] } = useQuery<{ productId: string; displayOrder: number }[]>({
+  const { data: suggestedAddOnsData = [] } = useQuery<{ addOn: { productId: string; displayOrder: number }; product: any }[]>({
     queryKey: ['/api/programs', selectedPackage, 'suggested-add-ons'],
     enabled: !!selectedPackage && !isStoreItemPurchase,
   });
 
-  // Determine if we have suggested add-ons
-  const suggestedAddOnIds = suggestedAddOns.map(a => a.productId);
-  const hasSuggestedAddOns = suggestedAddOnIds.length > 0 && storeItems.length > 0;
+  // Extract product IDs from the add-ons response
+  const suggestedAddOnProducts = suggestedAddOnsData.map(a => a.product).filter(Boolean);
+  const suggestedAddOnIds = suggestedAddOnProducts.map(p => p.id);
+  const hasSuggestedAddOns = suggestedAddOnIds.length > 0;
 
   // Get required waivers for selected program
   const requiredWaiverIds = selectedProgram?.requiredWaivers || [];
@@ -1694,9 +1695,7 @@ export default function UnifiedAccount() {
                               Recommended Add-ons
                             </label>
                             <div className="space-y-2 max-h-48 overflow-y-auto">
-                              {storeItems
-                                .filter((item: any) => suggestedAddOnIds.includes(item.id))
-                                .map((item: any) => {
+                              {suggestedAddOnProducts.map((item: any) => {
                                   const isSelected = selectedAddOns.includes(item.id);
                                   return (
                                     <div
@@ -1742,7 +1741,7 @@ export default function UnifiedAccount() {
                           const isStoreProduct = pkg.productCategory === 'goods';
                           const basePrice = pkg.price || 0;
                           const addOnsTotal = selectedAddOns.reduce((sum, id) => {
-                            const item = storeItems.find((s: any) => s.id === id);
+                            const item = suggestedAddOnProducts.find((s: any) => s.id === id);
                             return sum + (item?.price || 0);
                           }, 0);
                           const totalPrice = basePrice + addOnsTotal;
@@ -1754,7 +1753,7 @@ export default function UnifiedAccount() {
                                 <span>${(basePrice / 100).toFixed(2)}</span>
                               </div>
                               {selectedAddOns.length > 0 && selectedAddOns.map(addonId => {
-                                const addon = storeItems.find((s: any) => s.id === addonId);
+                                const addon = suggestedAddOnProducts.find((s: any) => s.id === addonId);
                                 if (!addon) return null;
                                 return (
                                   <div key={addonId} className="flex justify-between text-sm text-gray-600">

@@ -2857,8 +2857,6 @@ class DatabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
-    console.log('DEBUG createUser - password received:', user.password ? '***SET***' : 'EMPTY');
-    
     const dbUser = {
       id,
       organizationId: user.organizationId || 'default-org',

@@ -74,6 +74,15 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
     }));
   };
 
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
   const generatePDFBlob = async (): Promise<{ blob: Blob; fileName: string } | null> => {
     try {
       // Create a temporary div with the evaluation template
@@ -92,15 +101,15 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             <table style="width: 100%; border-collapse: collapse; border: 2px solid #000;">
               <tr>
                 <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; width: 150px; font-size: 12px;">Player Name:</td>
-                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.playerName}</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${escapeHtml(formData.playerName)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Program Attended:</td>
-                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.programAttended}</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${escapeHtml(formData.programAttended)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Program Recommended:</td>
-                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.programRecommended}</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${escapeHtml(formData.programRecommended)}</td>
               </tr>
               <tr>
                 <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Date:</td>
@@ -108,7 +117,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
               </tr>
               <tr>
                 <td style="padding: 8px; border: 1px solid #000; background: #f0f0f0; font-weight: bold; font-size: 12px;">Evaluator(s):</td>
-                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${formData.evaluator}</td>
+                <td style="padding: 8px; border: 1px solid #000; font-size: 12px;">${escapeHtml(formData.evaluator)}</td>
               </tr>
             </table>
           </div>
@@ -145,7 +154,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
             </tr>
             <tr>
               <td style="padding: 12px; border: 1px solid #000; min-height: 40px; font-size: 12px;">
-                ${formData.notes || ''}
+                ${escapeHtml(formData.notes || '')}
               </td>
             </tr>
           </table>

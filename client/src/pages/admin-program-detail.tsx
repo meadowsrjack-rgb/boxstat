@@ -91,9 +91,37 @@ export default function AdminProgramDetail() {
     select: (data: any[]) => data.filter(u => u.role === 'coach'),
   });
 
-  const { data: players = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
+  const { data: allPlayers = [] } = useQuery<{ id: string; firstName: string; lastName: string }[]>({
     queryKey: ["/api/users"],
     select: (data: any[]) => data.filter(u => u.role === 'player'),
+  });
+
+  // Fetch enrollments for this program
+  const { data: enrollments = [] } = useQuery<any[]>({
+    queryKey: ["/api/enrollments", { programId }],
+    queryFn: async () => {
+      const response = await fetch(`/api/enrollments?programId=${programId}`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!programId,
+  });
+
+  // Get player IDs that are enrolled in this program
+  const enrolledPlayerIds = new Set(enrollments.map((e: any) => e.profileId).filter(Boolean));
+  
+  // Filter to only show enrolled players, with enrolled first
+  const enrolledPlayers = allPlayers.filter(p => enrolledPlayerIds.has(p.id));
+  const unenrolledPlayers = allPlayers.filter(p => !enrolledPlayerIds.has(p.id));
+  
+  // State for player search filter
+  const [playerSearchFilter, setPlayerSearchFilter] = useState("");
+  
+  // Combine enrolled first, then unenrolled, and apply search filter
+  const filteredPlayers = [...enrolledPlayers, ...unenrolledPlayers].filter(player => {
+    if (!playerSearchFilter) return true;
+    const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
+    return fullName.includes(playerSearchFilter.toLowerCase());
   });
 
   const programTeams = teams.filter(team => team.programId === programId);
@@ -158,6 +186,7 @@ export default function AdminProgramDetail() {
       toast({ title: "Team created successfully" });
       setShowCreateTeamDialog(false);
       setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], playerIds: [], season: "", notes: "" });
+      setPlayerSearchFilter("");
     },
     onError: (error: Error) => {
       toast({ title: "Failed to create team", description: error.message, variant: "destructive" });
@@ -286,6 +315,7 @@ export default function AdminProgramDetail() {
       queryClient.invalidateQueries({ queryKey: ["/api/enrollments"] });
       setShowCreateTeamDialog(false);
       setTeamForm({ name: "", division: "", coachId: "", assistantCoachIds: [], playerIds: [], season: "", notes: "" });
+      setPlayerSearchFilter("");
     } catch (error) {
       toast({ title: "Failed to create team", description: error instanceof Error ? error.message : "Unknown error", variant: "destructive" });
     } finally {
@@ -654,37 +684,59 @@ export default function AdminProgramDetail() {
                       </div>
                       <div className="space-y-2">
                         <Label>Assign Players (Optional)</Label>
-                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
-                          {players.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No players available</p>
+                        <Input
+                          placeholder="Search players..."
+                          value={playerSearchFilter}
+                          onChange={(e) => setPlayerSearchFilter(e.target.value)}
+                          className="mb-2"
+                          data-testid="input-player-search"
+                        />
+                        <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-1">
+                          {filteredPlayers.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {playerSearchFilter ? "No players match your search" : "No players available"}
+                            </p>
                           ) : (
-                            players.map((player) => (
-                              <label
-                                key={player.id}
-                                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1 rounded"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={teamForm.playerIds.includes(player.id)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setTeamForm({
-                                        ...teamForm,
-                                        playerIds: [...teamForm.playerIds, player.id]
-                                      });
-                                    } else {
-                                      setTeamForm({
-                                        ...teamForm,
-                                        playerIds: teamForm.playerIds.filter(id => id !== player.id)
-                                      });
-                                    }
-                                  }}
-                                  className="h-4 w-4"
-                                  data-testid={`checkbox-player-${player.id}`}
-                                />
-                                <span className="text-sm">{player.firstName} {player.lastName}</span>
-                              </label>
-                            ))
+                            <>
+                              {enrolledPlayers.length > 0 && !playerSearchFilter && (
+                                <p className="text-xs font-semibold text-green-600 mb-1">Enrolled in this program ({enrolledPlayers.length})</p>
+                              )}
+                              {filteredPlayers.map((player) => {
+                                const isEnrolled = enrolledPlayerIds.has(player.id);
+                                return (
+                                  <label
+                                    key={player.id}
+                                    className={`flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-1.5 rounded ${isEnrolled ? 'bg-green-50' : ''}`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={teamForm.playerIds.includes(player.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setTeamForm({
+                                            ...teamForm,
+                                            playerIds: [...teamForm.playerIds, player.id]
+                                          });
+                                        } else {
+                                          setTeamForm({
+                                            ...teamForm,
+                                            playerIds: teamForm.playerIds.filter(id => id !== player.id)
+                                          });
+                                        }
+                                      }}
+                                      className="h-4 w-4"
+                                      data-testid={`checkbox-player-${player.id}`}
+                                    />
+                                    <span className="text-sm flex-1">{player.firstName} {player.lastName}</span>
+                                    {isEnrolled && (
+                                      <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-300">
+                                        Enrolled
+                                      </Badge>
+                                    )}
+                                  </label>
+                                );
+                              })}
+                            </>
                           )}
                         </div>
                         {teamForm.playerIds.length > 0 && (
@@ -714,7 +766,7 @@ export default function AdminProgramDetail() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setShowCreateTeamDialog(false)}>
+                      <Button variant="outline" onClick={() => { setShowCreateTeamDialog(false); setPlayerSearchFilter(""); }}>
                         Cancel
                       </Button>
                       <Button

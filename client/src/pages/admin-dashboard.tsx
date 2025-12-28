@@ -6573,6 +6573,36 @@ function ProgramsTab({ programs, teams, organization }: any) {
     queryKey: ["/api/waivers"],
   });
 
+  // Fetch store products (goods) for add-on selection
+  const { data: allProducts = [] } = useQuery<any[]>({
+    queryKey: ["/api/programs"],
+  });
+  const storeProducts = allProducts.filter((p: any) => p.productCategory === 'goods' && p.isActive !== false);
+  
+  // State for selected add-ons
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+
+  // Fetch existing add-ons when editing
+  const { data: existingAddOns = [] } = useQuery<any[]>({
+    queryKey: ["/api/programs", editingProgram?.id, "suggested-add-ons"],
+    queryFn: async () => {
+      if (!editingProgram?.id) return [];
+      const response = await fetch(`/api/programs/${editingProgram.id}/suggested-add-ons`);
+      if (!response.ok) return [];
+      return response.json();
+    },
+    enabled: !!editingProgram?.id,
+  });
+
+  // Update selected add-ons when editing an existing program
+  useEffect(() => {
+    if (existingAddOns.length > 0) {
+      setSelectedAddOns(existingAddOns.map((a: any) => a.productId || a.product?.id));
+    } else if (!editingProgram) {
+      setSelectedAddOns([]);
+    }
+  }, [existingAddOns, editingProgram]);
+
   const handleViewProgram = (programId: string) => {
     navigate(`/admin/programs/${programId}`);
   };
@@ -6615,9 +6645,19 @@ function ProgramsTab({ programs, teams, organization }: any) {
         productCategory: "service",
       };
       if (editingProgram) {
-        return await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, payload);
+        const result = await apiRequest("PATCH", `/api/programs/${editingProgram.id}`, payload);
+        // Save suggested add-ons
+        if (selectedAddOns.length > 0 || existingAddOns.length > 0) {
+          await apiRequest("PUT", `/api/programs/${editingProgram.id}/suggested-add-ons`, { productIds: selectedAddOns });
+        }
+        return result;
       }
-      return await apiRequest("POST", "/api/programs", payload);
+      const result = await apiRequest("POST", "/api/programs", payload);
+      // Save suggested add-ons for new program
+      if (selectedAddOns.length > 0 && result?.id) {
+        await apiRequest("PUT", `/api/programs/${result.id}/suggested-add-ons`, { productIds: selectedAddOns });
+      }
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/programs"] });
@@ -6627,6 +6667,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
       toast({ title: editingProgram ? "Program updated successfully" : "Program created successfully" });
       setIsDialogOpen(false);
       setEditingProgram(null);
+      setSelectedAddOns([]);
       form.reset();
     },
     onError: () => {
@@ -6679,6 +6720,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
     setIsDialogOpen(open);
     if (!open) {
       setEditingProgram(null);
+      setSelectedAddOns([]);
       form.reset();
     }
   };
@@ -7099,7 +7141,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                       render={({ field }) => (
                         <FormItem className="mt-3">
                           <FormLabel>Required Waivers</FormLabel>
-                          <div className="space-y-2 border rounded-md p-3">
+                          <div className="space-y-2 border rounded-md p-3 max-h-32 overflow-y-auto">
                             {waivers.map((waiver: any) => (
                               <div key={waiver.id} className="flex items-center gap-2">
                                 <Checkbox
@@ -7112,6 +7154,7 @@ function ProgramsTab({ programs, teams, organization }: any) {
                                       field.onChange(current.filter((id: string) => id !== waiver.id));
                                     }
                                   }}
+                                  data-testid={`checkbox-waiver-${waiver.id}`}
                                 />
                                 <span className="text-sm">{waiver.name}</span>
                               </div>
@@ -7121,6 +7164,35 @@ function ProgramsTab({ programs, teams, organization }: any) {
                         </FormItem>
                       )}
                     />
+                  )}
+
+                  {/* Suggested Add-ons Section */}
+                  {storeProducts.length > 0 && (
+                    <div className="mt-3">
+                      <label className="text-sm font-medium">Suggested Add-ons</label>
+                      <div className="space-y-2 border rounded-md p-3 mt-1 max-h-32 overflow-y-auto">
+                        {storeProducts.map((product: any) => (
+                          <div key={product.id} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedAddOns.includes(product.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedAddOns([...selectedAddOns, product.id]);
+                                } else {
+                                  setSelectedAddOns(selectedAddOns.filter(id => id !== product.id));
+                                }
+                              }}
+                              data-testid={`checkbox-addon-${product.id}`}
+                            />
+                            <span className="text-sm">{product.name}</span>
+                            {product.price > 0 && (
+                              <span className="text-xs text-gray-500">${(product.price / 100).toFixed(2)}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">These products will be suggested as add-ons during checkout</p>
+                    </div>
                   )}
                 </div>
                 

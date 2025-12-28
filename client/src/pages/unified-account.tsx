@@ -49,6 +49,8 @@ import {
   AlertCircle,
   Ruler,
   Crown,
+  Package,
+  FileText,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEffect, useState, useRef } from "react";
@@ -866,6 +868,8 @@ export default function UnifiedAccount() {
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
   
   // Store tab state
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
@@ -988,6 +992,31 @@ export default function UnifiedAccount() {
   const { data: playerEnrollments = [] } = useQuery<any[]>({
     queryKey: ["/api/enrollments"],
   });
+
+  // Fetch waivers for payment dialog
+  const { data: waivers = [] } = useQuery<any[]>({
+    queryKey: ["/api/waivers"],
+  });
+
+  // Fetch store items (goods) for add-ons
+  const storeItems = (programs as any[])?.filter((p: any) => p.productCategory === 'goods' && p.isActive !== false) || [];
+
+  // Get selected program for add-ons lookup
+  const selectedProgram = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+
+  // Fetch suggested add-ons for the selected program
+  const { data: suggestedAddOns = [] } = useQuery<{ productId: string; displayOrder: number }[]>({
+    queryKey: ['/api/programs', selectedPackage, 'suggested-add-ons'],
+    enabled: !!selectedPackage && !isStoreItemPurchase,
+  });
+
+  // Determine if we have suggested add-ons
+  const suggestedAddOnIds = suggestedAddOns.map(a => a.productId);
+  const hasSuggestedAddOns = suggestedAddOnIds.length > 0 && storeItems.length > 0;
+
+  // Get required waivers for selected program
+  const requiredWaiverIds = selectedProgram?.requiredWaivers || [];
+  const requiredWaivers = waivers.filter((w: any) => requiredWaiverIds.includes(w.id) && w.isActive);
 
   const upcomingEvents = events
     .filter((e: any) => new Date(e.startTime) > new Date())
@@ -1512,6 +1541,8 @@ export default function UnifiedAccount() {
                 setIsStoreItemPurchase(false);
                 setSelectedPackage("");
                 setSelectedPlayer("");
+                setSelectedAddOns([]);
+                setSignedWaivers({});
               }
             }}>
               <DialogContent className="max-w-md" data-testid="dialog-make-payment">
@@ -1615,13 +1646,129 @@ export default function UnifiedAccount() {
                                   )}
                                 </div>
                               )}
-                              
-                              <div className="flex justify-between items-center pt-2 border-t">
-                                <span className="font-medium">Total:</span>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Required Waivers Section */}
+                        {selectedPackage && !isStoreItemPurchase && requiredWaivers.length > 0 && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Required Waivers
+                            </label>
+                            <div className="space-y-2">
+                              {requiredWaivers.map((waiver: any) => (
+                                <div
+                                  key={waiver.id}
+                                  onClick={() => setSignedWaivers(prev => ({ ...prev, [waiver.id]: !prev[waiver.id] }))}
+                                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                    signedWaivers[waiver.id] 
+                                      ? 'border-green-500 bg-green-50' 
+                                      : 'border-gray-200 hover:border-gray-300'
+                                  }`}
+                                  data-testid={`waiver-${waiver.id}`}
+                                >
+                                  <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                                    signedWaivers[waiver.id] 
+                                      ? 'bg-green-500 border-green-500' 
+                                      : 'border-gray-300'
+                                  }`}>
+                                    {signedWaivers[waiver.id] && <Check className="w-3 h-3 text-white" />}
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">{waiver.title}</p>
+                                    <p className="text-xs text-gray-500">Click to agree to this waiver</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Add-ons Section */}
+                        {selectedPackage && !isStoreItemPurchase && hasSuggestedAddOns && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium flex items-center gap-2">
+                              <Package className="w-4 h-4" />
+                              Recommended Add-ons
+                            </label>
+                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                              {storeItems
+                                .filter((item: any) => suggestedAddOnIds.includes(item.id))
+                                .map((item: any) => {
+                                  const isSelected = selectedAddOns.includes(item.id);
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() => setSelectedAddOns(prev => 
+                                        isSelected ? prev.filter(id => id !== item.id) : [...prev, item.id]
+                                      )}
+                                      className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${
+                                        isSelected 
+                                          ? 'border-red-500 bg-red-50' 
+                                          : 'border-gray-200 hover:border-gray-300'
+                                      }`}
+                                      data-testid={`addon-${item.id}`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${
+                                          isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'
+                                        }`}>
+                                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                                        </div>
+                                        <div>
+                                          <p className="font-medium text-sm">{item.name}</p>
+                                          {item.description && (
+                                            <p className="text-xs text-gray-500 line-clamp-1">{item.description}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <span className="font-semibold text-red-600">
+                                        ${((item.price || 0) / 100).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Total Summary */}
+                        {selectedPackage && (() => {
+                          const pkg = (programs as any[])?.find((p: any) => p.id === selectedPackage);
+                          if (!pkg) return null;
+                          
+                          const isStoreProduct = pkg.productCategory === 'goods';
+                          const basePrice = pkg.price || 0;
+                          const addOnsTotal = selectedAddOns.reduce((sum, id) => {
+                            const item = storeItems.find((s: any) => s.id === id);
+                            return sum + (item?.price || 0);
+                          }, 0);
+                          const totalPrice = basePrice + addOnsTotal;
+                          
+                          return (
+                            <div className="bg-gray-100 p-4 rounded-lg space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>{pkg.name}</span>
+                                <span>${(basePrice / 100).toFixed(2)}</span>
+                              </div>
+                              {selectedAddOns.length > 0 && selectedAddOns.map(addonId => {
+                                const addon = storeItems.find((s: any) => s.id === addonId);
+                                if (!addon) return null;
+                                return (
+                                  <div key={addonId} className="flex justify-between text-sm text-gray-600">
+                                    <span>+ {addon.name}</span>
+                                    <span>${((addon.price || 0) / 100).toFixed(2)}</span>
+                                  </div>
+                                );
+                              })}
+                              <div className="flex justify-between items-center pt-2 border-t border-gray-300">
+                                <span className="font-semibold">Total:</span>
                                 <div className="text-right">
-                                  <span className="text-lg font-bold">${((pkg.price || 0) / 100).toFixed(2)}</span>
+                                  <span className="text-xl font-bold">${(totalPrice / 100).toFixed(2)}</span>
                                   {!isStoreProduct && pkg.type === "Subscription" && pkg.billingCycle && (
-                                    <p className="text-xs text-gray-500 mt-1">
+                                    <p className="text-xs text-gray-500">
                                       per {pkg.billingCycle.toLowerCase()}
                                     </p>
                                   )}
@@ -1679,6 +1826,19 @@ export default function UnifiedAccount() {
                                   return;
                                 }
                               }
+                              
+                              // Validate waivers are signed
+                              if (!isStoreProduct && requiredWaivers.length > 0) {
+                                const unsignedWaivers = requiredWaivers.filter((w: any) => !signedWaivers[w.id]);
+                                if (unsignedWaivers.length > 0) {
+                                  toast({
+                                    title: "Waivers Required",
+                                    description: "Please agree to all required waivers before proceeding",
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                              }
 
                               setIsProcessingPayment(true);
                               try {
@@ -1689,6 +1849,8 @@ export default function UnifiedAccount() {
                                     packageId: selectedPackage,
                                     playerId: isStoreProduct ? null : (selectedPlayer || null),
                                     isStoreItem: isStoreProduct,
+                                    addOnIds: selectedAddOns.length > 0 ? selectedAddOns : undefined,
+                                    signedWaiverIds: Object.keys(signedWaivers).filter(id => signedWaivers[id]),
                                   },
                                 }) as { url: string };
 

@@ -1134,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const { packageId, playerId } = req.body;
+      const { packageId, playerId, addOnIds, signedWaiverIds } = req.body;
       
       if (!packageId) {
         return res.status(400).json({ error: "Package ID is required" });
@@ -1188,8 +1188,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Determine if this is a subscription or one-time payment
       const isSubscription = program.type === 'Subscription' && program.billingCycle;
       
-      // Build line items based on product type
-      const lineItem: any = {
+      // Build line items - start with main program
+      const lineItems: any[] = [];
+      
+      // Main program line item
+      const mainLineItem: any = {
         price_data: {
           currency: 'usd',
           product_data: {
@@ -1209,15 +1212,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                interval === 'yearly' ? 'year' : 
                                interval === 'weekly' ? 'week' :
                                interval === 'daily' ? 'day' : interval;
-        lineItem.price_data.recurring = {
+        mainLineItem.price_data.recurring = {
           interval: stripeInterval as 'day' | 'week' | 'month' | 'year',
         };
+      }
+      
+      lineItems.push(mainLineItem);
+      
+      // Add add-on line items (one-time purchases only, not subscriptions)
+      const addOnProductIds: string[] = [];
+      if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0 && !isSubscription) {
+        for (const addOnId of addOnIds) {
+          const addOn = await storage.getProgram(addOnId);
+          if (addOn && addOn.price) {
+            addOnProductIds.push(addOnId);
+            lineItems.push({
+              price_data: {
+                currency: 'usd',
+                product_data: {
+                  name: addOn.name,
+                  description: addOn.description || undefined,
+                },
+                unit_amount: addOn.price,
+              },
+              quantity: 1,
+            });
+          }
+        }
       }
       
       // Create Stripe Checkout Session
       const session = await stripe.checkout.sessions.create({
         customer: stripeCustomerId,
-        line_items: [lineItem],
+        line_items: lineItems,
         mode: isSubscription ? 'subscription' : 'payment',
         success_url: `${origin}/unified-account?payment=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}/unified-account?payment=canceled`,
@@ -1226,6 +1253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           packageId: packageId,
           playerId: playerId || '',
           type: 'package_purchase',
+          addOnIds: addOnProductIds.length > 0 ? JSON.stringify(addOnProductIds) : '',
+          signedWaiverIds: signedWaiverIds && signedWaiverIds.length > 0 ? JSON.stringify(signedWaiverIds) : '',
         },
       });
       

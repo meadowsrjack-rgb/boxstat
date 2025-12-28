@@ -1435,9 +1435,10 @@ export default function UnifiedAccount() {
                   <CardContent className="pt-0">
                     {(() => {
                       // Get enrollments for selected player or all players
+                      // Enrollments use profileId for the player
                       const relevantEnrollments = playerEnrollments?.filter((e: any) => 
                         e.status === 'active' && 
-                        (!selectedStorePlayer || e.playerId === selectedStorePlayer || e.userId === user?.id)
+                        (!selectedStorePlayer || e.profileId === selectedStorePlayer || e.accountHolderId === user?.id)
                       ) || [];
                       
                       if (relevantEnrollments.length === 0) {
@@ -1459,8 +1460,8 @@ export default function UnifiedAccount() {
                             const remainingCredits = enrollment.remainingCredits || 0;
                             const totalCredits = enrollment.totalCredits || program?.sessionCount || 0;
                             
-                            // Get player or user name
-                            const player = players?.find((p: any) => p.id === enrollment.playerId);
+                            // Get player or user name - enrollments use profileId for the player
+                            const player = players?.find((p: any) => p.id === enrollment.profileId);
                             const enrolleeName = player 
                               ? `${player.firstName} ${player.lastName}` 
                               : user ? `${(user as any).firstName || ''} ${(user as any).lastName || ''}`.trim() || 'You' : 'You';

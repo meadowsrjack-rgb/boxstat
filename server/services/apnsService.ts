@@ -58,7 +58,6 @@ function generateJWT(): string | null {
     console.error('[APNs] Missing required configuration:');
     console.error('[APNs]   APNS_KEY_ID:', APNS_KEY_ID ? '✓' : '✗');
     console.error('[APNs]   APNS_TEAM_ID:', APNS_TEAM_ID ? '✓' : '✗');
-    console.error('[APNs]   APNS_AUTH_KEY:', privateKey ? '✓' : '✗');
     return null;
   }
 

@@ -1538,7 +1538,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { sessionId } = req.body;
       
       if (!sessionId || !stripe) {
-        console.error('❌ Missing sessionId:', sessionId, 'or Stripe not configured:', !!stripe);
         return res.status(400).json({ error: 'Missing session ID or Stripe not configured' });
       }
 

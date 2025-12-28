@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import DOMPurify from "dompurify";
 import uyplogoUrl from "@assets/UYP Logo nback.png";
 
 // Program options
@@ -94,7 +95,7 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
       tempDiv.style.padding = '40px';
       tempDiv.style.fontFamily = 'Arial, sans-serif';
       
-      tempDiv.innerHTML = `
+      const htmlContent = `
         <!-- Player Information with Logo -->
         <div style="display: flex; margin-bottom: 10px;">
           <div style="flex: 2; margin-right: 10px;">
@@ -212,6 +213,8 @@ export default function LeadEvaluationForm({ onClose }: LeadEvaluationFormProps)
           </table>
         </div>
       `;
+      
+      tempDiv.innerHTML = DOMPurify.sanitize(htmlContent);
       
       document.body.appendChild(tempDiv);
       

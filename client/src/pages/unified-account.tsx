@@ -870,6 +870,7 @@ export default function UnifiedAccount() {
   const [isStoreItemPurchase, setIsStoreItemPurchase] = useState(false);
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
   const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
+  const [waiverScrollStatus, setWaiverScrollStatus] = useState<Record<string, boolean>>({});
   
   // Store tab state
   const [selectedStorePlayer, setSelectedStorePlayer] = useState<string>("");
@@ -1544,6 +1545,7 @@ export default function UnifiedAccount() {
                 setSelectedPlayer("");
                 setSelectedAddOns([]);
                 setSignedWaivers({});
+                setWaiverScrollStatus({});
               }
             }}>
               <DialogContent className="max-w-md" data-testid="dialog-make-payment">
@@ -1653,36 +1655,74 @@ export default function UnifiedAccount() {
 
                         {/* Required Waivers Section */}
                         {selectedPackage && !isStoreItemPurchase && requiredWaivers.length > 0 && (
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <label className="text-sm font-medium flex items-center gap-2">
                               <FileText className="w-4 h-4" />
-                              Required Waivers
+                              Required Waivers ({Object.values(signedWaivers).filter(Boolean).length}/{requiredWaivers.length} signed)
                             </label>
-                            <div className="space-y-2">
-                              {requiredWaivers.map((waiver: any) => (
-                                <div
-                                  key={waiver.id}
-                                  onClick={() => setSignedWaivers(prev => ({ ...prev, [waiver.id]: !prev[waiver.id] }))}
-                                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                                    signedWaivers[waiver.id] 
-                                      ? 'border-green-500 bg-green-50' 
-                                      : 'border-gray-200 hover:border-gray-300'
-                                  }`}
-                                  data-testid={`waiver-${waiver.id}`}
-                                >
-                                  <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                                    signedWaivers[waiver.id] 
-                                      ? 'bg-green-500 border-green-500' 
-                                      : 'border-gray-300'
-                                  }`}>
-                                    {signedWaivers[waiver.id] && <Check className="w-3 h-3 text-white" />}
+                            <div className="space-y-4">
+                              {requiredWaivers.map((waiver: any) => {
+                                const waiverScrollId = `waiver-scroll-${waiver.id}`;
+                                const hasScrolled = waiverScrollStatus[waiver.id];
+                                const isSigned = signedWaivers[waiver.id];
+                                
+                                return (
+                                  <div
+                                    key={waiver.id}
+                                    className={`rounded-lg border overflow-hidden ${
+                                      isSigned 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-gray-200'
+                                    }`}
+                                    data-testid={`waiver-${waiver.id}`}
+                                  >
+                                    <div className="p-3 bg-gray-50 border-b">
+                                      <h4 className="font-semibold text-sm">{waiver.title}</h4>
+                                    </div>
+                                    <div 
+                                      id={waiverScrollId}
+                                      className="p-3 max-h-32 overflow-y-auto text-xs text-gray-600 bg-white"
+                                      onScroll={(e) => {
+                                        const el = e.currentTarget;
+                                        const scrolledToBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
+                                        if (scrolledToBottom && !waiverScrollStatus[waiver.id]) {
+                                          setWaiverScrollStatus(prev => ({ ...prev, [waiver.id]: true }));
+                                        }
+                                      }}
+                                    >
+                                      {waiver.content || "Please read and agree to this waiver to continue."}
+                                    </div>
+                                    <div className="p-3 border-t bg-gray-50">
+                                      {!hasScrolled && waiver.content && waiver.content.length > 200 ? (
+                                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                                          <AlertCircle className="w-3 h-3" />
+                                          Please scroll to read the full waiver before agreeing
+                                        </p>
+                                      ) : (
+                                        <label 
+                                          className="flex items-center gap-3 cursor-pointer"
+                                          onClick={() => {
+                                            if (hasScrolled || !waiver.content || waiver.content.length <= 200) {
+                                              setSignedWaivers(prev => ({ ...prev, [waiver.id]: !prev[waiver.id] }));
+                                            }
+                                          }}
+                                        >
+                                          <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
+                                            isSigned 
+                                              ? 'bg-green-500 border-green-500' 
+                                              : 'border-gray-300 hover:border-gray-400'
+                                          }`}>
+                                            {isSigned && <Check className="w-3 h-3 text-white" />}
+                                          </div>
+                                          <span className="text-sm">
+                                            I have read and agree to this waiver
+                                          </span>
+                                        </label>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="font-medium text-sm">{waiver.title}</p>
-                                    <p className="text-xs text-gray-500">Click to agree to this waiver</p>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         )}

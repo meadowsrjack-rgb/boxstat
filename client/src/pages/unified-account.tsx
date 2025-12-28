@@ -1662,9 +1662,10 @@ export default function UnifiedAccount() {
                             </label>
                             <div className="space-y-4">
                               {requiredWaivers.map((waiver: any) => {
-                                const waiverScrollId = `waiver-scroll-${waiver.id}`;
                                 const hasScrolled = waiverScrollStatus[waiver.id];
                                 const isSigned = signedWaivers[waiver.id];
+                                const needsScrollCheck = waiverScrollStatus[`needs-scroll-${waiver.id}`];
+                                const canAgree = hasScrolled || needsScrollCheck === false;
                                 
                                 return (
                                   <div
@@ -1680,8 +1681,17 @@ export default function UnifiedAccount() {
                                       <h4 className="font-semibold text-sm">{waiver.title}</h4>
                                     </div>
                                     <div 
-                                      id={waiverScrollId}
-                                      className="p-3 max-h-32 overflow-y-auto text-xs text-gray-600 bg-white"
+                                      className="p-3 max-h-32 overflow-y-auto text-xs text-gray-600 bg-white whitespace-pre-wrap"
+                                      ref={(el) => {
+                                        if (el && waiverScrollStatus[`needs-scroll-${waiver.id}`] === undefined) {
+                                          const needsScroll = el.scrollHeight > el.clientHeight;
+                                          setWaiverScrollStatus(prev => ({ 
+                                            ...prev, 
+                                            [`needs-scroll-${waiver.id}`]: needsScroll,
+                                            [waiver.id]: !needsScroll
+                                          }));
+                                        }
+                                      }}
                                       onScroll={(e) => {
                                         const el = e.currentTarget;
                                         const scrolledToBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 10;
@@ -1693,7 +1703,7 @@ export default function UnifiedAccount() {
                                       {waiver.content || "Please read and agree to this waiver to continue."}
                                     </div>
                                     <div className="p-3 border-t bg-gray-50">
-                                      {!hasScrolled && waiver.content && waiver.content.length > 200 ? (
+                                      {!canAgree && needsScrollCheck === true ? (
                                         <p className="text-xs text-amber-600 flex items-center gap-1">
                                           <AlertCircle className="w-3 h-3" />
                                           Please scroll to read the full waiver before agreeing
@@ -1701,11 +1711,7 @@ export default function UnifiedAccount() {
                                       ) : (
                                         <label 
                                           className="flex items-center gap-3 cursor-pointer"
-                                          onClick={() => {
-                                            if (hasScrolled || !waiver.content || waiver.content.length <= 200) {
-                                              setSignedWaivers(prev => ({ ...prev, [waiver.id]: !prev[waiver.id] }));
-                                            }
-                                          }}
+                                          onClick={() => setSignedWaivers(prev => ({ ...prev, [waiver.id]: !prev[waiver.id] }))}
                                         >
                                           <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                                             isSigned 

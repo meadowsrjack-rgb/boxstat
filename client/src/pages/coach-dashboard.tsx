@@ -51,7 +51,7 @@ import PlayerSearch from "@/components/PlayerSearch";
 import PlayerCard from "@/components/PlayerCard";
 import TeamChat from "@/components/TeamChat";
 import LeadEvaluationForm from "@/components/LeadEvaluationForm";
-import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, TEAM_TROPHIES, COACH_AWARDS, type PlayerLite, type EvalScores, type Quarter, type SkillCategoryName } from "@/components/CoachAwardDialogs";
+import { AwardsDialog, EvaluationDialog, SKILL_CATEGORIES, type PlayerLite, type EvalScores, type Quarter, type SkillCategoryName } from "@/components/CoachAwardDialogs";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 

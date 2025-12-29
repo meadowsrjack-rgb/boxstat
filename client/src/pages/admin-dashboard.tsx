@@ -4482,7 +4482,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     imageUrl: z.string().optional(),
     active: z.boolean().default(true),
     // New simplified trigger system
-    triggerCategory: z.enum(["checkin", "system", "time", "store", "manual"]).default("manual"),
+    triggerCategory: z.enum(["checkin", "rsvp", "system", "time", "store", "manual"]).default("manual"),
     eventFilter: z.enum(["game", "practice", "skills", "fnh", "any"]).optional(),
     countMode: z.enum(["total", "streak"]).optional(),
     threshold: z.number().optional(),
@@ -4627,6 +4627,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
   const getTriggerCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       "checkin": "Check-in",
+      "rsvp": "RSVP",
       "system": "Collection",
       "time": "Time",
       "store": "Store",
@@ -4696,6 +4697,26 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     setUploadingImage(true);
     
     try {
+      // Validate image dimensions (500x500px)
+      const img = new Image();
+      const imageUrl = URL.createObjectURL(file);
+      
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          URL.revokeObjectURL(imageUrl);
+          if (img.width !== 500 || img.height !== 500) {
+            reject(new Error(`Image must be exactly 500x500 pixels. Your image is ${img.width}x${img.height}px.`));
+          } else {
+            resolve();
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(imageUrl);
+          reject(new Error('Failed to load image'));
+        };
+        img.src = imageUrl;
+      });
+
       const formData = new FormData();
       formData.append('image', file);
 
@@ -4776,7 +4797,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   const downloadAwardsData = () => {
     const csvHeaders = "Name,Category,Points,Description,Image URL";
-    const csvRows = sortedAwards.map((award: any) => {
+    const csvRows = filteredAwards.map((award: any) => {
       return [
         award.name || "",
         award.tier || "",
@@ -4935,6 +4956,57 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     )}
                   />
                   
+                  {/* Award Image Upload */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Award Image (500x500px)</label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center overflow-hidden bg-muted">
+                        {imagePreview ? (
+                          <img src={imagePreview} alt="Award preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Upload className="w-8 h-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleImageUpload}
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          data-testid="input-award-image"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          data-testid="button-upload-image"
+                        >
+                          {uploadingImage ? "Uploading..." : "Upload Image"}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          Must be exactly 500x500 pixels. PNG, JPG, or WebP.
+                        </p>
+                        {imagePreview && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setImagePreview("");
+                              form.setValue("imageUrl", "");
+                            }}
+                            className="text-destructive"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
                   {/* Trigger Category - The Master Switch */}
                   <FormField
                     control={form.control}
@@ -4950,6 +5022,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="checkin">Check-in / Attendance</SelectItem>
+                            <SelectItem value="rsvp">RSVP Attendance</SelectItem>
                             <SelectItem value="system">Collection (Meta-Badge)</SelectItem>
                             <SelectItem value="time">Time Active</SelectItem>
                             <SelectItem value="store">Store Purchase</SelectItem>
@@ -4958,6 +5031,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                         </Select>
                         <FormDescription>
                           {watchedTriggerCategory === "checkin" && "Award based on event attendance"}
+                          {watchedTriggerCategory === "rsvp" && "Award based on RSVP 'attending' responses"}
                           {watchedTriggerCategory === "system" && "Award when user collects enough of another badge"}
                           {watchedTriggerCategory === "time" && "Award based on membership duration"}
                           {watchedTriggerCategory === "store" && "Award when user purchases a specific product"}
@@ -5130,6 +5204,95 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                               />
                             </FormControl>
                             <FormDescription>How many check-ins are needed to earn this award?</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {watchedTriggerCategory === "rsvp" && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+                      {/* Program Selection for RSVP */}
+                      <FormField
+                        control={form.control}
+                        name="programIds"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Programs (Optional)</FormLabel>
+                            <div className="flex flex-wrap gap-2 p-2 border rounded-lg min-h-[40px]">
+                              {programs.map((program: any) => {
+                                const isSelected = (field.value || []).includes(program.id);
+                                return (
+                                  <Badge
+                                    key={program.id}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className={`cursor-pointer ${isSelected ? "bg-primary" : "hover:bg-muted"}`}
+                                    onClick={() => {
+                                      const current = field.value || [];
+                                      if (isSelected) {
+                                        field.onChange(current.filter((id: string) => id !== program.id));
+                                      } else {
+                                        field.onChange([...current, program.id]);
+                                      }
+                                    }}
+                                    data-testid={`badge-rsvp-program-${program.id}`}
+                                  >
+                                    {program.name}
+                                  </Badge>
+                                );
+                              })}
+                              {programs.length === 0 && (
+                                <span className="text-muted-foreground text-sm">No programs available</span>
+                              )}
+                            </div>
+                            <FormDescription>
+                              Select programs to limit this award. Leave empty for all programs.
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="countMode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Counting Mode</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-rsvp-count-mode">
+                                    <SelectValue placeholder="Select mode..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="total">Total (Cumulative)</SelectItem>
+                                  <SelectItem value="streak">Streak (Consecutive within 14 days)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="threshold"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Number of RSVPs Required</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="e.g., 10"
+                                onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
+                                value={field.value || ""}
+                                data-testid="input-rsvp-threshold"
+                              />
+                            </FormControl>
+                            <FormDescription>How many 'attending' RSVPs are needed to earn this award?</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -5448,6 +5611,9 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                     <TableCell className="text-sm text-muted-foreground">
                       {award.triggerCategory === 'checkin' && (
                         <span>{award.countMode === 'streak' ? 'Streak' : 'Total'}: {award.threshold || 0} {award.eventFilter || 'any'}</span>
+                      )}
+                      {award.triggerCategory === 'rsvp' && (
+                        <span>{award.countMode === 'streak' ? 'Streak' : 'Total'}: {award.threshold || 0} RSVPs</span>
                       )}
                       {award.triggerCategory === 'time' && (
                         <span>{award.threshold || 0} {award.timeUnit || 'years'}</span>

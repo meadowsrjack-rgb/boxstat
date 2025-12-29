@@ -333,7 +333,7 @@ export class NotificationService {
           .filter((sub: any) => sub.fcmToken)
           .map((sub: any) => ({
             token: sub.fcmToken,
-            environment: sub.apnsEnvironment || 'production' // Default to production for legacy tokens
+            environment: sub.apnsEnvironment || 'sandbox' // Default to sandbox for dev/Xcode builds
           }));
         console.log(`[Push Send] Extracted ${devices.length} APNs device(s)`);
         devices.forEach((d: any) => console.log(`[Push Send]   Token: ${d.token.substring(0, 20)}... (${d.environment})`));

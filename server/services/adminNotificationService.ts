@@ -11,6 +11,7 @@ import {
 } from "../../shared/schema";
 import { eq, and, desc, sql, inArray, or } from "drizzle-orm";
 import { notificationService } from "./notificationService";
+import { sendNotificationEmail } from "../email";
 
 interface RecipientResolution {
   userIds: string[];
@@ -223,10 +224,39 @@ export class AdminNotificationService {
               break;
 
             case 'email':
-              // Email delivery would be handled here
-              // For now, mark as sent
-              deliveryStatus.email = 'sent';
-              console.log(`[Admin Notification Delivery]   ✅ Email notification queued`);
+              // Look up user email and name for sending
+              try {
+                const [user] = await db.select({ 
+                  email: users.email, 
+                  firstName: users.firstName 
+                })
+                  .from(users)
+                  .where(eq(users.id, userId))
+                  .limit(1);
+                
+                if (user?.email) {
+                  const emailResult = await sendNotificationEmail({
+                    email: user.email,
+                    firstName: user.firstName || '',
+                    title: notification.title,
+                    message: notification.message,
+                  });
+                  
+                  if (emailResult.success) {
+                    deliveryStatus.email = 'sent';
+                    console.log(`[Admin Notification Delivery]   ✅ Email sent to ${user.email}`);
+                  } else {
+                    deliveryStatus.email = 'failed';
+                    console.error(`[Admin Notification Delivery]   ❌ Email failed: ${emailResult.error}`);
+                  }
+                } else {
+                  deliveryStatus.email = 'skipped';
+                  console.log(`[Admin Notification Delivery]   ⏭️ No email address for user ${userId}`);
+                }
+              } catch (emailError) {
+                deliveryStatus.email = 'failed';
+                console.error(`[Admin Notification Delivery]   ❌ Email error:`, emailError);
+              }
               break;
 
             case 'push':

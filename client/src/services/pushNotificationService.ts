@@ -35,11 +35,20 @@ export const initPushNotifications = async () => {
       const url = getFullUrl('/api/push/register');
       console.log('[Push Registration] Sending token to backend:', url);
       
+      const authToken = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('[Push Registration] Including JWT auth token');
+      } else {
+        console.log('[Push Registration] ⚠️ No auth token found in localStorage');
+      }
+      
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
         body: JSON.stringify({ 
           token: token.value

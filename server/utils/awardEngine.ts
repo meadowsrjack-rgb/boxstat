@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { users, awardDefinitions, userAwards, attendances, productEnrollments } from "@shared/schema";
+import { users, awardDefinitions, userAwards, attendances, productEnrollments, rsvpResponses } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import type { IStorage } from "../storage";
 import type { TriggerCategory, SelectAwardDefinition } from "@shared/schema";
@@ -70,6 +70,9 @@ export async function evaluateAwardsForUser(
       switch (category) {
         case 'checkin':
           qualifies = await evaluateCheckinAward(userId, award);
+          break;
+        case 'rsvp':
+          qualifies = await evaluateRsvpAward(userId, award);
           break;
         case 'system':
           qualifies = await evaluateSystemAward(userId, award, existingAwardIds);
@@ -212,6 +215,69 @@ async function calculateCheckinStreak(userId: string, eventFilter: string): Prom
       const daysDiff = Math.floor((lastDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
       
       if (daysDiff <= 7) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    lastDate = currentDate;
+  }
+
+  return streak;
+}
+
+async function evaluateRsvpAward(userId: string, award: SelectAwardDefinition): Promise<boolean> {
+  const threshold = award.threshold || 0;
+  const countMode = award.countMode || 'total';
+
+  // Count RSVPs with "attending" response for this user
+  const [result] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(rsvpResponses)
+    .where(and(
+      eq(rsvpResponses.userId, userId),
+      eq(rsvpResponses.response, 'attending')
+    ));
+  
+  const totalRsvps = Number(result?.count || 0);
+
+  if (countMode === 'total') {
+    return totalRsvps >= threshold;
+  }
+
+  if (countMode === 'streak') {
+    const streak = await calculateRsvpStreak(userId);
+    return streak >= threshold;
+  }
+
+  return false;
+}
+
+async function calculateRsvpStreak(userId: string): Promise<number> {
+  const rsvps = await db
+    .select({ date: rsvpResponses.respondedAt })
+    .from(rsvpResponses)
+    .where(and(
+      eq(rsvpResponses.userId, userId),
+      eq(rsvpResponses.response, 'attending')
+    ))
+    .orderBy(desc(rsvpResponses.respondedAt));
+
+  if (rsvps.length === 0) return 0;
+
+  let streak = 1;
+  let lastDate: Date | null = null;
+
+  for (const rsvp of rsvps) {
+    if (!rsvp.date) continue;
+    const currentDate = new Date(rsvp.date);
+    currentDate.setHours(0, 0, 0, 0);
+
+    if (lastDate) {
+      const daysDiff = Math.floor((lastDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Allow up to 14 days between RSVPs (events may be weekly or bi-weekly)
+      if (daysDiff <= 14) {
         streak++;
       } else {
         break;
@@ -437,6 +503,17 @@ export async function getAwardProgress(
           .from(attendances)
           .where(eq(attendances.userId, userId));
         current = Number(checkinResult?.count || 0);
+        break;
+      
+      case 'rsvp':
+        const [rsvpResult] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(rsvpResponses)
+          .where(and(
+            eq(rsvpResponses.userId, userId),
+            eq(rsvpResponses.response, 'attending')
+          ));
+        current = Number(rsvpResult?.count || 0);
         break;
         
       case 'time':

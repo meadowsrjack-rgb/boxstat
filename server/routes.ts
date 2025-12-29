@@ -5391,6 +5391,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Award engine integration - evaluate awards for 'attending' RSVPs (for the player, not parent)
+      try {
+        if (response === 'attending' && playerId) {
+          // Update tracking for the player
+          const playerData = await storage.getUser(playerId);
+          
+          if (playerData) {
+            await storage.updateUserAwardTracking(playerId, {
+              consecutiveCheckins: (playerData.consecutiveCheckins || 0) + 1,
+            });
+            
+            // Evaluate and grant any newly earned awards for the PLAYER
+            await evaluateAwardsForUser(playerId, storage, { category: 'rsvp' });
+            
+            console.log(`✅ Awards evaluated for player ${playerId} after proxy RSVP`);
+          }
+        }
+      } catch (awardError: any) {
+        // Log error but don't fail the RSVP operation
+        console.error('⚠️ Award evaluation failed (non-fatal):', awardError.message);
+      }
+      
       res.json({ 
         success: true, 
         rsvp: result,
@@ -5822,8 +5844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               consecutiveCheckins: (user.consecutiveCheckins || 0) + 1,
             });
             
-            // Evaluate and grant any newly earned awards
-            await evaluateAwardsForUser(rsvpData.userId, storage);
+            // Evaluate and grant any newly earned RSVP awards
+            await evaluateAwardsForUser(rsvpData.userId, storage, { category: 'rsvp' });
             
             console.log(`✅ Awards evaluated for user ${rsvpData.userId} after RSVP`);
           }

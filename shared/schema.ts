@@ -1283,7 +1283,7 @@ export type InsertUserAward = z.infer<typeof insertUserAwardSchema>;
 // =============================================
 
 // Trigger categories for simplified awards
-export type TriggerCategory = 'checkin' | 'system' | 'time' | 'store' | 'manual';
+export type TriggerCategory = 'checkin' | 'rsvp' | 'system' | 'time' | 'store' | 'manual';
 export type EventFilter = 'game' | 'practice' | 'skills' | 'fnh' | 'any';
 export type CountMode = 'total' | 'streak';
 export type TimeUnit = 'years' | 'months' | 'days';

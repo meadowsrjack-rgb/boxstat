@@ -435,9 +435,10 @@ export class NotificationService {
       const finalStatus = sentSuccessfully ? 'sent' : 'failed';
       console.log(`[Push Send] ${sentSuccessfully ? '✅' : '❌'} Final result: ${finalStatus}`);
       
+      const pushStatus = sentSuccessfully ? '"sent"' : '"failed"';
       await db.update(notificationRecipients)
         .set({ 
-          deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '${sentSuccessfully ? '"sent"' : '"failed"'}')`
+          deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', ${pushStatus}::jsonb)`
         })
         .where(and(
           eq(notificationRecipients.notificationId, notificationId),
@@ -452,9 +453,10 @@ export class NotificationService {
       console.error('[Push Send] Error message:', error instanceof Error ? error.message : String(error));
       
       // Mark as failed
+      const failedStatus = '"failed"';
       await db.update(notificationRecipients)
         .set({ 
-          deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', '"failed"')` 
+          deliveryStatus: sql`jsonb_set(COALESCE(delivery_status, '{}'::jsonb), '{push}', ${failedStatus}::jsonb)` 
         })
         .where(and(
           eq(notificationRecipients.notificationId, notificationId),

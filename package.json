@@ -144,5 +144,8 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "next": "^16.1.1"
   }
 }

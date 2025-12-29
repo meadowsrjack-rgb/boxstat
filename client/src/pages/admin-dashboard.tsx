@@ -4477,7 +4477,7 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   const awardFormSchema = z.object({
     name: z.string().min(1, "Name is required"),
-    tier: z.enum(["Gold", "Purple", "Blue", "Green", "Grey", "Special"]),
+    tier: z.enum(["Prospect", "Starter", "All-Star", "Superstar", "HOF", "Legacy"]),
     description: z.string().optional(),
     imageUrl: z.string().optional(),
     active: z.boolean().default(true),
@@ -4610,17 +4610,17 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
     }
   };
 
-  // Get tier badge color (new simplified tiers)
+  // Get tier badge color
   const getTierBadgeColor = (tier: string) => {
     const colors: Record<string, string> = {
-      "Gold": "bg-yellow-100 text-yellow-700 border-yellow-300",
-      "Purple": "bg-purple-100 text-purple-700 border-purple-300",
-      "Blue": "bg-blue-100 text-blue-700 border-blue-300",
-      "Green": "bg-green-100 text-green-700 border-green-300",
-      "Grey": "bg-gray-100 text-gray-700 border-gray-300",
-      "Special": "bg-gradient-to-r from-purple-100 to-yellow-100 text-purple-700 border-purple-300",
+      "Prospect": "bg-gray-100 text-gray-700 border-gray-300",
+      "Starter": "bg-green-100 text-green-700 border-green-300",
+      "All-Star": "bg-blue-100 text-blue-700 border-blue-300",
+      "Superstar": "bg-purple-100 text-purple-700 border-purple-300",
+      "HOF": "bg-yellow-100 text-yellow-700 border-yellow-300",
+      "Legacy": "bg-gradient-to-r from-red-100 via-yellow-100 via-green-100 via-blue-100 to-purple-100 text-purple-700 border-purple-300",
     };
-    return colors[tier] || colors["Grey"];
+    return colors[tier] || colors["Prospect"];
   };
 
   // Get trigger category label
@@ -4638,12 +4638,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
 
   // Tier hierarchy for sorting
   const tierOrder: Record<string, number> = {
-    "Gold": 6,
-    "Special": 5,
-    "Purple": 4,
-    "Blue": 3,
-    "Green": 2,
-    "Grey": 1,
+    "Legacy": 6,
+    "HOF": 5,
+    "Superstar": 4,
+    "All-Star": 3,
+    "Starter": 2,
+    "Prospect": 1,
   };
 
   // Filter and sort awards
@@ -4943,12 +4943,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Gold">Gold</SelectItem>
-                            <SelectItem value="Purple">Purple</SelectItem>
-                            <SelectItem value="Blue">Blue</SelectItem>
-                            <SelectItem value="Green">Green</SelectItem>
-                            <SelectItem value="Grey">Grey</SelectItem>
-                            <SelectItem value="Special">Special</SelectItem>
+                            <SelectItem value="Prospect">Prospect</SelectItem>
+                            <SelectItem value="Starter">Starter</SelectItem>
+                            <SelectItem value="All-Star">All-Star</SelectItem>
+                            <SelectItem value="Superstar">Superstar</SelectItem>
+                            <SelectItem value="HOF">HOF</SelectItem>
+                            <SelectItem value="Legacy">Legacy</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -5499,12 +5499,12 @@ function AwardsTab({ awardDefinitions, users, organization }: any) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="Gold">Gold</SelectItem>
-              <SelectItem value="Purple">Purple</SelectItem>
-              <SelectItem value="Blue">Blue</SelectItem>
-              <SelectItem value="Green">Green</SelectItem>
-              <SelectItem value="Grey">Grey</SelectItem>
-              <SelectItem value="Special">Special</SelectItem>
+              <SelectItem value="Prospect">Prospect</SelectItem>
+              <SelectItem value="Starter">Starter</SelectItem>
+              <SelectItem value="All-Star">All-Star</SelectItem>
+              <SelectItem value="Superstar">Superstar</SelectItem>
+              <SelectItem value="HOF">HOF</SelectItem>
+              <SelectItem value="Legacy">Legacy</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterClass} onValueChange={setFilterClass}>

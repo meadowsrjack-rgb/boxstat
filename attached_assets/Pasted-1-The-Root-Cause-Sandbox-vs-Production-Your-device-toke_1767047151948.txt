@@ -1,0 +1,46 @@
+1. The Root Cause: Sandbox vs. Production
+
+Your device token (generated via Xcode/Replit) is only valid in the Apple Sandbox environment.
+
+Replit (Development Server): Your logs explicitly show: Host: api.sandbox.push.apple.com. Because both the server and the app are in "Sandbox" mode, they match, and the push works.
+
+boxstat.app (Production Website): This server is likely configured with production: true. It tries to send your sandbox token to api.push.apple.com. Apple rejects this because a sandbox token cannot be used on the production gateway.
+
+2. How to fix the Website (Production) Backend
+
+You need to ensure your production server can detect if a token is "Sandbox" or "Production" and route it to the correct Apple gateway.
+
+In your notificationService.ts on the production server, check the logic that initializes the apn.Provider. It should look something like this:
+
+TypeScript
+// You need TWO providers if you want the website to support test devices
+const sandboxProvider = new apn.Provider({
+  token: { key: "AuthKey_8F5HP72M74.p8", keyId: "8F5HP72M74", teamId: "..." },
+  production: false // Hits api.sandbox.push.apple.com
+});
+
+const productionProvider = new apn.Provider({
+  token: { key: "AuthKey_8F5HP72M74.p8", keyId: "8F5HP72M74", teamId: "..." },
+  production: true // Hits api.push.apple.com
+});
+
+// Logic to choose the provider
+async function sendPush(token, isSandbox) {
+  const provider = isSandbox ? sandboxProvider : productionProvider;
+  await provider.send(notification, token);
+}
+3. Verification of the "Topic"
+
+Remember that your logs showed DeviceTokenNotForTopic.
+
+Ensure the production website is also using the exact same Bundle ID: com.boxstat.app.
+
+If the website is accidentally using boxstat.app (without the com.), it will fail even if the environment is correct.
+
+4. The Database "JSON" Exception
+
+Don't forget that your logs also showed a database crash when trying to save the push results: invalid input syntax for type json.
+
+If your production database (Neon) has a stricter schema than your Replit database, this error might be stopping the execution flow before the push is even sent.
+
+Ensure line 438 of your notificationService.ts is using JSON.stringify(result) when saving to the database.

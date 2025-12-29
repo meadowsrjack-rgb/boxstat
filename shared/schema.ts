@@ -92,6 +92,9 @@ export interface User {
   gender?: string;
   height?: string;
   age?: string;
+  grade?: string;
+  aauMembershipId?: string;
+  divisionId?: number;
   
   // Emergency and medical information
   emergencyContact?: string;
@@ -117,6 +120,7 @@ export interface User {
   // Performance metrics
   rating?: number;
   awardsCount?: number;
+  skillsAssessments?: Record<string, any>;
   
   // Award tracking fields
   awards?: any[]; // cached array of earned awards for quick display
@@ -136,6 +140,8 @@ export interface User {
   // Security
   passcode?: string; // 4-digit PIN for quick switching
   password?: string; // Hashed password for account login
+  passwordResetToken?: string;
+  passwordResetExpiry?: Date;
   
   // Email verification & magic links
   verified: boolean;
@@ -143,6 +149,7 @@ export interface User {
   verificationExpiry?: Date;
   magicLinkToken?: string;
   magicLinkExpiry?: Date;
+  magicLinkSourcePlatform?: string;
   
   // OAuth providers
   googleId?: string;
@@ -992,6 +999,12 @@ export const insertUserSchema = z.object({
   phoneNumber: z.string().optional(),
   address: z.string().optional(),
   gender: z.string().optional(),
+  grade: z.string().optional(),
+  aauMembershipId: z.string().optional(),
+  divisionId: z.number().optional(),
+  paymentStatus: z.string().optional(),
+  skillsAssessments: z.record(z.any()).optional(),
+  magicLinkSourcePlatform: z.string().optional(),
   registrationType: z.enum(["myself", "my_child"]).optional(),
   accountHolderId: z.string().optional(),
   packageSelected: z.string().optional(),
@@ -1049,6 +1062,8 @@ export interface Team {
   rosterSize?: number;
   active?: boolean;
   notes?: string;
+  notionSlug?: string;
+  ageGroup?: string;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -1119,6 +1134,8 @@ export interface Event {
   status?: string; // active, cancelled, completed, draft
   tags?: string[];
   isActive: boolean;
+  participationRoles?: string[];
+  proxyCheckinRoles?: string[];
   createdAt: Date;
 }
 
@@ -1456,6 +1473,10 @@ export interface Product {
   coverageScope?: string[]; // Age divisions or "All": ["U10", "U12", "U14"] or ["All"]
   ageGroups?: string[]; // DEPRECATED: Use "coverageScope" instead. Kept for backwards compatibility
   autoAssignPlayers?: boolean; // Auto-mark players active when purchased
+  requireAAUMembership?: boolean; // Whether AAU membership is required
+  requireConcussionWaiver?: boolean; // Whether concussion waiver is required
+  requireClubAgreement?: boolean; // Whether club agreement is required
+  requiredWaivers?: string[]; // Custom waiver IDs required for this product
   linkedAwards?: string[]; // Award IDs earned automatically for completing this package
   accessTag?: string; // "club_member" (subscription), "pack_holder" (one-time with credits)
   sessionCount?: number; // Number of sessions/credits for one-time packs
@@ -1651,12 +1672,14 @@ export interface Notification {
   message: string;
   recipientTarget: "everyone" | "users" | "roles" | "teams" | "divisions";
   recipientUserIds?: string[];
+  recipientIds?: string[]; // Legacy alias for recipientUserIds
   recipientRoles?: string[];
   recipientTeamIds?: string[];
   recipientDivisionIds?: string[];
   deliveryChannels: ("in_app" | "email" | "push")[];
   sentBy: string;
   sentAt?: Date;
+  readBy?: string[]; // Legacy field for tracking who read the notification
   relatedEventId?: number;
   status: "pending" | "sent" | "failed";
   createdAt: Date;

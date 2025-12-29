@@ -4,6 +4,7 @@ import {
   notificationRecipients,
   notificationPreferences, 
   pushSubscriptions,
+  users,
   type SelectNotification,
   type SelectNotificationRecipient,
   type NotificationPreferences,
@@ -16,6 +17,7 @@ import {
 import { eq, and, or, desc, sql } from "drizzle-orm";
 import webpush from "web-push";
 import { sendAPNsNotification, isAPNsConfigured } from "./apnsService";
+import { sendNotificationEmail } from "../email";
 import admin from 'firebase-admin';
 
 // Firebase Admin SDK for Android push notifications
@@ -642,9 +644,29 @@ export class NotificationService {
         await this.sendPushNotification(0, userId, title, message);
       }
       
-      // Email channel would be handled separately if needed
+      // Send email notification if requested
       if (channels.includes('email')) {
-        console.log(`Email notification to ${userId}: ${title} - not yet implemented`);
+        try {
+          const [user] = await db.select({ 
+            email: users.email, 
+            firstName: users.firstName 
+          })
+            .from(users)
+            .where(eq(users.id, userId))
+            .limit(1);
+          
+          if (user?.email) {
+            await sendNotificationEmail({
+              email: user.email,
+              firstName: user.firstName || '',
+              title,
+              message,
+            });
+            console.log(`✅ Email notification sent to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error(`❌ Email notification failed for ${userId}:`, emailError);
+        }
       }
     } catch (error) {
       console.error('Error sending multi-channel notification:', error);

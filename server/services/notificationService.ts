@@ -619,6 +619,7 @@ export class NotificationService {
             types: ['notification'],
             recipientTarget: 'users',
             recipientUserIds: [userId],
+            deliveryChannels: channels,
             status: 'sent',
             sentAt: new Date().toISOString(),
             sentBy: 'system',

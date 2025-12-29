@@ -111,6 +111,7 @@ export function setupAdminNotificationRoutes(app: Express) {
           organizationId,
           title: req.body.title || 'Test Message',
           message: req.body.message || 'This is a test message from the admin panel.',
+          types: req.body.types || ['notification'] as const,
           recipientTarget: req.body.recipientTarget || 'users',
           recipientUserIds: req.body.recipientUserIds || [userId],
           deliveryChannels: req.body.deliveryChannels || ['in_app'],

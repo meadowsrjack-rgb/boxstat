@@ -8437,11 +8437,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dbAwardId = awardDefinition.id; // This is the integer ID
       }
       
-      // Check if user already has this award for the same year
+      // Check if user already has this award for the same year (only for non-manual awards)
       const currentYear = year || new Date().getFullYear();
-      const hasAward = await storage.checkUserHasAward(userId, dbAwardId, currentYear);
-      if (hasAward) {
-        return res.status(400).json({ error: 'User already has this award for the specified year' });
+      const awardDef = await storage.getAwardDefinition(dbAwardId);
+      if (awardDef && awardDef.triggerCategory !== 'manual') {
+        const hasAward = await storage.checkUserHasAward(userId, dbAwardId, currentYear);
+        if (hasAward) {
+          return res.status(400).json({ error: 'User already has this award for the specified year' });
+        }
       }
       
       const userAwardData = insertUserAwardRecordSchema.parse({
@@ -8497,10 +8500,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Award definition not found' });
       }
       
-      // Check if user already has this award for the same year
-      const hasAward = await storage.checkUserHasAward(userId, awardId, year);
-      if (hasAward) {
-        return res.status(400).json({ error: 'User already has this award for the specified year' });
+      // Check if user already has this award for the same year (only for non-manual awards)
+      if (awardDefinition.triggerCategory !== 'manual') {
+        const hasAward = await storage.checkUserHasAward(userId, awardId, year);
+        if (hasAward) {
+          return res.status(400).json({ error: 'User already has this award for the specified year' });
+        }
       }
       
       const userAwardData = insertUserAwardRecordSchema.parse({

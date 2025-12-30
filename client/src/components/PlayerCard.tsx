@@ -205,9 +205,22 @@ export default function PlayerCard({
     onSuccess: () => {
       toast({ title: "Award given successfully!" });
       setShowAwardDialog(false);
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/awards`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/badges`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${playerId}/trophies`] });
+      // Invalidate all award-related queries for both playerId and accountId
+      const idsToInvalidate = [playerId, accountIdForQueries].filter(Boolean);
+      idsToInvalidate.forEach(id => {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${id}/awards`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${id}/badges`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${id}/trophies`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/profile/${id}`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/profile", id] });
+      });
+      // Invalidate coach dashboard queries to ensure player lists refresh
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/coaches/') && key.includes('/players');
+        }
+      });
     },
     onError: () => {
       toast({ title: "Failed to give award", variant: "destructive" });
@@ -225,7 +238,21 @@ export default function PlayerCard({
     onSuccess: () => {
       toast({ title: "Evaluation saved successfully!" });
       setShowSkillEvaluation(false);
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${playerId}/latest-evaluation`] });
+      // Invalidate all evaluation-related queries for both playerId and accountId
+      const idsToInvalidate = [playerId, accountIdForQueries].filter(Boolean);
+      idsToInvalidate.forEach(id => {
+        queryClient.invalidateQueries({ queryKey: [`/api/players/${id}/latest-evaluation`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/profile/${id}`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/profile", id] });
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${id}`] });
+      });
+      // Invalidate coach dashboard queries to ensure player lists refresh
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.includes('/api/coaches/') && key.includes('/players');
+        }
+      });
     },
     onError: () => {
       toast({ title: "Failed to save evaluation", variant: "destructive" });

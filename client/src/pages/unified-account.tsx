@@ -113,6 +113,10 @@ function CompactAwardsIndicator({ playerId }: { playerId: string }) {
   const { data: awardsData } = useQuery<any>({
     queryKey: [`/api/users/${playerId}/awards`],
     enabled: !!playerId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
   // Calculate total awards earned (totalBadges + totalTrophies from API response)
@@ -165,6 +169,10 @@ function SkillsIndicator({ playerId }: { playerId: string }) {
   const { data: evaluation } = useQuery<any>({
     queryKey: [`/api/players/${playerId}/latest-evaluation`],
     enabled: !!playerId,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
   // Calculate overall skill average from evaluation scores
@@ -689,6 +697,10 @@ function PlayerProfileCard({ player }: { player: any }) {
   const { data: awardsData } = useQuery<any>({
     queryKey: [`/api/users/${player.id}/awards`],
     enabled: !!player.id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
   const totalAwards = typeof awardsData?.totalBadges === 'number' && typeof awardsData?.totalTrophies === 'number'
@@ -972,6 +984,10 @@ export default function UnifiedAccount() {
   // Fetch linked players
   const { data: players = [], isLoading: playersLoading } = useQuery<any[]>({
     queryKey: ["/api/account/players"],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
   // Fetch upcoming events

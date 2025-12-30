@@ -221,6 +221,8 @@ export default function PlayerCard({
           return typeof key === 'string' && key.includes('/api/coaches/') && key.includes('/players');
         }
       });
+      // Invalidate player dashboard queries
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
     },
     onError: () => {
       toast({ title: "Failed to give award", variant: "destructive" });
@@ -253,6 +255,8 @@ export default function PlayerCard({
           return typeof key === 'string' && key.includes('/api/coaches/') && key.includes('/players');
         }
       });
+      // Invalidate player dashboard queries
+      queryClient.invalidateQueries({ queryKey: ["/api/account/players"] });
     },
     onError: () => {
       toast({ title: "Failed to save evaluation", variant: "destructive" });

@@ -195,11 +195,11 @@ export default function PlayerCard({
 
   // Award mutation
   const awardMutation = useMutation({
-    mutationFn: async ({ awardId, kind }: { awardId: string; kind: "badge" | "trophy" }) => {
+    mutationFn: async ({ awardId, kind }: { awardId: string | number; kind: "badge" | "trophy" }) => {
       if (!selectedPlayer) throw new Error("No player selected");
       return await apiRequest('/api/coach/award', {
         method: 'POST',
-        data: { playerId: selectedPlayer.id, awardId, category: kind },
+        data: { playerId: selectedPlayer.id, awardId: String(awardId), category: kind },
       });
     },
     onSuccess: () => {
@@ -216,7 +216,7 @@ export default function PlayerCard({
 
   // Skills evaluation mutation
   const skillsMutation = useMutation({
-    mutationFn: async (data: { playerId: string; scores: Record<string, number>; quarter: string; year: number }) => {
+    mutationFn: async (data: { playerId: string; scores: EvalScores; quarter: string; year: number }) => {
       return await apiRequest('/api/coach/evaluate', {
         method: 'POST',
         data,
@@ -482,7 +482,8 @@ export default function PlayerCard({
                   onClick={() => {
                     setSelectedPlayer({
                       id: playerId,
-                      name: getPlayerFullName(playerProfile),
+                      firstName: playerProfile.firstName || '',
+                      lastName: playerProfile.lastName || '',
                     });
                     setShowAwardDialog(true);
                   }}
@@ -497,7 +498,8 @@ export default function PlayerCard({
                   onClick={() => {
                     setSelectedPlayer({
                       id: playerId,
-                      name: getPlayerFullName(playerProfile),
+                      firstName: playerProfile.firstName || '',
+                      lastName: playerProfile.lastName || '',
                     });
                     setShowSkillEvaluation(true);
                   }}
@@ -516,20 +518,19 @@ export default function PlayerCard({
       {/* Awards Dialog */}
       {showAwardDialog && selectedPlayer && (
         <AwardsDialog
-          isOpen={showAwardDialog}
-          onClose={() => setShowAwardDialog(false)}
+          open={showAwardDialog}
+          onOpenChange={(v) => setShowAwardDialog(v)}
           player={selectedPlayer}
-          availableAwards={availableAwards || []}
-          onSubmit={({ awardId, kind }) => awardMutation.mutate({ awardId, kind })}
-          isSubmitting={awardMutation.isPending}
+          onGive={(awardId, kind) => awardMutation.mutate({ awardId, kind })}
+          giving={awardMutation.isPending}
         />
       )}
 
       {/* Evaluation Dialog */}
       {showSkillEvaluation && selectedPlayer && (
         <EvaluationDialog
-          isOpen={showSkillEvaluation}
-          onClose={() => setShowSkillEvaluation(false)}
+          open={showSkillEvaluation}
+          onOpenChange={(v) => setShowSkillEvaluation(v)}
           player={selectedPlayer}
           scores={scores}
           setScores={setScores}
@@ -537,7 +538,7 @@ export default function PlayerCard({
           setQuarter={setQuarter}
           year={year}
           setYear={setYear}
-          onSubmit={() => {
+          onSave={() => {
             skillsMutation.mutate({
               playerId: selectedPlayer.id,
               scores,
@@ -545,7 +546,7 @@ export default function PlayerCard({
               year,
             });
           }}
-          isSubmitting={skillsMutation.isPending}
+          saving={skillsMutation.isPending}
         />
       )}
     </>

@@ -138,17 +138,28 @@ function CircularRingMeter({
   );
 }
 
+const defaultMeter: Meter = { earned: 0, total: 1 };
+
 export default function UypTrophyRings({
   data,
   size = 136,
   stroke = 16,
   className,
 }: {
-  data: UypRingsData;
+  data: UypRingsData | null | undefined;
   size?: number;
   stroke?: number;
   className?: string;
 }) {
+  const safeData = {
+    legacy: data?.legacy ?? defaultMeter,
+    hof: data?.hof ?? defaultMeter,
+    superstar: data?.superstar ?? defaultMeter,
+    allStar: data?.allStar ?? defaultMeter,
+    starter: data?.starter ?? defaultMeter,
+    prospect: data?.prospect ?? defaultMeter,
+  };
+
   return (
     <div
       className={className}
@@ -160,12 +171,12 @@ export default function UypTrophyRings({
         padding: '4px',
       }}
     >
-      <CircularRingMeter label="Legacy"     earned={data.legacy.earned}     total={data.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
-      <CircularRingMeter label="HOF"        earned={data.hof.earned}        total={data.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
-      <CircularRingMeter label="Superstar"  earned={data.superstar.earned}  total={data.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
-      <CircularRingMeter label="All-Star"   earned={data.allStar.earned}    total={data.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Starter"    earned={data.starter.earned}    total={data.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Prospect"   earned={data.prospect.earned}   total={data.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
+      <CircularRingMeter label="Legacy"     earned={safeData.legacy.earned}     total={safeData.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
+      <CircularRingMeter label="HOF"        earned={safeData.hof.earned}        total={safeData.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
+      <CircularRingMeter label="Superstar"  earned={safeData.superstar.earned}  total={safeData.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
+      <CircularRingMeter label="All-Star"   earned={safeData.allStar.earned}    total={safeData.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Starter"    earned={safeData.starter.earned}    total={safeData.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Prospect"   earned={safeData.prospect.earned}   total={safeData.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
     </div>
   );
 }

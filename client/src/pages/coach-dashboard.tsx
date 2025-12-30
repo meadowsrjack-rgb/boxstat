@@ -368,7 +368,7 @@ export default function CoachDashboard() {
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ message: res.statusText }));
-        throw new Error(errorData.message || "Failed to give award");
+        throw new Error(errorData.error || errorData.message || "Failed to give award");
       }
       return res.json();
     },

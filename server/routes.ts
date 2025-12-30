@@ -5979,25 +5979,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Return summary with counts for frontend display - count by prestige level
-      const trophiesCount = enrichedAwards.filter((a: any) => a.prestige === 'Trophy').length;
-      const hallOfFameBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Hall of Fame').length;
-      const superstarBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Superstar').length;
-      const allStarBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'All-Star').length;
-      const starterBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Starter').length;
-      const prospectBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Prospect').length;
-      const rookieBadgesCount = enrichedAwards.filter((a: any) => a.prestige === 'Rookie').length;
+      // Count earned awards by tier
+      const legacyCount = enrichedAwards.filter((a: any) => a.tier === 'Legacy').length;
+      const hofCount = enrichedAwards.filter((a: any) => a.tier === 'HOF').length;
+      const superstarCount = enrichedAwards.filter((a: any) => a.tier === 'Superstar').length;
+      const allStarCount = enrichedAwards.filter((a: any) => a.tier === 'All-Star').length;
+      const starterCount = enrichedAwards.filter((a: any) => a.tier === 'Starter').length;
+      const prospectCount = enrichedAwards.filter((a: any) => a.tier === 'Prospect').length;
       
-      console.log(`[Awards API] Counts - Trophy:${trophiesCount}, HOF:${hallOfFameBadgesCount}, Superstar:${superstarBadgesCount}, All-Star:${allStarBadgesCount}, Starter:${starterBadgesCount}, Prospect:${prospectBadgesCount}`);
+      // Count total available awards per tier from all award definitions
+      const legacyTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Legacy' && a.active).length;
+      const hofTotal = allAwardDefinitions.filter((a: any) => a.tier === 'HOF' && a.active).length;
+      const superstarTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Superstar' && a.active).length;
+      const allStarTotal = allAwardDefinitions.filter((a: any) => a.tier === 'All-Star' && a.active).length;
+      const starterTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Starter' && a.active).length;
+      const prospectTotal = allAwardDefinitions.filter((a: any) => a.tier === 'Prospect' && a.active).length;
+      
+      console.log(`[Awards API] Earned - Legacy:${legacyCount}, HOF:${hofCount}, Superstar:${superstarCount}, All-Star:${allStarCount}, Starter:${starterCount}, Prospect:${prospectCount}`);
+      console.log(`[Awards API] Totals - Legacy:${legacyTotal}, HOF:${hofTotal}, Superstar:${superstarTotal}, All-Star:${allStarTotal}, Starter:${starterTotal}, Prospect:${prospectTotal}`);
       
       res.json({
-        trophiesCount,
-        hallOfFameBadgesCount,
-        superstarBadgesCount,
-        allStarBadgesCount,
-        starterBadgesCount,
-        prospectBadgesCount,
-        rookieBadgesCount,
+        // New tier-based summary with earned and total
+        tierSummary: {
+          legacy: { earned: legacyCount, total: legacyTotal || 1 },
+          hof: { earned: hofCount, total: hofTotal || 1 },
+          superstar: { earned: superstarCount, total: superstarTotal || 1 },
+          allStar: { earned: allStarCount, total: allStarTotal || 1 },
+          starter: { earned: starterCount, total: starterTotal || 1 },
+          prospect: { earned: prospectCount, total: prospectTotal || 1 },
+        },
+        // Legacy fields for backwards compatibility
+        trophiesCount: legacyCount,
+        hallOfFameBadgesCount: hofCount,
+        superstarBadgesCount: superstarCount,
+        allStarBadgesCount: allStarCount,
+        starterBadgesCount: starterCount,
+        prospectBadgesCount: prospectCount,
+        rookieBadgesCount: 0,
         allAwards: enrichedAwards,
       });
     } catch (error: any) {

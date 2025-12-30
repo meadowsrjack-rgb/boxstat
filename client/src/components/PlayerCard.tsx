@@ -70,7 +70,20 @@ interface TeamInfo {
   color: string;
 }
 
+interface TierMeter {
+  earned: number;
+  total: number;
+}
+
 interface AwardsSummary {
+  tierSummary?: {
+    legacy: TierMeter;
+    hof: TierMeter;
+    superstar: TierMeter;
+    allStar: TierMeter;
+    starter: TierMeter;
+    prospect: TierMeter;
+  };
   rookieBadgesCount: number;
   starterBadgesCount: number;
   allStarBadgesCount: number;
@@ -250,20 +263,28 @@ export default function PlayerCard({
   const overallSkillScore = calculateOverallScore(latestEvaluation?.skillsData);
 
   // Prepare rings data for trophy display (each needs earned/total format)
-  const ringsData = awardsSummary ? {
-    trophies: { earned: awardsSummary.trophiesCount || 0, total: 10 },
-    hallOfFame: { earned: awardsSummary.hallOfFameBadgesCount || 0, total: 10 },
-    superstar: { earned: awardsSummary.superstarBadgesCount || 0, total: 10 },
-    allStar: { earned: awardsSummary.allStarBadgesCount || 0, total: 10 },
-    starter: { earned: awardsSummary.starterBadgesCount || 0, total: 10 },
-    prospect: { earned: awardsSummary.prospectBadgesCount || 0, total: 10 },
+  // Use tierSummary if available (new format), otherwise fall back to legacy counts
+  const ringsData = awardsSummary?.tierSummary ? {
+    legacy: awardsSummary.tierSummary.legacy,
+    hof: awardsSummary.tierSummary.hof,
+    superstar: awardsSummary.tierSummary.superstar,
+    allStar: awardsSummary.tierSummary.allStar,
+    starter: awardsSummary.tierSummary.starter,
+    prospect: awardsSummary.tierSummary.prospect,
+  } : awardsSummary ? {
+    legacy: { earned: awardsSummary.trophiesCount || 0, total: 1 },
+    hof: { earned: awardsSummary.hallOfFameBadgesCount || 0, total: 1 },
+    superstar: { earned: awardsSummary.superstarBadgesCount || 0, total: 1 },
+    allStar: { earned: awardsSummary.allStarBadgesCount || 0, total: 1 },
+    starter: { earned: awardsSummary.starterBadgesCount || 0, total: 1 },
+    prospect: { earned: awardsSummary.prospectBadgesCount || 0, total: 1 },
   } : {
-    trophies: { earned: 0, total: 10 },
-    hallOfFame: { earned: 0, total: 10 },
-    superstar: { earned: 0, total: 10 },
-    allStar: { earned: 0, total: 10 },
-    starter: { earned: 0, total: 10 },
-    prospect: { earned: 0, total: 10 },
+    legacy: { earned: 0, total: 1 },
+    hof: { earned: 0, total: 1 },
+    superstar: { earned: 0, total: 1 },
+    allStar: { earned: 0, total: 1 },
+    starter: { earned: 0, total: 1 },
+    prospect: { earned: 0, total: 1 },
   };
 
   // Show loading spinner only while actually loading

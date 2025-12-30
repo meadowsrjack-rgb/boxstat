@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 
 type Meter = { earned: number; total: number };
 type UypRingsData = {
-  trophies:   Meter;
-  hallOfFame: Meter;
+  legacy:     Meter;
+  hof:        Meter;
   superstar:  Meter;
   allStar:    Meter;
   starter:    Meter;
@@ -13,8 +13,8 @@ type UypRingsData = {
 };
 
 const schemes = {
-  trophies:   { ring: ['#9ad0ff', '#b7ffef', '#ffe07d', '#ff9ac2'] },
-  hallOfFame: { ring: ['#FFD700', '#FFB347'] },
+  legacy:     { ring: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#9b59b6'] },
+  hof:        { ring: ['#FFD700', '#FFB347'] },
   superstar:  { ring: ['#8e44ad', '#9b59b6'] },
   allStar:    { ring: ['#3498db', '#2980b9'] },
   starter:    { ring: ['#27ae60', '#2ecc71'] },
@@ -162,12 +162,12 @@ export default function UypTrophyRings({
         padding: '4px',
       }}
     >
-      <CircularRingMeter label="Trophies"     earned={data.trophies.earned}   total={data.trophies.total}     scheme={schemes.trophies}   size={size} stroke={stroke} />
-      <CircularRingMeter label="Hall of Fame" earned={data.hallOfFame.earned} total={data.hallOfFame.total}   scheme={schemes.hallOfFame} size={size} stroke={stroke} />
-      <CircularRingMeter label="Superstar"    earned={data.superstar.earned}  total={data.superstar.total}    scheme={schemes.superstar}  size={size} stroke={stroke} />
-      <CircularRingMeter label="All-Star"     earned={data.allStar.earned}    total={data.allStar.total}      scheme={schemes.allStar}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Starter"      earned={data.starter.earned}    total={data.starter.total}      scheme={schemes.starter}    size={size} stroke={stroke} />
-      <CircularRingMeter label="Prospect"     earned={data.prospect.earned}   total={data.prospect.total}     scheme={schemes.prospect}   size={size} stroke={stroke} />
+      <CircularRingMeter label="Legacy"     earned={data.legacy.earned}     total={data.legacy.total}     scheme={schemes.legacy}     size={size} stroke={stroke} />
+      <CircularRingMeter label="HOF"        earned={data.hof.earned}        total={data.hof.total}        scheme={schemes.hof}        size={size} stroke={stroke} />
+      <CircularRingMeter label="Superstar"  earned={data.superstar.earned}  total={data.superstar.total}  scheme={schemes.superstar}  size={size} stroke={stroke} />
+      <CircularRingMeter label="All-Star"   earned={data.allStar.earned}    total={data.allStar.total}    scheme={schemes.allStar}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Starter"    earned={data.starter.earned}    total={data.starter.total}    scheme={schemes.starter}    size={size} stroke={stroke} />
+      <CircularRingMeter label="Prospect"   earned={data.prospect.earned}   total={data.prospect.total}   scheme={schemes.prospect}   size={size} stroke={stroke} />
     </div>
   );
 }

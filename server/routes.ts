@@ -8654,10 +8654,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Finalize legacy claims - mark all migrations as claimed
   app.post('/api/legacy/finalize', requireAuth, async (req: any, res) => {
     try {
-      const { id: userId, email } = req.user;
+      const { id: userId } = req.user;
+      
+      // Get user's email from database (req.user.email might be undefined)
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(400).json({ error: 'User email not found' });
+      }
       
       // Get all unclaimed migrations for this user
-      const migrations = await storage.getMigrationLookupsByEmail(email);
+      const migrations = await storage.getMigrationLookupsByEmail(user.email);
       
       // Mark all as claimed
       for (const migration of migrations) {

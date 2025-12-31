@@ -2333,7 +2333,7 @@ class MemStorage implements IStorage {
 // =============================================
 
 import { db } from "./db";
-import { eq, and, gte, lte, or, sql, isNull, inArray, desc } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, isNull, inArray, desc, ilike } from "drizzle-orm";
 import * as schema from "../shared/schema";
 
 class DatabaseStorage implements IStorage {
@@ -4550,7 +4550,7 @@ class DatabaseStorage implements IStorage {
   async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
     const results = await db.select().from(schema.migrationLookup)
       .where(and(
-        sql`LOWER(${schema.migrationLookup.email}) = LOWER(${email})`,
+        ilike(schema.migrationLookup.email, email),
         eq(schema.migrationLookup.isClaimed, false)
       ));
     return results;

@@ -4548,12 +4548,12 @@ class DatabaseStorage implements IStorage {
   }
   
   async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
-    const results = await db.select().from(schema.migrationLookup)
-      .where(and(
-        ilike(schema.migrationLookup.email, email),
-        eq(schema.migrationLookup.isClaimed, false)
-      ));
-    return results;
+    // Get all unclaimed migrations and filter by email case-insensitively
+    const allResults = await db.select().from(schema.migrationLookup)
+      .where(eq(schema.migrationLookup.isClaimed, false));
+    
+    // Filter case-insensitively in JavaScript
+    return allResults.filter(m => m.email.toLowerCase() === email.toLowerCase());
   }
   
   async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {

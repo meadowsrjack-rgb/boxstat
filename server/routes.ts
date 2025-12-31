@@ -8167,6 +8167,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // ADMIN MIGRATION ROUTES (Legacy Parent Stripe Data)
+  // =============================================
+  
+  // Get all migration records
+  app.get('/api/admin/migrations', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can view migrations' });
+      }
+      
+      const migrations = await storage.getAllMigrationLookups();
+      res.json(migrations);
+    } catch (error: any) {
+      console.error('Error fetching migrations:', error);
+      res.status(500).json({ error: 'Failed to fetch migrations', message: error.message });
+    }
+  });
+  
+  // Create migration record
+  app.post('/api/admin/migrations', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can create migrations' });
+      }
+      
+      const { email, stripeCustomerId, stripeSubscriptionId, productName } = req.body;
+      
+      if (!email || !stripeCustomerId || !stripeSubscriptionId || !productName) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      const migration = await storage.createMigrationLookup({
+        email,
+        stripeCustomerId,
+        stripeSubscriptionId,
+        productName,
+        isClaimed: false,
+      });
+      
+      res.status(201).json(migration);
+    } catch (error: any) {
+      console.error('Error creating migration:', error);
+      res.status(500).json({ error: 'Failed to create migration', message: error.message });
+    }
+  });
+  
+  // Update migration record
+  app.patch('/api/admin/migrations/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can update migrations' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid migration ID' });
+      }
+      
+      const { email, stripeCustomerId, stripeSubscriptionId, productName } = req.body;
+      
+      const migration = await storage.updateMigrationLookup(id, {
+        email,
+        stripeCustomerId,
+        stripeSubscriptionId,
+        productName,
+      });
+      
+      if (!migration) {
+        return res.status(404).json({ error: 'Migration not found' });
+      }
+      
+      res.json(migration);
+    } catch (error: any) {
+      console.error('Error updating migration:', error);
+      res.status(500).json({ error: 'Failed to update migration', message: error.message });
+    }
+  });
+  
+  // Delete migration record
+  app.delete('/api/admin/migrations/:id', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can delete migrations' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid migration ID' });
+      }
+      
+      await storage.deleteMigrationLookup(id);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting migration:', error);
+      res.status(500).json({ error: 'Failed to delete migration', message: error.message });
+    }
+  });
+  
+  // Link migration to player (creates subscription for player)
+  app.post('/api/admin/migrations/:id/link', requireAuth, async (req: any, res) => {
+    try {
+      const { role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Only admins can link migrations' });
+      }
+      
+      const id = parseInt(req.params.id, 10);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid migration ID' });
+      }
+      
+      const { playerId } = req.body;
+      if (!playerId) {
+        return res.status(400).json({ error: 'Player ID is required' });
+      }
+      
+      // Get the migration record
+      const migration = await storage.getMigrationLookupById(id);
+      if (!migration) {
+        return res.status(404).json({ error: 'Migration not found' });
+      }
+      
+      if (migration.isClaimed) {
+        return res.status(400).json({ error: 'Migration already claimed' });
+      }
+      
+      // Get the player to find their parent
+      const player = await storage.getUser(playerId);
+      if (!player) {
+        return res.status(404).json({ error: 'Player not found' });
+      }
+      
+      // Determine the owner (parent) - use linkedParentId if available, otherwise use the player's own ID
+      const ownerUserId = player.linkedParentId || playerId;
+      
+      // Create a subscription for this player
+      await storage.createSubscription({
+        ownerUserId,
+        assignedPlayerId: playerId,
+        stripeCustomerId: migration.stripeCustomerId,
+        stripeSubscriptionId: migration.stripeSubscriptionId,
+        productName: migration.productName,
+        status: 'active',
+        isMigrated: true,
+      });
+      
+      // Update user's stripe customer ID if not already set
+      if (!player.stripeCustomerId) {
+        await storage.updateUser(playerId, {
+          stripeCustomerId: migration.stripeCustomerId,
+        });
+      }
+      
+      // Mark migration as claimed
+      await storage.markMigrationLookupClaimed(id);
+      
+      res.json({ success: true, message: 'Subscription linked to player' });
+    } catch (error: any) {
+      console.error('Error linking migration:', error);
+      res.status(500).json({ error: 'Failed to link migration', message: error.message });
+    }
+  });
+  
+  // =============================================
   // AWARD DEFINITION ROUTES (Admin/Coach Only)
   // =============================================
   

@@ -253,8 +253,12 @@ export interface IStorage {
   deleteFacility(id: number): Promise<void>;
   
   // Migration Lookup operations (Legacy UYP Migration)
+  getAllMigrationLookups(): Promise<SelectMigrationLookup[]>;
+  getMigrationLookupById(id: number): Promise<SelectMigrationLookup | undefined>;
   getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]>;
   createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup>;
+  updateMigrationLookup(id: number, updates: Partial<InsertMigrationLookup>): Promise<SelectMigrationLookup | undefined>;
+  deleteMigrationLookup(id: number): Promise<void>;
   markMigrationLookupClaimed(id: number): Promise<void>;
   
   // Subscription operations (User Wallet System)
@@ -1895,6 +1899,14 @@ class MemStorage implements IStorage {
   }
   
   // Migration Lookup operations
+  async getAllMigrationLookups(): Promise<SelectMigrationLookup[]> {
+    return Array.from(this.migrationLookups.values());
+  }
+  
+  async getMigrationLookupById(id: number): Promise<SelectMigrationLookup | undefined> {
+    return this.migrationLookups.get(id);
+  }
+  
   async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
     const results: SelectMigrationLookup[] = [];
     this.migrationLookups.forEach(lookup => {
@@ -1918,6 +1930,26 @@ class MemStorage implements IStorage {
     };
     this.migrationLookups.set(lookup.id, lookup);
     return lookup;
+  }
+  
+  async updateMigrationLookup(id: number, updates: Partial<InsertMigrationLookup>): Promise<SelectMigrationLookup | undefined> {
+    const lookup = this.migrationLookups.get(id);
+    if (!lookup) return undefined;
+    
+    const updated = {
+      ...lookup,
+      ...(updates.email && { email: updates.email }),
+      ...(updates.stripeCustomerId && { stripeCustomerId: updates.stripeCustomerId }),
+      ...(updates.stripeSubscriptionId && { stripeSubscriptionId: updates.stripeSubscriptionId }),
+      ...(updates.productName && { productName: updates.productName }),
+      ...(updates.isClaimed !== undefined && { isClaimed: updates.isClaimed }),
+    };
+    this.migrationLookups.set(id, updated);
+    return updated;
+  }
+  
+  async deleteMigrationLookup(id: number): Promise<void> {
+    this.migrationLookups.delete(id);
   }
   
   async markMigrationLookupClaimed(id: number): Promise<void> {
@@ -4487,6 +4519,18 @@ class DatabaseStorage implements IStorage {
   }
   
   // Migration Lookup operations
+  async getAllMigrationLookups(): Promise<SelectMigrationLookup[]> {
+    const results = await db.select().from(schema.migrationLookup)
+      .orderBy(schema.migrationLookup.createdAt);
+    return results;
+  }
+  
+  async getMigrationLookupById(id: number): Promise<SelectMigrationLookup | undefined> {
+    const results = await db.select().from(schema.migrationLookup)
+      .where(eq(schema.migrationLookup.id, id));
+    return results[0] || undefined;
+  }
+  
   async getMigrationLookupsByEmail(email: string): Promise<SelectMigrationLookup[]> {
     const results = await db.select().from(schema.migrationLookup)
       .where(and(
@@ -4505,6 +4549,27 @@ class DatabaseStorage implements IStorage {
       isClaimed: data.isClaimed ?? false,
     }).returning();
     return results[0];
+  }
+  
+  async updateMigrationLookup(id: number, updates: Partial<InsertMigrationLookup>): Promise<SelectMigrationLookup | undefined> {
+    const dbUpdates: any = {};
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.stripeCustomerId !== undefined) dbUpdates.stripeCustomerId = updates.stripeCustomerId;
+    if (updates.stripeSubscriptionId !== undefined) dbUpdates.stripeSubscriptionId = updates.stripeSubscriptionId;
+    if (updates.productName !== undefined) dbUpdates.productName = updates.productName;
+    if (updates.isClaimed !== undefined) dbUpdates.isClaimed = updates.isClaimed;
+    
+    if (Object.keys(dbUpdates).length === 0) return this.getMigrationLookupById(id);
+    
+    const results = await db.update(schema.migrationLookup)
+      .set(dbUpdates)
+      .where(eq(schema.migrationLookup.id, id))
+      .returning();
+    return results[0] || undefined;
+  }
+  
+  async deleteMigrationLookup(id: number): Promise<void> {
+    await db.delete(schema.migrationLookup).where(eq(schema.migrationLookup.id, id));
   }
   
   async markMigrationLookupClaimed(id: number): Promise<void> {

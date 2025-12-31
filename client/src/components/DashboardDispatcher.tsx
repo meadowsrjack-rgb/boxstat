@@ -23,6 +23,13 @@ export default function DashboardDispatcher() {
       return;
     }
 
+    // Check if user needs to claim legacy subscriptions
+    if ((user as any)?.needsLegacyClaim) {
+      hasNavigated.current = true;
+      setLocation("/claim-subscription");
+      return;
+    }
+
     hasNavigated.current = true;
 
     const userRole = (user as any)?.role;

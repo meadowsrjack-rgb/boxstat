@@ -2063,43 +2063,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Delete the pending registration now that account is created
       await storage.deletePendingRegistration(primaryEmail, organizationId);
       
-      // Check for migrated subscriptions from legacy UYP system
-      let hasUnassignedSubs = false;
-      let migratedSubsCount = 0;
+      // Check for unclaimed legacy subscriptions
+      let hasLegacySubscriptions = false;
+      let legacySubsCount = 0;
       
       if (primaryUser) {
         try {
           const migrationLookups = await storage.getMigrationLookupsByEmail(primaryEmail);
           
           if (migrationLookups.length > 0) {
-            console.log(`🔄 Found ${migrationLookups.length} legacy subscriptions for ${primaryEmail}`);
+            console.log(`🔄 Found ${migrationLookups.length} unclaimed legacy subscriptions for ${primaryEmail}`);
+            legacySubsCount = migrationLookups.length;
+            hasLegacySubscriptions = true;
             
-            // Create subscription records for each migrated subscription
-            for (const lookup of migrationLookups) {
-              await storage.createSubscription({
-                ownerUserId: primaryUser.id,
-                assignedPlayerId: null,
-                stripeCustomerId: lookup.stripeCustomerId,
-                stripeSubscriptionId: lookup.stripeSubscriptionId,
-                productName: lookup.productName,
-                status: 'active',
-                isMigrated: true,
-              });
-              
-              // Mark the lookup as claimed
-              await storage.markMigrationLookupClaimed(lookup.id);
-              migratedSubsCount++;
-            }
+            // Set the needsLegacyClaim flag so user is directed to claim page
+            await storage.updateUser(primaryUser.id, {
+              needsLegacyClaim: true,
+              stripeCustomerId: migrationLookups[0].stripeCustomerId,
+            });
             
-            hasUnassignedSubs = true;
-            console.log(`✅ Migrated ${migratedSubsCount} subscriptions to wallet for user ${primaryUser.id}`);
-            
-            // Update user with stripe customer ID from first subscription
-            if (migrationLookups[0].stripeCustomerId) {
-              await storage.updateUser(primaryUser.id, {
-                stripeCustomerId: migrationLookups[0].stripeCustomerId,
-              });
-            }
+            console.log(`✅ Set needsLegacyClaim flag for user ${primaryUser.id} - ${legacySubsCount} subscriptions to claim`);
           }
         } catch (migrationError: any) {
           console.error("Migration lookup error (non-fatal):", migrationError);
@@ -2109,13 +2092,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        message: hasUnassignedSubs 
-          ? `Registration complete! We found ${migratedSubsCount} subscription(s) linked to your email.`
+        message: hasLegacySubscriptions 
+          ? `Welcome back! We found ${legacySubsCount} subscription(s) linked to your email. Please assign them to your players.`
           : "Registration complete! You can now login.",
         requiresVerification: false,
         email: primaryEmail,
-        hasUnassignedSubs,
-        migratedSubsCount,
+        needsLegacyClaim: hasLegacySubscriptions,
+        legacySubsCount,
       });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -2497,6 +2480,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false, 
         message: error.message || "Failed to add player" 
+      });
+    }
+  });
+  
+  // Get child players for a user (for legacy migration claim flow)
+  app.get('/api/users/:userId/children', requireAuth, async (req: any, res) => {
+    try {
+      const { id: requesterId, organizationId, role } = req.user;
+      const { userId } = req.params;
+      
+      // Only allow parent role to access their own children - no admin bypass for security
+      if (role !== 'parent' || userId !== requesterId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      
+      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const children = allUsers.filter(u => 
+        u.accountHolderId === requesterId || 
+        u.linkedParentId === requesterId ||
+        u.parentId === requesterId
+      );
+      
+      // Return only minimal fields needed for selection
+      res.json(children.map(c => ({
+        id: c.id,
+        firstName: c.firstName,
+        lastName: c.lastName,
+      })));
+    } catch (error: any) {
+      console.error('Error fetching children:', error);
+      res.status(500).json({ error: 'Failed to fetch children', message: error.message });
+    }
+  });
+  
+  // Simple create child player (for legacy migration claim flow)
+  app.post('/api/users/create-child', requireAuth, async (req: any, res) => {
+    try {
+      const { id, organizationId, role } = req.user;
+      
+      if (role !== "parent" && role !== "admin") {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Only parent and admin accounts can add players" 
+        });
+      }
+      
+      const { firstName, lastName, dateOfBirth, gender } = req.body;
+      
+      if (!firstName || !lastName) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "First name and last name are required" 
+        });
+      }
+      
+      // Create child player without package selection
+      const playerUser = await storage.createUser({
+        organizationId,
+        email: null as any,
+        role: "player",
+        firstName,
+        lastName,
+        dateOfBirth: dateOfBirth || null,
+        gender: gender || null,
+        accountHolderId: id,
+        hasRegistered: false,
+        verified: true,
+        isActive: true,
+        awards: [],
+        totalPractices: 0,
+        totalGames: 0,
+        consecutiveCheckins: 0,
+        videosCompleted: 0,
+        yearsActive: 0,
+      });
+      
+      console.log(`✅ Created child player ${playerUser.id} for parent ${id}`);
+      
+      res.json({
+        success: true,
+        player: playerUser,
+        message: "Player created successfully"
+      });
+    } catch (error: any) {
+      console.error("Create child error:", error);
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to create player" 
       });
     }
   });

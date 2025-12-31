@@ -9393,12 +9393,17 @@ function MigrationsTab({ organization, users }: any) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMigration, setEditingMigration] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
-  const [linkingMigration, setLinkingMigration] = useState<any>(null);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
   });
+
+  const { data: products = [] } = useQuery<any[]>({
+    queryKey: ['/api/products'],
+  });
+
+  const programs = products.filter((p: any) => p.type === 'Subscription' || p.type === 'Program');
+  const storeProducts = products.filter((p: any) => p.type === 'One-Time');
 
   const createMigration = useMutation({
     mutationFn: (data: any) => apiRequest('/api/admin/migrations', { method: 'POST', body: JSON.stringify(data) }),
@@ -9438,42 +9443,37 @@ function MigrationsTab({ organization, users }: any) {
     },
   });
 
-  const linkToPlayer = useMutation({
-    mutationFn: ({ migrationId, playerId }: { migrationId: number; playerId: string }) =>
-      apiRequest(`/api/admin/migrations/${migrationId}/link`, { method: 'POST', body: JSON.stringify({ playerId }) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
-      setLinkingMigration(null);
-      setSelectedPlayerId("");
-      toast({ title: "Subscription linked to player" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    },
-  });
-
   const form = useForm({
     resolver: zodResolver(z.object({
       email: z.string().email("Valid email required"),
       stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
       stripeSubscriptionId: z.string().min(1, "Stripe Subscription ID required"),
-      productName: z.string().min(1, "Product name required"),
+      productType: z.enum(['program', 'store']),
+      programId: z.string().optional(),
     })),
     defaultValues: {
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
-      productName: "",
+      productType: "program" as const,
+      programId: "",
     },
   });
 
-  const filteredMigrations = migrations.filter((m: any) =>
-    m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.productName?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const productType = form.watch('productType');
 
-  const players = users.filter((u: any) => u.role === 'player');
+  const filteredMigrations = migrations.filter((m: any) => {
+    const programName = products.find((p: any) => p.id === m.programId)?.name || '';
+    return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      programName?.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const getProgramName = (programId: string | null) => {
+    if (!programId) return 'Not Assigned';
+    const program = products.find((p: any) => p.id === programId);
+    return program?.name || 'Unknown';
+  };
 
   const handleEdit = (migration: any) => {
     setEditingMigration(migration);
@@ -9481,7 +9481,8 @@ function MigrationsTab({ organization, users }: any) {
       email: migration.email,
       stripeCustomerId: migration.stripeCustomerId,
       stripeSubscriptionId: migration.stripeSubscriptionId,
-      productName: migration.productName,
+      productType: migration.productType || 'program',
+      programId: migration.programId || "",
     });
     setIsAddDialogOpen(true);
   };
@@ -9500,7 +9501,8 @@ function MigrationsTab({ organization, users }: any) {
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
-      productName: "",
+      productType: "program",
+      programId: "",
     });
     setIsAddDialogOpen(true);
   };
@@ -9557,7 +9559,8 @@ function MigrationsTab({ organization, users }: any) {
                   <TableHead>Email</TableHead>
                   <TableHead>Stripe Customer ID</TableHead>
                   <TableHead>Subscription ID</TableHead>
-                  <TableHead>Product</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Program/Product</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -9568,7 +9571,12 @@ function MigrationsTab({ organization, users }: any) {
                     <TableCell className="font-medium">{migration.email}</TableCell>
                     <TableCell className="font-mono text-xs">{migration.stripeCustomerId}</TableCell>
                     <TableCell className="font-mono text-xs">{migration.stripeSubscriptionId}</TableCell>
-                    <TableCell>{migration.productName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {migration.productType || 'program'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{getProgramName(migration.programId)}</TableCell>
                     <TableCell>
                       {migration.isClaimed ? (
                         <Badge className="bg-green-100 text-green-800">
@@ -9584,17 +9592,6 @@ function MigrationsTab({ organization, users }: any) {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {!migration.isClaimed && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setLinkingMigration(migration)}
-                            data-testid={`button-link-migration-${migration.id}`}
-                          >
-                            <UserPlus className="w-4 h-4 mr-1" />
-                            Link
-                          </Button>
-                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -9634,7 +9631,7 @@ function MigrationsTab({ organization, users }: any) {
           <DialogHeader>
             <DialogTitle>{editingMigration ? "Edit Migration Record" : "Add Migration Record"}</DialogTitle>
             <DialogDescription>
-              Enter the legacy parent Stripe data from the club payment system.
+              Enter the legacy parent Stripe data from the club payment system. When the parent signs up with this email, they will be prompted to claim their subscription.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -9680,13 +9677,45 @@ function MigrationsTab({ organization, users }: any) {
               />
               <FormField
                 control={form.control}
-                name="productName"
+                name="productType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product/Subscription Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Monthly Training Program" {...field} data-testid="input-migration-product" />
-                    </FormControl>
+                    <FormLabel>Product Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-migration-product-type">
+                          <SelectValue placeholder="Select type..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="program">Program Subscription</SelectItem>
+                        <SelectItem value="store">Store Product</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="programId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{productType === 'store' ? 'Store Product' : 'Program'}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-migration-program">
+                          <SelectValue placeholder={`Select ${productType === 'store' ? 'product' : 'program'}...`} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(productType === 'store' ? storeProducts : programs).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -9701,48 +9730,6 @@ function MigrationsTab({ organization, users }: any) {
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Link to Player Dialog */}
-      <Dialog open={!!linkingMigration} onOpenChange={() => setLinkingMigration(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Link to Player Profile</DialogTitle>
-            <DialogDescription>
-              Select a player to assign this legacy subscription to.
-              Email: {linkingMigration?.email}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Select Player</Label>
-              <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                <SelectTrigger data-testid="select-link-player">
-                  <SelectValue placeholder="Choose a player..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {players.map((player: any) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.firstName} {player.lastName} ({player.email || 'No email'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setLinkingMigration(null)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => linkToPlayer.mutate({ migrationId: linkingMigration.id, playerId: selectedPlayerId })}
-                disabled={!selectedPlayerId || linkToPlayer.isPending}
-                data-testid="button-confirm-link"
-              >
-                {linkToPlayer.isPending ? "Linking..." : "Link Subscription"}
-              </Button>
-            </DialogFooter>
-          </div>
         </DialogContent>
       </Dialog>
 

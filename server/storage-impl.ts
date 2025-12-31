@@ -5001,6 +5001,8 @@ class DatabaseStorage implements IStorage {
       googleId: dbUser.googleId,
       appleId: dbUser.appleId,
       isActive: Boolean(dbUser.isActive),
+      needsLegacyClaim: Boolean(dbUser.needsLegacyClaim),
+      defaultDashboardView: dbUser.defaultDashboardView,
       createdAt: new Date(dbUser.createdAt),
       updatedAt: new Date(dbUser.updatedAt),
     };

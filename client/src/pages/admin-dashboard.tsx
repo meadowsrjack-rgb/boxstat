@@ -9463,7 +9463,7 @@ function MigrationsTab({ organization, users }: any) {
   const productType = form.watch('productType');
 
   const filteredMigrations = migrations.filter((m: any) => {
-    const programName = products.find((p: any) => p.id === m.programId)?.name || '';
+    const programName = programs.find((p: any) => p.id === m.programId)?.name || '';
     return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       programName?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -9471,7 +9471,7 @@ function MigrationsTab({ organization, users }: any) {
 
   const getProgramName = (programId: string | null) => {
     if (!programId) return 'Not Assigned';
-    const program = products.find((p: any) => p.id === programId);
+    const program = programs.find((p: any) => p.id === programId);
     return program?.name || 'Unknown';
   };
 

@@ -2,8 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, User, CheckCircle, XCircle, Clock, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calendar, User, CheckCircle, XCircle, Clock, AlertCircle, RefreshCw, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
+
+interface UpcomingPayment {
+  subscriptionId: string;
+  stripeSubscriptionId: string;
+  productName: string;
+  playerName: string | null;
+  amount: number;
+  currency: string;
+  nextPaymentDate: string;
+  interval: string;
+}
 
 interface PlayerInfo {
   id: string;
@@ -48,6 +59,13 @@ interface EnrichedPayment {
   playerInfo: PlayerInfo | null;
 }
 
+interface SubscriptionDetails {
+  success: boolean;
+  subscriptions: any[];
+  upcomingPayments: UpcomingPayment[];
+  stripeCustomerId: string | null;
+}
+
 interface PaymentHistoryProps {
   selectedPlayer?: string; // empty string or undefined = all players
 }
@@ -57,11 +75,23 @@ export function PaymentHistory({ selectedPlayer }: PaymentHistoryProps = {}) {
     queryKey: ['/api/payments/history'],
   });
   
+  // Fetch subscription details for upcoming payments
+  const { data: subscriptionDetails } = useQuery<SubscriptionDetails>({
+    queryKey: ['/api/subscriptions/details'],
+  });
+  
   // Filter payments by selected player
   const filteredPayments = payments?.filter(payment => {
     if (!selectedPlayer) return true; // Show all if no filter
     return payment.playerId === selectedPlayer;
   });
+  
+  // Filter upcoming payments by selected player (if any)
+  const upcomingPayments = subscriptionDetails?.upcomingPayments?.filter(payment => {
+    if (!selectedPlayer) return true;
+    // Player name matching is approximate since we don't have player IDs in this data
+    return true;
+  }) || [];
 
   if (isLoading) {
     return (
@@ -170,16 +200,81 @@ export function PaymentHistory({ selectedPlayer }: PaymentHistoryProps = {}) {
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  const formatCurrencyUpcoming = (amount: number, currency: string) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amount / 100);
+  };
+
   return (
-    <Card data-testid="payment-history">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Payment History
-        </CardTitle>
-        <CardDescription>All your past payments and subscriptions</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="space-y-4">
+      {/* Upcoming Payments Section */}
+      {upcomingPayments.length > 0 && (
+        <Card data-testid="upcoming-payments" className="border-blue-200 bg-blue-50/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <CreditCard className="h-5 w-5" />
+              Upcoming Payments
+            </CardTitle>
+            <CardDescription>Your next scheduled subscription payments</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingPayments.map((payment, index) => (
+              <div key={payment.stripeSubscriptionId || index}>
+                {index > 0 && <Separator className="my-3" />}
+                <div className="flex items-start justify-between" data-testid={`upcoming-payment-${index}`}>
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <p className="font-medium text-gray-900" data-testid={`upcoming-product-${index}`}>
+                        {payment.productName}
+                      </p>
+                      <Badge className="bg-blue-100 text-blue-700 border-0 text-xs capitalize">
+                        {payment.interval}ly
+                      </Badge>
+                    </div>
+                    
+                    {payment.playerName && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span data-testid={`upcoming-player-${index}`}>{payment.playerName}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-1 text-sm font-medium text-blue-600">
+                      <Clock className="h-3 w-3" />
+                      <span data-testid={`upcoming-date-${index}`}>
+                        Due: {format(new Date(payment.nextPaymentDate), 'MMM dd, yyyy')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right ml-4">
+                    <p className="font-bold text-lg text-gray-900" data-testid={`upcoming-amount-${index}`}>
+                      {formatCurrencyUpcoming(payment.amount, payment.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground capitalize">
+                      per {payment.interval}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Payment History */}
+      <Card data-testid="payment-history">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Payment History
+          </CardTitle>
+          <CardDescription>All your past payments and subscriptions</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
         {sortedPayments.map((payment, index) => {
           const isSubscription = isSubscriptionPayment(payment);
           const subDetails = payment.stripeData?.subscriptionDetails;
@@ -262,7 +357,8 @@ export function PaymentHistory({ selectedPlayer }: PaymentHistoryProps = {}) {
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

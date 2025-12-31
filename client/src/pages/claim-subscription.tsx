@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,6 +37,7 @@ interface Migration {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
+  stripeSubscriptionIds?: string[];
   items: MigrationItem[];
 }
 
@@ -46,14 +47,25 @@ interface Player {
   lastName: string;
 }
 
+interface FlattenedItem {
+  migrationId: number;
+  subscriptionId: string;
+  itemId: string;
+  itemType: 'program' | 'store';
+  itemName: string;
+  instanceIndex: number;
+  uniqueKey: string;
+}
+
 export default function ClaimSubscriptionPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [newPlayerFirstName, setNewPlayerFirstName] = useState("");
   const [newPlayerLastName, setNewPlayerLastName] = useState("");
-  const [selectedMigration, setSelectedMigration] = useState<Migration | null>(null);
+  const [selectedItem, setSelectedItem] = useState<FlattenedItem | null>(null);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+  const [assignedItems, setAssignedItems] = useState<Record<string, string>>({});
 
   const { data: user } = useQuery<any>({
     queryKey: ['/api/auth/me'],
@@ -68,16 +80,51 @@ export default function ClaimSubscriptionPage() {
     enabled: !!user?.id,
   });
 
+  const flattenedItems = useMemo(() => {
+    const items: FlattenedItem[] = [];
+    migrations.forEach((migration) => {
+      const subscriptionIds = migration.stripeSubscriptionIds || [migration.stripeSubscriptionId];
+      
+      migration.items?.forEach((item, itemIndex) => {
+        for (let i = 0; i < item.quantity; i++) {
+          const subscriptionId = subscriptionIds[items.length % subscriptionIds.length] || subscriptionIds[0];
+          items.push({
+            migrationId: migration.id,
+            subscriptionId,
+            itemId: item.itemId,
+            itemType: item.itemType,
+            itemName: item.itemName || 'Unknown Program',
+            instanceIndex: i + 1,
+            uniqueKey: `${migration.id}-${item.itemId}-${i}`,
+          });
+        }
+      });
+    });
+    return items;
+  }, [migrations]);
+
+  const unassignedItems = flattenedItems.filter(item => !assignedItems[item.uniqueKey]);
+  const assignedItemsList = flattenedItems.filter(item => assignedItems[item.uniqueKey]);
+
   const assignMigration = useMutation({
-    mutationFn: (data: { migrationId: number; playerId: string }) =>
+    mutationFn: (data: { migrationId: number; playerId: string; itemId?: string }) =>
       apiRequest('/api/legacy/assign', { method: 'POST', data }),
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/legacy/my-migrations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
-      setSelectedMigration(null);
+      queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
+      
+      if (selectedItem) {
+        setAssignedItems(prev => ({
+          ...prev,
+          [selectedItem.uniqueKey]: selectedPlayerId
+        }));
+      }
+      
+      setSelectedItem(null);
       setSelectedPlayerId("");
       toast({ 
-        title: "Account Linked!", 
+        title: "Subscription Assigned!", 
         description: response.message || "Your next billing cycle will be updated to the new BoxStat rate.",
       });
     },
@@ -91,7 +138,7 @@ export default function ClaimSubscriptionPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       toast({ title: "You can assign subscriptions later from your dashboard" });
-      setLocation('/parent');
+      setLocation('/dashboard');
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -113,6 +160,20 @@ export default function ClaimSubscriptionPage() {
     },
   });
 
+  const handleAssign = () => {
+    if (!selectedItem || !selectedPlayerId) return;
+    assignMigration.mutate({
+      migrationId: selectedItem.migrationId,
+      playerId: selectedPlayerId,
+      itemId: selectedItem.itemId,
+    });
+  };
+
+  const getPlayerName = (playerId: string) => {
+    const player = childPlayers.find(p => p.id === playerId);
+    return player ? `${player.firstName} ${player.lastName}` : 'Unknown';
+  };
+
   if (loadingMigrations) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
@@ -126,7 +187,7 @@ export default function ClaimSubscriptionPage() {
     );
   }
 
-  if (migrations.length === 0) {
+  if (migrations.length === 0 && Object.keys(assignedItems).length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl">
@@ -138,7 +199,7 @@ export default function ClaimSubscriptionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => setLocation('/parent')} size="lg" data-testid="button-go-dashboard">
+            <Button onClick={() => setLocation('/dashboard')} size="lg" data-testid="button-go-dashboard">
               Go to Dashboard
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -158,8 +219,8 @@ export default function ClaimSubscriptionPage() {
             </div>
             <CardTitle className="text-2xl">Welcome Back!</CardTitle>
             <CardDescription className="text-lg">
-              We found {migrations.length} subscription(s) linked to your email. 
-              Assign them to your players to continue.
+              We found {flattenedItems.length} subscription(s) linked to your email. 
+              Assign each one to a player to continue.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -167,41 +228,82 @@ export default function ClaimSubscriptionPage() {
         <div className="grid gap-4 mb-6">
           <h3 className="font-semibold text-lg flex items-center gap-2">
             <Package className="w-5 h-5" />
-            Your Subscriptions ({migrations.length})
+            Subscriptions to Assign ({unassignedItems.length})
           </h3>
-          {migrations.map((migration) => (
-            <Card key={migration.id} className="border-2 border-dashed border-gray-200" data-testid={`card-migration-${migration.id}`}>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div>
-                    <div className="font-medium text-lg">
-                      {migration.items && migration.items.length > 0 
-                        ? migration.items.map((item: MigrationItem) => 
-                            `${item.itemName || 'Unknown'} (x${item.quantity})`
-                          ).join(', ')
-                        : 'Legacy Subscription'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {migration.items && migration.items.length > 0 && migration.items.map((item: MigrationItem, idx: number) => (
-                        <Badge key={idx} variant="outline" className="capitalize mr-1">
-                          {item.itemType}
-                        </Badge>
-                      ))}
-                      <span className="ml-1">ID: ...{migration.stripeSubscriptionId.slice(-8)}</span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => setSelectedMigration(migration)}
-                    data-testid={`button-assign-${migration.id}`}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    Assign to Player
-                  </Button>
-                </div>
+          
+          {unassignedItems.length === 0 ? (
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="py-6 text-center">
+                <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <p className="text-green-700 font-medium">All subscriptions assigned!</p>
+                <Button 
+                  onClick={() => setLocation('/dashboard')} 
+                  className="mt-4"
+                  data-testid="button-continue-dashboard"
+                >
+                  Continue to Dashboard
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="grid gap-3">
+              {unassignedItems.map((item) => (
+                <Card key={item.uniqueKey} className="border-2 border-dashed border-gray-200" data-testid={`card-item-${item.uniqueKey}`}>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                          <Package className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium">{item.itemName}</div>
+                          <div className="text-sm text-gray-500 flex items-center gap-2">
+                            <Badge variant="outline" className="capitalize text-xs">
+                              {item.itemType}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => setSelectedItem(item)}
+                        size="sm"
+                        data-testid={`button-assign-${item.uniqueKey}`}
+                      >
+                        <User className="w-4 h-4 mr-2" />
+                        Assign to Player
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
+
+        {assignedItemsList.length > 0 && (
+          <div className="grid gap-4 mb-6">
+            <h3 className="font-semibold text-lg flex items-center gap-2 text-green-700">
+              <CheckCircle2 className="w-5 h-5" />
+              Assigned ({assignedItemsList.length})
+            </h3>
+            <div className="grid gap-2">
+              {assignedItemsList.map((item) => (
+                <Card key={item.uniqueKey} className="border-green-200 bg-green-50">
+                  <CardContent className="py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      <span className="font-medium">{item.itemName}</span>
+                    </div>
+                    <Badge variant="secondary">
+                      {getPlayerName(assignedItems[item.uniqueKey])}
+                    </Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 mb-6">
           <div className="flex items-center justify-between">
@@ -250,27 +352,32 @@ export default function ClaimSubscriptionPage() {
           </Button>
         </div>
 
-        <Dialog open={!!selectedMigration} onOpenChange={() => setSelectedMigration(null)}>
+        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Claim Your Subscription</DialogTitle>
+              <DialogTitle>Assign Subscription</DialogTitle>
               <DialogDescription>
-                Link your legacy subscription to a player. Your billing will be updated to the new BoxStat rate on your next billing cycle.
+                Choose which player should receive this subscription.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-blue-800">
-                  Programs: {selectedMigration?.items?.map((item: MigrationItem) => item.itemName).join(', ') || 'Legacy Subscription'}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  No immediate charge - new pricing applies at your next billing date
-                </p>
+            
+            {selectedItem && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <Package className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <div className="font-medium text-blue-900">{selectedItem.itemName}</div>
+                    <div className="text-sm text-blue-700">No immediate charge - billing updates on next cycle</div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label>Link to Player</Label>
+            )}
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select Player</Label>
                 <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                  <SelectTrigger data-testid="select-assign-player">
+                  <SelectTrigger data-testid="select-player">
                     <SelectValue placeholder="Choose a player..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -289,18 +396,15 @@ export default function ClaimSubscriptionPage() {
               )}
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedMigration(null)}>
+              <Button variant="outline" onClick={() => setSelectedItem(null)}>
                 Cancel
               </Button>
               <Button
-                onClick={() => selectedMigration && assignMigration.mutate({ 
-                  migrationId: selectedMigration.id, 
-                  playerId: selectedPlayerId 
-                })}
+                onClick={handleAssign}
                 disabled={!selectedPlayerId || assignMigration.isPending}
                 data-testid="button-confirm-assign"
               >
-                {assignMigration.isPending ? "Activating..." : "Confirm and Activate"}
+                {assignMigration.isPending ? "Assigning..." : "Assign Subscription"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -315,7 +419,7 @@ export default function ClaimSubscriptionPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
+              <div className="space-y-2">
                 <Label>First Name</Label>
                 <Input
                   value={newPlayerFirstName}
@@ -324,7 +428,7 @@ export default function ClaimSubscriptionPage() {
                   data-testid="input-player-first-name"
                 />
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label>Last Name</Label>
                 <Input
                   value={newPlayerLastName}

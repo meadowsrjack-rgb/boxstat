@@ -8355,8 +8355,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get unclaimed migrations for authenticated user (by email)
   app.get('/api/legacy/my-migrations', requireAuth, async (req: any, res) => {
     try {
-      const { email } = req.user;
-      console.log(`📦 Fetching migrations for email: "${email}"`);
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      const email = user?.email;
+      
+      console.log(`📦 Fetching migrations for email: "${email}" (userId: ${userId})`);
       if (!email) {
         console.log(`📦 No email found, returning empty array`);
         return res.json([]);
@@ -8381,7 +8384,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assign migration subscription to a player (user self-service)
   app.post('/api/legacy/assign', requireAuth, async (req: any, res) => {
     try {
-      const { id: userId, email } = req.user;
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      const email = user?.email;
       const { migrationId, playerId } = req.body;
       
       if (!migrationId || !playerId) {

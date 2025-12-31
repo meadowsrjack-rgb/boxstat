@@ -145,6 +145,19 @@ export default function ClaimSubscriptionPage() {
     },
   });
 
+  const finalizeClaim = useMutation({
+    mutationFn: () => apiRequest('/api/legacy/finalize', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/legacy/my-migrations'] });
+      toast({ title: "All subscriptions assigned!", description: "Welcome to BoxStat!" });
+      setLocation('/dashboard');
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const createPlayer = useMutation({
     mutationFn: (data: { firstName: string; lastName: string }) =>
       apiRequest('/api/users/create-child', { method: 'POST', data }),
@@ -231,22 +244,25 @@ export default function ClaimSubscriptionPage() {
             Subscriptions to Assign ({unassignedItems.length})
           </h3>
           
-          {unassignedItems.length === 0 ? (
+          {unassignedItems.length === 0 && assignedItemsList.length > 0 ? (
             <Card className="border-green-200 bg-green-50">
               <CardContent className="py-6 text-center">
-                <CheckCircle2 className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="text-green-700 font-medium">All subscriptions assigned!</p>
+                <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                <p className="text-green-700 font-medium text-lg mb-1">All Subscriptions Assigned!</p>
+                <p className="text-green-600 text-sm mb-4">Your players are now enrolled in their programs.</p>
                 <Button 
-                  onClick={() => setLocation('/dashboard')} 
-                  className="mt-4"
-                  data-testid="button-continue-dashboard"
+                  onClick={() => finalizeClaim.mutate()} 
+                  className="bg-green-600 hover:bg-green-700"
+                  size="lg"
+                  disabled={finalizeClaim.isPending}
+                  data-testid="button-continue-account"
                 >
-                  Continue to Dashboard
+                  {finalizeClaim.isPending ? "Finalizing..." : "Continue to Account"}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </CardContent>
             </Card>
-          ) : (
+          ) : unassignedItems.length > 0 ? (
             <div className="grid gap-3">
               {unassignedItems.map((item) => (
                 <Card key={item.uniqueKey} className="border-2 border-dashed border-gray-200" data-testid={`card-item-${item.uniqueKey}`}>
@@ -278,7 +294,7 @@ export default function ClaimSubscriptionPage() {
                 </Card>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
         {assignedItemsList.length > 0 && (

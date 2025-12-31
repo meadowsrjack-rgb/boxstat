@@ -8584,15 +8584,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Mark migration as claimed
-      await storage.markMigrationLookupClaimed(migrationId);
-      
-      // Check if user has any remaining unclaimed migrations
-      const remaining = await storage.getMigrationLookupsByEmail(email);
-      if (remaining.length === 0) {
-        // Clear the legacy claim flag
-        await storage.updateUser(userId, { needsLegacyClaim: false });
-      }
+      // DON'T mark migration as claimed yet - let frontend track individual items
+      // Migration will be marked claimed when user clicks "Continue to Dashboard"
       
       // Check if any Stripe upgrades failed
       const failedUpgrades = stripeUpgradeResults.filter(r => !r.success);
@@ -8602,8 +8595,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         success: true, 
-        message: 'Account linked! Your next billing cycle will be updated to the new BoxStat rate.',
+        message: 'Subscription assigned! Continue assigning remaining subscriptions.',
         stripeUpgrades: stripeUpgradeResults,
+        itemAssigned: itemId || 'all',
       });
     } catch (error: any) {
       console.error('Error assigning legacy subscription:', error);
@@ -8623,6 +8617,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error skipping legacy claim:', error);
       res.status(500).json({ error: 'Failed to skip claim', message: error.message });
+    }
+  });
+  
+  // Finalize legacy claims - mark all migrations as claimed
+  app.post('/api/legacy/finalize', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId, email } = req.user;
+      
+      // Get all unclaimed migrations for this user
+      const migrations = await storage.getMigrationLookupsByEmail(email);
+      
+      // Mark all as claimed
+      for (const migration of migrations) {
+        await storage.markMigrationLookupClaimed(migration.id);
+      }
+      
+      // Clear the legacy claim flag
+      await storage.updateUser(userId, { needsLegacyClaim: false });
+      
+      res.json({ 
+        success: true, 
+        message: 'All subscriptions finalized!',
+        claimedCount: migrations.length,
+      });
+    } catch (error: any) {
+      console.error('Error finalizing legacy claims:', error);
+      res.status(500).json({ error: 'Failed to finalize claims', message: error.message });
     }
   });
   

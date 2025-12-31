@@ -8559,16 +8559,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Enroll player in programs from migration items
-      for (const item of (migration.items || [])) {
-        if (item.itemId && item.itemType === 'program') {
+      // Enroll player in the SPECIFIC item being assigned (not all items)
+      if (itemId) {
+        // Find the specific item being assigned
+        const itemToAssign = (migration.items || []).find((item: any) => item.itemId === itemId);
+        if (itemToAssign && itemToAssign.itemType === 'program') {
           try {
-            // Get program to fetch full details
-            const program = await storage.getProgram(item.itemId);
+            const program = await storage.getProgram(itemToAssign.itemId);
             
             await storage.createEnrollment({
               organizationId: player.organizationId,
-              programId: item.itemId,
+              programId: itemToAssign.itemId,
               accountHolderId: userId,
               profileId: playerId,
               status: 'active',
@@ -8576,9 +8577,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               remainingCredits: program?.sessionCount ?? undefined,
               totalCredits: program?.sessionCount ?? undefined,
             });
-            console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName})`);
+            console.log(`✅ Enrolled player ${playerId} in program ${itemToAssign.itemId} (${itemToAssign.itemName})`);
           } catch (enrollError: any) {
-            console.warn(`⚠️ Could not enroll in program ${item.itemId}:`, enrollError.message);
+            console.warn(`⚠️ Could not enroll in program ${itemToAssign.itemId}:`, enrollError.message);
+          }
+        }
+      } else {
+        // Legacy: if no itemId specified, enroll in all programs (backwards compatibility)
+        for (const item of (migration.items || [])) {
+          if (item.itemId && item.itemType === 'program') {
+            try {
+              const program = await storage.getProgram(item.itemId);
+              
+              await storage.createEnrollment({
+                organizationId: player.organizationId,
+                programId: item.itemId,
+                accountHolderId: userId,
+                profileId: playerId,
+                status: 'active',
+                source: 'migrated',
+                remainingCredits: program?.sessionCount ?? undefined,
+                totalCredits: program?.sessionCount ?? undefined,
+              });
+              console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName})`);
+            } catch (enrollError: any) {
+              console.warn(`⚠️ Could not enroll in program ${item.itemId}:`, enrollError.message);
+            }
           }
         }
       }

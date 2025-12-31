@@ -9445,11 +9445,10 @@ function MigrationsTab({ organization, users }: any) {
     },
   });
 
-  // Items for this migration (itemId, itemType, quantity)
-  const [migrationItems, setMigrationItems] = useState<Array<{itemId: string; itemType: 'program' | 'store'; itemName: string; quantity: number}>>([]);
+  // Items for this migration (itemId, itemType) - each item is added individually
+  const [migrationItems, setMigrationItems] = useState<Array<{itemId: string; itemType: 'program' | 'store'; itemName: string}>>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
-  const [itemQuantity, setItemQuantity] = useState<number>(1);
 
   const form = useForm({
     resolver: zodResolver(z.object({
@@ -9473,7 +9472,7 @@ function MigrationsTab({ organization, users }: any) {
 
   const getItemsSummary = (items: any[] | null) => {
     if (!items || items.length === 0) return 'No items';
-    return items.map(item => `${item.itemName || 'Unknown'} (x${item.quantity})`).join(', ');
+    return items.map(item => item.itemName || 'Unknown').join(', ');
   };
 
   const addItem = () => {
@@ -9488,10 +9487,8 @@ function MigrationsTab({ organization, users }: any) {
       itemId: selectedProductId,
       itemType: selectedItemType,
       itemName: product.name,
-      quantity: itemQuantity,
     }]);
     setSelectedProductId("");
-    setItemQuantity(1);
   };
 
   const removeItem = (index: number) => {
@@ -9548,7 +9545,6 @@ function MigrationsTab({ organization, users }: any) {
     setMigrationItems([]);
     setSelectedProductId("");
     setSelectedItemType('program');
-    setItemQuantity(1);
     form.reset({
       email: "",
       stripeCustomerId: "",
@@ -9572,7 +9568,7 @@ function MigrationsTab({ organization, users }: any) {
     const csvHeaders = "Email,Customer Name,Stripe Customer ID,Subscription IDs,Subscriptions Count,Items,Status";
     const csvRows = migrations.map((migration: any) => {
       const itemsList = migration.items?.map((item: any) => 
-        `${item.itemName || 'Unknown'} (x${item.quantity})`
+        item.itemName || 'Unknown'
       ).join('; ') || '';
       const subscriptionIds = migration.stripeSubscriptionIds?.join('; ') || migration.stripeSubscriptionId || '';
       const subscriptionsCount = migration.subscriptions?.length || (migration.stripeSubscriptionId ? 1 : 0);
@@ -9942,7 +9938,6 @@ function MigrationsTab({ organization, users }: any) {
                             {item.itemType}
                           </Badge>
                           <span className="text-sm">{item.itemName}</span>
-                          <span className="text-xs text-gray-500">x{item.quantity}</span>
                         </div>
                         <Button 
                           type="button" 
@@ -9960,30 +9955,18 @@ function MigrationsTab({ organization, users }: any) {
                 
                 {/* Add New Item */}
                 <div className="border rounded-md p-3 space-y-3">
-                  <p className="text-sm font-medium text-gray-700">Add Item</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label className="text-xs">Type</Label>
-                      <Select value={selectedItemType} onValueChange={(v: 'program' | 'store') => setSelectedItemType(v)}>
-                        <SelectTrigger data-testid="select-item-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="program">Program</SelectItem>
-                          <SelectItem value="store">Store Product</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs">Quantity</Label>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        value={itemQuantity} 
-                        onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
-                        data-testid="input-item-quantity"
-                      />
-                    </div>
+                  <p className="text-sm font-medium text-gray-700">Add Item (add each item individually)</p>
+                  <div>
+                    <Label className="text-xs">Type</Label>
+                    <Select value={selectedItemType} onValueChange={(v: 'program' | 'store') => setSelectedItemType(v)}>
+                      <SelectTrigger data-testid="select-item-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="program">Program</SelectItem>
+                        <SelectItem value="store">Store Product</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label className="text-xs">{selectedItemType === 'program' ? 'Program' : 'Store Product'}</Label>

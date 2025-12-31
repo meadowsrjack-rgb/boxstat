@@ -1924,7 +1924,8 @@ class MemStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
-      productName: data.productName,
+      programId: data.programId ?? null,
+      productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
       createdAt: now.toISOString(),
     };
@@ -1941,7 +1942,8 @@ class MemStorage implements IStorage {
       ...(updates.email && { email: updates.email }),
       ...(updates.stripeCustomerId && { stripeCustomerId: updates.stripeCustomerId }),
       ...(updates.stripeSubscriptionId && { stripeSubscriptionId: updates.stripeSubscriptionId }),
-      ...(updates.productName && { productName: updates.productName }),
+      ...(updates.programId !== undefined && { programId: updates.programId }),
+      ...(updates.productType && { productType: updates.productType }),
       ...(updates.isClaimed !== undefined && { isClaimed: updates.isClaimed }),
     };
     this.migrationLookups.set(id, updated);
@@ -4545,7 +4547,8 @@ class DatabaseStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
-      productName: data.productName,
+      programId: data.programId ?? null,
+      productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
     }).returning();
     return results[0];
@@ -4556,7 +4559,8 @@ class DatabaseStorage implements IStorage {
     if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.stripeCustomerId !== undefined) dbUpdates.stripeCustomerId = updates.stripeCustomerId;
     if (updates.stripeSubscriptionId !== undefined) dbUpdates.stripeSubscriptionId = updates.stripeSubscriptionId;
-    if (updates.productName !== undefined) dbUpdates.productName = updates.productName;
+    if (updates.programId !== undefined) dbUpdates.programId = updates.programId;
+    if (updates.productType !== undefined) dbUpdates.productType = updates.productType;
     if (updates.isClaimed !== undefined) dbUpdates.isClaimed = updates.isClaimed;
     
     if (Object.keys(dbUpdates).length === 0) return this.getMigrationLookupById(id);

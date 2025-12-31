@@ -246,6 +246,7 @@ export const users = pgTable("users", {
   yearsActive: integer("years_active").default(0),
   lastLogin: timestamp("last_login", { mode: 'string' }),
   defaultDashboardView: varchar("default_dashboard_view"),
+  needsLegacyClaim: boolean("needs_legacy_claim").default(false), // Legacy migration flag
 });
 // NOTE: Email uniqueness is enforced via a partial unique index in the database
 // Only parent/account holder accounts (account_holder_id IS NULL) require unique emails
@@ -1906,7 +1907,8 @@ export const migrationLookup = pgTable("migration_lookup", {
   email: varchar().notNull(),
   stripeCustomerId: varchar("stripe_customer_id").notNull(),
   stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
-  productName: varchar("product_name").notNull(),
+  programId: varchar("program_id"), // References products table for program subscriptions
+  productType: varchar("product_type").default('program').notNull(), // 'program' or 'store'
   isClaimed: boolean("is_claimed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
@@ -1916,7 +1918,8 @@ export interface MigrationLookup {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
-  productName: string;
+  programId: string | null;
+  productType: string;
   isClaimed: boolean;
   createdAt: Date;
 }
@@ -1925,7 +1928,8 @@ export const insertMigrationLookupSchema = z.object({
   email: z.string().email(),
   stripeCustomerId: z.string(),
   stripeSubscriptionId: z.string(),
-  productName: z.string(),
+  programId: z.string().optional(),
+  productType: z.enum(['program', 'store']).default('program'),
   isClaimed: z.boolean().default(false),
 });
 

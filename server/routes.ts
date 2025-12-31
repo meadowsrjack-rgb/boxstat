@@ -8194,9 +8194,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Only admins can create migrations' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, productName } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, programId, productType } = req.body;
       
-      if (!email || !stripeCustomerId || !stripeSubscriptionId || !productName) {
+      if (!email || !stripeCustomerId || !stripeSubscriptionId) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
@@ -8204,7 +8204,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        productName,
+        programId: programId || null,
+        productType: productType || 'program',
         isClaimed: false,
       });
       
@@ -8228,13 +8229,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid migration ID' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, productName } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, programId, productType } = req.body;
       
       const migration = await storage.updateMigrationLookup(id, {
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        productName,
+        programId,
+        productType,
       });
       
       if (!migration) {
@@ -8269,68 +8271,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Link migration to player (creates subscription for player)
-  app.post('/api/admin/migrations/:id/link', requireAuth, async (req: any, res) => {
+  // =============================================
+  // LEGACY CLAIM ROUTES (For migrating users)
+  // =============================================
+  
+  // Get unclaimed migrations for authenticated user (by email)
+  app.get('/api/legacy/my-migrations', requireAuth, async (req: any, res) => {
     try {
-      const { role } = req.user;
-      if (role !== 'admin') {
-        return res.status(403).json({ message: 'Only admins can link migrations' });
+      const { email } = req.user;
+      if (!email) {
+        return res.json([]);
       }
       
-      const id = parseInt(req.params.id, 10);
-      if (isNaN(id)) {
-        return res.status(400).json({ error: 'Invalid migration ID' });
-      }
+      const migrations = await storage.getMigrationLookupsByEmail(email);
       
-      const { playerId } = req.body;
-      if (!playerId) {
-        return res.status(400).json({ error: 'Player ID is required' });
+      // Enrich with program details
+      const enrichedMigrations = await Promise.all(migrations.map(async (m) => {
+        let program = null;
+        if (m.programId) {
+          program = await storage.getProduct(m.programId);
+        }
+        return {
+          ...m,
+          program: program ? { id: program.id, name: program.name } : null,
+        };
+      }));
+      
+      res.json(enrichedMigrations);
+    } catch (error: any) {
+      console.error('Error fetching user migrations:', error);
+      res.status(500).json({ error: 'Failed to fetch migrations', message: error.message });
+    }
+  });
+  
+  // Assign migration subscription to a player (user self-service)
+  app.post('/api/legacy/assign', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId, email } = req.user;
+      const { migrationId, playerId } = req.body;
+      
+      if (!migrationId || !playerId) {
+        return res.status(400).json({ error: 'Migration ID and Player ID are required' });
       }
       
       // Get the migration record
-      const migration = await storage.getMigrationLookupById(id);
+      const migration = await storage.getMigrationLookupById(migrationId);
       if (!migration) {
         return res.status(404).json({ error: 'Migration not found' });
+      }
+      
+      // Verify the migration belongs to this user's email
+      if (migration.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'This migration does not belong to you' });
       }
       
       if (migration.isClaimed) {
         return res.status(400).json({ error: 'Migration already claimed' });
       }
       
-      // Get the player to find their parent
+      // Get the player to verify it belongs to this parent
       const player = await storage.getUser(playerId);
       if (!player) {
         return res.status(404).json({ error: 'Player not found' });
       }
       
-      // Determine the owner (parent) - use linkedParentId if available, otherwise use the player's own ID
-      const ownerUserId = player.linkedParentId || playerId;
+      // Verify player belongs to this parent
+      if (player.accountHolderId !== userId && player.linkedParentId !== userId && player.id !== userId) {
+        return res.status(403).json({ error: 'This player does not belong to your account' });
+      }
+      
+      // Get program name for the subscription
+      let productName = 'Legacy Subscription';
+      if (migration.programId) {
+        const program = await storage.getProduct(migration.programId);
+        if (program) {
+          productName = program.name;
+        }
+      }
       
       // Create a subscription for this player
       await storage.createSubscription({
-        ownerUserId,
+        ownerUserId: userId,
         assignedPlayerId: playerId,
         stripeCustomerId: migration.stripeCustomerId,
         stripeSubscriptionId: migration.stripeSubscriptionId,
-        productName: migration.productName,
+        productName,
         status: 'active',
         isMigrated: true,
       });
       
-      // Update user's stripe customer ID if not already set
-      if (!player.stripeCustomerId) {
-        await storage.updateUser(playerId, {
+      // Update parent's stripe customer ID if not already set
+      const parent = await storage.getUser(userId);
+      if (parent && !parent.stripeCustomerId) {
+        await storage.updateUser(userId, {
           stripeCustomerId: migration.stripeCustomerId,
         });
       }
       
       // Mark migration as claimed
-      await storage.markMigrationLookupClaimed(id);
+      await storage.markMigrationLookupClaimed(migrationId);
       
-      res.json({ success: true, message: 'Subscription linked to player' });
+      // Check if user has any remaining unclaimed migrations
+      const remaining = await storage.getMigrationLookupsByEmail(email);
+      if (remaining.length === 0) {
+        // Clear the legacy claim flag
+        await storage.updateUser(userId, { needsLegacyClaim: false });
+      }
+      
+      res.json({ success: true, message: 'Subscription assigned to player' });
     } catch (error: any) {
-      console.error('Error linking migration:', error);
-      res.status(500).json({ error: 'Failed to link migration', message: error.message });
+      console.error('Error assigning legacy subscription:', error);
+      res.status(500).json({ error: 'Failed to assign subscription', message: error.message });
+    }
+  });
+  
+  // Skip legacy claim (user doesn't want to claim now)
+  app.post('/api/legacy/skip', requireAuth, async (req: any, res) => {
+    try {
+      const { id: userId } = req.user;
+      
+      // Clear the legacy claim flag
+      await storage.updateUser(userId, { needsLegacyClaim: false });
+      
+      res.json({ success: true, message: 'Legacy claim skipped' });
+    } catch (error: any) {
+      console.error('Error skipping legacy claim:', error);
+      res.status(500).json({ error: 'Failed to skip claim', message: error.message });
     }
   });
   

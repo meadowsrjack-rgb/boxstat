@@ -151,7 +151,7 @@ export default function ClaimSubscriptionPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       queryClient.invalidateQueries({ queryKey: ['/api/legacy/my-migrations'] });
       toast({ title: "All subscriptions assigned!", description: "Welcome to BoxStat!" });
-      setLocation('/dashboard');
+      setLocation('/profile-gateway');
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -200,26 +200,10 @@ export default function ClaimSubscriptionPage() {
     );
   }
 
+  // If no migrations to claim, redirect straight to profile gateway
   if (migrations.length === 0 && Object.keys(assignedItems).length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl">
-          <CardHeader className="text-center">
-            <CheckCircle2 className="w-16 h-16 mx-auto text-green-600 mb-4" />
-            <CardTitle className="text-2xl">All Set!</CardTitle>
-            <CardDescription>
-              All your subscriptions have been assigned. Continue to your dashboard.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => setLocation('/dashboard')} size="lg" data-testid="button-go-dashboard">
-              Go to Dashboard
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    setLocation('/profile-gateway');
+    return null;
   }
 
   return (

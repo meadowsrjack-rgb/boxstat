@@ -9550,17 +9550,21 @@ function MigrationsTab({ organization, users }: any) {
     );
   }
 
-  // Download migrations as CSV
+  // Download migrations as CSV (Stripe format)
   const downloadMigrationsData = () => {
-    const csvHeaders = "Email,Stripe Customer ID,Stripe Subscription ID,Items,Status";
+    const csvHeaders = "Email,Customer Name,Stripe Customer ID,Subscription IDs,Subscriptions Count,Items,Status";
     const csvRows = migrations.map((migration: any) => {
       const itemsList = migration.items?.map((item: any) => 
         `${item.itemName || 'Unknown'} (x${item.quantity})`
       ).join('; ') || '';
+      const subscriptionIds = migration.stripeSubscriptionIds?.join('; ') || migration.stripeSubscriptionId || '';
+      const subscriptionsCount = migration.subscriptions?.length || (migration.stripeSubscriptionId ? 1 : 0);
       return [
         migration.email || "",
+        migration.customerName || "",
         migration.stripeCustomerId || "",
-        migration.stripeSubscriptionId || "",
+        subscriptionIds,
+        subscriptionsCount.toString(),
         itemsList,
         migration.isClaimed ? "Claimed" : "Pending"
       ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
@@ -9579,35 +9583,102 @@ function MigrationsTab({ organization, users }: any) {
     if (!csvFile) return;
     const text = await csvFile.text();
     const lines = text.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+    
+    // Map Stripe export column names to our field names
+    const headerMap: Record<string, string> = {
+      'id': 'subscriptionId',
+      'customer id': 'customerId', 
+      'customer email': 'email',
+      'customer name': 'customerName',
+      'customer description': 'customerDescription',
+      'plan': 'plan',
+      'quantity': 'quantity',
+      'currency': 'currency',
+      'interval': 'interval',
+      'amount': 'amount',
+      'status': 'status',
+      'created (utc)': 'createdUtc',
+      'start date (utc)': 'startDateUtc',
+      'current period start (utc)': 'currentPeriodStartUtc',
+      'current period end (utc)': 'currentPeriodEndUtc',
+    };
+    
+    // Parse rows and group by email
+    const groupedByEmail: Record<string, {
+      email: string;
+      customerId: string;
+      customerName: string;
+      customerDescription: string;
+      subscriptions: any[];
+    }> = {};
     
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].match(/("([^"]|"")*"|[^,]*)/g)?.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
-      if (values.length >= 3) {
-        const email = values[0];
-        const stripeCustomerId = values[1];
-        const stripeSubscriptionId = values[2];
-        if (email && stripeCustomerId && stripeSubscriptionId) {
-          try {
-            await apiRequest('/api/admin/migrations', { 
-              method: 'POST', 
-              data: { 
-                email, 
-                stripeCustomerId, 
-                stripeSubscriptionId, 
-                items: [] // Empty items for bulk upload
-              } 
-            });
-          } catch (e) {
-            console.error('Failed to import migration:', email);
-          }
-        }
+      const row: Record<string, string> = {};
+      
+      headers.forEach((h, idx) => {
+        const fieldName = headerMap[h] || h.replace(/[^a-z0-9]/gi, '');
+        row[fieldName] = values[idx] || '';
+      });
+      
+      const email = row.email?.toLowerCase();
+      if (!email) continue;
+      
+      if (!groupedByEmail[email]) {
+        groupedByEmail[email] = {
+          email,
+          customerId: row.customerId || '',
+          customerName: row.customerName || '',
+          customerDescription: row.customerDescription || '',
+          subscriptions: []
+        };
+      }
+      
+      // Add subscription data
+      if (row.subscriptionId) {
+        groupedByEmail[email].subscriptions.push({
+          subscriptionId: row.subscriptionId,
+          plan: row.plan || '',
+          quantity: parseInt(row.quantity) || 1,
+          currency: row.currency || 'usd',
+          interval: row.interval || '',
+          amount: row.amount || '',
+          status: row.status || 'active',
+          createdUtc: row.createdUtc || '',
+          startDateUtc: row.startDateUtc || '',
+          currentPeriodStartUtc: row.currentPeriodStartUtc || '',
+          currentPeriodEndUtc: row.currentPeriodEndUtc || '',
+        });
       }
     }
+    
+    // Create migration entries
+    let successCount = 0;
+    for (const emailData of Object.values(groupedByEmail)) {
+      try {
+        await apiRequest('/api/admin/migrations', { 
+          method: 'POST', 
+          data: { 
+            email: emailData.email, 
+            stripeCustomerId: emailData.customerId,
+            customerName: emailData.customerName,
+            customerDescription: emailData.customerDescription,
+            stripeSubscriptionIds: emailData.subscriptions.map(s => s.subscriptionId),
+            subscriptions: emailData.subscriptions,
+            items: []
+          } 
+        });
+        successCount++;
+      } catch (e) {
+        console.error('Failed to import migration:', emailData.email);
+      }
+    }
+    
     queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
     setIsUploadDialogOpen(false);
     setCsvFile(null);
-    toast({ title: "Import complete", description: `Processed ${lines.length - 1} rows` });
+    toast({ title: "Import complete", description: `Created ${successCount} migration entries from ${lines.length - 1} subscription rows` });
   };
 
   return (
@@ -9630,11 +9701,11 @@ function MigrationsTab({ organization, users }: any) {
                   <Upload className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Bulk Upload Migrations</DialogTitle>
                   <DialogDescription>
-                    Upload a CSV file with columns: Email, Stripe Customer ID, Stripe Subscription ID
+                    Upload a Stripe subscription export CSV. Rows with the same email will be grouped together with multiple subscription IDs.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -9645,12 +9716,12 @@ function MigrationsTab({ organization, users }: any) {
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        const template = "Email,Stripe Customer ID,Stripe Subscription ID\nexample@email.com,cus_xxx,sub_xxx";
+                        const template = "id,Customer ID,Customer Description,Customer Email,Plan,Quantity,Currency,Interval,Amount,Status,Created (UTC),Start Date (UTC),Current Period Start (UTC),Current Period End (UTC),Customer Name\nsub_xxx,cus_xxx,,example@email.com,price_xxx,1,usd,month,2500,active,2025-01-01 00:00,2025-01-01 00:00,2025-01-01 00:00,2025-02-01 00:00,John Doe";
                         const blob = new Blob([template], { type: 'text/csv' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'migrations_template.csv';
+                        a.download = 'stripe_subscriptions_template.csv';
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
@@ -9704,19 +9775,33 @@ function MigrationsTab({ organization, users }: any) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Stripe Customer ID</TableHead>
-                  <TableHead>Subscription ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Subscriptions</TableHead>
                   <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredMigrations.map((migration: any) => (
+                {filteredMigrations.map((migration: any) => {
+                  const subscriptionCount = migration.subscriptions?.length || (migration.stripeSubscriptionId ? 1 : 0);
+                  const subscriptionIds = migration.stripeSubscriptionIds?.join(', ') || migration.stripeSubscriptionId || 'N/A';
+                  return (
                   <TableRow key={migration.id} data-testid={`row-migration-${migration.id}`}>
-                    <TableCell className="font-medium">{migration.email}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{migration.email}</div>
+                      {migration.customerName && (
+                        <div className="text-xs text-gray-500">{migration.customerName}</div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{migration.stripeCustomerId}</TableCell>
-                    <TableCell className="font-mono text-xs">{migration.stripeSubscriptionId}</TableCell>
+                    <TableCell>
+                      <div className="font-mono text-xs truncate max-w-[150px]" title={subscriptionIds}>
+                        {subscriptionCount > 0 ? (
+                          <Badge variant="outline">{subscriptionCount} sub{subscriptionCount !== 1 ? 's' : ''}</Badge>
+                        ) : 'None'}
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-xs truncate" title={getItemsSummary(migration.items)}>
                       {getItemsSummary(migration.items)}
                     </TableCell>
@@ -9755,7 +9840,8 @@ function MigrationsTab({ organization, users }: any) {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

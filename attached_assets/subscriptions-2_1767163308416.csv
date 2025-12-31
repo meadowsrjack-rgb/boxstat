@@ -1,0 +1,2 @@
+id,Customer ID,Customer Description,Customer Email,Plan,Quantity,Currency,Interval,Amount,Status,Created (UTC),Start Date (UTC),Current Period Start (UTC),Current Period End (UTC),Customer Name,companyName (metadata),contactId (metadata),altId (metadata),orderId (metadata),altType (metadata)
+sub_1SkCUeDffY6JnI6OYWREdpFX,cus_ThKDfRlgNnnI66,,xiaoxue5658@gmail.com,price_1SS5EUDffY6JnI6OGIjf1WTh,1,usd,day,277.00,active,2025-12-30 23:38,2025-12-30 23:38,2025-12-30 23:38,2026-01-27 23:38,Yang Liu,,Dx9OBKW5VuisUb15L66t,QCG9x9KJzYf8o2SK3jCx,6954626f05d03f156e9dcc03,location

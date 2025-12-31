@@ -1912,11 +1912,33 @@ export const migrationItemSchema = z.object({
 
 export type MigrationItem = z.infer<typeof migrationItemSchema>;
 
+// Stripe subscription data structure - matches Stripe's subscription export CSV format
+export const stripeSubscriptionDataSchema = z.object({
+  subscriptionId: z.string(), // Stripe subscription ID (sub_...)
+  plan: z.string().optional(), // Price ID (price_...)
+  quantity: z.number().default(1),
+  currency: z.string().default('usd'),
+  interval: z.string().optional(), // day, week, month, year
+  amount: z.string().optional(), // Amount in cents as string
+  status: z.string().default('active'),
+  createdUtc: z.string().optional(),
+  startDateUtc: z.string().optional(),
+  currentPeriodStartUtc: z.string().optional(),
+  currentPeriodEndUtc: z.string().optional(),
+  metadata: z.record(z.string()).optional(), // Store all metadata fields
+});
+
+export type StripeSubscriptionData = z.infer<typeof stripeSubscriptionDataSchema>;
+
 export const migrationLookup = pgTable("migration_lookup", {
   id: serial().primaryKey().notNull(),
   email: varchar().notNull(),
+  customerName: varchar("customer_name"), // Customer Name from Stripe
   stripeCustomerId: varchar("stripe_customer_id").notNull(),
-  stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
+  customerDescription: varchar("customer_description"), // Customer Description from Stripe
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // Legacy single subscription ID (kept for backward compatibility)
+  stripeSubscriptionIds: text("stripe_subscription_ids").array(), // Array of subscription IDs
+  subscriptions: jsonb("subscriptions").$type<StripeSubscriptionData[]>().default([]), // Full subscription data
   items: jsonb("items").$type<MigrationItem[]>().default([]), // Array of items with type and quantity
   isClaimed: boolean("is_claimed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -1925,8 +1947,12 @@ export const migrationLookup = pgTable("migration_lookup", {
 export interface MigrationLookup {
   id: number;
   email: string;
+  customerName: string | null;
   stripeCustomerId: string;
-  stripeSubscriptionId: string;
+  customerDescription: string | null;
+  stripeSubscriptionId: string | null; // Legacy field
+  stripeSubscriptionIds: string[] | null;
+  subscriptions: StripeSubscriptionData[];
   items: MigrationItem[];
   isClaimed: boolean;
   createdAt: Date;
@@ -1934,8 +1960,12 @@ export interface MigrationLookup {
 
 export const insertMigrationLookupSchema = z.object({
   email: z.string().email(),
+  customerName: z.string().optional(),
   stripeCustomerId: z.string(),
-  stripeSubscriptionId: z.string(),
+  customerDescription: z.string().optional(),
+  stripeSubscriptionId: z.string().optional(), // Legacy field
+  stripeSubscriptionIds: z.array(z.string()).optional(),
+  subscriptions: z.array(stripeSubscriptionDataSchema).default([]),
   items: z.array(migrationItemSchema).default([]),
   isClaimed: z.boolean().default(false),
 });

@@ -1922,8 +1922,12 @@ class MemStorage implements IStorage {
     const lookup: SelectMigrationLookup = {
       id: this.nextMigrationLookupId++,
       email: data.email,
+      customerName: data.customerName ?? null,
       stripeCustomerId: data.stripeCustomerId,
-      stripeSubscriptionId: data.stripeSubscriptionId,
+      customerDescription: data.customerDescription ?? null,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      stripeSubscriptionIds: data.stripeSubscriptionIds ?? null,
+      subscriptions: data.subscriptions ?? [],
       items: data.items ?? [],
       isClaimed: data.isClaimed ?? false,
       createdAt: now.toISOString(),
@@ -1939,8 +1943,12 @@ class MemStorage implements IStorage {
     const updated = {
       ...lookup,
       ...(updates.email && { email: updates.email }),
+      ...(updates.customerName !== undefined && { customerName: updates.customerName }),
       ...(updates.stripeCustomerId && { stripeCustomerId: updates.stripeCustomerId }),
-      ...(updates.stripeSubscriptionId && { stripeSubscriptionId: updates.stripeSubscriptionId }),
+      ...(updates.customerDescription !== undefined && { customerDescription: updates.customerDescription }),
+      ...(updates.stripeSubscriptionId !== undefined && { stripeSubscriptionId: updates.stripeSubscriptionId }),
+      ...(updates.stripeSubscriptionIds !== undefined && { stripeSubscriptionIds: updates.stripeSubscriptionIds }),
+      ...(updates.subscriptions !== undefined && { subscriptions: updates.subscriptions }),
       ...(updates.items !== undefined && { items: updates.items }),
       ...(updates.isClaimed !== undefined && { isClaimed: updates.isClaimed }),
     };
@@ -2874,10 +2882,14 @@ class DatabaseStorage implements IStorage {
   }
 
   async getPlayersByParent(parentId: string): Promise<User[]> {
-    // Get all player profiles where parentId (accountHolderId) matches the parent
+    // Get all player profiles where parentId, accountHolderId, or guardianId matches the parent
     const playerResults = await db.select().from(schema.users).where(
       and(
-        eq(schema.users.parentId, parentId),
+        or(
+          eq(schema.users.parentId, parentId),
+          eq(schema.users.accountHolderId, parentId),
+          eq(schema.users.guardianId, parentId)
+        ),
         eq(schema.users.role, 'player'),
         eq(schema.users.isActive, true)
       )
@@ -4547,11 +4559,12 @@ class DatabaseStorage implements IStorage {
   async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {
     const results = await db.insert(schema.migrationLookup).values({
       email: data.email,
+      customerName: data.customerName ?? null,
       stripeCustomerId: data.stripeCustomerId,
-      stripeSubscriptionId: data.stripeSubscriptionId,
+      customerDescription: data.customerDescription ?? null,
+      stripeSubscriptionIds: data.stripeSubscriptionIds ?? null,
+      subscriptions: data.subscriptions ?? [],
       items: data.items ?? [],
-      programIds: data.programIds ?? null,
-      productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
     }).returning();
     return results[0];
@@ -4560,11 +4573,13 @@ class DatabaseStorage implements IStorage {
   async updateMigrationLookup(id: number, updates: Partial<InsertMigrationLookup>): Promise<SelectMigrationLookup | undefined> {
     const dbUpdates: any = {};
     if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.customerName !== undefined) dbUpdates.customerName = updates.customerName;
     if (updates.stripeCustomerId !== undefined) dbUpdates.stripeCustomerId = updates.stripeCustomerId;
+    if (updates.customerDescription !== undefined) dbUpdates.customerDescription = updates.customerDescription;
     if (updates.stripeSubscriptionId !== undefined) dbUpdates.stripeSubscriptionId = updates.stripeSubscriptionId;
+    if (updates.stripeSubscriptionIds !== undefined) dbUpdates.stripeSubscriptionIds = updates.stripeSubscriptionIds;
+    if (updates.subscriptions !== undefined) dbUpdates.subscriptions = updates.subscriptions;
     if (updates.items !== undefined) dbUpdates.items = updates.items;
-    if (updates.programIds !== undefined) dbUpdates.programIds = updates.programIds;
-    if (updates.productType !== undefined) dbUpdates.productType = updates.productType;
     if (updates.isClaimed !== undefined) dbUpdates.isClaimed = updates.isClaimed;
     
     if (Object.keys(dbUpdates).length === 0) return this.getMigrationLookupById(id);

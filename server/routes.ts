@@ -8578,6 +8578,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalCredits: program?.sessionCount ?? undefined,
             });
             console.log(`✅ Enrolled player ${playerId} in program ${itemToAssign.itemId} (${itemToAssign.itemName})`);
+            
+            // Update player's payment status to paid (legacy subscription covers payment)
+            await storage.updateUser(playerId, { paymentStatus: 'paid' });
+            console.log(`✅ Updated player ${playerId} paymentStatus to paid`);
           } catch (enrollError: any) {
             console.warn(`⚠️ Could not enroll in program ${itemToAssign.itemId}:`, enrollError.message);
           }
@@ -8600,6 +8604,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 totalCredits: program?.sessionCount ?? undefined,
               });
               console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName})`);
+              
+              // Update player's payment status to paid
+              await storage.updateUser(playerId, { paymentStatus: 'paid' });
             } catch (enrollError: any) {
               console.warn(`⚠️ Could not enroll in program ${item.itemId}:`, enrollError.message);
             }

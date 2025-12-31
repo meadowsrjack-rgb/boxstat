@@ -4552,8 +4552,8 @@ class DatabaseStorage implements IStorage {
     const allResults = await db.select().from(schema.migrationLookup)
       .where(eq(schema.migrationLookup.isClaimed, false));
     
-    // Filter case-insensitively in JavaScript
-    return allResults.filter(m => m.email.toLowerCase() === email.toLowerCase());
+    // Filter case-insensitively in JavaScript (with null check)
+    return allResults.filter(m => m.email && m.email.toLowerCase() === email.toLowerCase());
   }
   
   async createMigrationLookup(data: InsertMigrationLookup): Promise<SelectMigrationLookup> {

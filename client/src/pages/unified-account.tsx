@@ -58,6 +58,7 @@ import { PINDialog } from "@/components/PINDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
+import UypTrophyRings from "@/components/UypTrophyRings";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -719,23 +720,29 @@ function PlayerProfileCard({ player }: { player: any }) {
     refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
-  // Calculate total awards from tierSummary or legacy count fields
-  const totalAwards = (() => {
-    if (!awardsData) return 0;
-    // Use tierSummary if available (new format with earned/total per tier)
-    if (awardsData.tierSummary) {
-      return Object.values(awardsData.tierSummary).reduce((sum: number, tier: any) => {
-        return sum + (tier?.earned || 0);
-      }, 0);
-    }
-    // Fallback to legacy count fields
-    return (awardsData.trophiesCount || 0) + 
-           (awardsData.hallOfFameBadgesCount || 0) + 
-           (awardsData.superstarBadgesCount || 0) + 
-           (awardsData.allStarBadgesCount || 0) + 
-           (awardsData.starterBadgesCount || 0) + 
-           (awardsData.prospectBadgesCount || 0);
-  })();
+  // Prepare rings data for trophy display (same format as coach dashboard)
+  const ringsData = awardsData?.tierSummary ? {
+    legacy: awardsData.tierSummary.legacy,
+    hof: awardsData.tierSummary.hof,
+    superstar: awardsData.tierSummary.superstar,
+    allStar: awardsData.tierSummary.allStar,
+    starter: awardsData.tierSummary.starter,
+    prospect: awardsData.tierSummary.prospect,
+  } : awardsData ? {
+    legacy: { earned: awardsData.trophiesCount || 0, total: 1 },
+    hof: { earned: awardsData.hallOfFameBadgesCount || 0, total: 1 },
+    superstar: { earned: awardsData.superstarBadgesCount || 0, total: 1 },
+    allStar: { earned: awardsData.allStarBadgesCount || 0, total: 1 },
+    starter: { earned: awardsData.starterBadgesCount || 0, total: 1 },
+    prospect: { earned: awardsData.prospectBadgesCount || 0, total: 1 },
+  } : {
+    legacy: { earned: 0, total: 1 },
+    hof: { earned: 0, total: 1 },
+    superstar: { earned: 0, total: 1 },
+    allStar: { earned: 0, total: 1 },
+    starter: { earned: 0, total: 1 },
+    prospect: { earned: 0, total: 1 },
+  };
 
   return (
     <Card className="border-0 shadow-sm" data-testid={`player-profile-card-${player.id}`}>
@@ -837,13 +844,20 @@ function PlayerProfileCard({ player }: { player: any }) {
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-yellow-500" />
-                  <div>
-                    <span className="text-xs text-gray-500 block">Awards</span>
-                    <span className="text-sm font-medium">{totalAwards}</span>
-                  </div>
+              </div>
+              
+              {/* Trophy Rings - same as coach dashboard */}
+              <div className="pt-3 border-t">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+                  <Trophy className="w-4 h-4 text-yellow-500" />
+                  Awards & Achievements
+                </h4>
+                <div className="flex justify-center">
+                  <UypTrophyRings data={ringsData} size={109} stroke={8} />
                 </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t">
                 
                 {player.schoolGrade && (
                   <div className="flex items-center gap-2">

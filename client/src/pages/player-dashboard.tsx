@@ -818,44 +818,43 @@ export default function PlayerDashboard({ childId }: { childId?: number | null }
     }));
   };
 
-  // Build rings data for UypTrophyRings using real awards data
+  // Build rings data for UypTrophyRings using real awards data from tierSummary
+  // Use the same format as the coach dashboard (PlayerCard.tsx)
   const ringsData = useMemo(() => {
     console.log('Awards Summary:', awardsSummary); // Debug log
-    if (!awardsSummary) {
+    
+    // Use tierSummary if available (same format as coach dashboard)
+    if (awardsSummary?.tierSummary) {
       return {
-        trophies:   { earned: 0, total: 10 },
-        hallOfFame: { earned: 0, total: 8  },
-        superstar:  { earned: 0, total: 12 },
-        allStar:    { earned: 0, total: 20 },
-        starter:    { earned: 0, total: 18 },
-        prospect:   { earned: 0, total: 24 },
+        legacy: awardsSummary.tierSummary.legacy,
+        hof: awardsSummary.tierSummary.hof,
+        superstar: awardsSummary.tierSummary.superstar,
+        allStar: awardsSummary.tierSummary.allStar,
+        starter: awardsSummary.tierSummary.starter,
+        prospect: awardsSummary.tierSummary.prospect,
       };
     }
     
-    // Count awards by prestige level from the allAwards array
-    const allAwards = awardsSummary.allAwards || [];
-    const prestigeCounts = {
-      HallOfFame: 0,
-      Superstar: 0,
-      AllStar: 0,
-      Starter: 0,
-      Prospect: 0,
-    };
+    // Fallback to legacy count fields
+    if (awardsSummary) {
+      return {
+        legacy: { earned: awardsSummary.trophiesCount || 0, total: 1 },
+        hof: { earned: awardsSummary.hallOfFameBadgesCount || 0, total: 1 },
+        superstar: { earned: awardsSummary.superstarBadgesCount || 0, total: 1 },
+        allStar: { earned: awardsSummary.allStarBadgesCount || 0, total: 1 },
+        starter: { earned: awardsSummary.starterBadgesCount || 0, total: 1 },
+        prospect: { earned: awardsSummary.prospectBadgesCount || 0, total: 1 },
+      };
+    }
     
-    allAwards.forEach((award: any) => {
-      if (award.prestige && prestigeCounts.hasOwnProperty(award.prestige)) {
-        prestigeCounts[award.prestige as keyof typeof prestigeCounts]++;
-      }
-    });
-    
-    // Use the actual award counts from the API
+    // Default empty state
     return {
-      trophies:   { earned: awardsSummary.totalTrophies || 0, total: 20 },
-      hallOfFame: { earned: prestigeCounts.HallOfFame, total: 8  },
-      superstar:  { earned: prestigeCounts.Superstar, total: 12 },
-      allStar:    { earned: prestigeCounts.AllStar, total: 20 },
-      starter:    { earned: prestigeCounts.Starter, total: 18 },
-      prospect:   { earned: prestigeCounts.Prospect, total: 24 },
+      legacy: { earned: 0, total: 1 },
+      hof: { earned: 0, total: 1 },
+      superstar: { earned: 0, total: 1 },
+      allStar: { earned: 0, total: 1 },
+      starter: { earned: 0, total: 1 },
+      prospect: { earned: 0, total: 1 },
     };
   }, [awardsSummary]);
 

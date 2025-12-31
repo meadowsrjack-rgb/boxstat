@@ -9637,12 +9637,35 @@ function MigrationsTab({ organization, users }: any) {
                     Upload a CSV file with columns: Email, Stripe Customer ID, Stripe Subscription ID
                   </DialogDescription>
                 </DialogHeader>
-                <Input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-                  data-testid="input-upload-migrations-csv"
-                />
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <Download className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground flex-1">Need the template?</span>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const template = "Email,Stripe Customer ID,Stripe Subscription ID\nexample@email.com,cus_xxx,sub_xxx";
+                        const blob = new Blob([template], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'migrations_template.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                      data-testid="button-download-template"
+                    >
+                      Download Template
+                    </Button>
+                  </div>
+                  <Input 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                    data-testid="input-upload-migrations-csv"
+                  />
+                </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
                   <Button onClick={handleCsvUpload} disabled={!csvFile}>Upload</Button>

@@ -1502,6 +1502,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`ℹ️ No valid playerId provided in session metadata, skipping player status update`);
           }
           
+          // For subscription mode checkouts, create a subscription record
+          if (session.mode === 'subscription' && session.subscription) {
+            try {
+              const stripeSubscriptionId = typeof session.subscription === 'string' 
+                ? session.subscription 
+                : session.subscription.id;
+              
+              const user = await storage.getUser(userId);
+              
+              await storage.createSubscription({
+                ownerUserId: userId,
+                assignedPlayerId: playerId || undefined,
+                stripeCustomerId: user?.stripeCustomerId || session.customer as string,
+                stripeSubscriptionId: stripeSubscriptionId,
+                productName: program?.name || 'Subscription',
+                status: 'active',
+                isMigrated: false,
+              });
+              console.log(`✅ Created subscription record for ${stripeSubscriptionId}`);
+            } catch (subError: any) {
+              console.error("Error creating subscription record:", subError);
+            }
+          }
+          
           return res.json({ received: true });
         }
         

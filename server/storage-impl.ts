@@ -4545,6 +4545,7 @@ class DatabaseStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
+      items: data.items ?? [],
       programIds: data.programIds ?? null,
       productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
@@ -4557,6 +4558,7 @@ class DatabaseStorage implements IStorage {
     if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.stripeCustomerId !== undefined) dbUpdates.stripeCustomerId = updates.stripeCustomerId;
     if (updates.stripeSubscriptionId !== undefined) dbUpdates.stripeSubscriptionId = updates.stripeSubscriptionId;
+    if (updates.items !== undefined) dbUpdates.items = updates.items;
     if (updates.programIds !== undefined) dbUpdates.programIds = updates.programIds;
     if (updates.productType !== undefined) dbUpdates.productType = updates.productType;
     if (updates.isClaimed !== undefined) dbUpdates.isClaimed = updates.isClaimed;

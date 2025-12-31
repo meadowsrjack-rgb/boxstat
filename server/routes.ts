@@ -9320,13 +9320,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log(`📊 Fetching Stripe subscription: ${subId}`);
             const stripeSub = await stripe.subscriptions.retrieve(subId);
-            console.log(`📊 Stripe subscription ${subId} status: ${stripeSub.status}, period_end: ${stripeSub.current_period_end}`);
+            // Check both snake_case (raw API) and camelCase (SDK) property names
+            const periodEnd = (stripeSub as any).current_period_end || (stripeSub as any).currentPeriodEnd;
+            const periodStart = (stripeSub as any).current_period_start || (stripeSub as any).currentPeriodStart;
+            const cancelEnd = (stripeSub as any).cancel_at_period_end || (stripeSub as any).cancelAtPeriodEnd;
+            console.log(`📊 Stripe subscription ${subId} status: ${stripeSub.status}, period_end: ${periodEnd}`);
             stripeDetails[subId] = {
               id: stripeSub.id,
               status: stripeSub.status,
-              currentPeriodStart: stripeSub.current_period_start,
-              currentPeriodEnd: stripeSub.current_period_end,
-              cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
+              cancelAtPeriodEnd: cancelEnd,
               interval: stripeSub.items.data[0]?.price?.recurring?.interval || 'month',
               amount: stripeSub.items.data[0]?.price?.unit_amount || 0,
               currency: stripeSub.items.data[0]?.price?.currency || 'usd',

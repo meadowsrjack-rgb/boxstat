@@ -291,7 +291,7 @@ export default function PlayerCard({
     return Math.round(average * 20);
   };
   
-  const overallSkillScore = calculateOverallScore(latestEvaluation?.skillsData);
+  const overallSkillScore = calculateOverallScore(latestEvaluation?.scores || latestEvaluation?.skillsData);
 
   // Prepare rings data for trophy display (each needs earned/total format)
   // Use tierSummary if available (new format), otherwise fall back to legacy counts

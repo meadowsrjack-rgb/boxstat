@@ -9406,7 +9406,7 @@ function MigrationsTab({ organization, users }: any) {
   const programProducts = programs.filter((p: any) => p.type !== 'One-Time' && p.type !== 'Store');
 
   const createMigration = useMutation({
-    mutationFn: (data: any) => apiRequest('/api/admin/migrations', { method: 'POST', body: JSON.stringify(data) }),
+    mutationFn: (data: any) => apiRequest('/api/admin/migrations', { method: 'POST', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
       setIsAddDialogOpen(false);
@@ -9420,7 +9420,7 @@ function MigrationsTab({ organization, users }: any) {
 
   const updateMigration = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest(`/api/admin/migrations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      apiRequest(`/api/admin/migrations/${id}`, { method: 'PATCH', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
       setEditingMigration(null);

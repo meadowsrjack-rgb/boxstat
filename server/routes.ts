@@ -8563,13 +8563,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const item of (migration.items || [])) {
         if (item.itemId && item.itemType === 'program') {
           try {
+            // Get program to fetch full details
+            const program = await storage.getProgram(item.itemId);
+            
             await storage.createEnrollment({
-              userId: playerId,
-              productId: item.itemId,
+              organizationId: player.organizationId,
+              programId: item.itemId,
+              accountHolderId: userId,
+              profileId: playerId,
               status: 'active',
-              enrollmentType: 'migrated',
+              source: 'migrated',
+              remainingCredits: program?.sessionCount ?? undefined,
+              totalCredits: program?.sessionCount ?? undefined,
             });
-            console.log(`✅ Enrolled player ${playerId} in program ${item.itemId}`);
+            console.log(`✅ Enrolled player ${playerId} in program ${item.itemId} (${item.itemName})`);
           } catch (enrollError: any) {
             console.warn(`⚠️ Could not enroll in program ${item.itemId}:`, enrollError.message);
           }

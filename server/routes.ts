@@ -2339,12 +2339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const subId of stripeSubIds) {
           try {
             const stripeSub = await stripe.subscriptions.retrieve(subId);
+            // Get period data from items (Stripe SDK returns period data in items)
+            const periodEnd = stripeSub.items?.data?.[0]?.current_period_end || (stripeSub as any).current_period_end;
+            const periodStart = stripeSub.items?.data?.[0]?.current_period_start || (stripeSub as any).current_period_start;
             stripeDetails[subId] = {
               id: stripeSub.id,
               status: stripeSub.status,
-              currentPeriodStart: stripeSub.current_period_start,
-              currentPeriodEnd: stripeSub.current_period_end,
-              cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
+              cancelAtPeriodEnd: (stripeSub as any).cancel_at_period_end,
               interval: stripeSub.items.data[0]?.price?.recurring?.interval || 'month',
               amount: stripeSub.items.data[0]?.price?.unit_amount || 0,
               currency: stripeSub.items.data[0]?.price?.currency || 'usd',

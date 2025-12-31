@@ -9443,64 +9443,80 @@ function MigrationsTab({ organization, users }: any) {
     },
   });
 
-  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+  // Items for this migration (itemId, itemType, quantity)
+  const [migrationItems, setMigrationItems] = useState<Array<{itemId: string; itemType: 'program' | 'store'; itemName: string; quantity: number}>>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [selectedItemType, setSelectedItemType] = useState<'program' | 'store'>('program');
+  const [itemQuantity, setItemQuantity] = useState<number>(1);
 
   const form = useForm({
     resolver: zodResolver(z.object({
       email: z.string().email("Valid email required"),
       stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
       stripeSubscriptionId: z.string().min(1, "Stripe Subscription ID required"),
-      productType: z.enum(['program', 'store']),
     })),
     defaultValues: {
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
-      productType: "program" as const,
     },
   });
 
-  const productType = form.watch('productType');
-
   const filteredMigrations = migrations.filter((m: any) => {
-    const programNames = (m.programIds || []).map((pid: string) => 
-      programs.find((p: any) => p.id === pid)?.name || ''
-    ).join(' ');
+    const itemNames = (m.items || []).map((item: any) => item.itemName || '').join(' ');
     return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      programNames?.toLowerCase().includes(searchTerm.toLowerCase());
+      itemNames?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const getProgramNames = (programIds: string[] | null) => {
-    if (!programIds || programIds.length === 0) return 'Not Assigned';
-    return programIds.map(pid => {
-      const program = programs.find((p: any) => p.id === pid);
-      return program?.name || 'Unknown';
-    }).join(', ');
+  const getItemsSummary = (items: any[] | null) => {
+    if (!items || items.length === 0) return 'No items';
+    return items.map(item => `${item.itemName || 'Unknown'} (x${item.quantity})`).join(', ');
+  };
+
+  const addItem = () => {
+    if (!selectedProductId) {
+      toast({ title: "Error", description: "Please select a product", variant: "destructive" });
+      return;
+    }
+    const product = programs.find((p: any) => p.id === selectedProductId);
+    if (!product) return;
+    
+    setMigrationItems(prev => [...prev, {
+      itemId: selectedProductId,
+      itemType: selectedItemType,
+      itemName: product.name,
+      quantity: itemQuantity,
+    }]);
+    setSelectedProductId("");
+    setItemQuantity(1);
+  };
+
+  const removeItem = (index: number) => {
+    setMigrationItems(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleEdit = (migration: any) => {
     setEditingMigration(migration);
-    setSelectedProgramIds(migration.programIds || []);
+    setMigrationItems(migration.items || []);
     form.reset({
       email: migration.email,
       stripeCustomerId: migration.stripeCustomerId,
       stripeSubscriptionId: migration.stripeSubscriptionId,
-      productType: migration.productType || 'program',
     });
     setIsAddDialogOpen(true);
   };
 
   const handleSubmit = (data: any) => {
-    if (selectedProgramIds.length === 0) {
+    if (migrationItems.length === 0) {
       toast({ 
         title: "Error", 
-        description: "Please select at least one program/product", 
+        description: "Please add at least one item", 
         variant: "destructive" 
       });
       return;
     }
-    const submitData = { ...data, programIds: selectedProgramIds };
+    const submitData = { ...data, items: migrationItems };
     if (editingMigration) {
       updateMigration.mutate({ id: editingMigration.id, data: submitData });
     } else {
@@ -9510,22 +9526,16 @@ function MigrationsTab({ organization, users }: any) {
 
   const openAddDialog = () => {
     setEditingMigration(null);
-    setSelectedProgramIds([]);
+    setMigrationItems([]);
+    setSelectedProductId("");
+    setSelectedItemType('program');
+    setItemQuantity(1);
     form.reset({
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
-      productType: "program",
     });
     setIsAddDialogOpen(true);
-  };
-
-  const toggleProgramSelection = (programId: string) => {
-    setSelectedProgramIds(prev => 
-      prev.includes(programId) 
-        ? prev.filter(id => id !== programId)
-        : [...prev, programId]
-    );
   };
 
   if (isLoading) {
@@ -9580,8 +9590,7 @@ function MigrationsTab({ organization, users }: any) {
                   <TableHead>Email</TableHead>
                   <TableHead>Stripe Customer ID</TableHead>
                   <TableHead>Subscription ID</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Program/Product</TableHead>
+                  <TableHead>Items</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -9592,12 +9601,9 @@ function MigrationsTab({ organization, users }: any) {
                     <TableCell className="font-medium">{migration.email}</TableCell>
                     <TableCell className="font-mono text-xs">{migration.stripeCustomerId}</TableCell>
                     <TableCell className="font-mono text-xs">{migration.stripeSubscriptionId}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {migration.productType || 'program'}
-                      </Badge>
+                    <TableCell className="max-w-xs truncate" title={getItemsSummary(migration.items)}>
+                      {getItemsSummary(migration.items)}
                     </TableCell>
-                    <TableCell>{getProgramNames(migration.programIds)}</TableCell>
                     <TableCell>
                       {migration.isClaimed ? (
                         <Badge className="bg-green-100 text-green-800">
@@ -9696,52 +9702,83 @@ function MigrationsTab({ organization, users }: any) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="productType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Product Type</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-migration-product-type">
-                          <SelectValue placeholder="Select type..." />
+              {/* Items List */}
+              <div className="space-y-3">
+                <FormLabel>Subscription Items</FormLabel>
+                
+                {/* Current Items */}
+                {migrationItems.length > 0 && (
+                  <div className="border rounded-md p-3 space-y-2 bg-gray-50">
+                    {migrationItems.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between bg-white p-2 rounded border">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={item.itemType === 'program' ? 'default' : 'secondary'} className="text-xs">
+                            {item.itemType}
+                          </Badge>
+                          <span className="text-sm">{item.itemName}</span>
+                          <span className="text-xs text-gray-500">x{item.quantity}</span>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => removeItem(index)}
+                          className="text-red-500 hover:text-red-700 h-6 w-6 p-0"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Add New Item */}
+                <div className="border rounded-md p-3 space-y-3">
+                  <p className="text-sm font-medium text-gray-700">Add Item</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-xs">Type</Label>
+                      <Select value={selectedItemType} onValueChange={(v: 'program' | 'store') => setSelectedItemType(v)}>
+                        <SelectTrigger data-testid="select-item-type">
+                          <SelectValue />
                         </SelectTrigger>
-                      </FormControl>
+                        <SelectContent>
+                          <SelectItem value="program">Program</SelectItem>
+                          <SelectItem value="store">Store Product</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Quantity</Label>
+                      <Input 
+                        type="number" 
+                        min="1" 
+                        value={itemQuantity} 
+                        onChange={(e) => setItemQuantity(parseInt(e.target.value) || 1)}
+                        data-testid="input-item-quantity"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{selectedItemType === 'program' ? 'Program' : 'Store Product'}</Label>
+                    <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                      <SelectTrigger data-testid="select-product">
+                        <SelectValue placeholder="Select a product..." />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="program">Program Subscription</SelectItem>
-                        <SelectItem value="store">Store Product</SelectItem>
+                        {(selectedItemType === 'store' ? storeProducts : programProducts).map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="space-y-2">
-                <FormLabel>{productType === 'store' ? 'Store Products' : 'Programs'} (Select Multiple)</FormLabel>
-                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multi-select-programs">
-                  {(productType === 'store' ? storeProducts : programProducts).map((p: any) => (
-                    <div key={p.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`program-${p.id}`}
-                        checked={selectedProgramIds.includes(p.id)}
-                        onCheckedChange={() => toggleProgramSelection(p.id)}
-                        data-testid={`checkbox-program-${p.id}`}
-                      />
-                      <label
-                        htmlFor={`program-${p.id}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {p.name}
-                      </label>
-                    </div>
-                  ))}
-                  {(productType === 'store' ? storeProducts : programProducts).length === 0 && (
-                    <p className="text-sm text-gray-500">No {productType === 'store' ? 'products' : 'programs'} available</p>
-                  )}
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addItem} className="w-full" data-testid="button-add-item">
+                    <Plus className="w-3 h-3 mr-1" /> Add Item
+                  </Button>
                 </div>
-                {selectedProgramIds.length > 0 && (
-                  <p className="text-xs text-gray-500">{selectedProgramIds.length} selected</p>
+                
+                {migrationItems.length === 0 && (
+                  <p className="text-xs text-red-500">At least one item is required</p>
                 )}
               </div>
               <DialogFooter>

@@ -25,14 +25,19 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
+interface MigrationItem {
+  itemId: string;
+  itemType: 'program' | 'store';
+  itemName?: string;
+  quantity: number;
+}
+
 interface Migration {
   id: number;
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
-  programIds: string[] | null;
-  productType: string;
-  programs: { id: string; name: string }[];
+  items: MigrationItem[];
 }
 
 interface Player {
@@ -172,15 +177,19 @@ export default function ClaimSubscriptionPage() {
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <div className="font-medium text-lg">
-                      {migration.programs && migration.programs.length > 0 
-                        ? migration.programs.map((p: any) => p.name).join(', ')
+                      {migration.items && migration.items.length > 0 
+                        ? migration.items.map((item: MigrationItem) => 
+                            `${item.itemName || 'Unknown'} (x${item.quantity})`
+                          ).join(', ')
                         : 'Legacy Subscription'}
                     </div>
                     <div className="text-sm text-gray-500">
-                      <Badge variant="outline" className="capitalize mr-2">
-                        {migration.productType}
-                      </Badge>
-                      Subscription ID: {migration.stripeSubscriptionId.slice(-8)}
+                      {migration.items && migration.items.length > 0 && migration.items.map((item: MigrationItem, idx: number) => (
+                        <Badge key={idx} variant="outline" className="capitalize mr-1">
+                          {item.itemType}
+                        </Badge>
+                      ))}
+                      <span className="ml-1">ID: ...{migration.stripeSubscriptionId.slice(-8)}</span>
                     </div>
                   </div>
                   <Button

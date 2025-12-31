@@ -1902,13 +1902,22 @@ export type InsertRsvpResponse = z.infer<typeof insertRsvpResponseSchema>;
 // Migration Lookup Schema (Legacy UYP Migration)
 // =============================================
 
+// Item structure for migration lookup - supports multiple items with quantities
+export const migrationItemSchema = z.object({
+  itemId: z.string(),
+  itemType: z.enum(['program', 'store']),
+  itemName: z.string().optional(),
+  quantity: z.number().min(1).default(1),
+});
+
+export type MigrationItem = z.infer<typeof migrationItemSchema>;
+
 export const migrationLookup = pgTable("migration_lookup", {
   id: serial().primaryKey().notNull(),
   email: varchar().notNull(),
   stripeCustomerId: varchar("stripe_customer_id").notNull(),
   stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
-  programIds: text("program_ids").array(), // Array of program/product IDs
-  productType: varchar("product_type").default('program').notNull(), // 'program' or 'store'
+  items: jsonb("items").$type<MigrationItem[]>().default([]), // Array of items with type and quantity
   isClaimed: boolean("is_claimed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
@@ -1918,8 +1927,7 @@ export interface MigrationLookup {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
-  programIds: string[] | null;
-  productType: string;
+  items: MigrationItem[];
   isClaimed: boolean;
   createdAt: Date;
 }
@@ -1928,8 +1936,7 @@ export const insertMigrationLookupSchema = z.object({
   email: z.string().email(),
   stripeCustomerId: z.string(),
   stripeSubscriptionId: z.string(),
-  programIds: z.array(z.string()).optional(),
-  productType: z.enum(['program', 'store']).default('program'),
+  items: z.array(migrationItemSchema).default([]),
   isClaimed: z.boolean().default(false),
 });
 

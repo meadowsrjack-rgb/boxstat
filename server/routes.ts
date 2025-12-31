@@ -8266,22 +8266,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Only admins can create migrations' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, programIds, productType } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, items } = req.body;
       
       if (!email || !stripeCustomerId || !stripeSubscriptionId) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      if (!programIds || !Array.isArray(programIds) || programIds.length === 0) {
-        return res.status(400).json({ error: 'At least one program/product must be selected' });
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'At least one item must be added' });
       }
       
       const migration = await storage.createMigrationLookup({
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        programIds,
-        productType: productType || 'program',
+        items,
         isClaimed: false,
       });
       
@@ -8305,18 +8304,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid migration ID' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, programIds, productType } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, items } = req.body;
       
-      if (programIds !== undefined && (!Array.isArray(programIds) || programIds.length === 0)) {
-        return res.status(400).json({ error: 'At least one program/product must be selected' });
+      if (items !== undefined && (!Array.isArray(items) || items.length === 0)) {
+        return res.status(400).json({ error: 'At least one item must be added' });
       }
       
       const migration = await storage.updateMigrationLookup(id, {
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        programIds,
-        productType,
+        items,
       });
       
       if (!migration) {
@@ -8365,21 +8363,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const migrations = await storage.getMigrationLookupsByEmail(email);
       
-      // Enrich with program details
-      const enrichedMigrations = await Promise.all(migrations.map(async (m) => {
-        let programsList: { id: string; name: string }[] = [];
-        if (m.programIds && m.programIds.length > 0) {
-          for (const programId of m.programIds) {
-            const program = await storage.getProduct(programId);
-            if (program) {
-              programsList.push({ id: program.id, name: program.name });
-            }
-          }
-        }
-        return {
-          ...m,
-          programs: programsList,
-        };
+      // Return migrations with items already included
+      const enrichedMigrations = migrations.map(m => ({
+        ...m,
+        items: m.items || [],
       }));
       
       res.json(enrichedMigrations);
@@ -8425,18 +8412,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'This player does not belong to your account' });
       }
       
-      // Get program names for the subscription
+      // Get item names for the subscription
       let productName = 'Legacy Subscription';
-      if (migration.programIds && migration.programIds.length > 0) {
-        const programNames: string[] = [];
-        for (const programId of migration.programIds) {
-          const program = await storage.getProduct(programId);
-          if (program) {
-            programNames.push(program.name);
-          }
-        }
-        if (programNames.length > 0) {
-          productName = programNames.join(', ');
+      if (migration.items && migration.items.length > 0) {
+        const itemNames = migration.items.map(item => 
+          item.itemName || `${item.itemType} (${item.quantity})`
+        );
+        if (itemNames.length > 0) {
+          productName = itemNames.join(', ');
         }
       }
       

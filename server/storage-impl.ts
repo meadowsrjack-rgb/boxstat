@@ -1924,8 +1924,7 @@ class MemStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
-      programIds: data.programIds ?? null,
-      productType: data.productType ?? 'program',
+      items: data.items ?? [],
       isClaimed: data.isClaimed ?? false,
       createdAt: now.toISOString(),
     };
@@ -1942,8 +1941,7 @@ class MemStorage implements IStorage {
       ...(updates.email && { email: updates.email }),
       ...(updates.stripeCustomerId && { stripeCustomerId: updates.stripeCustomerId }),
       ...(updates.stripeSubscriptionId && { stripeSubscriptionId: updates.stripeSubscriptionId }),
-      ...(updates.programIds !== undefined && { programIds: updates.programIds }),
-      ...(updates.productType && { productType: updates.productType }),
+      ...(updates.items !== undefined && { items: updates.items }),
       ...(updates.isClaimed !== undefined && { isClaimed: updates.isClaimed }),
     };
     this.migrationLookups.set(id, updated);

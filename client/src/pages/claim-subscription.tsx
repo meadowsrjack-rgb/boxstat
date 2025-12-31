@@ -75,7 +75,7 @@ export default function ClaimSubscriptionPage() {
 
   const assignMigration = useMutation({
     mutationFn: (data: { migrationId: number; playerId: string }) =>
-      apiRequest('/api/legacy/assign', { method: 'POST', body: JSON.stringify(data) }),
+      apiRequest('/api/legacy/assign', { method: 'POST', data }),
     onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/legacy/my-migrations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
@@ -105,7 +105,7 @@ export default function ClaimSubscriptionPage() {
 
   const createPlayer = useMutation({
     mutationFn: (data: { firstName: string; lastName: string }) =>
-      apiRequest('/api/users/create-child', { method: 'POST', body: JSON.stringify(data) }),
+      apiRequest('/api/users/create-child', { method: 'POST', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'children'] });
       setIsAddPlayerOpen(false);

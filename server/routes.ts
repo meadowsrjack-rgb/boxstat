@@ -8266,17 +8266,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Only admins can create migrations' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, programId, productType } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, programIds, productType } = req.body;
       
       if (!email || !stripeCustomerId || !stripeSubscriptionId) {
         return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      if (!programIds || !Array.isArray(programIds) || programIds.length === 0) {
+        return res.status(400).json({ error: 'At least one program/product must be selected' });
       }
       
       const migration = await storage.createMigrationLookup({
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        programId: programId || null,
+        programIds,
         productType: productType || 'program',
         isClaimed: false,
       });
@@ -8301,13 +8305,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Invalid migration ID' });
       }
       
-      const { email, stripeCustomerId, stripeSubscriptionId, programId, productType } = req.body;
+      const { email, stripeCustomerId, stripeSubscriptionId, programIds, productType } = req.body;
+      
+      if (programIds !== undefined && (!Array.isArray(programIds) || programIds.length === 0)) {
+        return res.status(400).json({ error: 'At least one program/product must be selected' });
+      }
       
       const migration = await storage.updateMigrationLookup(id, {
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        programId,
+        programIds,
         productType,
       });
       
@@ -8359,13 +8367,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Enrich with program details
       const enrichedMigrations = await Promise.all(migrations.map(async (m) => {
-        let program = null;
-        if (m.programId) {
-          program = await storage.getProduct(m.programId);
+        let programsList: { id: string; name: string }[] = [];
+        if (m.programIds && m.programIds.length > 0) {
+          for (const programId of m.programIds) {
+            const program = await storage.getProduct(programId);
+            if (program) {
+              programsList.push({ id: program.id, name: program.name });
+            }
+          }
         }
         return {
           ...m,
-          program: program ? { id: program.id, name: program.name } : null,
+          programs: programsList,
         };
       }));
       
@@ -8412,12 +8425,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'This player does not belong to your account' });
       }
       
-      // Get program name for the subscription
+      // Get program names for the subscription
       let productName = 'Legacy Subscription';
-      if (migration.programId) {
-        const program = await storage.getProduct(migration.programId);
-        if (program) {
-          productName = program.name;
+      if (migration.programIds && migration.programIds.length > 0) {
+        const programNames: string[] = [];
+        for (const programId of migration.programIds) {
+          const program = await storage.getProduct(programId);
+          if (program) {
+            programNames.push(program.name);
+          }
+        }
+        if (programNames.length > 0) {
+          productName = programNames.join(', ');
         }
       }
       

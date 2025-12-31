@@ -30,9 +30,9 @@ interface Migration {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
-  programId: string | null;
+  programIds: string[] | null;
   productType: string;
-  program: { id: string; name: string } | null;
+  programs: { id: string; name: string }[];
 }
 
 interface Player {
@@ -172,7 +172,9 @@ export default function ClaimSubscriptionPage() {
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <div className="font-medium text-lg">
-                      {migration.program?.name || 'Legacy Subscription'}
+                      {migration.programs && migration.programs.length > 0 
+                        ? migration.programs.map((p: any) => p.name).join(', ')
+                        : 'Legacy Subscription'}
                     </div>
                     <div className="text-sm text-gray-500">
                       <Badge variant="outline" className="capitalize mr-2">

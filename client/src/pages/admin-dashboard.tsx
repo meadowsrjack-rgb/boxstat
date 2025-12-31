@@ -9443,68 +9443,89 @@ function MigrationsTab({ organization, users }: any) {
     },
   });
 
+  const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
+
   const form = useForm({
     resolver: zodResolver(z.object({
       email: z.string().email("Valid email required"),
       stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
       stripeSubscriptionId: z.string().min(1, "Stripe Subscription ID required"),
       productType: z.enum(['program', 'store']),
-      programId: z.string().optional(),
     })),
     defaultValues: {
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
       productType: "program" as const,
-      programId: "",
     },
   });
 
   const productType = form.watch('productType');
 
   const filteredMigrations = migrations.filter((m: any) => {
-    const programName = programs.find((p: any) => p.id === m.programId)?.name || '';
+    const programNames = (m.programIds || []).map((pid: string) => 
+      programs.find((p: any) => p.id === pid)?.name || ''
+    ).join(' ');
     return m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      programName?.toLowerCase().includes(searchTerm.toLowerCase());
+      programNames?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const getProgramName = (programId: string | null) => {
-    if (!programId) return 'Not Assigned';
-    const program = programs.find((p: any) => p.id === programId);
-    return program?.name || 'Unknown';
+  const getProgramNames = (programIds: string[] | null) => {
+    if (!programIds || programIds.length === 0) return 'Not Assigned';
+    return programIds.map(pid => {
+      const program = programs.find((p: any) => p.id === pid);
+      return program?.name || 'Unknown';
+    }).join(', ');
   };
 
   const handleEdit = (migration: any) => {
     setEditingMigration(migration);
+    setSelectedProgramIds(migration.programIds || []);
     form.reset({
       email: migration.email,
       stripeCustomerId: migration.stripeCustomerId,
       stripeSubscriptionId: migration.stripeSubscriptionId,
       productType: migration.productType || 'program',
-      programId: migration.programId || "",
     });
     setIsAddDialogOpen(true);
   };
 
   const handleSubmit = (data: any) => {
+    if (selectedProgramIds.length === 0) {
+      toast({ 
+        title: "Error", 
+        description: "Please select at least one program/product", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    const submitData = { ...data, programIds: selectedProgramIds };
     if (editingMigration) {
-      updateMigration.mutate({ id: editingMigration.id, data });
+      updateMigration.mutate({ id: editingMigration.id, data: submitData });
     } else {
-      createMigration.mutate(data);
+      createMigration.mutate(submitData);
     }
   };
 
   const openAddDialog = () => {
     setEditingMigration(null);
+    setSelectedProgramIds([]);
     form.reset({
       email: "",
       stripeCustomerId: "",
       stripeSubscriptionId: "",
       productType: "program",
-      programId: "",
     });
     setIsAddDialogOpen(true);
+  };
+
+  const toggleProgramSelection = (programId: string) => {
+    setSelectedProgramIds(prev => 
+      prev.includes(programId) 
+        ? prev.filter(id => id !== programId)
+        : [...prev, programId]
+    );
   };
 
   if (isLoading) {
@@ -9576,7 +9597,7 @@ function MigrationsTab({ organization, users }: any) {
                         {migration.productType || 'program'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{getProgramName(migration.programId)}</TableCell>
+                    <TableCell>{getProgramNames(migration.programIds)}</TableCell>
                     <TableCell>
                       {migration.isClaimed ? (
                         <Badge className="bg-green-100 text-green-800">
@@ -9696,30 +9717,33 @@ function MigrationsTab({ organization, users }: any) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="programId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{productType === 'store' ? 'Store Product' : 'Program'}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-migration-program">
-                          <SelectValue placeholder={`Select ${productType === 'store' ? 'product' : 'program'}...`} />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(productType === 'store' ? storeProducts : programProducts).map((p: any) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+              <div className="space-y-2">
+                <FormLabel>{productType === 'store' ? 'Store Products' : 'Programs'} (Select Multiple)</FormLabel>
+                <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2" data-testid="multi-select-programs">
+                  {(productType === 'store' ? storeProducts : programProducts).map((p: any) => (
+                    <div key={p.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`program-${p.id}`}
+                        checked={selectedProgramIds.includes(p.id)}
+                        onCheckedChange={() => toggleProgramSelection(p.id)}
+                        data-testid={`checkbox-program-${p.id}`}
+                      />
+                      <label
+                        htmlFor={`program-${p.id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {p.name}
+                      </label>
+                    </div>
+                  ))}
+                  {(productType === 'store' ? storeProducts : programProducts).length === 0 && (
+                    <p className="text-sm text-gray-500">No {productType === 'store' ? 'products' : 'programs'} available</p>
+                  )}
+                </div>
+                {selectedProgramIds.length > 0 && (
+                  <p className="text-xs text-gray-500">{selectedProgramIds.length} selected</p>
                 )}
-              />
+              </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel

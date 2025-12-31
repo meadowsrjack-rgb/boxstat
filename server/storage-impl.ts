@@ -1924,7 +1924,7 @@ class MemStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
-      programId: data.programId ?? null,
+      programIds: data.programIds ?? null,
       productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
       createdAt: now.toISOString(),
@@ -1942,7 +1942,7 @@ class MemStorage implements IStorage {
       ...(updates.email && { email: updates.email }),
       ...(updates.stripeCustomerId && { stripeCustomerId: updates.stripeCustomerId }),
       ...(updates.stripeSubscriptionId && { stripeSubscriptionId: updates.stripeSubscriptionId }),
-      ...(updates.programId !== undefined && { programId: updates.programId }),
+      ...(updates.programIds !== undefined && { programIds: updates.programIds }),
       ...(updates.productType && { productType: updates.productType }),
       ...(updates.isClaimed !== undefined && { isClaimed: updates.isClaimed }),
     };
@@ -4547,7 +4547,7 @@ class DatabaseStorage implements IStorage {
       email: data.email,
       stripeCustomerId: data.stripeCustomerId,
       stripeSubscriptionId: data.stripeSubscriptionId,
-      programId: data.programId ?? null,
+      programIds: data.programIds ?? null,
       productType: data.productType ?? 'program',
       isClaimed: data.isClaimed ?? false,
     }).returning();
@@ -4559,7 +4559,7 @@ class DatabaseStorage implements IStorage {
     if (updates.email !== undefined) dbUpdates.email = updates.email;
     if (updates.stripeCustomerId !== undefined) dbUpdates.stripeCustomerId = updates.stripeCustomerId;
     if (updates.stripeSubscriptionId !== undefined) dbUpdates.stripeSubscriptionId = updates.stripeSubscriptionId;
-    if (updates.programId !== undefined) dbUpdates.programId = updates.programId;
+    if (updates.programIds !== undefined) dbUpdates.programIds = updates.programIds;
     if (updates.productType !== undefined) dbUpdates.productType = updates.productType;
     if (updates.isClaimed !== undefined) dbUpdates.isClaimed = updates.isClaimed;
     

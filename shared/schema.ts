@@ -1907,7 +1907,7 @@ export const migrationLookup = pgTable("migration_lookup", {
   email: varchar().notNull(),
   stripeCustomerId: varchar("stripe_customer_id").notNull(),
   stripeSubscriptionId: varchar("stripe_subscription_id").notNull(),
-  programId: varchar("program_id"), // References products table for program subscriptions
+  programIds: text("program_ids").array(), // Array of program/product IDs
   productType: varchar("product_type").default('program').notNull(), // 'program' or 'store'
   isClaimed: boolean("is_claimed").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
@@ -1918,7 +1918,7 @@ export interface MigrationLookup {
   email: string;
   stripeCustomerId: string;
   stripeSubscriptionId: string;
-  programId: string | null;
+  programIds: string[] | null;
   productType: string;
   isClaimed: boolean;
   createdAt: Date;
@@ -1928,7 +1928,7 @@ export const insertMigrationLookupSchema = z.object({
   email: z.string().email(),
   stripeCustomerId: z.string(),
   stripeSubscriptionId: z.string(),
-  programId: z.string().optional(),
+  programIds: z.array(z.string()).optional(),
   productType: z.enum(['program', 'store']).default('program'),
   isClaimed: z.boolean().default(false),
 });

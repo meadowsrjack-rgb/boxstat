@@ -64,12 +64,7 @@ export default function ClaimSubscriptionPage() {
   });
 
   const { data: childPlayers = [] } = useQuery<Player[]>({
-    queryKey: ['/api/users', user?.id, 'children'],
-    queryFn: async () => {
-      const res = await fetch(`/api/users/${user?.id}/children`);
-      if (!res.ok) return [];
-      return res.json();
-    },
+    queryKey: ['/api/account/players'],
     enabled: !!user?.id,
   });
 
@@ -107,7 +102,7 @@ export default function ClaimSubscriptionPage() {
     mutationFn: (data: { firstName: string; lastName: string }) =>
       apiRequest('/api/users/create-child', { method: 'POST', data }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/users', user?.id, 'children'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/account/players'] });
       setIsAddPlayerOpen(false);
       setNewPlayerFirstName("");
       setNewPlayerLastName("");

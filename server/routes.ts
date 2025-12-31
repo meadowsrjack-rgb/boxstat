@@ -8458,34 +8458,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Upgrade Stripe subscriptions with new pricing and 1% application fee
       const stripeUpgradeResults: { subscriptionId: string; success: boolean; error?: string }[] = [];
       
-      if (stripe && subscriptionIds.length > 0) {
-        for (const stripeSubId of subscriptionIds) {
+      if (stripe && subscriptionIds.length > 0 && priceUpdates.length > 0) {
+        // Use rich subscription data if available for matching
+        const richSubscriptions = migration.subscriptions || [];
+        
+        for (let subIdx = 0; subIdx < subscriptionIds.length; subIdx++) {
+          const stripeSubId = subscriptionIds[subIdx];
           try {
-            // Get the current subscription from Stripe
-            const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubId);
+            // Try to find matching price for this subscription
+            let newPriceId: string | null = null;
+            let programName = 'Unknown';
             
-            if (stripeSubscription && priceUpdates.length > 0) {
-              // Build the items array for the update
-              // We'll update each subscription item with the new price
-              const existingItems = stripeSubscription.items.data;
-              const updateItems: any[] = [];
-              
-              for (const existingItem of existingItems) {
-                // Find matching new price for this item
-                const matchingPrice = priceUpdates.find(p => p.stripePriceId);
-                if (matchingPrice && matchingPrice.stripePriceId) {
-                  updateItems.push({
-                    id: existingItem.id,
-                    price: matchingPrice.stripePriceId,
-                  });
-                  console.log(`📦 Updating subscription item ${existingItem.id} to price ${matchingPrice.stripePriceId}`);
-                }
+            // Strategy 1: Match using rich subscription data if available
+            const richSubData = richSubscriptions.find(s => s.subscriptionId === stripeSubId);
+            if (richSubData && richSubData.plan) {
+              // The plan field contains the legacy price - try to match by program name
+              // Look for a price update that matches this subscription's program
+              const matchByName = priceUpdates.find(p => 
+                p.itemName && (
+                  richSubData.metadata?.program?.toLowerCase().includes(p.itemName.toLowerCase()) ||
+                  p.itemName.toLowerCase().includes(richSubData.metadata?.program?.toLowerCase() || '')
+                )
+              );
+              if (matchByName) {
+                newPriceId = matchByName.stripePriceId;
+                programName = matchByName.itemName;
               }
+            }
+            
+            // Strategy 2: Simple 1:1 mapping when counts match
+            if (!newPriceId && subscriptionIds.length === priceUpdates.length) {
+              const directMatch = priceUpdates[subIdx];
+              if (directMatch && directMatch.stripePriceId) {
+                newPriceId = directMatch.stripePriceId;
+                programName = directMatch.itemName;
+              }
+            }
+            
+            // Strategy 3: Single program - apply to all subscriptions
+            if (!newPriceId && priceUpdates.length === 1) {
+              newPriceId = priceUpdates[0].stripePriceId;
+              programName = priceUpdates[0].itemName;
+            }
+            
+            if (newPriceId) {
+              // Get the current subscription from Stripe
+              const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubId);
+              const existingItems = stripeSubscription.items.data;
               
-              if (updateItems.length > 0) {
-                // Update the subscription with new pricing
+              if (existingItems.length > 0) {
+                // Update the first item with new pricing
                 await stripe.subscriptions.update(stripeSubId, {
-                  items: updateItems,
+                  items: [{
+                    id: existingItems[0].id,
+                    price: newPriceId,
+                  }],
                   proration_behavior: 'none', // No immediate charge, applies at next billing
                   application_fee_percent: 1, // 1% BoxStat service fee
                   metadata: {
@@ -8494,16 +8521,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     migratedFrom: 'legacy',
                     playerId: playerId,
                     parentUserId: userId,
+                    programName: programName,
                   },
                 });
-                console.log(`✅ Stripe subscription ${stripeSubId} upgraded successfully`);
+                console.log(`✅ Stripe subscription ${stripeSubId} upgraded to ${programName} (${newPriceId})`);
                 stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
               } else {
-                console.log(`⚠️ No price updates for subscription ${stripeSubId}`);
+                console.log(`⚠️ Subscription ${stripeSubId} has no items to update`);
                 stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
               }
             } else {
-              console.log(`⚠️ No price mappings available for subscription ${stripeSubId}`);
+              console.log(`⚠️ Could not determine new price for subscription ${stripeSubId} - manual update may be needed`);
               stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
             }
           } catch (stripeError: any) {

@@ -9179,6 +9179,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // =============================================
+  // ADMIN USER BILLING DETAILS
+  // =============================================
+  
+  // Get detailed billing info for a user (admin only)
+  app.get('/api/admin/users/:userId/billing', requireAuth, async (req: any, res) => {
+    try {
+      const { role, organizationId } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+      
+      const { userId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (user.organizationId !== organizationId) {
+        return res.status(403).json({ message: 'Cannot view billing for users from other organizations' });
+      }
+      
+      // Get child players if this is a parent account
+      const allUsers = await storage.getUsersByOrganization(organizationId);
+      const childPlayers = allUsers.filter(u => u.accountHolderId === userId && u.role === 'player');
+      
+      // Get all subscriptions for this user
+      const subscriptions = await storage.getSubscriptionsByOwner(userId);
+      
+      // Get enrollments for each child player
+      const playerEnrollments: Record<string, any[]> = {};
+      const playerSubscriptions: Record<string, any[]> = {};
+      
+      for (const player of childPlayers) {
+        const enrollments = await storage.getActiveEnrollmentsWithCredits(player.id);
+        playerEnrollments[player.id] = enrollments;
+        
+        const playerSubs = await storage.getSubscriptionsByPlayerId(player.id);
+        playerSubscriptions[player.id] = playerSubs;
+      }
+      
+      // Collect unique Stripe subscription IDs
+      const stripeSubIds = new Set<string>();
+      for (const sub of subscriptions) {
+        if (sub.stripeSubscriptionId) stripeSubIds.add(sub.stripeSubscriptionId);
+      }
+      for (const playerId in playerSubscriptions) {
+        for (const sub of playerSubscriptions[playerId]) {
+          if (sub.stripeSubscriptionId) stripeSubIds.add(sub.stripeSubscriptionId);
+        }
+      }
+      
+      // Fetch Stripe subscription details
+      const stripeDetails: Record<string, any> = {};
+      if (stripe) {
+        for (const subId of stripeSubIds) {
+          try {
+            const stripeSub = await stripe.subscriptions.retrieve(subId);
+            stripeDetails[subId] = {
+              id: stripeSub.id,
+              status: stripeSub.status,
+              currentPeriodStart: stripeSub.current_period_start,
+              currentPeriodEnd: stripeSub.current_period_end,
+              cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+              interval: stripeSub.items.data[0]?.price?.recurring?.interval || 'month',
+              amount: stripeSub.items.data[0]?.price?.unit_amount || 0,
+              currency: stripeSub.items.data[0]?.price?.currency || 'usd',
+              productName: stripeSub.items.data[0]?.price?.product,
+            };
+          } catch (stripeError: any) {
+            console.warn(`Could not fetch Stripe subscription ${subId}:`, stripeError.message);
+          }
+        }
+      }
+      
+      // Build player details with their programs and subscriptions
+      const playersWithDetails = await Promise.all(childPlayers.map(async (player) => {
+        const enrollments = playerEnrollments[player.id] || [];
+        const subs = playerSubscriptions[player.id] || [];
+        
+        // Enrich subscriptions with Stripe data
+        const enrichedSubs = subs.map(sub => ({
+          ...sub,
+          stripe: sub.stripeSubscriptionId ? stripeDetails[sub.stripeSubscriptionId] : null,
+          nextPaymentDate: sub.stripeSubscriptionId && stripeDetails[sub.stripeSubscriptionId]?.currentPeriodEnd 
+            ? new Date(stripeDetails[sub.stripeSubscriptionId].currentPeriodEnd * 1000).toISOString()
+            : null,
+        }));
+        
+        return {
+          id: player.id,
+          firstName: player.firstName,
+          lastName: player.lastName,
+          programs: enrollments.map(e => ({
+            programId: e.programId,
+            programName: e.programName,
+            status: e.status,
+            remainingCredits: e.remainingCredits,
+            source: e.source,
+          })),
+          subscriptions: enrichedSubs,
+        };
+      }));
+      
+      // Get all unique Stripe subscription IDs for display
+      const allStripeSubIds = Array.from(stripeSubIds);
+      
+      // Calculate next payment date across all subscriptions
+      let nextPaymentDate: string | null = null;
+      let nextPaymentAmount = 0;
+      
+      for (const subId in stripeDetails) {
+        const sub = stripeDetails[subId];
+        if (sub.status === 'active' && sub.currentPeriodEnd) {
+          const subNextDate = new Date(sub.currentPeriodEnd * 1000).toISOString();
+          if (!nextPaymentDate || subNextDate < nextPaymentDate) {
+            nextPaymentDate = subNextDate;
+            nextPaymentAmount = sub.amount;
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionIds: allStripeSubIds,
+        players: playersWithDetails,
+        nextPaymentDate,
+        nextPaymentAmount,
+        stripeDetails,
+      });
+    } catch (error: any) {
+      console.error('Error fetching admin user billing:', error);
+      res.status(500).json({ error: 'Failed to fetch billing details', message: error.message });
+    }
+  });
+  
+  // =============================================
   // AWARD SYNC ROUTES
   // =============================================
   

@@ -600,6 +600,13 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
     enabled: !!viewingUser && detailTab === 'performance',
   });
 
+  // Fetch detailed billing info - only when viewing user in billing tab
+  const { data: userBillingDetails, isLoading: billingLoading } = useQuery<any>({
+    queryKey: ['/api/admin/users', viewingUser?.id, 'billing'],
+    queryFn: () => apiRequest(`/api/admin/users/${viewingUser!.id}/billing`),
+    enabled: !!viewingUser && detailTab === 'billing',
+  });
+
   // Fetch program memberships for the user being edited
   const { data: editingUserProgramMemberships = [] } = useQuery<any[]>({
     queryKey: ["/api/users", editingUser?.id, "program-memberships"],
@@ -1934,36 +1941,143 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
               {/* Billing Tab */}
               {detailTab === "billing" && (
                 <div role="tabpanel" id="billing-panel" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Stripe Customer ID</p>
-                      <p className="text-sm font-mono text-gray-900" data-testid="text-user-stripe-id">
-                        {viewingUser.stripeCustomerId || "—"}
-                      </p>
+                  {billingLoading ? (
+                    <div className="space-y-4">
+                      <div className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+                      <div className="h-32 bg-gray-100 rounded-lg animate-pulse" />
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Packages</p>
-                      <p className="text-sm text-gray-900" data-testid="text-user-packages">
-                        {viewingUser.packages?.join(", ") || "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Active Products</p>
-                    {viewingUser.products && Array.isArray(viewingUser.products) && viewingUser.products.length > 0 ? (
-                      <div className="space-y-2">
-                        {viewingUser.products.map((product: any, index: number) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg" data-testid={`product-${index}`}>
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
-                            <p className="text-sm font-medium text-gray-900">{typeof product === 'string' ? product : product.name || 'Unknown Product'}</p>
-                          </div>
-                        ))}
+                  ) : (
+                    <>
+                      {/* Stripe Info & Next Payment */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Stripe Customer ID</p>
+                          <p className="text-sm font-mono text-gray-900" data-testid="text-user-stripe-id">
+                            {userBillingDetails?.stripeCustomerId || viewingUser.stripeCustomerId || "—"}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Stripe Subscription IDs</p>
+                          {userBillingDetails?.stripeSubscriptionIds?.length > 0 ? (
+                            <div className="space-y-1" data-testid="text-stripe-sub-ids">
+                              {userBillingDetails.stripeSubscriptionIds.map((subId: string, idx: number) => (
+                                <p key={idx} className="text-sm font-mono text-gray-900">{subId}</p>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400">—</p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">No active products</p>
-                    )}
-                  </div>
+
+                      {/* Next Payment Date */}
+                      {userBillingDetails?.nextPaymentDate && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-1">Next Payment Due</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-lg font-bold text-blue-700" data-testid="text-next-payment-date">
+                              {new Date(userBillingDetails.nextPaymentDate).toLocaleDateString('en-US', { 
+                                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+                              })}
+                            </p>
+                            {userBillingDetails.nextPaymentAmount > 0 && (
+                              <p className="text-lg font-bold text-blue-700" data-testid="text-next-payment-amount">
+                                ${(userBillingDetails.nextPaymentAmount / 100).toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Players with Programs and Subscriptions */}
+                      {userBillingDetails?.players?.length > 0 && (
+                        <div className="pt-4 border-t">
+                          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+                            Player Assignments ({userBillingDetails.players.length})
+                          </p>
+                          <div className="space-y-4">
+                            {userBillingDetails.players.map((player: any) => (
+                              <div key={player.id} className="bg-gray-50 rounded-lg p-4" data-testid={`player-billing-${player.id}`}>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white text-xs font-semibold">
+                                    {player.firstName?.charAt(0)}{player.lastName?.charAt(0)}
+                                  </div>
+                                  <p className="font-medium text-gray-900">{player.firstName} {player.lastName}</p>
+                                </div>
+                                
+                                {/* Programs for this player */}
+                                {player.programs?.length > 0 ? (
+                                  <div className="mb-3">
+                                    <p className="text-xs font-medium text-gray-500 mb-2">Programs:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {player.programs.map((prog: any, idx: number) => (
+                                        <Badge 
+                                          key={idx} 
+                                          variant="outline" 
+                                          className={`text-xs ${prog.source === 'migrated' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-green-50 border-green-200 text-green-700'}`}
+                                          data-testid={`program-badge-${player.id}-${idx}`}
+                                        >
+                                          {prog.programName}
+                                          {prog.source === 'migrated' && <span className="ml-1 text-xs">(migrated)</span>}
+                                          {prog.remainingCredits !== null && (
+                                            <span className="ml-1 text-xs">({prog.remainingCredits} credits)</span>
+                                          )}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-400 mb-3">No programs assigned</p>
+                                )}
+                                
+                                {/* Subscriptions for this player */}
+                                {player.subscriptions?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-medium text-gray-500 mb-2">Subscriptions:</p>
+                                    <div className="space-y-2">
+                                      {player.subscriptions.map((sub: any, idx: number) => (
+                                        <div key={idx} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border" data-testid={`subscription-${player.id}-${idx}`}>
+                                          <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${sub.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                            <span className="font-medium">{sub.productName}</span>
+                                            {sub.isMigrated && (
+                                              <Badge variant="outline" className="text-xs bg-amber-50 border-amber-200 text-amber-700">Legacy</Badge>
+                                            )}
+                                          </div>
+                                          {sub.nextPaymentDate && (
+                                            <span className="text-xs text-gray-500">
+                                              Next: {new Date(sub.nextPaymentDate).toLocaleDateString()}
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Legacy Products Section */}
+                      <div className="pt-4 border-t">
+                        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Active Products</p>
+                        {viewingUser.products && Array.isArray(viewingUser.products) && viewingUser.products.length > 0 ? (
+                          <div className="space-y-2">
+                            {viewingUser.products.map((product: any, index: number) => (
+                              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg" data-testid={`product-${index}`}>
+                                <div className="w-2 h-2 rounded-full bg-green-500" />
+                                <p className="text-sm font-medium text-gray-900">{typeof product === 'string' ? product : product.name || 'Unknown Product'}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-400">No active products</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 

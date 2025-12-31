@@ -9455,12 +9455,12 @@ function MigrationsTab({ organization, users }: any) {
     resolver: zodResolver(z.object({
       email: z.string().email("Valid email required"),
       stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
-      stripeSubscriptionId: z.string().min(1, "Stripe Subscription ID required"),
+      stripeSubscriptionIds: z.string().min(1, "At least one Stripe Subscription ID required"),
     })),
     defaultValues: {
       email: "",
       stripeCustomerId: "",
-      stripeSubscriptionId: "",
+      stripeSubscriptionIds: "",
     },
   });
 
@@ -9501,10 +9501,14 @@ function MigrationsTab({ organization, users }: any) {
   const handleEdit = (migration: any) => {
     setEditingMigration(migration);
     setMigrationItems(migration.items || []);
+    // Load subscription IDs from array or legacy field
+    const subscriptionIds = migration.stripeSubscriptionIds?.length > 0 
+      ? migration.stripeSubscriptionIds.join(', ')
+      : migration.stripeSubscriptionId || '';
     form.reset({
       email: migration.email,
       stripeCustomerId: migration.stripeCustomerId,
-      stripeSubscriptionId: migration.stripeSubscriptionId,
+      stripeSubscriptionIds: subscriptionIds,
     });
     setIsAddDialogOpen(true);
   };
@@ -9518,7 +9522,20 @@ function MigrationsTab({ organization, users }: any) {
       });
       return;
     }
-    const submitData = { ...data, items: migrationItems };
+    // Parse subscription IDs from comma/newline separated string into array
+    const subscriptionIdsArray = data.stripeSubscriptionIds
+      .split(/[,\n]/)
+      .map((id: string) => id.trim())
+      .filter((id: string) => id.length > 0);
+    
+    const submitData = { 
+      email: data.email,
+      stripeCustomerId: data.stripeCustomerId,
+      stripeSubscriptionIds: subscriptionIdsArray,
+      // Keep legacy field for backward compatibility (first ID)
+      stripeSubscriptionId: subscriptionIdsArray[0] || '',
+      items: migrationItems 
+    };
     if (editingMigration) {
       updateMigration.mutate({ id: editingMigration.id, data: submitData });
     } else {
@@ -9535,7 +9552,7 @@ function MigrationsTab({ organization, users }: any) {
     form.reset({
       email: "",
       stripeCustomerId: "",
-      stripeSubscriptionId: "",
+      stripeSubscriptionIds: "",
     });
     setIsAddDialogOpen(true);
   };
@@ -9893,13 +9910,20 @@ function MigrationsTab({ organization, users }: any) {
               />
               <FormField
                 control={form.control}
-                name="stripeSubscriptionId"
+                name="stripeSubscriptionIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stripe Subscription ID</FormLabel>
+                    <FormLabel>Stripe Subscription IDs</FormLabel>
                     <FormControl>
-                      <Input placeholder="sub_xxxxxxxxxxxxx" {...field} data-testid="input-migration-stripe-sub" />
+                      <Textarea 
+                        placeholder="sub_xxxxxxxxxxxxx&#10;sub_yyyyyyyyyyyyy&#10;(one per line or comma-separated)" 
+                        {...field} 
+                        data-testid="input-migration-stripe-subs"
+                        rows={3}
+                        className="font-mono text-sm"
+                      />
                     </FormControl>
+                    <p className="text-xs text-gray-500">Enter multiple subscription IDs separated by commas or new lines</p>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -8272,15 +8272,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'At least one item must be added' });
-      }
+      // Items are optional for bulk upload - default to empty array
+      const itemsArray = Array.isArray(items) ? items : [];
       
       const migration = await storage.createMigrationLookup({
         email,
         stripeCustomerId,
         stripeSubscriptionId,
-        items,
+        items: itemsArray,
         isClaimed: false,
       });
       

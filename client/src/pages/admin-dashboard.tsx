@@ -9393,6 +9393,8 @@ function MigrationsTab({ organization, users }: any) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingMigration, setEditingMigration] = useState<any>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   const { data: migrations = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/migrations'],
@@ -9548,6 +9550,66 @@ function MigrationsTab({ organization, users }: any) {
     );
   }
 
+  // Download migrations as CSV
+  const downloadMigrationsData = () => {
+    const csvHeaders = "Email,Stripe Customer ID,Stripe Subscription ID,Items,Status";
+    const csvRows = migrations.map((migration: any) => {
+      const itemsList = migration.items?.map((item: any) => 
+        `${item.itemName || 'Unknown'} (x${item.quantity})`
+      ).join('; ') || '';
+      return [
+        migration.email || "",
+        migration.stripeCustomerId || "",
+        migration.stripeSubscriptionId || "",
+        itemsList,
+        migration.isClaimed ? "Claimed" : "Pending"
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+    });
+    const csvContent = [csvHeaders, ...csvRows].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'migrations.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCsvUpload = async () => {
+    if (!csvFile) return;
+    const text = await csvFile.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].match(/("([^"]|"")*"|[^,]*)/g)?.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"')) || [];
+      if (values.length >= 3) {
+        const email = values[0];
+        const stripeCustomerId = values[1];
+        const stripeSubscriptionId = values[2];
+        if (email && stripeCustomerId && stripeSubscriptionId) {
+          try {
+            await apiRequest('/api/admin/migrations', { 
+              method: 'POST', 
+              data: { 
+                email, 
+                stripeCustomerId, 
+                stripeSubscriptionId, 
+                items: [] // Empty items for bulk upload
+              } 
+            });
+          } catch (e) {
+            console.error('Failed to import migration:', email);
+          }
+        }
+      }
+    }
+    queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+    setIsUploadDialogOpen(false);
+    setCsvFile(null);
+    toast({ title: "Import complete", description: `Processed ${lines.length - 1} rows` });
+  };
+
   return (
     <Card data-testid="migrations-tab">
       <CardHeader>
@@ -9561,10 +9623,41 @@ function MigrationsTab({ organization, users }: any) {
               Manage legacy parent subscriptions from the club payment system. Link Stripe data to player profiles.
             </CardDescription>
           </div>
-          <Button onClick={openAddDialog} data-testid="button-add-migration">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Migration
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="icon" title="Bulk Upload" data-testid="button-bulk-upload-migrations">
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Migrations</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file with columns: Email, Stripe Customer ID, Stripe Subscription ID
+                  </DialogDescription>
+                </DialogHeader>
+                <Input 
+                  type="file" 
+                  accept=".csv" 
+                  onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                  data-testid="input-upload-migrations-csv"
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleCsvUpload} disabled={!csvFile}>Upload</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            
+            <Button variant="outline" size="icon" title="Download Data" onClick={downloadMigrationsData} data-testid="button-download-migrations">
+              <Download className="w-4 h-4" />
+            </Button>
+            
+            <Button size="icon" title="Add Migration" onClick={openAddDialog} data-testid="button-add-migration">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

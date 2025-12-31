@@ -1219,6 +1219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       lineItems.push(mainLineItem);
       
+      // Calculate subtotal for platform fee
+      let subtotal = program.price;
+      
       // Add add-on line items (one-time purchases only, not subscriptions)
       const addOnProductIds: string[] = [];
       if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0 && !isSubscription) {
@@ -1226,6 +1229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const addOn = await storage.getProgram(addOnId);
           if (addOn && addOn.price) {
             addOnProductIds.push(addOnId);
+            subtotal += addOn.price;
             lineItems.push({
               price_data: {
                 currency: 'usd',
@@ -1239,6 +1243,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
+      }
+      
+      // Add 1% BoxStat platform fee as a separate line item
+      const platformFee = Math.round(subtotal * 0.01); // 1% of subtotal
+      if (platformFee > 0) {
+        const platformFeeItem: any = {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'BoxStat Platform Fee',
+              description: '1% service fee',
+            },
+            unit_amount: platformFee,
+          },
+          quantity: 1,
+        };
+        
+        // For subscriptions, the fee must also be recurring
+        if (isSubscription) {
+          const interval = (program.billingCycle || 'month').toLowerCase();
+          const stripeInterval = interval === 'monthly' ? 'month' : 
+                                 interval === 'yearly' ? 'year' : 
+                                 interval === 'weekly' ? 'week' :
+                                 interval === 'daily' ? 'day' : interval;
+          platformFeeItem.price_data.recurring = {
+            interval: stripeInterval as 'day' | 'week' | 'month' | 'year',
+          };
+        }
+        
+        lineItems.push(platformFeeItem);
       }
       
       // Create Stripe Checkout Session
@@ -2518,6 +2552,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         quantity: 1,
       }];
+      
+      // Track subtotal for platform fee
+      let subtotal = program.price;
 
       // Add any selected add-ons (validate they are goods products)
       if (addOnIds && Array.isArray(addOnIds) && addOnIds.length > 0) {
@@ -2525,6 +2562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const addOn = await storage.getProgram(addOnId);
           // Only allow goods products as add-ons
           if (addOn && addOn.productCategory === 'goods' && addOn.price && addOn.price > 0) {
+            subtotal += addOn.price;
             lineItems.push({
               price_data: {
                 currency: 'usd',
@@ -2538,6 +2576,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
         }
+      }
+      
+      // Add 1% BoxStat platform fee
+      const platformFee = Math.round(subtotal * 0.01); // 1% of subtotal
+      if (platformFee > 0) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'BoxStat Platform Fee',
+              description: '1% service fee',
+            },
+            unit_amount: platformFee,
+          },
+          quantity: 1,
+        });
       }
 
       // Build success URL - include auth token for iOS to restore session after redirect

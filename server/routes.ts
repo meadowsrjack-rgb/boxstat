@@ -9320,6 +9320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             console.log(`📊 Fetching Stripe subscription: ${subId}`);
             const stripeSub = await stripe.subscriptions.retrieve(subId);
+            console.log(`📊 Stripe raw keys:`, Object.keys(stripeSub).filter(k => k.includes('period') || k.includes('Period')));
             // Check both snake_case (raw API) and camelCase (SDK) property names
             const periodEnd = (stripeSub as any).current_period_end || (stripeSub as any).currentPeriodEnd;
             const periodStart = (stripeSub as any).current_period_start || (stripeSub as any).currentPeriodStart;

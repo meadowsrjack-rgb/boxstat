@@ -76,12 +76,15 @@ export default function ClaimSubscriptionPage() {
   const assignMigration = useMutation({
     mutationFn: (data: { migrationId: number; playerId: string }) =>
       apiRequest('/api/legacy/assign', { method: 'POST', body: JSON.stringify(data) }),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/legacy/my-migrations'] });
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       setSelectedMigration(null);
       setSelectedPlayerId("");
-      toast({ title: "Subscription assigned successfully!" });
+      toast({ 
+        title: "Account Linked!", 
+        description: response.message || "Your next billing cycle will be updated to the new BoxStat rate.",
+      });
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -255,14 +258,22 @@ export default function ClaimSubscriptionPage() {
         <Dialog open={!!selectedMigration} onOpenChange={() => setSelectedMigration(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Assign Subscription</DialogTitle>
+              <DialogTitle>Claim Your Subscription</DialogTitle>
               <DialogDescription>
-                Select a player to assign "{selectedMigration?.program?.name || 'Legacy Subscription'}" to.
+                Link your legacy subscription to a player. Your billing will be updated to the new BoxStat rate on your next billing cycle.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-800">
+                  Programs: {selectedMigration?.items?.map((item: MigrationItem) => item.itemName).join(', ') || 'Legacy Subscription'}
+                </p>
+                <p className="text-xs text-blue-600 mt-1">
+                  No immediate charge - new pricing applies at your next billing date
+                </p>
+              </div>
               <div>
-                <Label>Select Player</Label>
+                <Label>Link to Player</Label>
                 <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
                   <SelectTrigger data-testid="select-assign-player">
                     <SelectValue placeholder="Choose a player..." />
@@ -294,7 +305,7 @@ export default function ClaimSubscriptionPage() {
                 disabled={!selectedPlayerId || assignMigration.isPending}
                 data-testid="button-confirm-assign"
               >
-                {assignMigration.isPending ? "Assigning..." : "Assign Subscription"}
+                {assignMigration.isPending ? "Activating..." : "Confirm and Activate"}
               </Button>
             </DialogFooter>
           </DialogContent>

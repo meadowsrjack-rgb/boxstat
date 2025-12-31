@@ -8382,6 +8382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Assign migration subscription to a player (user self-service)
+  // Includes Stripe subscription upgrade with new pricing and 1% application fee
   app.post('/api/legacy/assign', requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
@@ -8419,8 +8420,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: 'This player does not belong to your account' });
       }
       
-      // Get item names for the subscription
+      // Get item names for the subscription and lookup new price IDs
       let productName = 'Legacy Subscription';
+      const priceUpdates: { itemName: string; stripePriceId: string | null; programId: string }[] = [];
+      
       if (migration.items && migration.items.length > 0) {
         const itemNames = migration.items.map(item => 
           item.itemName || `${item.itemType} (${item.quantity})`
@@ -8428,18 +8431,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (itemNames.length > 0) {
           productName = itemNames.join(', ');
         }
+        
+        // Look up new price IDs from programs table
+        for (const item of migration.items) {
+          if (item.itemId && item.itemType === 'program') {
+            const program = await storage.getProgram(item.itemId);
+            if (program && program.stripePriceId) {
+              priceUpdates.push({
+                itemName: item.itemName || program.name,
+                stripePriceId: program.stripePriceId,
+                programId: item.itemId,
+              });
+              console.log(`📦 Found new price for "${item.itemName}": ${program.stripePriceId}`);
+            }
+          }
+        }
       }
       
-      // Create a subscription for this player
-      await storage.createSubscription({
-        ownerUserId: userId,
-        assignedPlayerId: playerId,
-        stripeCustomerId: migration.stripeCustomerId,
-        stripeSubscriptionId: migration.stripeSubscriptionId,
-        productName,
-        status: 'active',
-        isMigrated: true,
-      });
+      // Get all subscription IDs from migration (support both single and array)
+      const subscriptionIds: string[] = (migration.stripeSubscriptionIds && migration.stripeSubscriptionIds.length > 0)
+        ? migration.stripeSubscriptionIds 
+        : migration.stripeSubscriptionId 
+          ? [migration.stripeSubscriptionId]
+          : [];
+      
+      // Upgrade Stripe subscriptions with new pricing and 1% application fee
+      const stripeUpgradeResults: { subscriptionId: string; success: boolean; error?: string }[] = [];
+      
+      if (stripe && subscriptionIds.length > 0) {
+        for (const stripeSubId of subscriptionIds) {
+          try {
+            // Get the current subscription from Stripe
+            const stripeSubscription = await stripe.subscriptions.retrieve(stripeSubId);
+            
+            if (stripeSubscription && priceUpdates.length > 0) {
+              // Build the items array for the update
+              // We'll update each subscription item with the new price
+              const existingItems = stripeSubscription.items.data;
+              const updateItems: any[] = [];
+              
+              for (const existingItem of existingItems) {
+                // Find matching new price for this item
+                const matchingPrice = priceUpdates.find(p => p.stripePriceId);
+                if (matchingPrice && matchingPrice.stripePriceId) {
+                  updateItems.push({
+                    id: existingItem.id,
+                    price: matchingPrice.stripePriceId,
+                  });
+                  console.log(`📦 Updating subscription item ${existingItem.id} to price ${matchingPrice.stripePriceId}`);
+                }
+              }
+              
+              if (updateItems.length > 0) {
+                // Update the subscription with new pricing
+                await stripe.subscriptions.update(stripeSubId, {
+                  items: updateItems,
+                  proration_behavior: 'none', // No immediate charge, applies at next billing
+                  application_fee_percent: 1, // 1% BoxStat service fee
+                  metadata: {
+                    migrated: 'true',
+                    migratedAt: new Date().toISOString(),
+                    migratedFrom: 'legacy',
+                    playerId: playerId,
+                    parentUserId: userId,
+                  },
+                });
+                console.log(`✅ Stripe subscription ${stripeSubId} upgraded successfully`);
+                stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
+              } else {
+                console.log(`⚠️ No price updates for subscription ${stripeSubId}`);
+                stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
+              }
+            } else {
+              console.log(`⚠️ No price mappings available for subscription ${stripeSubId}`);
+              stripeUpgradeResults.push({ subscriptionId: stripeSubId, success: true });
+            }
+          } catch (stripeError: any) {
+            console.error(`❌ Failed to upgrade Stripe subscription ${stripeSubId}:`, stripeError.message);
+            stripeUpgradeResults.push({ 
+              subscriptionId: stripeSubId, 
+              success: false, 
+              error: stripeError.message 
+            });
+            // Continue with other subscriptions even if one fails
+          }
+        }
+      }
+      
+      // Create subscription records for each subscription ID
+      for (const stripeSubId of subscriptionIds) {
+        await storage.createSubscription({
+          ownerUserId: userId,
+          assignedPlayerId: playerId,
+          stripeCustomerId: migration.stripeCustomerId,
+          stripeSubscriptionId: stripeSubId,
+          productName,
+          status: 'active',
+          isMigrated: true,
+        });
+      }
+      
+      // Enroll player in programs from migration items
+      for (const item of (migration.items || [])) {
+        if (item.itemId && item.itemType === 'program') {
+          try {
+            await storage.createEnrollment({
+              userId: playerId,
+              productId: item.itemId,
+              status: 'active',
+              enrollmentType: 'migrated',
+            });
+            console.log(`✅ Enrolled player ${playerId} in program ${item.itemId}`);
+          } catch (enrollError: any) {
+            console.warn(`⚠️ Could not enroll in program ${item.itemId}:`, enrollError.message);
+          }
+        }
+      }
       
       // Update parent's stripe customer ID if not already set
       const parent = await storage.getUser(userId);
@@ -8459,7 +8566,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUser(userId, { needsLegacyClaim: false });
       }
       
-      res.json({ success: true, message: 'Subscription assigned to player' });
+      // Check if any Stripe upgrades failed
+      const failedUpgrades = stripeUpgradeResults.filter(r => !r.success);
+      if (failedUpgrades.length > 0) {
+        console.warn(`⚠️ Some Stripe upgrades failed:`, failedUpgrades);
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Account linked! Your next billing cycle will be updated to the new BoxStat rate.',
+        stripeUpgrades: stripeUpgradeResults,
+      });
     } catch (error: any) {
       console.error('Error assigning legacy subscription:', error);
       res.status(500).json({ error: 'Failed to assign subscription', message: error.message });

@@ -307,6 +307,10 @@ export default function AdminDashboard() {
                 <Bell className="w-4 h-4 mr-2" />
                 Notifications
               </TabsTrigger>
+              <TabsTrigger value="migrations" data-testid="tab-migrations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <ArrowLeftRight className="w-4 h-4 mr-2" />
+                Migrations
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -376,6 +380,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="settings">
             <SettingsTab organization={organization} />
+          </TabsContent>
+
+          <TabsContent value="migrations">
+            <MigrationsTab organization={organization} users={users} />
           </TabsContent>
         </Tabs>
       </div>
@@ -9368,6 +9376,392 @@ function WaiversTab({ organization }: any) {
               onClick={() => deleteWaiver.mutate(deleteConfirm?.id)}
               className="bg-red-600 hover:bg-red-700"
               data-testid="button-confirm-delete-waiver"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
+  );
+}
+
+// Migrations Tab - Legacy Parent Stripe Data Management
+function MigrationsTab({ organization, users }: any) {
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [editingMigration, setEditingMigration] = useState<any>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [linkingMigration, setLinkingMigration] = useState<any>(null);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>("");
+
+  const { data: migrations = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/migrations'],
+  });
+
+  const createMigration = useMutation({
+    mutationFn: (data: any) => apiRequest('/api/admin/migrations', { method: 'POST', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+      setIsAddDialogOpen(false);
+      setEditingMigration(null);
+      toast({ title: "Migration record saved" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateMigration = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => 
+      apiRequest(`/api/admin/migrations/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+      setEditingMigration(null);
+      toast({ title: "Migration record updated" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const deleteMigration = useMutation({
+    mutationFn: (id: number) => apiRequest(`/api/admin/migrations/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+      setDeleteConfirm(null);
+      toast({ title: "Migration record deleted" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const linkToPlayer = useMutation({
+    mutationFn: ({ migrationId, playerId }: { migrationId: number; playerId: string }) =>
+      apiRequest(`/api/admin/migrations/${migrationId}/link`, { method: 'POST', body: JSON.stringify({ playerId }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/migrations'] });
+      setLinkingMigration(null);
+      setSelectedPlayerId("");
+      toast({ title: "Subscription linked to player" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const form = useForm({
+    resolver: zodResolver(z.object({
+      email: z.string().email("Valid email required"),
+      stripeCustomerId: z.string().min(1, "Stripe Customer ID required"),
+      stripeSubscriptionId: z.string().min(1, "Stripe Subscription ID required"),
+      productName: z.string().min(1, "Product name required"),
+    })),
+    defaultValues: {
+      email: "",
+      stripeCustomerId: "",
+      stripeSubscriptionId: "",
+      productName: "",
+    },
+  });
+
+  const filteredMigrations = migrations.filter((m: any) =>
+    m.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.stripeCustomerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.productName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const players = users.filter((u: any) => u.role === 'player');
+
+  const handleEdit = (migration: any) => {
+    setEditingMigration(migration);
+    form.reset({
+      email: migration.email,
+      stripeCustomerId: migration.stripeCustomerId,
+      stripeSubscriptionId: migration.stripeSubscriptionId,
+      productName: migration.productName,
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleSubmit = (data: any) => {
+    if (editingMigration) {
+      updateMigration.mutate({ id: editingMigration.id, data });
+    } else {
+      createMigration.mutate(data);
+    }
+  };
+
+  const openAddDialog = () => {
+    setEditingMigration(null);
+    form.reset({
+      email: "",
+      stripeCustomerId: "",
+      stripeSubscriptionId: "",
+      productName: "",
+    });
+    setIsAddDialogOpen(true);
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center text-gray-500">
+          Loading migration data...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="migrations-tab">
+      <CardHeader>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="w-5 h-5" />
+              Legacy Migrations
+            </CardTitle>
+            <CardDescription>
+              Manage legacy parent subscriptions from the club payment system. Link Stripe data to player profiles.
+            </CardDescription>
+          </div>
+          <Button onClick={openAddDialog} data-testid="button-add-migration">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Migration
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4">
+          <Input
+            placeholder="Search by email, Stripe ID, or product..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+            data-testid="input-search-migrations"
+          />
+        </div>
+
+        {filteredMigrations.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            {searchTerm ? "No matching migration records found" : "No migration records yet. Add legacy parent data to get started."}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Stripe Customer ID</TableHead>
+                  <TableHead>Subscription ID</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredMigrations.map((migration: any) => (
+                  <TableRow key={migration.id} data-testid={`row-migration-${migration.id}`}>
+                    <TableCell className="font-medium">{migration.email}</TableCell>
+                    <TableCell className="font-mono text-xs">{migration.stripeCustomerId}</TableCell>
+                    <TableCell className="font-mono text-xs">{migration.stripeSubscriptionId}</TableCell>
+                    <TableCell>{migration.productName}</TableCell>
+                    <TableCell>
+                      {migration.isClaimed ? (
+                        <Badge className="bg-green-100 text-green-800">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          Claimed
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                          <Circle className="w-3 h-3 mr-1" />
+                          Pending
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {!migration.isClaimed && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setLinkingMigration(migration)}
+                            data-testid={`button-link-migration-${migration.id}`}
+                          >
+                            <UserPlus className="w-4 h-4 mr-1" />
+                            Link
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleEdit(migration)}
+                          data-testid={`button-edit-migration-${migration.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => setDeleteConfirm(migration)}
+                          data-testid={`button-delete-migration-${migration.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        <div className="mt-4 text-sm text-gray-500">
+          Total: {filteredMigrations.length} records • 
+          Claimed: {filteredMigrations.filter((m: any) => m.isClaimed).length} • 
+          Pending: {filteredMigrations.filter((m: any) => !m.isClaimed).length}
+        </div>
+      </CardContent>
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingMigration ? "Edit Migration Record" : "Add Migration Record"}</DialogTitle>
+            <DialogDescription>
+              Enter the legacy parent Stripe data from the club payment system.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="parent@example.com" {...field} data-testid="input-migration-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stripeCustomerId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stripe Customer ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="cus_xxxxxxxxxxxxx" {...field} data-testid="input-migration-stripe-customer" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="stripeSubscriptionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stripe Subscription ID</FormLabel>
+                    <FormControl>
+                      <Input placeholder="sub_xxxxxxxxxxxxx" {...field} data-testid="input-migration-stripe-sub" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="productName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product/Subscription Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Monthly Training Program" {...field} data-testid="input-migration-product" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createMigration.isPending || updateMigration.isPending} data-testid="button-save-migration">
+                  {createMigration.isPending || updateMigration.isPending ? "Saving..." : "Save"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link to Player Dialog */}
+      <Dialog open={!!linkingMigration} onOpenChange={() => setLinkingMigration(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link to Player Profile</DialogTitle>
+            <DialogDescription>
+              Select a player to assign this legacy subscription to.
+              Email: {linkingMigration?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Select Player</Label>
+              <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                <SelectTrigger data-testid="select-link-player">
+                  <SelectValue placeholder="Choose a player..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {players.map((player: any) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {player.firstName} {player.lastName} ({player.email || 'No email'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLinkingMigration(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => linkToPlayer.mutate({ migrationId: linkingMigration.id, playerId: selectedPlayerId })}
+                disabled={!selectedPlayerId || linkToPlayer.isPending}
+                data-testid="button-confirm-link"
+              >
+                {linkToPlayer.isPending ? "Linking..." : "Link Subscription"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Migration Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the migration record for "{deleteConfirm?.email}"? 
+              This will not affect any linked player subscriptions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMigration.mutate(deleteConfirm?.id)}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete-migration"
             >
               Delete
             </AlertDialogAction>

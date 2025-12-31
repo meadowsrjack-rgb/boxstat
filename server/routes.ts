@@ -9285,6 +9285,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all subscriptions for this user
       const subscriptions = await storage.getSubscriptionsByOwner(userId);
+      console.log(`📊 Admin billing for ${userId}: Found ${subscriptions.length} owner subscriptions`);
+      console.log(`📊 Admin billing: childPlayers count: ${childPlayers.length}`);
       
       // Get enrollments for each child player
       const playerEnrollments: Record<string, any[]> = {};
@@ -9311,10 +9313,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch Stripe subscription details
       const stripeDetails: Record<string, any> = {};
+      console.log(`📊 Admin billing: Found ${stripeSubIds.size} Stripe subscription IDs:`, Array.from(stripeSubIds));
+      
       if (stripe) {
         for (const subId of stripeSubIds) {
           try {
+            console.log(`📊 Fetching Stripe subscription: ${subId}`);
             const stripeSub = await stripe.subscriptions.retrieve(subId);
+            console.log(`📊 Stripe subscription ${subId} status: ${stripeSub.status}, period_end: ${stripeSub.current_period_end}`);
             stripeDetails[subId] = {
               id: stripeSub.id,
               status: stripeSub.status,
@@ -9331,6 +9337,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
+      
+      console.log(`📊 Admin billing: stripeDetails keys:`, Object.keys(stripeDetails));
       
       // Build player details with their programs and subscriptions
       const playersWithDetails = await Promise.all(childPlayers.map(async (player) => {

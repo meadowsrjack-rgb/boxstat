@@ -9398,12 +9398,12 @@ function MigrationsTab({ organization, users }: any) {
     queryKey: ['/api/admin/migrations'],
   });
 
-  const { data: products = [] } = useQuery<any[]>({
-    queryKey: ['/api/products'],
+  const { data: programs = [] } = useQuery<any[]>({
+    queryKey: ['/api/programs'],
   });
 
-  const programs = products.filter((p: any) => p.type === 'Subscription' || p.type === 'Program');
-  const storeProducts = products.filter((p: any) => p.type === 'One-Time');
+  const storeProducts = programs.filter((p: any) => p.type === 'One-Time' || p.type === 'Store');
+  const programProducts = programs.filter((p: any) => p.type !== 'One-Time' && p.type !== 'Store');
 
   const createMigration = useMutation({
     mutationFn: (data: any) => apiRequest('/api/admin/migrations', { method: 'POST', body: JSON.stringify(data) }),
@@ -9709,7 +9709,7 @@ function MigrationsTab({ organization, users }: any) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {(productType === 'store' ? storeProducts : programs).map((p: any) => (
+                        {(productType === 'store' ? storeProducts : programProducts).map((p: any) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name}
                           </SelectItem>

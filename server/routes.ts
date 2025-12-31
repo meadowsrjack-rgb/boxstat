@@ -2240,6 +2240,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get detailed subscription info with Stripe data (next payment date, etc.)
+  app.get('/api/subscriptions/details', requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      
+      // Get all subscriptions for this account holder
+      const subscriptions = await storage.getSubscriptionsByOwner(userId);
+      
+      // Get all child players
+      const allUsers = await storage.getUsersByOrganization(user.organizationId);
+      const childPlayers = allUsers.filter(u => u.accountHolderId === userId && u.role === "player");
+      
+      // Collect all unique Stripe subscription IDs
+      const stripeSubIds = new Set<string>();
+      for (const sub of subscriptions) {
+        if (sub.stripeSubscriptionId) {
+          stripeSubIds.add(sub.stripeSubscriptionId);
+        }
+      }
+      
+      // Also check for Stripe subscriptions in player_subscriptions table
+      for (const player of childPlayers) {
+        const playerSubs = await storage.getSubscriptionsByPlayerId(player.id);
+        for (const sub of playerSubs) {
+          if (sub.stripeSubscriptionId) {
+            stripeSubIds.add(sub.stripeSubscriptionId);
+          }
+        }
+      }
+      
+      // Fetch Stripe subscription details
+      const stripeDetails: Record<string, any> = {};
+      if (stripe) {
+        for (const subId of stripeSubIds) {
+          try {
+            const stripeSub = await stripe.subscriptions.retrieve(subId);
+            stripeDetails[subId] = {
+              id: stripeSub.id,
+              status: stripeSub.status,
+              currentPeriodStart: stripeSub.current_period_start,
+              currentPeriodEnd: stripeSub.current_period_end,
+              cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+              interval: stripeSub.items.data[0]?.price?.recurring?.interval || 'month',
+              amount: stripeSub.items.data[0]?.price?.unit_amount || 0,
+              currency: stripeSub.items.data[0]?.price?.currency || 'usd',
+            };
+          } catch (stripeError: any) {
+            console.warn(`Could not fetch Stripe subscription ${subId}:`, stripeError.message);
+          }
+        }
+      }
+      
+      // Enrich subscriptions with Stripe data and player info
+      const enrichedSubscriptions = subscriptions.map(sub => {
+        const stripeInfo = sub.stripeSubscriptionId ? stripeDetails[sub.stripeSubscriptionId] : null;
+        const player = sub.assignedPlayerId ? childPlayers.find(p => p.id === sub.assignedPlayerId) : null;
+        
+        return {
+          ...sub,
+          playerName: player ? `${player.firstName} ${player.lastName}` : null,
+          stripe: stripeInfo,
+          nextPaymentDate: stripeInfo?.currentPeriodEnd ? new Date(stripeInfo.currentPeriodEnd * 1000).toISOString() : null,
+        };
+      });
+      
+      // Get upcoming payments summary
+      const upcomingPayments = enrichedSubscriptions
+        .filter(s => s.status === 'active' && s.stripe?.currentPeriodEnd)
+        .map(s => ({
+          subscriptionId: s.id,
+          stripeSubscriptionId: s.stripeSubscriptionId,
+          productName: s.productName,
+          playerName: s.playerName,
+          amount: s.stripe?.amount || 0,
+          currency: s.stripe?.currency || 'usd',
+          nextPaymentDate: s.nextPaymentDate,
+          interval: s.stripe?.interval || 'month',
+        }))
+        .sort((a, b) => new Date(a.nextPaymentDate || 0).getTime() - new Date(b.nextPaymentDate || 0).getTime());
+      
+      res.json({
+        success: true,
+        subscriptions: enrichedSubscriptions,
+        upcomingPayments,
+        stripeCustomerId: user.stripeCustomerId,
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscription details:", error);
+      res.status(500).json({ success: false, message: "Failed to fetch subscription details" });
+    }
+  });
+  
   // Get users by account holder (for unified account page)
   app.get('/api/account/players', requireAuth, async (req: any, res) => {
     const { id } = req.user;

@@ -8250,6 +8250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const migrations = await storage.getAllMigrationLookups();
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.json(migrations);
     } catch (error: any) {
       console.error('Error fetching migrations:', error);

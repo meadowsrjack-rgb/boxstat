@@ -1,0 +1,4 @@
+Name,Description,Type,Price,Billing Cycle,Access Tag,Duration Days,Is Active
+"Youth Club","Competitive club basketball program for youth players.","Subscription","25500","Monthly","club_member","90","true"
+"Youth Club Test","","Subscription","100","Monthly","club_member","90","true"
+"Skills Academy","","Subscription","10000","Monthly","club_member","90","true"

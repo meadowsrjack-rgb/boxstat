@@ -170,8 +170,9 @@ export default function RegistrationFlow() {
           
           // Force page reload to ensure fresh auth state (like login page does)
           // This prevents cached user data from previous sessions
+          // Route through /dashboard so DashboardDispatcher can check for legacy claims
           setTimeout(() => {
-            window.location.href = "/profile-gateway";
+            window.location.href = "/dashboard";
           }, 500);
         }
       } catch (loginError: any) {

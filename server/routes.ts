@@ -8356,11 +8356,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/legacy/my-migrations', requireAuth, async (req: any, res) => {
     try {
       const { email } = req.user;
+      console.log(`📦 Fetching migrations for email: "${email}"`);
       if (!email) {
+        console.log(`📦 No email found, returning empty array`);
         return res.json([]);
       }
       
       const migrations = await storage.getMigrationLookupsByEmail(email);
+      console.log(`📦 Found ${migrations.length} migrations for ${email}`);
       
       // Return migrations with items already included
       const enrichedMigrations = migrations.map(m => ({

@@ -8388,7 +8388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
       const email = user?.email;
-      const { migrationId, playerId } = req.body;
+      const { migrationId, playerId, itemId } = req.body;
       
       if (!migrationId || !playerId) {
         return res.status(400).json({ error: 'Migration ID and Player ID are required' });

@@ -1,0 +1,24 @@
+I have a legacy member migration already in progress.
+
+Current State: Legacy members are identified by email during signup. If a match is found in our legacy_migrationtable, they are redirected to a "Player Link" page.
+Data Available: We have the stripe_customer_id, stripe_subscription_id, and the legacy program_name (e.g., Youth Club, Skills Academy).
+Task: Implement the backend logic and UI for the "Player Link" page to "Claim" players and simultaneously upgrade their Stripe billing to the new BoxStat product structure with a service fee.
+1. Database Update: When a parent enters a player's name on the Player Link page:
+
+Create a Player record in our database.
+Link the Player record to the User (Parent).
+Store the stripe_subscription_id on the Player record.
+Mark the migration table status record as is_claimed = true.
+2. Stripe Subscription Upgrade Logic: Once the player is linked, trigger a stripe.subscriptions.update call for that specific stripe_subscription_id. Use the following settings:
+
+Price Mapping: - If legacy program was "Youth Club" (Old prices: $350 or $936), update to the new Youth Club Price ID ($255.00).
+If legacy program was "Skills Academy" (Old price: $213), update to the new Skills Academy Price ID($100.00).
+Service Fee: Include an application_fee_percent: 1 in the subscription update call so BoxStat collects a 1% fee on all future recurring transactions.
+Proration: Set proration_behavior: 'none'. This ensures the parent is NOT charged immediately for the price change; the new price and fee will only apply to their next scheduled billing date.
+3. Frontend Requirements:
+
+A "Claim Your Subscription" view that lists the found legacy programs.
+A linking field where user can link the players they just made to the programs.
+A "Confirm and Activate" button that triggers the backend migration and subscription update.
+A success message that says: "Account Linked! Your next billing cycle will be updated to the new BoxStat rate."
+4. Technical Note: Assume we are using the Stripe Node.js SDK and our environment variables for STRIPE_SECRET_KEYand the new Stripe Price IDs for Youth Club ($255) and Skills Academy ($100) are already configured.

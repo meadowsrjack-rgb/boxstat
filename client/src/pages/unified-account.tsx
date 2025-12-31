@@ -119,8 +119,24 @@ function CompactAwardsIndicator({ playerId }: { playerId: string }) {
     refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
-  // Calculate total awards earned (totalBadges + totalTrophies from API response)
-  const totalEarned = (awardsData?.totalBadges || 0) + (awardsData?.totalTrophies || 0);
+  // Calculate total awards earned from tierSummary or legacy count fields
+  const calculateTotalEarned = () => {
+    if (!awardsData) return 0;
+    // Use tierSummary if available (new format with earned/total per tier)
+    if (awardsData.tierSummary) {
+      return Object.values(awardsData.tierSummary).reduce((sum: number, tier: any) => {
+        return sum + (tier?.earned || 0);
+      }, 0);
+    }
+    // Fallback to legacy count fields
+    return (awardsData.trophiesCount || 0) + 
+           (awardsData.hallOfFameBadgesCount || 0) + 
+           (awardsData.superstarBadgesCount || 0) + 
+           (awardsData.allStarBadgesCount || 0) + 
+           (awardsData.starterBadgesCount || 0) + 
+           (awardsData.prospectBadgesCount || 0);
+  };
+  const totalEarned = calculateTotalEarned();
 
   return (
     <div className="flex items-center gap-3">
@@ -703,9 +719,23 @@ function PlayerProfileCard({ player }: { player: any }) {
     refetchInterval: 30000, // Poll every 30 seconds for cross-session updates
   });
 
-  const totalAwards = typeof awardsData?.totalBadges === 'number' && typeof awardsData?.totalTrophies === 'number'
-    ? awardsData.totalBadges + awardsData.totalTrophies
-    : (awardsData?.totalBadges || 0) + (awardsData?.totalTrophies || 0) || 0;
+  // Calculate total awards from tierSummary or legacy count fields
+  const totalAwards = (() => {
+    if (!awardsData) return 0;
+    // Use tierSummary if available (new format with earned/total per tier)
+    if (awardsData.tierSummary) {
+      return Object.values(awardsData.tierSummary).reduce((sum: number, tier: any) => {
+        return sum + (tier?.earned || 0);
+      }, 0);
+    }
+    // Fallback to legacy count fields
+    return (awardsData.trophiesCount || 0) + 
+           (awardsData.hallOfFameBadgesCount || 0) + 
+           (awardsData.superstarBadgesCount || 0) + 
+           (awardsData.allStarBadgesCount || 0) + 
+           (awardsData.starterBadgesCount || 0) + 
+           (awardsData.prospectBadgesCount || 0);
+  })();
 
   return (
     <Card className="border-0 shadow-sm" data-testid={`player-profile-card-${player.id}`}>

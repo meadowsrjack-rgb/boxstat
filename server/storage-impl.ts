@@ -2967,6 +2967,10 @@ class DatabaseStorage implements IStorage {
       allergies: updates.allergies,
       passwordResetToken: updates.passwordResetToken,
       passwordResetExpiry: updates.passwordResetExpiry instanceof Date ? updates.passwordResetExpiry.toISOString() : updates.passwordResetExpiry,
+      needsLegacyClaim: updates.needsLegacyClaim,
+      stripeCustomerId: updates.stripeCustomerId,
+      defaultDashboardView: updates.defaultDashboardView,
+      magicLinkSourcePlatform: updates.magicLinkSourcePlatform,
       updatedAt: new Date().toISOString(),
     };
 

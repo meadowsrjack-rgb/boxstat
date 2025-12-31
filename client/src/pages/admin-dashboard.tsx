@@ -438,9 +438,26 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
     return "Unknown User";
   };
   
-  const getProgramName = (programId: string) => {
-    const program = programs.find((p: any) => p.id === programId);
-    return program ? program.name : "N/A";
+  const getProgramName = (payment: any) => {
+    // Try programId first
+    if (payment.programId) {
+      const program = programs.find((p: any) => String(p.id) === String(payment.programId));
+      if (program) return program.name;
+    }
+    // Try packageId (some payments use this instead)
+    if (payment.packageId) {
+      const program = programs.find((p: any) => String(p.id) === String(payment.packageId));
+      if (program) return program.name;
+    }
+    // Fall back to description if available
+    if (payment.description) {
+      return payment.description;
+    }
+    // Check payment type as last resort
+    if (payment.paymentType) {
+      return payment.paymentType;
+    }
+    return "Payment";
   };
   
   const formatDate = (dateString: string) => {
@@ -487,7 +504,7 @@ function RecentTransactionsCard({ payments, users, programs }: any) {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-xs text-gray-500" data-testid={`transaction-program-${payment.id}`}>
-            {getProgramName(payment.programId)}
+            {getProgramName(payment)}
           </p>
           <span className="text-xs text-gray-400">•</span>
           <p className="text-xs text-gray-500" data-testid={`transaction-date-${payment.id}`}>

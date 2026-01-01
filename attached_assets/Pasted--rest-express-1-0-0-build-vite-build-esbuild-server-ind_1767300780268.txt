@@ -1,0 +1,72 @@
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.21 building for production...
+✓ 3877 modules transformed.
+../dist/public/index.html                                  10.60 kB │ gzip:   2.01 kB
+../dist/public/assets/logo2_1762477206651-8MFFHG_P.png    107.97 kB
+../dist/public/assets/UYP Logo nback-DsWwmSx0.png         606.43 kB
+../dist/public/assets/landing-background-Bql6giPT.png     912.43 kB
+../dist/public/assets/index-DJKHe73_.css                  163.49 kB │ gzip:  28.85 kB
+../dist/public/assets/web-85cG9yOK.js                       0.76 kB │ gzip:   0.36 kB
+../dist/public/assets/index.es-CZk3nmAm.js                150.44 kB │ gzip:  51.42 kB
+../dist/public/assets/index-CICC4H2Q.js                 2,990.37 kB │ gzip: 798.56 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.93s
+
+  dist/index.js  591.8kb
+
+⚡ Done in 25ms
+✔ Copying web assets from public to ios/App/App/public in 90.53ms
+✔ Creating capacitor.config.json in ios/App/App in 449.54μs
+✔ copy ios in 136.01ms
+✔ Updating iOS plugins in 9.58ms
+✖ Updating iOS native dependencies with pod install - failed!
+✖ update ios - failed!
+[error] Error: ENOENT: no such file or directory, open '/Users/jackmeadows/Documents/boxstat/ios/App/Podfile'
+jackmeadows@Jacks-MacBook-Air boxstat % # 1. Fully remove the corrupted iOS folder
+rm -rf ios
+
+# 2. Re-create the iOS platform from scratch
+npx cap add ios
+
+# 3. Sync the web assets
+npx cap sync ios
+
+# 4. Open in Xcode
+npx cap open ios
+zsh: command not found: #
+zsh: command not found: #
+✔ Adding native Xcode project in ios in 10.98ms
+✔ add in 11.19ms
+✔ Copying web assets from public to ios/App/App/public in 99.25ms
+✔ Creating capacitor.config.json in ios/App/App in 630.00μs
+✔ copy ios in 147.80ms
+✔ Updating iOS plugins in 9.96ms
+✔ Updating iOS native dependencies with pod install in 3.87s
+⠇ update ios [info] Found 2 Capacitor plugins for ios:
+       @capacitor/app@7.1.1
+       @capacitor/push-notifications@7.0.4
+✔ update ios in 4.03s
+[success] ios platform added!
+Follow the Developer Workflow guide to get building:
+https://capacitorjs.com/docs/basics/workflow
+zsh: command not found: #
+✔ Copying web assets from public to ios/App/App/public in 86.40ms
+✔ Creating capacitor.config.json in ios/App/App in 402.58μs
+✔ copy ios in 128.45ms
+✔ Updating iOS plugins in 7.87ms
+✔ Updating iOS native dependencies with pod install in 2.26s
+[info] Found 2 Capacitor plugins for ios:
+       @capacitor/app@7.1.1
+       @capacitor/push-notifications@7.0.4
+✔ update ios in 2.32s
+[info] Sync finished in 2.798s
+zsh: command not found: #
+✔ Opening the Xcode workspace... in 3.01s
+jackmeadows@Jacks-MacBook-Air boxstat % 

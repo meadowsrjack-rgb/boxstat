@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const isDevMode = process.env.CAPACITOR_MODE !== 'production';
 
 const config: CapacitorConfig = {
-  appId: 'com.boxstat.app',
+  appId: 'boxstat.app',
   appName: 'BoxStat',
   webDir: 'dist/public',
   

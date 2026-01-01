@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken';
 const APNS_KEY_ID = process.env.APNS_KEY_ID;
 const APNS_TEAM_ID = process.env.APNS_TEAM_ID;
 const APNS_AUTH_KEY = process.env.APNS_AUTH_KEY;
-const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'com.boxstat.app';
+const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'boxstat.app';
 
 // APNs endpoints
 const APNS_HOST_PRODUCTION = 'api.push.apple.com';

@@ -1633,15 +1633,8 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('firstName')}
-                  data-testid="sort-firstName"
-                >First Name</TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('lastName')}
-                  data-testid="sort-lastName"
-                >
-                  Last Name
-                </TableHead>
+                  data-testid="sort-name"
+                >Name</TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('email')}
@@ -1658,13 +1651,6 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('dob')}
-                  data-testid="sort-dob"
-                >
-                  DOB
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('role')}
                   data-testid="sort-role"
                 >
@@ -1672,30 +1658,57 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
-                  onClick={() => handleSort('statusTag')}
-                  data-testid="sort-statusTag"
+                  data-testid="sort-players"
                 >
-                  Status
+                  Players
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  data-testid="sort-subscriptions"
+                >
+                  Subscriptions
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  onClick={() => handleSort('team')}
+                  data-testid="sort-team"
+                >
+                  Team
+                </TableHead>
+                <TableHead 
+                  className="cursor-pointer select-none hover:bg-gray-100"
+                  data-testid="sort-program"
+                >
+                  Program
                 </TableHead>
                 <TableHead 
                   className="cursor-pointer select-none hover:bg-gray-100"
                   onClick={() => handleSort('isActive')}
-                  data-testid="sort-isActive"
+                  data-testid="sort-status"
                 >
-                  Active
+                  Status
                 </TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedUsers.map((user: any) => {
+                const userTeam = teams.find((t: any) => t.id === user.teamId);
+                const userProgram = userTeam ? programs.find((p: any) => p.id === userTeam.programId) : null;
+                const linkedPlayers = user.role === "parent" 
+                  ? users.filter((u: any) => u.accountHolderId === user.id && u.role === "player")
+                  : [];
                 return (
                   <TableRow key={user.id} className="cursor-default" data-testid={`row-user-${user.id}`}>
-                    <TableCell data-testid={`text-firstname-${user.id}`}>{user.firstName || "-"}</TableCell>
-                    <TableCell data-testid={`text-lastname-${user.id}`}>{user.lastName || "-"}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.phoneNumber || user.phone || "-"}</TableCell>
-                    <TableCell>{user.dob ? new Date(user.dob).toLocaleDateString() : "-"}</TableCell>
+                    <TableCell data-testid={`text-name-${user.id}`}>
+                      <div className="font-medium">{user.firstName || ""} {user.lastName || ""}</div>
+                    </TableCell>
+                    <TableCell data-testid={`text-email-${user.id}`}>
+                      <span className="text-gray-600 text-sm">{user.email || "-"}</span>
+                    </TableCell>
+                    <TableCell data-testid={`text-phone-${user.id}`}>
+                      <span className="text-gray-600 text-sm">{user.phoneNumber || user.phone || "-"}</span>
+                    </TableCell>
                     <TableCell>
                       <Badge 
                         className={`capitalize ${
@@ -1709,11 +1722,30 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                             ? "bg-green-600 text-white hover:bg-green-700" 
                             : "bg-gray-500 text-white"
                         }`}
+                        data-testid={`badge-role-${user.id}`}
                       >
                         {user.role}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-testid={`text-players-${user.id}`}>
+                      {user.role === "parent" ? (
+                        linkedPlayers.length > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            {linkedPlayers.slice(0, 3).map((p: any) => (
+                              <span key={p.id} className="text-xs text-gray-600">{p.firstName} {p.lastName}</span>
+                            ))}
+                            {linkedPlayers.length > 3 && (
+                              <span className="text-xs text-gray-400">+{linkedPlayers.length - 3} more</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell data-testid={`text-subscriptions-${user.id}`}>
                       {user.role === "player" && user.statusTag && user.statusTag !== "none" ? (
                         <Badge 
                           variant="outline" 
@@ -1728,7 +1760,7 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                               ? "bg-blue-500/20 border-blue-500/50 text-blue-600" 
                               : ""
                           }`}
-                          data-testid={`badge-status-${user.id}`}
+                          data-testid={`badge-subscription-${user.id}`}
                         >
                           {user.statusTag === "payment_due" ? "Payment Due" 
                             : user.statusTag === "low_balance" ? "Low Balance" 
@@ -1737,19 +1769,25 @@ function UsersTab({ users, teams, programs, divisions, organization }: any) {
                             : "-"}
                         </Badge>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={user.isActive !== false}
-                        disabled={updatingUserId === user.id}
-                        onCheckedChange={(checked) => {
-                          updateUser.mutate({ id: user.id, isActive: checked });
-                        }}
-                        className="data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-gray-400"
-                        data-testid={`toggle-active-${user.id}`}
-                      />
+                    <TableCell data-testid={`text-team-${user.id}`}>
+                      <span className="text-sm">{userTeam?.name || "-"}</span>
+                    </TableCell>
+                    <TableCell data-testid={`text-program-${user.id}`}>
+                      <span className="text-sm">{userProgram?.name || "-"}</span>
+                    </TableCell>
+                    <TableCell data-testid={`text-status-${user.id}`}>
+                      <Badge 
+                        variant="outline" 
+                        className={user.isActive !== false 
+                          ? "bg-green-50 text-green-700 border-green-200" 
+                          : "bg-gray-50 text-gray-500 border-gray-200"
+                        }
+                      >
+                        {user.isActive !== false ? "Active" : "Inactive"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

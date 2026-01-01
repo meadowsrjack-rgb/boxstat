@@ -109,9 +109,10 @@ export function setupNotificationRoutes(app: Express) {
       const platform = userAgent.includes('iPhone') || userAgent.includes('iPad') ? 'ios' : 'android';
       const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
       
-      // For iOS, use the provided APNs environment or default to 'sandbox' for development builds
+      // For iOS, use the provided APNs environment
+      // Default to 'production' for deployed apps (TestFlight/App Store), 'sandbox' for local dev
       const resolvedApnsEnv = platform === 'ios' 
-        ? (apnsEnvironment || 'sandbox') // Default to sandbox for safety 
+        ? (apnsEnvironment || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'))
         : undefined;
       
       console.log('[Push Register] Platform detected:', platform);
@@ -433,7 +434,7 @@ export function setupNotificationRoutes(app: Express) {
           .filter(d => d.isActive && d.fcmToken)
           .map(d => ({ 
             token: d.fcmToken!, 
-            environment: d.apnsEnvironment || 'sandbox' // Default to sandbox for dev builds
+            environment: d.apnsEnvironment || 'production' // Use stored environment, default to production for TestFlight/App Store
           }));
       }
       

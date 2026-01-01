@@ -12,8 +12,9 @@ const APNS_BUNDLE_ID = process.env.APNS_BUNDLE_ID || 'boxstat.app';
 const APNS_HOST_PRODUCTION = 'api.push.apple.com';
 const APNS_HOST_SANDBOX = 'api.sandbox.push.apple.com';
 
-// Use production for App Store builds
-const APNS_HOST = process.env.NODE_ENV === 'development' ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
+// Default to PRODUCTION for TestFlight/App Store builds
+// Only use sandbox when explicitly requested (local Xcode debug builds)
+const APNS_DEFAULT_PRODUCTION = true;
 
 // JWT token cache
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -149,9 +150,13 @@ async function sendSingleNotification(
     // Clean device token (remove spaces and angle brackets if present)
     const cleanToken = deviceToken.replace(/[<>\s]/g, '');
 
-    // Use the correct APNs host based on the token's environment
-    const host = apnsEnvironment === 'sandbox' ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
-    console.log(`[APNs] Using host ${host} for token (environment: ${apnsEnvironment || 'default'})`);
+    // Use PRODUCTION by default - only use sandbox if explicitly set to 'sandbox'
+    // TestFlight and App Store builds require production APNs gateway
+    const useProduction = apnsEnvironment !== 'sandbox';
+    const host = useProduction ? APNS_HOST_PRODUCTION : APNS_HOST_SANDBOX;
+    console.log(`[APNs] 🚀 Using ${useProduction ? 'PRODUCTION' : 'SANDBOX'} gateway: ${host}`);
+    console.log(`[APNs]    Token environment: ${apnsEnvironment || 'not specified (defaulting to production)'}`);
+    console.log(`[APNs]    Token prefix: ${cleanToken.substring(0, 20)}...`);
     
     const client = http2.connect(`https://${host}`);
     
@@ -284,7 +289,9 @@ export function isAPNsConfigured(): boolean {
 // Log configuration status on module load
 if (isAPNsConfigured()) {
   console.log('✅ APNs configured for direct push notifications');
-  console.log(`   Host: ${APNS_HOST}`);
+  console.log(`   Mode: PRODUCTION-first (TestFlight/App Store compatible)`);
+  console.log(`   Production: ${APNS_HOST_PRODUCTION}`);
+  console.log(`   Sandbox: ${APNS_HOST_SANDBOX} (only for local Xcode debug builds)`);
   console.log(`   Bundle ID: ${APNS_BUNDLE_ID}`);
 } else {
   console.warn('⚠️ APNs not configured - iOS push notifications will not work');

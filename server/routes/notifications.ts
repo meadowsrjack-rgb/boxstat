@@ -110,9 +110,10 @@ export function setupNotificationRoutes(app: Express) {
       const deviceType = platform === 'ios' ? 'iPhone' : 'Android';
       
       // For iOS, use the provided APNs environment
-      // Default to 'production' for deployed apps (TestFlight/App Store), 'sandbox' for local dev
+      // Default to 'production' for TestFlight/App Store builds
+      // Only use 'sandbox' if explicitly provided by local Xcode debug builds
       const resolvedApnsEnv = platform === 'ios' 
-        ? (apnsEnvironment || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'))
+        ? (apnsEnvironment || 'production')  // Default to production for TestFlight compatibility
         : undefined;
       
       console.log('[Push Register] Platform detected:', platform);
@@ -158,7 +159,9 @@ export function setupNotificationRoutes(app: Express) {
       
       res.json({
         apnsConfigured: isAPNsConfigured(),
-        apnsHost: process.env.NODE_ENV === 'development' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com',
+        apnsMode: 'PRODUCTION-first (TestFlight/App Store compatible)',
+        apnsHostProduction: 'api.push.apple.com',
+        apnsHostSandbox: 'api.sandbox.push.apple.com (only for local Xcode debug builds)',
         bundleId: process.env.APNS_BUNDLE_ID || 'boxstat.app',
         registeredDevices: {
           ios: Number(iosCount[0]?.count) || 0,

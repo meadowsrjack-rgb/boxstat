@@ -989,6 +989,116 @@ export const chatMessages = pgTable("chat_messages", {
   updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 });
 
+// Direct Messages (parent-coach 1-on-1 chats)
+export const directMessages = pgTable("direct_messages", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  teamId: integer("team_id"), // optional: context of which team the message is about
+  message: text().notNull(),
+  isRead: boolean("is_read").default(false),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Contact Management Messages (parent messages to admin/management)
+export const contactManagementMessages = pgTable("contact_management_messages", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  senderName: varchar("sender_name"),
+  senderEmail: varchar("sender_email"),
+  message: text().notNull(),
+  status: varchar().default('unread'), // unread, read, replied, archived
+  assignedTo: varchar("assigned_to"), // admin user assigned to handle
+  repliedBy: varchar("replied_by"),
+  repliedAt: timestamp("replied_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// CRM Leads table
+export const crmLeads = pgTable("crm_leads", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  firstName: varchar("first_name").notNull(),
+  lastName: varchar("last_name").notNull(),
+  email: varchar("email"),
+  phone: varchar("phone"),
+  source: varchar(), // "referral", "website", "event", "social", "other"
+  status: varchar().default('new'), // new, contacted, qualified, quoted, converted, lost
+  playerCount: integer("player_count").default(1),
+  interestedPrograms: text("interested_programs").array(), // program IDs they're interested in
+  assignedTo: varchar("assigned_to"), // admin user assigned to this lead
+  lastContactedAt: timestamp("last_contacted_at", { mode: 'string' }),
+  convertedUserId: varchar("converted_user_id"), // links to user if converted
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+});
+
+// CRM Notes (notes on leads or users)
+export const crmNotes = pgTable("crm_notes", {
+  id: serial().primaryKey().notNull(),
+  organizationId: varchar("organization_id").notNull(),
+  leadId: integer("lead_id"), // optional: note on a lead
+  userId: varchar("user_id"), // optional: note on a user
+  authorId: varchar("author_id").notNull(), // admin who wrote the note
+  note: text().notNull(),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Quote Checkout Links (pre-filled checkout for leads)
+export const quoteCheckouts = pgTable("quote_checkouts", {
+  id: varchar().primaryKey().notNull(), // nanoid for unique URL
+  organizationId: varchar("organization_id").notNull(),
+  leadId: integer("lead_id"), // optional: linked to a lead
+  createdBy: varchar("created_by").notNull(), // admin who created the quote
+  programIds: text("program_ids").array().notNull(), // selected programs
+  discountPercent: integer("discount_percent").default(0),
+  discountCode: varchar("discount_code"),
+  notes: text(), // internal notes
+  expiresAt: timestamp("expires_at", { mode: 'string' }),
+  status: varchar().default('pending'), // pending, used, expired
+  usedBy: varchar("used_by"), // user ID if someone used the quote
+  usedAt: timestamp("used_at", { mode: 'string' }),
+  createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
+export type DirectMessage = typeof directMessages.$inferSelect;
+
+export const insertContactManagementMessageSchema = createInsertSchema(contactManagementMessages).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertContactManagementMessage = z.infer<typeof insertContactManagementMessageSchema>;
+export type ContactManagementMessage = typeof contactManagementMessages.$inferSelect;
+
+export const insertCrmLeadSchema = createInsertSchema(crmLeads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertCrmLead = z.infer<typeof insertCrmLeadSchema>;
+export type CrmLead = typeof crmLeads.$inferSelect;
+
+export const insertCrmNoteSchema = createInsertSchema(crmNotes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertCrmNote = z.infer<typeof insertCrmNoteSchema>;
+export type CrmNote = typeof crmNotes.$inferSelect;
+
+export const insertQuoteCheckoutSchema = createInsertSchema(quoteCheckouts).omit({
+  createdAt: true,
+});
+export type InsertQuoteCheckout = z.infer<typeof insertQuoteCheckoutSchema>;
+export type QuoteCheckout = typeof quoteCheckouts.$inferSelect;
+
 export const insertUserSchema = z.object({
   organizationId: z.string(),
   email: z.string().email(),

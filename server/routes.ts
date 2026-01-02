@@ -1422,6 +1422,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.json({ received: true });
         }
         
+        // Handle quote checkout payments
+        if (session.metadata?.quoteId) {
+          const quoteId = session.metadata.quoteId;
+          const userId = session.metadata.userId;
+          const playerId = session.metadata.playerId;
+          const enrollmentIdsStr = session.metadata.enrollmentIds;
+          
+          console.log(`✅ Quote checkout payment completed for quote ${quoteId}`);
+          
+          // Activate all enrollments from the quote
+          if (enrollmentIdsStr) {
+            try {
+              const enrollmentIds = JSON.parse(enrollmentIdsStr) as number[];
+              for (const enrollmentId of enrollmentIds) {
+                await storage.updateEnrollment(enrollmentId, { status: 'active' });
+                console.log(`✅ Activated enrollment ${enrollmentId} for quote ${quoteId}`);
+              }
+            } catch (enrollError: any) {
+              console.error("Error activating enrollments:", enrollError);
+            }
+          }
+          
+          // Create payment record
+          if (session.amount_total && userId) {
+            try {
+              await storage.createPayment({
+                organizationId: "default-org",
+                userId: userId,
+                playerId: playerId || undefined,
+                amount: session.amount_total,
+                currency: 'usd',
+                paymentType: 'quote_checkout',
+                status: 'completed',
+                description: `Quote Checkout Payment`,
+                stripePaymentId: session.payment_intent as string,
+              });
+              console.log(`✅ Created payment record for quote ${quoteId}`);
+            } catch (paymentError: any) {
+              console.error("Error creating payment record:", paymentError);
+            }
+          }
+          
+          return res.json({ received: true });
+        }
+        
         // Handle new package purchase from unified account payments tab
         if (session.metadata?.type === 'package_purchase') {
           const userId = session.metadata.userId;
@@ -10066,6 +10111,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: new Date(),
       });
 
+      // Create enrollments for program items (pending player assignment)
+      const enrollmentIds: number[] = [];
+      if (quote.items && Array.isArray(quote.items)) {
+        for (const item of quote.items) {
+          if (item.type === 'program' && item.productId) {
+            const program = await storage.getProgram(item.productId);
+            const enrollment = await storage.createEnrollment({
+              organizationId: quote.organizationId,
+              programId: item.productId,
+              accountHolderId: newUser.id,
+              profileId: player.id, // Assign to the player created during checkout
+              status: 'pending', // Will be activated after payment
+              source: 'quote',
+              totalCredits: program?.sessionCount || null,
+              remainingCredits: program?.sessionCount || null,
+              metadata: { quoteId: quote.id, quoteItemName: item.productName },
+            });
+            enrollmentIds.push(enrollment.id);
+          }
+        }
+      }
+
       // If there are items that require payment, create a Stripe checkout session
       if (quote.totalAmount && quote.totalAmount > 0 && stripe) {
         const lineItems = quote.items?.map((item: any) => ({
@@ -10090,10 +10157,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             userId: newUser.id,
             playerId: player.id,
             quoteId: quote.id,
+            enrollmentIds: JSON.stringify(enrollmentIds),
           },
         });
 
         return res.json({ paymentUrl: session.url });
+      }
+
+      // No payment needed - activate enrollments immediately
+      for (const enrollmentId of enrollmentIds) {
+        await storage.updateEnrollment(enrollmentId, { status: 'active' });
       }
 
       res.json({ success: true, userId: newUser.id });

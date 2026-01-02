@@ -2451,9 +2451,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let players: any[] = [];
     
     if (user?.role === "parent" || user?.role === "admin") {
-      // Get all players linked to this parent/admin
+      // Get all players linked to this parent/admin (check both accountHolderId and parentId)
       const allUsers = await storage.getUsersByOrganization(user.organizationId);
-      players = allUsers.filter(u => u.accountHolderId === id && u.role === "player");
+      players = allUsers.filter(u => (u.accountHolderId === id || u.parentId === id) && u.role === "player");
     } else if (user?.role === "player") {
       // Return self
       players = [user];
@@ -9713,7 +9713,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Admin access required" });
       }
       const messages = await storage.getContactManagementMessages(organizationId);
-      res.json(messages);
+      
+      // Enrich with sender info
+      const enrichedMessages = await Promise.all(messages.map(async (msg: any) => {
+        const sender = await storage.getUser(msg.senderId);
+        return {
+          ...msg,
+          sender: sender ? {
+            id: sender.id,
+            firstName: sender.firstName,
+            lastName: sender.lastName,
+            email: sender.email,
+          } : null,
+        };
+      }));
+      res.json(enrichedMessages);
     } catch (error: any) {
       console.error('Error fetching contact messages:', error);
       res.status(500).json({ error: "Failed to fetch messages" });

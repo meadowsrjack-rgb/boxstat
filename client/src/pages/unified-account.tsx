@@ -953,14 +953,10 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   // Send team message mutation
   const sendTeamMessageMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/teams/${activeChat?.teamId}/messages`, {
+      return apiRequest(`/api/teams/${activeChat?.teamId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: newMessage }),
+        data: { message: newMessage },
       });
-      if (!res.ok) throw new Error('Failed to send message');
-      return res.json();
     },
     onSuccess: () => {
       setNewMessage("");
@@ -974,18 +970,14 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   // Send direct message to coach mutation
   const sendCoachMessageMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/direct-messages', {
+      return apiRequest('/api/direct-messages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
+        data: { 
           receiverId: activeChat?.coachId, 
           message: newMessage,
           teamId: activeChat?.teamId,
-        }),
+        },
       });
-      if (!res.ok) throw new Error('Failed to send message');
-      return res.json();
     },
     onSuccess: () => {
       setNewMessage("");
@@ -999,14 +991,10 @@ function ParentMessagesSection({ players, userId }: { players: any[]; userId?: s
   // Send contact management message mutation
   const sendManagementMessageMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/contact-management', {
+      return apiRequest('/api/contact-management', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message: newMessage }),
+        data: { message: newMessage },
       });
-      if (!res.ok) throw new Error('Failed to send message');
-      return res.json();
     },
     onSuccess: () => {
       setNewMessage("");

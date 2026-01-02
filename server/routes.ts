@@ -2414,14 +2414,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       players = [user];
     }
     
-    // Fetch active subscriptions and status tags for each player with defensive error handling
+    // Fetch active subscriptions, status tags, and team info for each player
+    const allTeams = await storage.getTeamsByOrganization(user.organizationId);
+    
     const playersWithSubscriptions = await Promise.all(
       players.map(async (player: any) => {
         try {
           const subscriptions = await storage.getSubscriptionsByPlayerId(player.id);
           const statusTag = await storage.getPlayerStatusTag(player.id);
+          
+          // Get team memberships for this player
+          const playerTeamMemberships = await storage.getTeamMembershipsByProfile(player.id);
+          const activeTeamMembership = playerTeamMemberships.find((tm: any) => tm.status === 'active' && tm.role === 'player');
+          let teamInfo = null;
+          if (activeTeamMembership) {
+            const team = allTeams.find((t: any) => t.id === activeTeamMembership.teamId);
+            if (team) {
+              teamInfo = {
+                teamId: team.id,
+                teamName: team.name,
+                coachId: team.coachId,
+              };
+              // Get coach name if available
+              if (team.coachId) {
+                const coach = await storage.getUser(team.coachId);
+                if (coach) {
+                  (teamInfo as any).coachName = `${coach.firstName} ${coach.lastName}`;
+                }
+              }
+            }
+          }
+          
           return {
             ...player,
+            ...teamInfo,
             activeSubscriptions: (subscriptions || []).map(s => ({
               id: s.id,
               productName: s.productName,

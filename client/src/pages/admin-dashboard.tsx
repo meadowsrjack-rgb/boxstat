@@ -10299,14 +10299,7 @@ function CRMTab({ organization, users, teams }: any) {
   // Create lead mutation
   const createLeadMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch('/api/crm/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to create lead');
-      return res.json();
+      return apiRequest('/api/crm/leads', { method: 'POST', data });
     },
     onSuccess: () => {
       refetchLeads();
@@ -10321,14 +10314,7 @@ function CRMTab({ organization, users, teams }: any) {
   // Update lead mutation
   const updateLeadMutation = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
-      const res = await fetch(`/api/crm/leads/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to update lead');
-      return res.json();
+      return apiRequest(`/api/crm/leads/${id}`, { method: 'PATCH', data });
     },
     onSuccess: () => {
       refetchLeads();
@@ -10339,14 +10325,7 @@ function CRMTab({ organization, users, teams }: any) {
   // Add note mutation
   const addNoteMutation = useMutation({
     mutationFn: async ({ leadId, content }: { leadId: string; content: string }) => {
-      const res = await fetch('/api/crm/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ leadId, content }),
-      });
-      if (!res.ok) throw new Error('Failed to add note');
-      return res.json();
+      return apiRequest('/api/crm/notes', { method: 'POST', data: { leadId, content } });
     },
     onSuccess: () => {
       refetchLeads();
@@ -10358,14 +10337,7 @@ function CRMTab({ organization, users, teams }: any) {
   // Reply to contact message mutation
   const replyMessageMutation = useMutation({
     mutationFn: async ({ parentId, message }: { parentId: number; message: string }) => {
-      const res = await fetch(`/api/contact-management/${parentId}/reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ message }),
-      });
-      if (!res.ok) throw new Error('Failed to send reply');
-      return res.json();
+      return apiRequest(`/api/contact-management/${parentId}/reply`, { method: 'POST', data: { message } });
     },
     onSuccess: () => {
       refetchMessages();
@@ -10377,14 +10349,7 @@ function CRMTab({ organization, users, teams }: any) {
   // Create quote checkout mutation
   const createQuoteMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await fetch('/api/quote-checkouts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to create quote');
-      return res.json();
+      return apiRequest('/api/quote-checkouts', { method: 'POST', data });
     },
     onSuccess: () => {
       refetchQuotes();

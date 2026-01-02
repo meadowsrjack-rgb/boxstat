@@ -10020,6 +10020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         organizationId: req.user.organizationId,
         createdBy: req.user.id,
         leadId: req.body.leadId ? parseInt(req.body.leadId) : null,
+        userId: req.body.userId || null, // For quotes to existing members
         items,
         totalAmount,
         programIds: items.map((i: any) => i.productId),
@@ -10043,6 +10044,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let lead = null;
       if (quote.leadId) {
         lead = await storage.getCrmLead(quote.leadId);
+      }
+      
+      // Attach user info if available (for quotes to existing members)
+      let user = null;
+      if (quote.userId) {
+        user = await storage.getUser(quote.userId);
       }
       
       // Collect required waivers from all programs in the quote
@@ -10088,6 +10095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...quote, 
         checkoutId: quote.id, 
         lead,
+        user,
         waivers,
         suggestedAddOns: addOns.slice(0, 3),
         programs,
@@ -10095,6 +10103,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error fetching quote:', error);
       res.status(500).json({ error: "Failed to fetch quote" });
+    }
+  });
+
+  // Fetch quotes for a specific user (for their payments tab)
+  app.get("/api/account/quotes", requireAuth, async (req: any, res) => {
+    try {
+      const allQuotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
+      // Filter quotes for this user (either by userId or by lead that was converted to this user)
+      const userQuotes = allQuotes.filter((q: any) => 
+        q.userId === req.user.id && q.status === 'pending'
+      );
+      res.json(userQuotes);
+    } catch (error: any) {
+      console.error('Error fetching user quotes:', error);
+      res.status(500).json({ error: "Failed to fetch quotes" });
     }
   });
 
@@ -10113,50 +10136,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { firstName, lastName, email, password, phone, playerFirstName, playerLastName, playerBirthDate } = req.body;
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(400).json({ error: "An account with this email already exists. Please login instead." });
-      }
-
-      // Create parent account
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash(password, 10);
       const { nanoid } = await import('nanoid');
       
-      const newUser = await storage.createUser({
-        id: nanoid(21),
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-        role: 'parent',
-        userType: 'parent',
-        organizationId: quote.organizationId,
-        emailVerified: false,
-        isVerified: false,
-      });
+      let accountUser: any;
+      let player: any;
 
-      // Create player profile
-      const player = await storage.createUser({
-        id: nanoid(21),
-        firstName: playerFirstName,
-        lastName: playerLastName,
-        email: `${playerFirstName.toLowerCase()}.${nanoid(6)}@player.local`,
-        role: 'player',
-        userType: 'player',
-        dateOfBirth: playerBirthDate ? new Date(playerBirthDate) : null,
-        parentId: newUser.id,
-        organizationId: quote.organizationId,
-        isVerified: false,
-      });
+      // Determine if this is an existing user checkout based on quote data (server-side, not client)
+      const isExistingUserCheckout = !!quote.userId;
+
+      // Validate required fields based on checkout type
+      if (!isExistingUserCheckout) {
+        // New user checkout requires all account and player fields
+        if (!email || !password || !firstName || !lastName) {
+          return res.status(400).json({ error: "Account details (email, password, first name, last name) are required" });
+        }
+        if (!playerFirstName || !playerLastName) {
+          return res.status(400).json({ error: "Player details (first name, last name) are required" });
+        }
+      }
+
+      // Check if this is a quote for an existing user
+      if (isExistingUserCheckout) {
+        // Use existing user from quote
+        accountUser = await storage.getUser(quote.userId);
+        if (!accountUser) {
+          return res.status(400).json({ error: "User associated with this quote not found" });
+        }
+        
+        // Get the first player linked to this account for enrollment
+        const linkedPlayers = await storage.getPlayersByParent(accountUser.id);
+        player = linkedPlayers[0]; // Use first player if available
+        
+        if (!player) {
+          // If no player exists, create one using account holder's name
+          const pFirstName = playerFirstName || accountUser.firstName || 'Player';
+          const pLastName = playerLastName || accountUser.lastName || 'Profile';
+          player = await storage.createUser({
+            id: nanoid(21),
+            firstName: pFirstName,
+            lastName: pLastName,
+            email: `${pFirstName.toLowerCase().replace(/\s+/g, '')}.${nanoid(6)}@player.local`,
+            role: 'player',
+            userType: 'player',
+            dateOfBirth: playerBirthDate ? new Date(playerBirthDate) : null,
+            parentId: accountUser.id,
+            organizationId: quote.organizationId,
+            isVerified: false,
+          });
+        }
+      } else {
+        // New user flow - create account
+        // Check if user already exists
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser) {
+          return res.status(400).json({ error: "An account with this email already exists. Please login instead." });
+        }
+
+        // Create parent account
+        const bcrypt = await import('bcrypt');
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        accountUser = await storage.createUser({
+          id: nanoid(21),
+          email,
+          password: hashedPassword,
+          firstName,
+          lastName,
+          phone,
+          role: 'parent',
+          userType: 'parent',
+          organizationId: quote.organizationId,
+          emailVerified: false,
+          isVerified: false,
+        });
+
+        // Create player profile
+        player = await storage.createUser({
+          id: nanoid(21),
+          firstName: playerFirstName,
+          lastName: playerLastName,
+          email: `${playerFirstName.toLowerCase()}.${nanoid(6)}@player.local`,
+          role: 'player',
+          userType: 'player',
+          dateOfBirth: playerBirthDate ? new Date(playerBirthDate) : null,
+          parentId: accountUser.id,
+          organizationId: quote.organizationId,
+          isVerified: false,
+        });
+      }
 
       // Update quote status
       await storage.updateQuoteCheckout(quote.id, { 
         status: 'completed',
-        userId: newUser.id,
+        userId: accountUser.id,
         completedAt: new Date(),
       });
 
@@ -10169,7 +10241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const enrollment = await storage.createEnrollment({
               organizationId: quote.organizationId,
               programId: item.productId,
-              accountHolderId: newUser.id,
+              accountHolderId: accountUser.id,
               profileId: player.id, // Assign to the player created during checkout
               status: 'pending', // Will be activated after payment
               source: 'quote',
@@ -10195,15 +10267,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           quantity: item.quantity || 1,
         })) || [];
 
+        const baseUrl = req.headers.origin || 'http://localhost:5000';
+        const successUrl = isExistingUserCheckout 
+          ? `${baseUrl}/account?tab=payments&checkout=success`
+          : `${baseUrl}/login?checkout=success`;
+        
         const session = await stripe.checkout.sessions.create({
           payment_method_types: ['card'],
           line_items: lineItems,
           mode: 'payment',
-          success_url: `${req.headers.origin || 'http://localhost:5000'}/login?checkout=success`,
-          cancel_url: `${req.headers.origin || 'http://localhost:5000'}/checkout/${req.params.checkoutId}?checkout=cancelled`,
-          customer_email: email,
+          success_url: successUrl,
+          cancel_url: `${baseUrl}/checkout/${req.params.checkoutId}?checkout=cancelled`,
+          customer_email: email || accountUser.email,
           metadata: {
-            userId: newUser.id,
+            userId: accountUser.id,
             playerId: player.id,
             quoteId: quote.id,
             enrollmentIds: JSON.stringify(enrollmentIds),
@@ -10218,7 +10295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateEnrollment(enrollmentId, { status: 'active' });
       }
 
-      res.json({ success: true, userId: newUser.id });
+      res.json({ success: true, userId: accountUser.id });
     } catch (error: any) {
       console.error('Error completing quote checkout:', error);
       res.status(500).json({ error: "Failed to complete checkout" });

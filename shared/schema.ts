@@ -1046,11 +1046,12 @@ export const crmNotes = pgTable("crm_notes", {
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 });
 
-// Quote Checkout Links (pre-filled checkout for leads)
+// Quote Checkout Links (pre-filled checkout for leads or existing users)
 export const quoteCheckouts = pgTable("quote_checkouts", {
   id: varchar().primaryKey().notNull(), // nanoid for unique URL (used as checkoutId in links)
   organizationId: varchar("organization_id").notNull(),
   leadId: integer("lead_id"), // optional: linked to a lead
+  userId: varchar("user_id"), // optional: linked to an existing user (for quotes to current members)
   createdBy: varchar("created_by").notNull(), // admin who created the quote
   programIds: text("program_ids").array(), // selected programs (legacy)
   items: jsonb("items"), // array of { type, productId, productName, price, quantity }

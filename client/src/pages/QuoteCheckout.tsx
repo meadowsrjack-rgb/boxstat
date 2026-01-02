@@ -139,6 +139,9 @@ export default function QuoteCheckout() {
   const suggestedAddOns = quote?.suggestedAddOns || [];
   const hasWaivers = waivers.length > 0;
   const allWaiversSigned = waivers.every((w: any) => signedWaivers[w.id]);
+  
+  // Check if this is a quote for an existing user (no account creation needed)
+  const isExistingUserQuote = !!quote?.userId && !!quote?.user;
 
   const handleAddOn = (addOn: any) => {
     if (selectedAddOns.find(a => a.id === addOn.id)) {
@@ -152,6 +155,8 @@ export default function QuoteCheckout() {
     if (step === 'details') {
       if (hasWaivers) {
         setStep('waivers');
+      } else if (isExistingUserQuote) {
+        setStep('payment'); // Skip account creation for existing users
       } else {
         setStep('account');
       }
@@ -160,7 +165,11 @@ export default function QuoteCheckout() {
         toast({ title: "Please sign all required waivers to continue", variant: "destructive" });
         return;
       }
-      setStep('account');
+      if (isExistingUserQuote) {
+        setStep('payment'); // Skip account creation for existing users
+      } else {
+        setStep('account');
+      }
     } else if (step === 'account') {
       if (formData.password !== formData.confirmPassword) {
         toast({ title: "Passwords do not match", variant: "destructive" });
@@ -170,6 +179,7 @@ export default function QuoteCheckout() {
     } else if (step === 'payment') {
       completeCheckoutMutation.mutate({
         ...formData,
+        isExistingUser: isExistingUserQuote,
         signedWaivers: Object.keys(signedWaivers).filter(k => signedWaivers[k]),
         addOns: selectedAddOns.map(a => ({ productId: a.id, price: a.price })),
       });
@@ -183,9 +193,20 @@ export default function QuoteCheckout() {
   const addOnsAmount = selectedAddOns.reduce((sum: number, addOn: any) => sum + (addOn.price || 0), 0);
   const totalAmount = baseAmount + addOnsAmount;
   
-  const steps = hasWaivers 
-    ? ['details', 'waivers', 'account', 'payment'] 
-    : ['details', 'account', 'payment'];
+  // Build steps dynamically based on whether quote is for existing user
+  const steps = (() => {
+    if (isExistingUserQuote) {
+      // Existing user: skip account creation
+      return hasWaivers 
+        ? ['details', 'waivers', 'payment'] 
+        : ['details', 'payment'];
+    } else {
+      // New user: include account creation
+      return hasWaivers 
+        ? ['details', 'waivers', 'account', 'payment'] 
+        : ['details', 'account', 'payment'];
+    }
+  })();
   const currentStepIndex = steps.indexOf(step);
 
   return (
@@ -193,8 +214,14 @@ export default function QuoteCheckout() {
       <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Complete Your Registration</h1>
-          <p className="text-gray-600 mt-1">Personalized quote from UYP Basketball</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isExistingUserQuote ? 'Complete Your Purchase' : 'Complete Your Registration'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {isExistingUserQuote 
+              ? `Welcome back, ${quote?.user?.firstName || 'Member'}! Review your personalized offer.`
+              : 'Personalized quote from UYP Basketball'}
+          </p>
         </div>
 
         {/* Progress Steps */}
@@ -218,10 +245,20 @@ export default function QuoteCheckout() {
           <Card>
             <CardContent className="pt-6 text-center">
               <CheckCircle2 className="w-16 h-16 mx-auto mb-4 text-green-500" />
-              <h2 className="text-2xl font-bold mb-2">Registration Complete!</h2>
-              <p className="text-gray-600 mb-6">Your account has been created and your payment has been processed.</p>
-              <Button onClick={() => setLocation('/login')} className="bg-red-600 hover:bg-red-700" data-testid="button-go-to-login">
-                Login to Your Account
+              <h2 className="text-2xl font-bold mb-2">
+                {isExistingUserQuote ? 'Purchase Complete!' : 'Registration Complete!'}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                {isExistingUserQuote 
+                  ? 'Your payment has been processed and enrollment is complete.' 
+                  : 'Your account has been created and your payment has been processed.'}
+              </p>
+              <Button 
+                onClick={() => setLocation(isExistingUserQuote ? '/account?tab=payments' : '/login')} 
+                className="bg-red-600 hover:bg-red-700" 
+                data-testid="button-go-to-login"
+              >
+                {isExistingUserQuote ? 'Back to Account' : 'Login to Your Account'}
               </Button>
             </CardContent>
           </Card>

@@ -1324,6 +1324,11 @@ export default function UnifiedAccount() {
     queryKey: ["/api/enrollments"],
   });
 
+  // Fetch pending quotes for current user
+  const { data: pendingQuotes = [] } = useQuery<any[]>({
+    queryKey: ["/api/account/quotes"],
+  });
+
   // Fetch waivers for payment dialog
   const { data: waivers = [] } = useQuery<any[]>({
     queryKey: ["/api/waivers"],
@@ -1579,6 +1584,50 @@ export default function UnifiedAccount() {
 
           {/* Payments Tab - Redesigned with Category-Based Storefront */}
           <TabsContent value="payments" className="space-y-6">
+            {/* Pending Quotes Section */}
+            {pendingQuotes.length > 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2 text-red-700">
+                    <FileText className="w-5 h-5" />
+                    Personalized Offers for You
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {pendingQuotes.map((quote: any) => (
+                      <div 
+                        key={quote.id} 
+                        className="flex items-center justify-between p-4 bg-white rounded-lg border border-red-100"
+                        data-testid={`quote-${quote.id}`}
+                      >
+                        <div>
+                          <p className="font-medium">
+                            {quote.items?.map((i: any) => i.productName).join(', ') || 'Custom Package'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Created {quote.createdAt ? new Date(quote.createdAt).toLocaleDateString() : 'Recently'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-lg text-red-600">
+                            ${((quote.totalAmount || 0) / 100).toFixed(2)}
+                          </span>
+                          <Button
+                            className="bg-red-600 hover:bg-red-700"
+                            onClick={() => window.location.href = `/checkout/${quote.id}`}
+                            data-testid={`button-checkout-quote-${quote.id}`}
+                          >
+                            Complete Checkout
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>

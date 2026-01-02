@@ -10374,9 +10374,11 @@ function CRMTab({ organization, users, teams }: any) {
   });
 
   // Quote form - items can have custom prices
+  const [quoteRecipientType, setQuoteRecipientType] = useState<'lead' | 'user'>('lead');
   const quoteForm = useForm({
     defaultValues: {
       leadId: '',
+      userId: '',
       items: [] as { type: string; productId: string; quantity: number; customPrice?: number }[],
       expiresAt: '',
     },
@@ -10844,37 +10846,100 @@ function CRMTab({ organization, users, teams }: any) {
       </Dialog>
 
       {/* Create Quote Dialog */}
-      <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
+      <Dialog open={isQuoteDialogOpen} onOpenChange={(open) => {
+        setIsQuoteDialogOpen(open);
+        if (!open) {
+          quoteForm.reset();
+          setQuoteRecipientType('lead');
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Quote Checkout</DialogTitle>
-            <DialogDescription>Create a checkout link for a lead to complete payment</DialogDescription>
+            <DialogDescription>Create a checkout link for a lead or existing member</DialogDescription>
           </DialogHeader>
           <Form {...quoteForm}>
-            <form onSubmit={quoteForm.handleSubmit((data) => createQuoteMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={quoteForm.control}
-                name="leadId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lead</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-quote-lead">
-                          <SelectValue placeholder="Select a lead..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {leads.map((lead: any) => (
-                          <SelectItem key={lead.id} value={String(lead.id)}>
-                            {lead.firstName} {lead.lastName} - {lead.email}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
+            <form onSubmit={quoteForm.handleSubmit((data) => createQuoteMutation.mutate({
+              ...data,
+              recipientType: quoteRecipientType,
+            }))} className="space-y-4">
+              {/* Recipient Type Toggle */}
+              <div className="flex gap-2 border-b pb-3">
+                <Button
+                  type="button"
+                  variant={quoteRecipientType === 'lead' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setQuoteRecipientType('lead');
+                    quoteForm.setValue('userId', '');
+                  }}
+                  data-testid="button-recipient-lead"
+                >
+                  New Lead
+                </Button>
+                <Button
+                  type="button"
+                  variant={quoteRecipientType === 'user' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setQuoteRecipientType('user');
+                    quoteForm.setValue('leadId', '');
+                  }}
+                  data-testid="button-recipient-user"
+                >
+                  Existing Member
+                </Button>
+              </div>
+
+              {quoteRecipientType === 'lead' ? (
+                <FormField
+                  control={quoteForm.control}
+                  name="leadId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Lead</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-quote-lead">
+                            <SelectValue placeholder="Select a lead..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {leads.map((lead: any) => (
+                            <SelectItem key={lead.id} value={String(lead.id)}>
+                              {lead.firstName} {lead.lastName} - {lead.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={quoteForm.control}
+                  name="userId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Member</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-quote-user">
+                            <SelectValue placeholder="Select a member..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {users.filter((u: any) => u.role === 'parent').map((user: any) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.firstName} {user.lastName} - {user.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              )}
               
               <div>
                 <FormLabel>Items</FormLabel>

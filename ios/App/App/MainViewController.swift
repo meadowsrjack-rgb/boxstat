@@ -4,31 +4,6 @@ import WebKit
 
 class MainViewController: CAPBridgeViewController {
     
-    // Inject APNs environment script BEFORE the WebView loads any content
-    override func webViewConfiguration() -> WKWebViewConfiguration {
-        let config = super.webViewConfiguration()
-        
-        // Determine APNs environment based on build configuration
-        #if DEBUG
-        let apnsEnvironment = "sandbox"
-        #else
-        let apnsEnvironment = "production"
-        #endif
-        
-        // Create user script that runs at document start (before any JS executes)
-        let script = "window.APNS_ENVIRONMENT = '\(apnsEnvironment)';"
-        let userScript = WKUserScript(
-            source: script,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: false
-        )
-        
-        config.userContentController.addUserScript(userScript)
-        print("📱 [MainViewController] Registered APNS_ENVIRONMENT script: \(apnsEnvironment)")
-        
-        return config
-    }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         

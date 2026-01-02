@@ -8030,6 +8030,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
   const [scheduledAt, setScheduledAt] = useState('');
   const [recurrenceFrequency, setRecurrenceFrequency] = useState('daily');
   const [recurrenceTime, setRecurrenceTime] = useState('09:00');
+  const [apnsEnvironment, setApnsEnvironment] = useState<'sandbox' | 'production'>('production');
 
   const { data: currentUser } = useQuery<any>({
     queryKey: ["/api/auth/user"],
@@ -8088,6 +8089,8 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
           recurrenceFrequency: scheduleType === 'recurring' ? recurrenceFrequency : undefined,
           recurrenceTime: scheduleType === 'recurring' ? recurrenceTime : undefined,
           timezone: 'America/Los_Angeles',
+          // Include APNs environment for iOS push testing
+          apnsEnvironment: data.deliveryChannels?.includes('push') ? apnsEnvironment : undefined,
         };
         console.log('[Notification Form] Creating campaign:', campaignData);
         return await apiRequest("POST", "/api/notification-campaigns", campaignData);
@@ -8098,6 +8101,8 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
         ...data,
         sentBy: currentUser?.id || data.sentBy,
         organizationId: organization?.id || data.organizationId,
+        // Include APNs environment for iOS push testing (sandbox for Xcode, production for TestFlight)
+        apnsEnvironment: data.deliveryChannels?.includes('push') ? apnsEnvironment : undefined,
       };
       console.log('[Notification Form] Submitting notification:', notificationData);
       return await apiRequest("POST", "/api/admin/notifications", notificationData);
@@ -8111,6 +8116,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
       setScheduledAt('');
       setRecurrenceFrequency('daily');
       setRecurrenceTime('09:00');
+      setApnsEnvironment('production');
       form.reset();
       setIsDialogOpen(false);
       toast({ title: successMessage });
@@ -8142,6 +8148,7 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
       setScheduledAt('');
       setRecurrenceFrequency('daily');
       setRecurrenceTime('09:00');
+      setApnsEnvironment('production');
     }
   };
 
@@ -8606,6 +8613,42 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                           />
                           <span className="text-sm">Push</span>
                         </div>
+                        
+                        {/* APNs Environment Toggle - only visible when Push is selected */}
+                        {field.value?.includes("push") && (
+                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
+                            <p className="text-sm font-medium text-amber-800 mb-2">iOS Push Environment (APNs)</p>
+                            <div className="flex gap-4">
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="apnsEnvironment"
+                                  value="sandbox"
+                                  checked={apnsEnvironment === 'sandbox'}
+                                  onChange={() => setApnsEnvironment('sandbox')}
+                                  className="w-4 h-4 text-amber-600"
+                                  data-testid="radio-apns-sandbox"
+                                />
+                                <span className="text-sm text-amber-900">Sandbox (Xcode)</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name="apnsEnvironment"
+                                  value="production"
+                                  checked={apnsEnvironment === 'production'}
+                                  onChange={() => setApnsEnvironment('production')}
+                                  className="w-4 h-4 text-amber-600"
+                                  data-testid="radio-apns-production"
+                                />
+                                <span className="text-sm text-amber-900">Production (TestFlight/App Store)</span>
+                              </label>
+                            </div>
+                            <p className="text-xs text-amber-700 mt-2">
+                              Select Sandbox for Xcode debug testing, Production for TestFlight or App Store builds.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500 mt-1">
                         Selected: {field.value?.length || 0} channel(s)

@@ -46,29 +46,38 @@ export const initPushNotifications = async () => {
         console.log('[Push Registration] ⚠️ No auth token found in localStorage');
       }
       
-      // Detect APNs environment:
-      // 1. Check VITE_APNS_ENVIRONMENT env var (set at build time for control)
-      // 2. Check if running in Vite dev mode (web development)
-      // 3. Default to 'production' for built apps (TestFlight/App Store)
-      // 
-      // For local Xcode debug builds: set VITE_APNS_ENVIRONMENT=sandbox before npm run build
-      // For TestFlight/App Store: leave unset to use 'production' default
+      // Detect APNs environment automatically:
+      // Priority order:
+      // 1. Native iOS bridge value (injected by AppDelegate based on Debug/Release build)
+      // 2. VITE_APNS_ENVIRONMENT env var (manual override)
+      // 3. Vite dev mode detection
+      // 4. Default to 'production' for built apps
+      
+      // Check for native-injected value from iOS (set by AppDelegate.swift)
+      const nativeApnsEnv = (window as any).BOXSTAT_APNS_ENVIRONMENT as string | undefined;
       const envOverride = import.meta.env.VITE_APNS_ENVIRONMENT as string | undefined;
       const isDevelopmentMode = import.meta.env.DEV;
       
       let apnsEnvironment: 'sandbox' | 'production';
-      if (envOverride === 'sandbox' || envOverride === 'production') {
+      let detectionMethod: string;
+      
+      if (nativeApnsEnv === 'sandbox' || nativeApnsEnv === 'production') {
+        // Native iOS bridge provides the most accurate detection
+        apnsEnvironment = nativeApnsEnv;
+        detectionMethod = 'Native iOS bridge (automatic)';
+      } else if (envOverride === 'sandbox' || envOverride === 'production') {
         apnsEnvironment = envOverride;
-        console.log('[Push Registration] Using env override VITE_APNS_ENVIRONMENT:', apnsEnvironment);
+        detectionMethod = 'VITE_APNS_ENVIRONMENT override';
       } else if (isDevelopmentMode) {
         apnsEnvironment = 'sandbox';
-        console.log('[Push Registration] Dev mode detected, using sandbox');
+        detectionMethod = 'Vite dev mode';
       } else {
         apnsEnvironment = 'production';
-        console.log('[Push Registration] Production build, using production APNs');
+        detectionMethod = 'Default (production build)';
       }
       
-      console.log('[Push Registration] Build mode:', import.meta.env.MODE);
+      console.log('[Push Registration] Detection method:', detectionMethod);
+      console.log('[Push Registration] Native bridge value:', nativeApnsEnv || 'not set');
       console.log('[Push Registration] Final APNs environment:', apnsEnvironment);
       
       const response = await fetch(url, {

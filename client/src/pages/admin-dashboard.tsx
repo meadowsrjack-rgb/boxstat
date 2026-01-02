@@ -56,6 +56,14 @@ import {
   Gift,
   Image as ImageIcon,
   X,
+  Headphones,
+  MessageSquare,
+  ExternalLink,
+  Link as LinkIcon,
+  Send,
+  StickyNote,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -311,6 +319,10 @@ export default function AdminDashboard() {
                 <ArrowLeftRight className="w-4 h-4 mr-2" />
                 Migrations
               </TabsTrigger>
+              <TabsTrigger value="crm" data-testid="tab-crm" className="rounded-none border-b-2 border-transparent data-[state=active]:border-red-600 data-[state=active]:bg-transparent bg-transparent px-6 py-3">
+                <Headphones className="w-4 h-4 mr-2" />
+                CRM
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -384,6 +396,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="migrations">
             <MigrationsTab organization={organization} users={users} />
+          </TabsContent>
+
+          <TabsContent value="crm">
+            <CRMTab organization={organization} users={users} teams={teams} />
           </TabsContent>
         </Tabs>
       </div>
@@ -10240,6 +10256,699 @@ function MigrationsTab({ organization, users }: any) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </Card>
+  );
+}
+
+// CRM Tab Component
+function CRMTab({ organization, users, teams }: any) {
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'leads' | 'messages' | 'quotes'>('leads');
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [isQuoteDialogOpen, setIsQuoteDialogOpen] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const [replyMessage, setReplyMessage] = useState("");
+  const [selectedConversation, setSelectedConversation] = useState<any>(null);
+
+  // Fetch CRM leads
+  const { data: leads = [], refetch: refetchLeads } = useQuery<any[]>({
+    queryKey: ['/api/crm/leads'],
+  });
+
+  // Fetch contact management messages
+  const { data: contactMessages = [], refetch: refetchMessages } = useQuery<any[]>({
+    queryKey: ['/api/contact-management'],
+  });
+
+  // Fetch quote checkouts
+  const { data: quotes = [], refetch: refetchQuotes } = useQuery<any[]>({
+    queryKey: ['/api/quote-checkouts'],
+  });
+
+  // Fetch programs for quote creation
+  const { data: programs = [] } = useQuery<any[]>({
+    queryKey: ['/api/programs'],
+  });
+
+  // Fetch store products for quote creation
+  const { data: storeProducts = [] } = useQuery<any[]>({
+    queryKey: ['/api/store-products'],
+  });
+
+  // Create lead mutation
+  const createLeadMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/crm/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to create lead');
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchLeads();
+      setIsAddLeadOpen(false);
+      toast({ title: "Lead created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create lead", variant: "destructive" });
+    },
+  });
+
+  // Update lead mutation
+  const updateLeadMutation = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await fetch(`/api/crm/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to update lead');
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchLeads();
+      toast({ title: "Lead updated" });
+    },
+  });
+
+  // Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: async ({ leadId, content }: { leadId: string; content: string }) => {
+      const res = await fetch('/api/crm/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ leadId, content }),
+      });
+      if (!res.ok) throw new Error('Failed to add note');
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchLeads();
+      setNewNote("");
+      toast({ title: "Note added" });
+    },
+  });
+
+  // Reply to contact message mutation
+  const replyMessageMutation = useMutation({
+    mutationFn: async ({ parentId, message }: { parentId: number; message: string }) => {
+      const res = await fetch(`/api/contact-management/${parentId}/reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message }),
+      });
+      if (!res.ok) throw new Error('Failed to send reply');
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchMessages();
+      setReplyMessage("");
+      toast({ title: "Reply sent" });
+    },
+  });
+
+  // Create quote checkout mutation
+  const createQuoteMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await fetch('/api/quote-checkouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to create quote');
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchQuotes();
+      setIsQuoteDialogOpen(false);
+      toast({ title: "Quote created successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to create quote", variant: "destructive" });
+    },
+  });
+
+  // Lead form
+  const leadForm = useForm({
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      source: 'manual',
+      status: 'new',
+    },
+  });
+
+  // Quote form
+  const quoteForm = useForm({
+    defaultValues: {
+      leadId: '',
+      items: [] as { type: string; productId: string; quantity: number }[],
+      expiresAt: '',
+    },
+  });
+
+  const handleCreateLead = (data: any) => {
+    createLeadMutation.mutate(data);
+  };
+
+  const copyQuoteLink = (quote: any) => {
+    const url = `${window.location.origin}/checkout/${quote.checkoutId}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link copied to clipboard" });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Headphones className="w-5 h-5" />
+          Customer Relationship Management
+        </CardTitle>
+        <CardDescription>Manage leads, quotes, and customer communications</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* Sub-tabs */}
+        <div className="flex gap-2 mb-6 border-b pb-2">
+          <Button
+            variant={activeTab === 'leads' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('leads')}
+            data-testid="button-crm-leads"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Leads
+          </Button>
+          <Button
+            variant={activeTab === 'messages' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('messages')}
+            data-testid="button-crm-messages"
+          >
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Messages
+          </Button>
+          <Button
+            variant={activeTab === 'quotes' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('quotes')}
+            data-testid="button-crm-quotes"
+          >
+            <LinkIcon className="w-4 h-4 mr-2" />
+            Quotes
+          </Button>
+        </div>
+
+        {/* Leads Tab */}
+        {activeTab === 'leads' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Lead Management</h3>
+              <Button onClick={() => setIsAddLeadOpen(true)} data-testid="button-add-lead">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Lead
+              </Button>
+            </div>
+
+            {leads.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p>No leads yet. Add your first lead to get started.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((lead: any) => (
+                    <TableRow key={lead.id} data-testid={`row-lead-${lead.id}`}>
+                      <TableCell>
+                        <div className="font-medium">{lead.firstName} {lead.lastName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {lead.email && <div className="flex items-center gap-1"><Mail className="w-3 h-3" /> {lead.email}</div>}
+                          {lead.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" /> {lead.phone}</div>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{lead.source}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.status}
+                          onValueChange={(status) => updateLeadMutation.mutate({ id: lead.id, status })}
+                        >
+                          <SelectTrigger className="w-32" data-testid={`select-lead-status-${lead.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="new">New</SelectItem>
+                            <SelectItem value="contacted">Contacted</SelectItem>
+                            <SelectItem value="qualified">Qualified</SelectItem>
+                            <SelectItem value="converted">Converted</SelectItem>
+                            <SelectItem value="lost">Lost</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedLead(lead)}
+                            data-testid={`button-view-lead-${lead.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              quoteForm.setValue('leadId', lead.id);
+                              setIsQuoteDialogOpen(true);
+                            }}
+                            data-testid={`button-create-quote-${lead.id}`}
+                          >
+                            <LinkIcon className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="space-y-4">
+            <h3 className="font-medium">Contact Management Messages</h3>
+            
+            {contactMessages.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <MessageSquare className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p>No messages yet. Messages from parents will appear here.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Conversation list */}
+                <div className="border rounded-lg p-4 space-y-2 max-h-96 overflow-y-auto">
+                  {contactMessages.map((msg: any) => (
+                    <div
+                      key={msg.id}
+                      className={`p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${selectedConversation?.id === msg.id ? 'bg-gray-100 border-l-4 border-red-600' : ''}`}
+                      onClick={() => setSelectedConversation(msg)}
+                      data-testid={`conversation-${msg.id}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium text-sm">
+                          {msg.sender?.firstName} {msg.sender?.lastName}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(msg.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">{msg.message}</p>
+                      {!msg.isRead && <Badge variant="default" className="mt-1">New</Badge>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Conversation detail */}
+                <div className="border rounded-lg p-4">
+                  {selectedConversation ? (
+                    <div className="space-y-4">
+                      <div className="border-b pb-2">
+                        <h4 className="font-medium">
+                          {selectedConversation.sender?.firstName} {selectedConversation.sender?.lastName}
+                        </h4>
+                        <p className="text-xs text-gray-500">{selectedConversation.sender?.email}</p>
+                      </div>
+                      
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        <div className="bg-gray-100 rounded-lg p-3">
+                          <p className="text-sm">{selectedConversation.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(selectedConversation.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        
+                        {selectedConversation.replies?.map((reply: any) => (
+                          <div key={reply.id} className={`rounded-lg p-3 ${reply.isAdmin ? 'bg-red-50 ml-4' : 'bg-gray-100'}`}>
+                            <p className="text-sm">{reply.message}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {reply.isAdmin ? 'Admin' : 'User'} - {new Date(reply.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex gap-2 pt-2 border-t">
+                        <Input
+                          value={replyMessage}
+                          onChange={(e) => setReplyMessage(e.target.value)}
+                          placeholder="Type a reply..."
+                          data-testid="input-reply-message"
+                        />
+                        <Button
+                          onClick={() => replyMessageMutation.mutate({ parentId: selectedConversation.id, message: replyMessage })}
+                          disabled={!replyMessage.trim() || replyMessageMutation.isPending}
+                          data-testid="button-send-reply"
+                        >
+                          <Send className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">Select a conversation to view</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quotes Tab */}
+        {activeTab === 'quotes' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium">Quote Checkouts</h3>
+              <Button onClick={() => setIsQuoteDialogOpen(true)} data-testid="button-create-quote">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Quote
+              </Button>
+            </div>
+
+            {quotes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <LinkIcon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                <p>No quotes created yet. Create a quote to share with leads.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Lead</TableHead>
+                    <TableHead>Items</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Link</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {quotes.map((quote: any) => (
+                    <TableRow key={quote.id} data-testid={`row-quote-${quote.id}`}>
+                      <TableCell>
+                        <div className="font-medium">{quote.lead?.firstName} {quote.lead?.lastName}</div>
+                        <div className="text-xs text-gray-500">{quote.lead?.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{quote.items?.length || 0} items</div>
+                      </TableCell>
+                      <TableCell>
+                        ${((quote.totalAmount || 0) / 100).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={quote.status === 'completed' ? 'default' : quote.status === 'expired' ? 'destructive' : 'secondary'}>
+                          {quote.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyQuoteLink(quote)}
+                          data-testid={`button-copy-quote-${quote.id}`}
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        )}
+      </CardContent>
+
+      {/* Add Lead Dialog */}
+      <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Lead</DialogTitle>
+            <DialogDescription>Create a new lead for tracking potential customers</DialogDescription>
+          </DialogHeader>
+          <Form {...leadForm}>
+            <form onSubmit={leadForm.handleSubmit(handleCreateLead)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={leadForm.control}
+                  name="firstName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>First Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-lead-first-name" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={leadForm.control}
+                  name="lastName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-lead-last-name" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={leadForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" data-testid="input-lead-email" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={leadForm.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone</FormLabel>
+                    <FormControl>
+                      <Input {...field} data-testid="input-lead-phone" />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={leadForm.control}
+                name="source"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Source</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-lead-source">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="manual">Manual Entry</SelectItem>
+                        <SelectItem value="website">Website</SelectItem>
+                        <SelectItem value="referral">Referral</SelectItem>
+                        <SelectItem value="social">Social Media</SelectItem>
+                        <SelectItem value="event">Event</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddLeadOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createLeadMutation.isPending} data-testid="button-save-lead">
+                  {createLeadMutation.isPending ? 'Creating...' : 'Create Lead'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lead Detail Dialog with Notes */}
+      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{selectedLead?.firstName} {selectedLead?.lastName}</DialogTitle>
+            <DialogDescription>Lead details and notes</DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">Email:</span>
+                <p className="font-medium">{selectedLead?.email || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Phone:</span>
+                <p className="font-medium">{selectedLead?.phone || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Source:</span>
+                <p className="font-medium">{selectedLead?.source}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Status:</span>
+                <Badge variant="outline">{selectedLead?.status}</Badge>
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h4 className="font-medium flex items-center gap-2 mb-3">
+                <StickyNote className="w-4 h-4" />
+                Notes
+              </h4>
+              
+              {selectedLead?.notes?.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                  {selectedLead.notes.map((note: any) => (
+                    <div key={note.id} className="bg-gray-50 rounded p-2 text-sm">
+                      <p>{note.content}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(note.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 mb-3">No notes yet</p>
+              )}
+
+              <div className="flex gap-2">
+                <Input
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Add a note..."
+                  data-testid="input-lead-note"
+                />
+                <Button
+                  onClick={() => addNoteMutation.mutate({ leadId: selectedLead.id, content: newNote })}
+                  disabled={!newNote.trim() || addNoteMutation.isPending}
+                  data-testid="button-add-note"
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Quote Dialog */}
+      <Dialog open={isQuoteDialogOpen} onOpenChange={setIsQuoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Quote Checkout</DialogTitle>
+            <DialogDescription>Create a checkout link for a lead to complete payment</DialogDescription>
+          </DialogHeader>
+          <Form {...quoteForm}>
+            <form onSubmit={quoteForm.handleSubmit((data) => createQuoteMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={quoteForm.control}
+                name="leadId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lead</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-quote-lead">
+                          <SelectValue placeholder="Select a lead..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {leads.map((lead: any) => (
+                          <SelectItem key={lead.id} value={lead.id}>
+                            {lead.firstName} {lead.lastName} - {lead.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              
+              <div>
+                <FormLabel>Items</FormLabel>
+                <p className="text-sm text-gray-500 mb-2">Select programs or store products to include in the quote</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                  {programs.filter((p: any) => p.isActive).map((program: any) => (
+                    <div key={program.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`program-${program.id}`}
+                        onCheckedChange={(checked) => {
+                          const items = quoteForm.getValues('items');
+                          if (checked) {
+                            quoteForm.setValue('items', [...items, { type: 'program', productId: program.id, quantity: 1 }]);
+                          } else {
+                            quoteForm.setValue('items', items.filter((i) => i.productId !== program.id));
+                          }
+                        }}
+                        data-testid={`checkbox-program-${program.id}`}
+                      />
+                      <label htmlFor={`program-${program.id}`} className="text-sm flex-1">
+                        {program.name} - ${(program.price / 100).toFixed(2)}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsQuoteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createQuoteMutation.isPending} data-testid="button-create-quote-submit">
+                  {createQuoteMutation.isPending ? 'Creating...' : 'Create Quote'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

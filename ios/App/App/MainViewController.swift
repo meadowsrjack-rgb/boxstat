@@ -4,21 +4,9 @@ import WebKit
 
 class MainViewController: CAPBridgeViewController {
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        // Set view controller background to black
-        view.backgroundColor = UIColor.black
-        
-        // Configure WebView backgrounds and disable bouncing
-        configureWebViewForBlackBackground()
-        
-        // Inject APNs environment detection script for JavaScript
-        injectApnsEnvironment()
-    }
-    
-    private func injectApnsEnvironment() {
-        guard let webView = webView else { return }
+    // Inject APNs environment script BEFORE the WebView loads any content
+    override func webViewConfiguration() -> WKWebViewConfiguration {
+        let config = super.webViewConfiguration()
         
         // Determine APNs environment based on build configuration
         #if DEBUG
@@ -27,17 +15,28 @@ class MainViewController: CAPBridgeViewController {
         let apnsEnvironment = "production"
         #endif
         
-        // Inject as a global JavaScript variable
+        // Create user script that runs at document start (before any JS executes)
         let script = "window.APNS_ENVIRONMENT = '\(apnsEnvironment)';"
-        
         let userScript = WKUserScript(
             source: script,
             injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
+            forMainFrameOnly: false
         )
         
-        webView.configuration.userContentController.addUserScript(userScript)
-        print("📱 [MainViewController] Injected APNS_ENVIRONMENT: \(apnsEnvironment)")
+        config.userContentController.addUserScript(userScript)
+        print("📱 [MainViewController] Registered APNS_ENVIRONMENT script: \(apnsEnvironment)")
+        
+        return config
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Set view controller background to black
+        view.backgroundColor = UIColor.black
+        
+        // Configure WebView backgrounds and disable bouncing
+        configureWebViewForBlackBackground()
     }
     
     override func viewDidAppear(_ animated: Bool) {

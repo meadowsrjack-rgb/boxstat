@@ -9998,7 +9998,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const quoteId = nanoid(12);
       
       // Build items array with prices from programs (use customPrice if provided)
-      const programs = await storage.getPrograms(req.user.organizationId);
+      const programs = await storage.getProgramsByOrganization(req.user.organizationId);
       const items = (req.body.items || []).map((item: any) => {
         const program = programs.find((p: any) => p.id === item.productId);
         // Use customPrice if provided, otherwise use program's default price

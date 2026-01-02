@@ -10045,7 +10045,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lead = await storage.getCrmLead(quote.leadId);
       }
       
-      res.json({ ...quote, checkoutId: quote.id, lead });
+      // Collect required waivers from all programs in the quote
+      const requiredWaiverIds = new Set<string>();
+      const programs: any[] = [];
+      const addOns: any[] = [];
+      
+      if (quote.items && Array.isArray(quote.items)) {
+        for (const item of quote.items) {
+          if (item.type === 'program' && item.productId) {
+            const program = await storage.getProgram(item.productId);
+            if (program) {
+              programs.push(program);
+              if (program.requiredWaivers && Array.isArray(program.requiredWaivers)) {
+                program.requiredWaivers.forEach((wid: string) => requiredWaiverIds.add(wid));
+              }
+              
+              // Fetch add-ons for this program (other products in same organization)
+              const allProducts = await storage.getProgramsByOrganization(quote.organizationId);
+              const quoteItems = Array.isArray(quote.items) ? quote.items : [];
+              const programAddOns = allProducts.filter((p: any) => 
+                p.id !== program.id && 
+                p.isActive && 
+                p.productType !== 'membership' &&
+                !quoteItems.some((qi: any) => qi.productId === p.id)
+              ).slice(0, 3);
+              
+              programAddOns.forEach((ao: any) => {
+                if (!addOns.some(a => a.id === ao.id)) {
+                  addOns.push(ao);
+                }
+              });
+            }
+          }
+        }
+      }
+      
+      // Fetch waivers
+      const allWaivers = await storage.getWaiversByOrganization(quote.organizationId);
+      const waivers = allWaivers.filter((w: any) => requiredWaiverIds.has(w.id) && w.isActive);
+      
+      res.json({ 
+        ...quote, 
+        checkoutId: quote.id, 
+        lead,
+        waivers,
+        suggestedAddOns: addOns.slice(0, 3),
+        programs,
+      });
     } catch (error: any) {
       console.error('Error fetching quote:', error);
       res.status(500).json({ error: "Failed to fetch quote" });

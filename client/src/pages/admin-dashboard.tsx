@@ -10866,7 +10866,7 @@ function CRMTab({ organization, users, teams }: any) {
                       </FormControl>
                       <SelectContent>
                         {leads.map((lead: any) => (
-                          <SelectItem key={lead.id} value={lead.id}>
+                          <SelectItem key={lead.id} value={String(lead.id)}>
                             {lead.firstName} {lead.lastName} - {lead.email}
                           </SelectItem>
                         ))}

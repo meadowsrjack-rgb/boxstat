@@ -113,6 +113,7 @@ export interface IStorage {
   getTeam(id: string): Promise<Team | undefined>;
   getTeamsByOrganization(organizationId: string): Promise<Team[]>;
   getTeamsByCoach(coachId: string): Promise<Team[]>;
+  getTeamMembershipsByProfile(profileId: string): Promise<any[]>;
   createTeam(team: InsertTeam): Promise<Team>;
   updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined>;
   deleteTeam(id: string): Promise<void>;
@@ -1036,6 +1037,11 @@ class MemStorage implements IStorage {
     return Array.from(this.teams.values()).filter(team => 
       team.coachId === coachId || team.assistantCoachIds?.includes(coachId)
     );
+  }
+  
+  async getTeamMembershipsByProfile(profileId: string): Promise<any[]> {
+    // MemStorage doesn't track team memberships separately, return empty
+    return [];
   }
   
   async createTeam(team: InsertTeam): Promise<Team> {
@@ -3187,6 +3193,48 @@ class DatabaseStorage implements IStorage {
     );
     
     return teams.map(team => this.mapDbTeamToTeam(team));
+  }
+
+  async getTeamMembershipsByProfile(profileId: string): Promise<any[]> {
+    const memberships = await db.select({
+      membershipId: schema.teamMemberships.id,
+      teamId: schema.teamMemberships.teamId,
+      role: schema.teamMemberships.role,
+      status: schema.teamMemberships.status,
+      teamName: schema.teams.name,
+      coachId: schema.teams.coachId,
+    })
+    .from(schema.teamMemberships)
+    .leftJoin(schema.teams, eq(schema.teamMemberships.teamId, schema.teams.id))
+    .where(
+      and(
+        eq(schema.teamMemberships.profileId, profileId),
+        eq(schema.teamMemberships.status, 'active')
+      )
+    );
+    
+    // For each membership, get coach name if available
+    const result = await Promise.all(memberships.map(async (m) => {
+      let coachName = null;
+      if (m.coachId) {
+        const coach = await db.select({ firstName: schema.users.firstName, lastName: schema.users.lastName })
+          .from(schema.users)
+          .where(eq(schema.users.id, m.coachId))
+          .limit(1);
+        if (coach.length > 0) {
+          coachName = `${coach[0].firstName} ${coach[0].lastName}`;
+        }
+      }
+      return {
+        teamId: String(m.teamId),
+        teamName: m.teamName,
+        role: m.role,
+        coachId: m.coachId,
+        coachName,
+      };
+    }));
+    
+    return result;
   }
 
   async createTeam(team: InsertTeam): Promise<Team> {

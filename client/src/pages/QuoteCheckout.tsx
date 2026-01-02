@@ -6,15 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { BanterLoader } from "@/components/BanterLoader";
-import { ShoppingCart, User, CreditCard, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShoppingCart, User, CreditCard, CheckCircle2, AlertCircle, FileText, Plus, ChevronRight } from "lucide-react";
 
 export default function QuoteCheckout() {
   const params = useParams<{ checkoutId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [step, setStep] = useState<'details' | 'account' | 'payment' | 'success'>('details');
+  const [step, setStep] = useState<'details' | 'waivers' | 'account' | 'payment' | 'success'>('details');
+  const [signedWaivers, setSignedWaivers] = useState<Record<string, boolean>>({});
+  const [selectedAddOns, setSelectedAddOns] = useState<any[]>([]);
+  const [viewingWaiver, setViewingWaiver] = useState<any | null>(null);
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -129,8 +135,31 @@ export default function QuoteCheckout() {
     );
   }
 
+  const waivers = quote?.waivers || [];
+  const suggestedAddOns = quote?.suggestedAddOns || [];
+  const hasWaivers = waivers.length > 0;
+  const allWaiversSigned = waivers.every((w: any) => signedWaivers[w.id]);
+
+  const handleAddOn = (addOn: any) => {
+    if (selectedAddOns.find(a => a.id === addOn.id)) {
+      setSelectedAddOns(selectedAddOns.filter(a => a.id !== addOn.id));
+    } else {
+      setSelectedAddOns([...selectedAddOns, addOn]);
+    }
+  };
+
   const handleNext = () => {
     if (step === 'details') {
+      if (hasWaivers) {
+        setStep('waivers');
+      } else {
+        setStep('account');
+      }
+    } else if (step === 'waivers') {
+      if (!allWaiversSigned) {
+        toast({ title: "Please sign all required waivers to continue", variant: "destructive" });
+        return;
+      }
       setStep('account');
     } else if (step === 'account') {
       if (formData.password !== formData.confirmPassword) {
@@ -139,13 +168,25 @@ export default function QuoteCheckout() {
       }
       setStep('payment');
     } else if (step === 'payment') {
-      completeCheckoutMutation.mutate(formData);
+      completeCheckoutMutation.mutate({
+        ...formData,
+        signedWaivers: Object.keys(signedWaivers).filter(k => signedWaivers[k]),
+        addOns: selectedAddOns.map(a => ({ productId: a.id, price: a.price })),
+      });
     }
   };
 
-  const totalAmount = quote.items?.reduce((sum: number, item: any) => {
+  const baseAmount = quote.items?.reduce((sum: number, item: any) => {
     return sum + (item.price || 0) * (item.quantity || 1);
   }, 0) || quote.totalAmount || 0;
+  
+  const addOnsAmount = selectedAddOns.reduce((sum: number, addOn: any) => sum + (addOn.price || 0), 0);
+  const totalAmount = baseAmount + addOnsAmount;
+  
+  const steps = hasWaivers 
+    ? ['details', 'waivers', 'account', 'payment'] 
+    : ['details', 'account', 'payment'];
+  const currentStepIndex = steps.indexOf(step);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -159,15 +200,15 @@ export default function QuoteCheckout() {
         {/* Progress Steps */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
-            {['details', 'account', 'payment'].map((s, i) => (
+            {steps.map((s, i) => (
               <div key={s} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                   step === s ? 'bg-red-600 text-white' : 
-                  ['details', 'account', 'payment'].indexOf(step) > i ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
+                  currentStepIndex > i ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
                 }`}>
                   {i + 1}
                 </div>
-                {i < 2 && <div className="w-12 h-0.5 bg-gray-200 mx-1" />}
+                {i < steps.length - 1 && <div className="w-12 h-0.5 bg-gray-200 mx-1" />}
               </div>
             ))}
           </div>
@@ -192,11 +233,13 @@ export default function QuoteCheckout() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {step === 'details' && <><ShoppingCart className="w-5 h-5" /> Review Your Quote</>}
+                    {step === 'waivers' && <><FileText className="w-5 h-5" /> Sign Required Waivers</>}
                     {step === 'account' && <><User className="w-5 h-5" /> Create Your Account</>}
                     {step === 'payment' && <><CreditCard className="w-5 h-5" /> Complete Payment</>}
                   </CardTitle>
                   <CardDescription>
                     {step === 'details' && 'Review the items in your personalized quote'}
+                    {step === 'waivers' && 'Please review and sign the required waivers to continue'}
                     {step === 'account' && 'Set up your parent account and add player information'}
                     {step === 'payment' && 'Securely complete your payment'}
                   </CardDescription>
@@ -216,13 +259,132 @@ export default function QuoteCheckout() {
                         ))}
                       </div>
                       
+                      {/* Suggested Add-Ons */}
+                      {suggestedAddOns.length > 0 && (
+                        <div className="border-t pt-4">
+                          <h3 className="font-medium mb-3 flex items-center gap-2">
+                            <Plus className="w-4 h-4" /> Suggested Add-Ons
+                          </h3>
+                          <div className="space-y-2">
+                            {suggestedAddOns.map((addOn: any) => {
+                              const isSelected = selectedAddOns.find(a => a.id === addOn.id);
+                              return (
+                                <div 
+                                  key={addOn.id} 
+                                  className={`flex justify-between items-center p-3 rounded-lg border cursor-pointer transition-colors ${
+                                    isSelected ? 'bg-red-50 border-red-300' : 'bg-white hover:bg-gray-50'
+                                  }`}
+                                  onClick={() => handleAddOn(addOn)}
+                                  data-testid={`addon-${addOn.id}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Checkbox checked={!!isSelected} />
+                                    <div>
+                                      <p className="font-medium">{addOn.name}</p>
+                                      {addOn.description && (
+                                        <p className="text-sm text-gray-500">{addOn.description}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <p className="font-semibold text-red-600">+${((addOn.price || 0) / 100).toFixed(2)}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="border-t pt-4">
                         <div className="flex justify-between text-lg font-bold">
                           <span>Total</span>
                           <span>${(totalAmount / 100).toFixed(2)}</span>
                         </div>
+                        {selectedAddOns.length > 0 && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            (includes {selectedAddOns.length} add-on{selectedAddOns.length > 1 ? 's' : ''})
+                          </p>
+                        )}
                       </div>
                     </>
+                  )}
+
+                  {step === 'waivers' && (
+                    <div className="space-y-4">
+                      <p className="text-sm text-gray-600">
+                        Please review and acknowledge each waiver below. Click on a waiver to read the full text.
+                      </p>
+                      <div className="space-y-3">
+                        {waivers.map((waiver: any) => (
+                          <div 
+                            key={waiver.id}
+                            className={`p-4 rounded-lg border ${signedWaivers[waiver.id] ? 'bg-green-50 border-green-300' : 'bg-white'}`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3">
+                                <Checkbox
+                                  id={`waiver-${waiver.id}`}
+                                  checked={!!signedWaivers[waiver.id]}
+                                  onCheckedChange={(checked) => {
+                                    setSignedWaivers({...signedWaivers, [waiver.id]: !!checked});
+                                  }}
+                                  data-testid={`checkbox-waiver-${waiver.id}`}
+                                />
+                                <div>
+                                  <Label htmlFor={`waiver-${waiver.id}`} className="font-medium cursor-pointer">
+                                    {waiver.title}
+                                  </Label>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {waiver.description || 'Please read and acknowledge this waiver'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" data-testid={`view-waiver-${waiver.id}`}>
+                                    <FileText className="w-4 h-4 mr-1" /> View
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl max-h-[80vh]">
+                                  <DialogHeader>
+                                    <DialogTitle>{waiver.title}</DialogTitle>
+                                  </DialogHeader>
+                                  <ScrollArea className="h-[60vh] pr-4">
+                                    <div className="prose prose-sm" dangerouslySetInnerHTML={{ __html: waiver.content || '' }} />
+                                  </ScrollArea>
+                                  <div className="flex justify-end pt-4 border-t">
+                                    <Button
+                                      onClick={() => setSignedWaivers({...signedWaivers, [waiver.id]: true})}
+                                      className="bg-red-600 hover:bg-red-700"
+                                      data-testid={`accept-waiver-${waiver.id}`}
+                                    >
+                                      I Agree & Accept
+                                    </Button>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
+                            {signedWaivers[waiver.id] && (
+                              <div className="mt-2 flex items-center gap-1 text-green-600 text-sm">
+                                <CheckCircle2 className="w-4 h-4" /> Acknowledged
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {waivers.length > 0 && (
+                        <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
+                          {allWaiversSigned ? (
+                            <span className="text-green-600 flex items-center gap-1">
+                              <CheckCircle2 className="w-4 h-4" /> All waivers signed. You can proceed.
+                            </span>
+                          ) : (
+                            <span>
+                              {Object.values(signedWaivers).filter(Boolean).length} of {waivers.length} waivers signed
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {step === 'account' && (
@@ -348,7 +510,10 @@ export default function QuoteCheckout() {
                     {step !== 'details' && (
                       <Button
                         variant="outline"
-                        onClick={() => setStep(step === 'payment' ? 'account' : 'details')}
+                        onClick={() => {
+                          const prevStep = steps[currentStepIndex - 1];
+                          if (prevStep) setStep(prevStep as any);
+                        }}
                         data-testid="button-back"
                       >
                         Back
@@ -379,6 +544,14 @@ export default function QuoteCheckout() {
                       <div key={index} className="flex justify-between">
                         <span className="text-gray-600">{item.productName || item.name}</span>
                         <span>${((item.price || 0) / 100).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {selectedAddOns.map((addOn: any) => (
+                      <div key={`addon-sidebar-${addOn.id}`} className="flex justify-between text-red-600">
+                        <span className="flex items-center gap-1">
+                          <Plus className="w-3 h-3" /> {addOn.name}
+                        </span>
+                        <span>${((addOn.price || 0) / 100).toFixed(2)}</span>
                       </div>
                     ))}
                     <div className="border-t pt-2 mt-2">

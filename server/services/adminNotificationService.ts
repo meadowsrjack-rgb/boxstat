@@ -127,7 +127,7 @@ export class AdminNotificationService {
   }
 
   // Create a new notification (admin function)
-  async createNotification(notification: InsertNotification): Promise<{ notification: SelectNotification; recipientCount: number; skipped: number }> {
+  async createNotification(notification: InsertNotification, apnsEnvironment?: 'sandbox' | 'production'): Promise<{ notification: SelectNotification; recipientCount: number; skipped: number }> {
     console.log(`[Admin Notification Create] 📢 Creating new notification for organization ${notification.organizationId}`);
     console.log(`[Admin Notification Create] Title: "${notification.title}"`);
     console.log(`[Admin Notification Create] Message: "${notification.message}"`);
@@ -180,7 +180,10 @@ export class AdminNotificationService {
 
       // Send notifications through each channel
       console.log(`[Admin Notification Create] 🚀 Starting delivery through channels:`, notification.deliveryChannels);
-      await this.sendToRecipients(created, resolution.userIds, notification.deliveryChannels);
+      if (apnsEnvironment) {
+        console.log(`[Admin Notification Create] 🍎 APNs environment override: ${apnsEnvironment}`);
+      }
+      await this.sendToRecipients(created, resolution.userIds, notification.deliveryChannels, apnsEnvironment);
       console.log(`[Admin Notification Create] ✅ Delivery complete`);
 
       return {
@@ -198,7 +201,8 @@ export class AdminNotificationService {
   private async sendToRecipients(
     notification: SelectNotification,
     userIds: string[],
-    channels: string[]
+    channels: string[],
+    apnsEnvironment?: 'sandbox' | 'production'
   ): Promise<void> {
     console.log(`[Admin Notification Delivery] 📤 Sending notification #${notification.id} to ${userIds.length} recipient(s)`);
     console.log(`[Admin Notification Delivery] Delivery channels selected:`, channels);
@@ -263,13 +267,17 @@ export class AdminNotificationService {
               // Use existing push notification service
               pushAttempts++;
               console.log(`[Admin Notification Delivery]   📱 Calling sendPushNotification for user ${userId}...`);
+              if (apnsEnvironment) {
+                console.log(`[Admin Notification Delivery]   📱 Using APNs environment override: ${apnsEnvironment}`);
+              }
               
               try {
                 await notificationService.sendPushNotification(
                   notification.id,
                   userId,
                   notification.title,
-                  notification.message
+                  notification.message,
+                  apnsEnvironment
                 );
                 deliveryStatus.push = 'sent';
                 pushSuccess++;

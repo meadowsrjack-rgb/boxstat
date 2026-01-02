@@ -49,15 +49,22 @@ export function setupAdminNotificationRoutes(app: Express) {
     try {
       const organizationId = req.user.organizationId || 'default-org';
       const userId = req.user.id;
+      
+      // Extract APNs environment override for iOS push testing (not part of notification schema)
+      const apnsEnvironment = req.body.apnsEnvironment as 'sandbox' | 'production' | undefined;
+      if (apnsEnvironment) {
+        console.log(`[Admin Notifications API] APNs environment override requested: ${apnsEnvironment}`);
+      }
 
-      // Validate request body
+      // Validate request body (remove apnsEnvironment as it's not in the schema)
+      const { apnsEnvironment: _, ...bodyWithoutApns } = req.body;
       const notificationData = insertNotificationSchema.parse({
-        ...req.body,
+        ...bodyWithoutApns,
         organizationId,
         sentBy: userId
       });
 
-      const result = await adminNotificationService.createNotification(notificationData);
+      const result = await adminNotificationService.createNotification(notificationData, apnsEnvironment);
 
       res.json({
         success: true,

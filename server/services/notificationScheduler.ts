@@ -221,6 +221,7 @@ export class NotificationScheduler {
                 type: 'campaign',
                 data: { campaignId: campaign.id },
                 channels: campaign.deliveryChannels as Array<'in_app' | 'push' | 'email'>,
+                apnsEnvironment: campaign.apnsEnvironment as 'sandbox' | 'production' | undefined,
               });
               successCount++;
             } catch (err) {

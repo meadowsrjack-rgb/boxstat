@@ -2053,6 +2053,9 @@ export const notificationCampaigns = pgTable("notification_campaigns", {
   // Delivery channels
   deliveryChannels: text("delivery_channels").array().notNull().default(sql`ARRAY['in_app']::text[]`),
   
+  // APNs environment for iOS push notifications (sandbox for Xcode, production for TestFlight/App Store)
+  apnsEnvironment: varchar("apns_environment"),
+  
   // Schedule configuration
   scheduleType: varchar("schedule_type").notNull().default('immediate'), // immediate, scheduled, recurring
   scheduledAt: timestamp("scheduled_at", { mode: 'string' }), // For one-time scheduled

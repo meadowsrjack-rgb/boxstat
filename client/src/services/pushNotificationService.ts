@@ -46,10 +46,10 @@ export const initPushNotifications = async () => {
         console.log('[Push Registration] ⚠️ No auth token found in localStorage');
       }
       
-      // Use APNs environment injected from native iOS layer
-      // DEBUG builds (Xcode) → 'sandbox', RELEASE builds (TestFlight/App Store) → 'production'
-      const apnsEnvironment = (window as any).APNS_ENVIRONMENT || 'production';
-      console.log('[Push Registration] APNs environment:', apnsEnvironment);
+      // APNs environment for token storage - defaults to 'production'
+      // Note: Actual send-time environment is controlled via admin dashboard toggle
+      const apnsEnvironment = 'production';
+      console.log('[Push Registration] Storing token with APNs environment:', apnsEnvironment);
       
       const response = await fetch(url, {
         method: 'POST',
@@ -60,8 +60,6 @@ export const initPushNotifications = async () => {
           apnsEnvironment
         }),
       });
-      
-      console.log('[Push Registration] Registered with APNs environment:', apnsEnvironment);
 
       console.log('[Push Registration] Backend response status:', response.status);
 

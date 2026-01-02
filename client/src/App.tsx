@@ -58,6 +58,7 @@ import RegistrationStatus from "@/pages/RegistrationStatus";
 import NoProfiles from "@/pages/NoProfiles";
 import FamilyOnboarding from "@/pages/family-onboarding";
 import DemoProfileSelection from "@/pages/demo-profile-selection";
+import QuoteCheckout from "@/pages/QuoteCheckout";
 import { useQuery } from "@tanstack/react-query";
 import { initPushNotifications, registerPushNotifications } from "@/services/pushNotificationService";
 import { initDeepLinks } from "@/services/deepLinkService";
@@ -372,6 +373,7 @@ function AppRouter() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/logout" component={Logout} />
+      <Route path="/checkout/:checkoutId" component={QuoteCheckout} />
       
       {/* Landing page - always accessible at root */}
       <Route path="/" component={Landing} />

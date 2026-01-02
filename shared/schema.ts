@@ -1048,16 +1048,18 @@ export const crmNotes = pgTable("crm_notes", {
 
 // Quote Checkout Links (pre-filled checkout for leads)
 export const quoteCheckouts = pgTable("quote_checkouts", {
-  id: varchar().primaryKey().notNull(), // nanoid for unique URL
+  id: varchar().primaryKey().notNull(), // nanoid for unique URL (used as checkoutId in links)
   organizationId: varchar("organization_id").notNull(),
   leadId: integer("lead_id"), // optional: linked to a lead
   createdBy: varchar("created_by").notNull(), // admin who created the quote
-  programIds: text("program_ids").array().notNull(), // selected programs
+  programIds: text("program_ids").array(), // selected programs (legacy)
+  items: jsonb("items"), // array of { type, productId, productName, price, quantity }
+  totalAmount: integer("total_amount").default(0), // in cents
   discountPercent: integer("discount_percent").default(0),
   discountCode: varchar("discount_code"),
   notes: text(), // internal notes
   expiresAt: timestamp("expires_at", { mode: 'string' }),
-  status: varchar().default('pending'), // pending, used, expired
+  status: varchar().default('pending'), // pending, completed, expired
   usedBy: varchar("used_by"), // user ID if someone used the quote
   usedAt: timestamp("used_at", { mode: 'string' }),
   createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),

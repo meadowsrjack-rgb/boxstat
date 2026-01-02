@@ -9896,6 +9896,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias for frontend consistency
+  app.get("/api/quote-checkouts", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const quotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
+      const leads = await storage.getCrmLeadsByOrganization(req.user.organizationId);
+      
+      // Attach lead info and add checkoutId alias
+      const enrichedQuotes = quotes.map((q: any) => ({
+        ...q,
+        checkoutId: q.id,
+        lead: leads.find((l: any) => l.id === q.leadId) || null,
+      }));
+      res.json(enrichedQuotes);
+    } catch (error: any) {
+      console.error('Error fetching quotes:', error);
+      res.status(500).json({ error: "Failed to fetch quotes" });
+    }
+  });
+
+  app.post("/api/quote-checkouts", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { nanoid } = await import('nanoid');
+      const quoteId = nanoid(12);
+      
+      // Build items array with prices from programs
+      const programs = await storage.getPrograms(req.user.organizationId);
+      const items = (req.body.items || []).map((item: any) => {
+        const program = programs.find((p: any) => p.id === item.productId);
+        return {
+          type: item.type || 'program',
+          productId: item.productId,
+          productName: program?.name || 'Unknown',
+          price: program?.price || 0,
+          quantity: item.quantity || 1,
+        };
+      });
+      
+      const totalAmount = items.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+      
+      const quote = await storage.createQuoteCheckout({
+        id: quoteId,
+        organizationId: req.user.organizationId,
+        createdBy: req.user.id,
+        leadId: req.body.leadId ? parseInt(req.body.leadId) : null,
+        items,
+        totalAmount,
+        programIds: items.map((i: any) => i.productId),
+      });
+      res.json({ ...quote, checkoutId: quote.id });
+    } catch (error: any) {
+      console.error('Error creating quote:', error);
+      res.status(500).json({ error: "Failed to create quote" });
+    }
+  });
+
+  // Public quote checkout access (no auth required for lead checkout)
+  app.get("/api/quote-checkouts/:checkoutId", async (req: any, res) => {
+    try {
+      const quote = await storage.getQuoteCheckout(req.params.checkoutId);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+      
+      // Attach lead info if available
+      let lead = null;
+      if (quote.leadId) {
+        lead = await storage.getCrmLead(quote.leadId);
+      }
+      
+      res.json({ ...quote, checkoutId: quote.id, lead });
+    } catch (error: any) {
+      console.error('Error fetching quote:', error);
+      res.status(500).json({ error: "Failed to fetch quote" });
+    }
+  });
+
+  // Complete quote checkout (creates account, player, and redirects to payment)
+  app.post("/api/quote-checkouts/:checkoutId/complete", async (req: any, res) => {
+    try {
+      const quote = await storage.getQuoteCheckout(req.params.checkoutId);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+      if (quote.status === 'completed') {
+        return res.status(400).json({ error: "Quote has already been completed" });
+      }
+      if (quote.status === 'expired' || (quote.expiresAt && new Date(quote.expiresAt) < new Date())) {
+        return res.status(400).json({ error: "Quote has expired" });
+      }
+
+      const { firstName, lastName, email, password, phone, playerFirstName, playerLastName, playerBirthDate } = req.body;
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ error: "An account with this email already exists. Please login instead." });
+      }
+
+      // Create parent account
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const { nanoid } = await import('nanoid');
+      
+      const newUser = await storage.createUser({
+        id: nanoid(21),
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        phone,
+        role: 'parent',
+        userType: 'parent',
+        organizationId: quote.organizationId,
+        emailVerified: false,
+        isVerified: false,
+      });
+
+      // Create player profile
+      const player = await storage.createUser({
+        id: nanoid(21),
+        firstName: playerFirstName,
+        lastName: playerLastName,
+        email: `${playerFirstName.toLowerCase()}.${nanoid(6)}@player.local`,
+        role: 'player',
+        userType: 'player',
+        dateOfBirth: playerBirthDate ? new Date(playerBirthDate) : null,
+        parentId: newUser.id,
+        organizationId: quote.organizationId,
+        isVerified: false,
+      });
+
+      // Update quote status
+      await storage.updateQuoteCheckout(quote.id, { 
+        status: 'completed',
+        userId: newUser.id,
+        completedAt: new Date(),
+      });
+
+      // If there are items that require payment, create a Stripe checkout session
+      if (quote.totalAmount && quote.totalAmount > 0 && stripe) {
+        const lineItems = quote.items?.map((item: any) => ({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: item.productName || item.name,
+            },
+            unit_amount: item.price,
+          },
+          quantity: item.quantity || 1,
+        })) || [];
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: lineItems,
+          mode: 'payment',
+          success_url: `${req.headers.origin || 'http://localhost:5000'}/login?checkout=success`,
+          cancel_url: `${req.headers.origin || 'http://localhost:5000'}/checkout/${req.params.checkoutId}?checkout=cancelled`,
+          customer_email: email,
+          metadata: {
+            userId: newUser.id,
+            playerId: player.id,
+            quoteId: quote.id,
+          },
+        });
+
+        return res.json({ paymentUrl: session.url });
+      }
+
+      res.json({ success: true, userId: newUser.id });
+    } catch (error: any) {
+      console.error('Error completing quote checkout:', error);
+      res.status(500).json({ error: "Failed to complete checkout" });
+    }
+  });
+
+  // Reply to contact management message
+  app.post("/api/contact-management/:id/reply", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const parentMessageId = parseInt(req.params.id);
+      const reply = await storage.createContactManagementMessage({
+        senderId: req.user.id,
+        organizationId: req.user.organizationId,
+        message: req.body.message,
+        parentMessageId,
+        isAdmin: true,
+      });
+      res.json(reply);
+    } catch (error: any) {
+      console.error('Error sending reply:', error);
+      res.status(500).json({ error: "Failed to send reply" });
+    }
+  });
+
   // =============================================
   // HTTP SERVER SETUP
   // =============================================

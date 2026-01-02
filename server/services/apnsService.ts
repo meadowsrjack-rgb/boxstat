@@ -150,10 +150,14 @@ async function sendSingleNotification(
     // Clean device token (remove spaces and angle brackets if present)
     const cleanToken = deviceToken.replace(/[<>\s]/g, '');
 
-    // Always use production APNs gateway
-    const host = APNS_HOST_PRODUCTION;
-    console.log(`[APNs] 🚀 Using PRODUCTION gateway: ${host}`);
+    // Route to correct gateway based on token environment
+    // Sandbox tokens (from Xcode debug builds) need sandbox gateway
+    // Production tokens (TestFlight/App Store) need production gateway
+    const isSandbox = apnsEnvironment === 'sandbox';
+    const host = isSandbox ? APNS_HOST_SANDBOX : APNS_HOST_PRODUCTION;
+    console.log(`[APNs] 🚀 Using ${isSandbox ? 'SANDBOX' : 'PRODUCTION'} gateway: ${host}`);
     console.log(`[APNs]    Token prefix: ${cleanToken.substring(0, 20)}...`);
+    console.log(`[APNs]    Environment: ${apnsEnvironment || 'default (production)'}`);
     
     const client = http2.connect(`https://${host}`);
     
@@ -286,7 +290,7 @@ export function isAPNsConfigured(): boolean {
 // Log configuration status on module load
 if (isAPNsConfigured()) {
   console.log('✅ APNs configured for direct push notifications');
-  console.log(`   Gateway: ${APNS_HOST_PRODUCTION} (production only)`);
+  console.log(`   Gateways: ${APNS_HOST_PRODUCTION} (production) / ${APNS_HOST_SANDBOX} (sandbox)`);
   console.log(`   Bundle ID: ${APNS_BUNDLE_ID}`);
 } else {
   console.warn('⚠️ APNs not configured - iOS push notifications will not work');

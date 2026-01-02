@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 class MainViewController: CAPBridgeViewController {
     
@@ -11,6 +12,32 @@ class MainViewController: CAPBridgeViewController {
         
         // Configure WebView backgrounds and disable bouncing
         configureWebViewForBlackBackground()
+        
+        // Inject APNs environment detection script for JavaScript
+        injectApnsEnvironment()
+    }
+    
+    private func injectApnsEnvironment() {
+        guard let webView = webView else { return }
+        
+        // Determine APNs environment based on build configuration
+        #if DEBUG
+        let apnsEnvironment = "sandbox"
+        #else
+        let apnsEnvironment = "production"
+        #endif
+        
+        // Inject as a global JavaScript variable
+        let script = "window.APNS_ENVIRONMENT = '\(apnsEnvironment)';"
+        
+        let userScript = WKUserScript(
+            source: script,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        )
+        
+        webView.configuration.userContentController.addUserScript(userScript)
+        print("📱 [MainViewController] Injected APNS_ENVIRONMENT: \(apnsEnvironment)")
     }
     
     override func viewDidAppear(_ animated: Bool) {

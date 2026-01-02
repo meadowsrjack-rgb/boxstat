@@ -46,39 +46,9 @@ export const initPushNotifications = async () => {
         console.log('[Push Registration] ⚠️ No auth token found in localStorage');
       }
       
-      // Detect APNs environment automatically:
-      // Priority order:
-      // 1. Native iOS bridge value (injected by AppDelegate based on Debug/Release build)
-      // 2. VITE_APNS_ENVIRONMENT env var (manual override)
-      // 3. Vite dev mode detection
-      // 4. Default to 'production' for built apps
-      
-      // Check for native-injected value from iOS (set by AppDelegate.swift)
-      const nativeApnsEnv = (window as any).BOXSTAT_APNS_ENVIRONMENT as string | undefined;
-      const envOverride = import.meta.env.VITE_APNS_ENVIRONMENT as string | undefined;
-      const isDevelopmentMode = import.meta.env.DEV;
-      
-      let apnsEnvironment: 'sandbox' | 'production';
-      let detectionMethod: string;
-      
-      if (nativeApnsEnv === 'sandbox' || nativeApnsEnv === 'production') {
-        // Native iOS bridge provides the most accurate detection
-        apnsEnvironment = nativeApnsEnv;
-        detectionMethod = 'Native iOS bridge (automatic)';
-      } else if (envOverride === 'sandbox' || envOverride === 'production') {
-        apnsEnvironment = envOverride;
-        detectionMethod = 'VITE_APNS_ENVIRONMENT override';
-      } else if (isDevelopmentMode) {
-        apnsEnvironment = 'sandbox';
-        detectionMethod = 'Vite dev mode';
-      } else {
-        apnsEnvironment = 'production';
-        detectionMethod = 'Default (production build)';
-      }
-      
-      console.log('[Push Registration] Detection method:', detectionMethod);
-      console.log('[Push Registration] Native bridge value:', nativeApnsEnv || 'not set');
-      console.log('[Push Registration] Final APNs environment:', apnsEnvironment);
+      // Always use production APNs
+      const apnsEnvironment = 'production';
+      console.log('[Push Registration] Using production APNs');
       
       const response = await fetch(url, {
         method: 'POST',

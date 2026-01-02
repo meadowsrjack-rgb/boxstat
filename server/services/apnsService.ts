@@ -150,12 +150,9 @@ async function sendSingleNotification(
     // Clean device token (remove spaces and angle brackets if present)
     const cleanToken = deviceToken.replace(/[<>\s]/g, '');
 
-    // Use PRODUCTION by default - only use sandbox if explicitly set to 'sandbox'
-    // TestFlight and App Store builds require production APNs gateway
-    const useProduction = apnsEnvironment !== 'sandbox';
-    const host = useProduction ? APNS_HOST_PRODUCTION : APNS_HOST_SANDBOX;
-    console.log(`[APNs] 🚀 Using ${useProduction ? 'PRODUCTION' : 'SANDBOX'} gateway: ${host}`);
-    console.log(`[APNs]    Token environment: ${apnsEnvironment || 'not specified (defaulting to production)'}`);
+    // Always use production APNs gateway
+    const host = APNS_HOST_PRODUCTION;
+    console.log(`[APNs] 🚀 Using PRODUCTION gateway: ${host}`);
     console.log(`[APNs]    Token prefix: ${cleanToken.substring(0, 20)}...`);
     
     const client = http2.connect(`https://${host}`);
@@ -289,9 +286,7 @@ export function isAPNsConfigured(): boolean {
 // Log configuration status on module load
 if (isAPNsConfigured()) {
   console.log('✅ APNs configured for direct push notifications');
-  console.log(`   Mode: PRODUCTION-first (TestFlight/App Store compatible)`);
-  console.log(`   Production: ${APNS_HOST_PRODUCTION}`);
-  console.log(`   Sandbox: ${APNS_HOST_SANDBOX} (only for local Xcode debug builds)`);
+  console.log(`   Gateway: ${APNS_HOST_PRODUCTION} (production only)`);
   console.log(`   Bundle ID: ${APNS_BUNDLE_ID}`);
 } else {
   console.warn('⚠️ APNs not configured - iOS push notifications will not work');

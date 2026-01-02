@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight, UserPlus, Users, Check, Mail, Loader2, Calen
 import { Capacitor } from "@capacitor/core";
 import { DateScrollPicker } from "react-date-wheel-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { authPersistence } from "@/services/authPersistence";
 
 // Form schemas for each step
 const emailEntrySchema = z.object({
@@ -153,9 +154,9 @@ export default function RegistrationFlow() {
         });
         
         if (loginResponse.success) {
-          // Store JWT token for mobile authentication (like login page does)
+          // Store JWT token for mobile authentication (using persistent native storage)
           if (loginResponse.token) {
-            localStorage.setItem('authToken', loginResponse.token);
+            await authPersistence.setToken(loginResponse.token);
           }
           
           // Different message based on registration type

@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LogIn, ChevronLeft, Mail } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
+import { authPersistence } from "@/services/authPersistence";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -35,13 +36,11 @@ export default function LoginPage() {
       if (response.success) {
         console.log("🎯 Login success branch - token present?", !!response.token);
 
-        // Store JWT token for mobile authentication
+        // Store JWT token for mobile authentication (using persistent native storage)
         if (response.token) {
           console.log("💾 About to store JWT token...");
-          localStorage.setItem('authToken', response.token);
-          console.log("✅ Token stored! Verifying...");
-          const storedToken = localStorage.getItem('authToken');
-          console.log("🔍 Token retrieved from storage:", storedToken ? storedToken.substring(0, 20) + "..." : "NULL");
+          await authPersistence.setToken(response.token);
+          console.log("✅ Token stored with native persistence!");
         } else {
           console.warn("⚠️ No token in response!");
         }

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from '@capacitor/core';
+import { authPersistence } from "@/services/authPersistence";
 
 // API base URL - use production backend when running in Capacitor native app
 const API_BASE_URL = Capacitor.isNativePlatform() 
@@ -10,9 +11,9 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery({
     queryKey: ["/api/auth/user"],
     queryFn: async () => {
-      // Get JWT token from localStorage (for mobile/JWT auth)
-      const token = localStorage.getItem('authToken');
-      console.log("🔑 useAuth: Token from localStorage:", token ? token.substring(0, 20) + "..." : "NULL");
+      // Restore token from native storage first (for iOS app restarts)
+      const token = await authPersistence.getToken();
+      console.log("🔑 useAuth: Token from storage:", token ? token.substring(0, 20) + "..." : "NULL");
       
       // Build headers
       const headers: Record<string, string> = {};
@@ -52,8 +53,8 @@ export function useAuth() {
   });
 
   const logout = async () => {
-    // Clear JWT token from localStorage
-    localStorage.removeItem('authToken');
+    // Clear JWT token from native and local storage
+    await authPersistence.clearAll();
     window.location.href = "/api/logout";
   };
 

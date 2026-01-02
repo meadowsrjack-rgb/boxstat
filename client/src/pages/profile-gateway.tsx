@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { authPersistence } from "@/services/authPersistence";
 
 export default function ProfileGateway() {
   const { user, isLoading } = useAuth();
@@ -111,7 +112,8 @@ export default function ProfileGateway() {
     } catch (e) {
       // Continue with logout even if API fails
     }
-    localStorage.removeItem('authToken');
+    // Clear auth token from native and local storage
+    await authPersistence.clearAll();
     localStorage.removeItem('selectedPlayerId');
     localStorage.removeItem('viewingAsParent');
     localStorage.removeItem('lastViewedProfileType');

@@ -59,6 +59,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import UypTrophyRings from "@/components/UypTrophyRings";
+import { authPersistence } from "@/services/authPersistence";
 
 // Hook for drag-to-scroll functionality
 function useDragScroll() {
@@ -951,7 +952,7 @@ export default function UnifiedAccount() {
     const isIOSRedirect = !!authToken;
     if (authToken) {
       console.log('[iOS Payment] Auth token detected, restoring session...');
-      localStorage.setItem('authToken', authToken);
+      authPersistence.setToken(authToken);
       // Clean the auth token from URL immediately for security
       urlParams.delete('auth_token');
       const newUrl = urlParams.toString() 

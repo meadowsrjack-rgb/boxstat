@@ -9570,6 +9570,333 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =============================================
+  // DIRECT MESSAGES (Parent-Coach 1-on-1)
+  // =============================================
+  
+  app.get("/api/direct-messages/:userId", requireAuth, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      // Users can only access their own DMs
+      if (req.user.id !== userId && req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const messages = await storage.getDirectMessagesForUser(userId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching direct messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+  
+  app.get("/api/direct-messages/:senderId/:receiverId", requireAuth, async (req: any, res) => {
+    try {
+      const { senderId, receiverId } = req.params;
+      // Users can only access conversations they're part of
+      if (req.user.id !== senderId && req.user.id !== receiverId && req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      const messages = await storage.getDirectMessagesBetweenUsers(senderId, receiverId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching direct messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+  
+  app.post("/api/direct-messages", requireAuth, async (req: any, res) => {
+    try {
+      const { receiverId, message, teamId } = req.body;
+      const dm = await storage.createDirectMessage({
+        organizationId: req.user.organizationId,
+        senderId: req.user.id,
+        receiverId,
+        message,
+        teamId: teamId || null,
+      });
+      res.json(dm);
+    } catch (error: any) {
+      console.error('Error creating direct message:', error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+  
+  app.patch("/api/direct-messages/:id/read", requireAuth, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updated = await storage.markDirectMessageRead(id);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error marking message read:', error);
+      res.status(500).json({ error: "Failed to mark message read" });
+    }
+  });
+  
+  // =============================================
+  // CONTACT MANAGEMENT MESSAGES
+  // =============================================
+  
+  app.get("/api/contact-management", requireAuth, async (req: any, res) => {
+    try {
+      const { organizationId, role } = req.user;
+      if (role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const messages = await storage.getContactManagementMessages(organizationId);
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching contact messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+  
+  app.get("/api/contact-management/my-messages", requireAuth, async (req: any, res) => {
+    try {
+      const messages = await storage.getContactManagementMessagesBySender(req.user.id);
+      res.json(messages);
+    } catch (error: any) {
+      console.error('Error fetching my contact messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+  
+  app.post("/api/contact-management", requireAuth, async (req: any, res) => {
+    try {
+      const { message } = req.body;
+      const user = await storage.getUser(req.user.id);
+      const msg = await storage.createContactManagementMessage({
+        organizationId: req.user.organizationId,
+        senderId: req.user.id,
+        senderName: user ? `${user.firstName} ${user.lastName}` : 'Unknown',
+        senderEmail: user?.email || null,
+        message,
+      });
+      res.json(msg);
+    } catch (error: any) {
+      console.error('Error creating contact message:', error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+  
+  app.patch("/api/contact-management/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const id = parseInt(req.params.id);
+      const updated = await storage.updateContactManagementMessage(id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating contact message:', error);
+      res.status(500).json({ error: "Failed to update message" });
+    }
+  });
+  
+  // =============================================
+  // CRM LEADS
+  // =============================================
+  
+  app.get("/api/crm/leads", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const leads = await storage.getCrmLeadsByOrganization(req.user.organizationId);
+      res.json(leads);
+    } catch (error: any) {
+      console.error('Error fetching leads:', error);
+      res.status(500).json({ error: "Failed to fetch leads" });
+    }
+  });
+  
+  app.get("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const lead = await storage.getCrmLead(parseInt(req.params.id));
+      if (!lead) {
+        return res.status(404).json({ error: "Lead not found" });
+      }
+      res.json(lead);
+    } catch (error: any) {
+      console.error('Error fetching lead:', error);
+      res.status(500).json({ error: "Failed to fetch lead" });
+    }
+  });
+  
+  app.post("/api/crm/leads", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const lead = await storage.createCrmLead({
+        organizationId: req.user.organizationId,
+        ...req.body,
+      });
+      res.json(lead);
+    } catch (error: any) {
+      console.error('Error creating lead:', error);
+      res.status(500).json({ error: "Failed to create lead" });
+    }
+  });
+  
+  app.patch("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const updated = await storage.updateCrmLead(parseInt(req.params.id), req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating lead:', error);
+      res.status(500).json({ error: "Failed to update lead" });
+    }
+  });
+  
+  app.delete("/api/crm/leads/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      await storage.deleteCrmLead(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting lead:', error);
+      res.status(500).json({ error: "Failed to delete lead" });
+    }
+  });
+  
+  // =============================================
+  // CRM NOTES
+  // =============================================
+  
+  app.get("/api/crm/notes/lead/:leadId", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const notes = await storage.getCrmNotesByLead(parseInt(req.params.leadId));
+      res.json(notes);
+    } catch (error: any) {
+      console.error('Error fetching notes:', error);
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+  
+  app.get("/api/crm/notes/user/:userId", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const notes = await storage.getCrmNotesByUser(req.params.userId);
+      res.json(notes);
+    } catch (error: any) {
+      console.error('Error fetching notes:', error);
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+  
+  app.post("/api/crm/notes", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const note = await storage.createCrmNote({
+        organizationId: req.user.organizationId,
+        authorId: req.user.id,
+        ...req.body,
+      });
+      res.json(note);
+    } catch (error: any) {
+      console.error('Error creating note:', error);
+      res.status(500).json({ error: "Failed to create note" });
+    }
+  });
+  
+  app.delete("/api/crm/notes/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      await storage.deleteCrmNote(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting note:', error);
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+  
+  // =============================================
+  // QUOTE CHECKOUTS
+  // =============================================
+  
+  app.get("/api/quotes", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const quotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
+      res.json(quotes);
+    } catch (error: any) {
+      console.error('Error fetching quotes:', error);
+      res.status(500).json({ error: "Failed to fetch quotes" });
+    }
+  });
+  
+  app.get("/api/quotes/:id", async (req: any, res) => {
+    try {
+      const quote = await storage.getQuoteCheckout(req.params.id);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+      // Check if expired
+      if (quote.expiresAt && new Date(quote.expiresAt) < new Date()) {
+        return res.status(410).json({ error: "Quote has expired" });
+      }
+      if (quote.status !== 'pending') {
+        return res.status(410).json({ error: "Quote has already been used" });
+      }
+      res.json(quote);
+    } catch (error: any) {
+      console.error('Error fetching quote:', error);
+      res.status(500).json({ error: "Failed to fetch quote" });
+    }
+  });
+  
+  app.post("/api/quotes", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { nanoid } = await import('nanoid');
+      const quoteId = nanoid(12);
+      const quote = await storage.createQuoteCheckout({
+        id: quoteId,
+        organizationId: req.user.organizationId,
+        createdBy: req.user.id,
+        ...req.body,
+      });
+      res.json(quote);
+    } catch (error: any) {
+      console.error('Error creating quote:', error);
+      res.status(500).json({ error: "Failed to create quote" });
+    }
+  });
+  
+  app.patch("/api/quotes/:id", requireAuth, async (req: any, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const updated = await storage.updateQuoteCheckout(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating quote:', error);
+      res.status(500).json({ error: "Failed to update quote" });
+    }
+  });
+
+  // =============================================
   // HTTP SERVER SETUP
   // =============================================
   

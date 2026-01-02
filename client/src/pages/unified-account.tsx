@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BanterLoader } from "@/components/BanterLoader";
@@ -905,6 +905,287 @@ function PlayerProfileCard({ player }: { player: any }) {
         </Collapsible>
       </CardContent>
     </Card>
+  );
+}
+
+// Parent Messages Section Component
+function ParentMessagesSection({ players, userId }: { players: any[]; userId?: string }) {
+  const [activeChat, setActiveChat] = useState<{ type: 'team' | 'coach' | 'management'; teamId?: number; coachId?: string; teamName?: string } | null>(null);
+  const [newMessage, setNewMessage] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Get unique teams from all players
+  const playerTeams = players?.reduce((teams: any[], player: any) => {
+    if (player.teamId && player.teamName) {
+      const existing = teams.find(t => t.id === player.teamId);
+      if (!existing) {
+        teams.push({
+          id: player.teamId,
+          name: player.teamName,
+          coachId: player.coachId,
+          coachName: player.coachName || 'Coach',
+          playerName: `${player.firstName} ${player.lastName}`,
+        });
+      }
+    }
+    return teams;
+  }, []) || [];
+
+  // Fetch team messages
+  const { data: teamMessages = [] } = useQuery<any[]>({
+    queryKey: ['/api/teams', activeChat?.teamId, 'messages'],
+    enabled: activeChat?.type === 'team' && !!activeChat?.teamId,
+  });
+
+  // Fetch direct messages with coach
+  const { data: coachMessages = [] } = useQuery<any[]>({
+    queryKey: ['/api/direct-messages', userId, activeChat?.coachId],
+    enabled: activeChat?.type === 'coach' && !!activeChat?.coachId && !!userId,
+  });
+
+  // Fetch contact management messages
+  const { data: myContactMessages = [] } = useQuery<any[]>({
+    queryKey: ['/api/contact-management/my-messages'],
+    enabled: activeChat?.type === 'management',
+  });
+
+  // Send team message mutation
+  const sendTeamMessageMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/teams/${activeChat?.teamId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: newMessage }),
+      });
+      if (!res.ok) throw new Error('Failed to send message');
+      return res.json();
+    },
+    onSuccess: () => {
+      setNewMessage("");
+      queryClient.invalidateQueries({ queryKey: ['/api/teams', activeChat?.teamId, 'messages'] });
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  // Send direct message to coach mutation
+  const sendCoachMessageMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/direct-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          receiverId: activeChat?.coachId, 
+          message: newMessage,
+          teamId: activeChat?.teamId,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to send message');
+      return res.json();
+    },
+    onSuccess: () => {
+      setNewMessage("");
+      queryClient.invalidateQueries({ queryKey: ['/api/direct-messages', userId, activeChat?.coachId] });
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  // Send contact management message mutation
+  const sendManagementMessageMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/contact-management', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: newMessage }),
+      });
+      if (!res.ok) throw new Error('Failed to send message');
+      return res.json();
+    },
+    onSuccess: () => {
+      setNewMessage("");
+      queryClient.invalidateQueries({ queryKey: ['/api/contact-management/my-messages'] });
+      toast({ title: "Message sent", description: "Management will respond soon." });
+    },
+    onError: () => {
+      toast({ title: "Failed to send message", variant: "destructive" });
+    },
+  });
+
+  const handleSend = () => {
+    if (!newMessage.trim()) return;
+    if (activeChat?.type === 'team') {
+      sendTeamMessageMutation.mutate();
+    } else if (activeChat?.type === 'coach') {
+      sendCoachMessageMutation.mutate();
+    } else if (activeChat?.type === 'management') {
+      sendManagementMessageMutation.mutate();
+    }
+  };
+
+  const currentMessages = activeChat?.type === 'team' ? teamMessages :
+    activeChat?.type === 'coach' ? coachMessages : myContactMessages;
+
+  if (activeChat) {
+    // Chat view
+    return (
+      <Card>
+        <CardHeader className="border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setActiveChat(null)} data-testid="button-back-to-chats">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div>
+                <CardTitle className="text-base">
+                  {activeChat.type === 'team' && `${activeChat.teamName} - Team Chat`}
+                  {activeChat.type === 'coach' && `Message Coach`}
+                  {activeChat.type === 'management' && 'Contact Management'}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {activeChat.type === 'team' && 'Parents & Coaches'}
+                  {activeChat.type === 'coach' && activeChat.teamName}
+                  {activeChat.type === 'management' && 'Get help from UYP staff'}
+                </CardDescription>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {/* Messages */}
+          <div className="h-80 overflow-y-auto p-4 space-y-3">
+            {currentMessages.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
+            ) : (
+              currentMessages.map((msg: any) => {
+                const isOwn = msg.senderId === userId;
+                return (
+                  <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[80%] rounded-lg px-3 py-2 ${isOwn ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-900'}`}>
+                      {!isOwn && msg.sender && (
+                        <div className="text-xs font-medium mb-1 opacity-70">
+                          {msg.sender?.firstName} {msg.sender?.lastName}
+                        </div>
+                      )}
+                      <p className="text-sm">{msg.message || msg.content}</p>
+                      <div className={`text-xs mt-1 ${isOwn ? 'text-red-100' : 'text-gray-500'}`}>
+                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {/* Input */}
+          <div className="border-t p-3 flex gap-2">
+            <Input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message..."
+              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              data-testid="input-chat-message"
+            />
+            <Button 
+              onClick={handleSend} 
+              disabled={!newMessage.trim() || sendTeamMessageMutation.isPending || sendCoachMessageMutation.isPending || sendManagementMessageMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-send-message"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Chat list view
+  return (
+    <div className="space-y-4">
+      {/* Contact Management - always show */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Phone className="w-4 h-4 text-red-600" />
+            Contact Management
+          </CardTitle>
+          <CardDescription>Get help from UYP staff</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2"
+            onClick={() => setActiveChat({ type: 'management' })}
+            data-testid="button-contact-management"
+          >
+            <MessageSquare className="w-4 h-4 text-red-600" />
+            Send a message to management
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Team Chats */}
+      {playerTeams.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
+              Team Chats
+            </CardTitle>
+            <CardDescription>Chat with other parents and coaches</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {playerTeams.map((team: any) => (
+              <div key={team.id} className="border rounded-lg p-3 space-y-2">
+                <div className="font-medium text-sm">{team.name}</div>
+                <div className="text-xs text-gray-500 mb-2">Player: {team.playerName}</div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1"
+                    onClick={() => setActiveChat({ type: 'team', teamId: team.id, teamName: team.name })}
+                    data-testid={`button-team-chat-${team.id}`}
+                  >
+                    <Users className="w-3 h-3" />
+                    Team Chat
+                  </Button>
+                  {team.coachId && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 gap-1"
+                      onClick={() => setActiveChat({ type: 'coach', teamId: team.id, coachId: team.coachId, teamName: team.name })}
+                      data-testid={`button-message-coach-${team.id}`}
+                    >
+                      <Mail className="w-3 h-3" />
+                      Message Coach
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center text-gray-500">
+              <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p>No team chats available yet.</p>
+              <p className="text-sm">Your players need to be assigned to teams first.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 
@@ -1998,15 +2279,7 @@ export default function UnifiedAccount() {
 
           {/* Messages Tab */}
           <TabsContent value="messages" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Messages</CardTitle>
-                <CardDescription>Communication and notifications</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-gray-500 py-8">No messages yet</p>
-              </CardContent>
-            </Card>
+            <ParentMessagesSection players={players} userId={user?.id} />
           </TabsContent>
 
           {/* Profile Tab */}

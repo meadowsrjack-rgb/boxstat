@@ -62,6 +62,21 @@ import {
   type SelectSubscription,
   type BugReport,
   bugReports,
+  directMessages,
+  contactManagementMessages,
+  crmLeads,
+  crmNotes,
+  quoteCheckouts,
+  type DirectMessage,
+  type InsertDirectMessage,
+  type ContactManagementMessage,
+  type InsertContactManagementMessage,
+  type CrmLead,
+  type InsertCrmLead,
+  type CrmNote,
+  type InsertCrmNote,
+  type QuoteCheckout,
+  type InsertQuoteCheckout,
 } from "@shared/schema";
 
 // =============================================
@@ -304,6 +319,37 @@ export interface IStorage {
   getBugReportsByOrganization(organizationId: string): Promise<BugReport[]>;
   createBugReport(data: { id: string; organizationId: string; userId: string; userEmail?: string; userName?: string; title: string; description: string; userAgent?: string; platform?: string; status?: string }): Promise<BugReport>;
   updateBugReport(id: string, updates: Partial<BugReport>): Promise<BugReport | undefined>;
+  
+  // Direct Message operations (parent-coach 1-on-1)
+  getDirectMessagesBetweenUsers(senderId: string, receiverId: string): Promise<DirectMessage[]>;
+  getDirectMessagesForUser(userId: string): Promise<DirectMessage[]>;
+  createDirectMessage(data: InsertDirectMessage): Promise<DirectMessage>;
+  markDirectMessageRead(id: number): Promise<DirectMessage | undefined>;
+  
+  // Contact Management Message operations (parent to admin)
+  getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]>;
+  getContactManagementMessagesBySender(senderId: string): Promise<ContactManagementMessage[]>;
+  createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage>;
+  updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined>;
+  
+  // CRM Lead operations
+  getCrmLead(id: number): Promise<CrmLead | undefined>;
+  getCrmLeadsByOrganization(organizationId: string): Promise<CrmLead[]>;
+  createCrmLead(data: InsertCrmLead): Promise<CrmLead>;
+  updateCrmLead(id: number, updates: Partial<CrmLead>): Promise<CrmLead | undefined>;
+  deleteCrmLead(id: number): Promise<void>;
+  
+  // CRM Note operations
+  getCrmNotesByLead(leadId: number): Promise<CrmNote[]>;
+  getCrmNotesByUser(userId: string): Promise<CrmNote[]>;
+  createCrmNote(data: InsertCrmNote): Promise<CrmNote>;
+  deleteCrmNote(id: number): Promise<void>;
+  
+  // Quote Checkout operations
+  getQuoteCheckout(id: string): Promise<QuoteCheckout | undefined>;
+  getQuoteCheckoutsByOrganization(organizationId: string): Promise<QuoteCheckout[]>;
+  createQuoteCheckout(data: InsertQuoteCheckout): Promise<QuoteCheckout>;
+  updateQuoteCheckout(id: string, updates: Partial<QuoteCheckout>): Promise<QuoteCheckout | undefined>;
 }
 
 // =============================================
@@ -2326,6 +2372,37 @@ class MemStorage implements IStorage {
     this.bugReportsStore.set(id, updated);
     return updated;
   }
+  
+  // Direct Message operations (MemStorage stubs)
+  async getDirectMessagesBetweenUsers(senderId: string, receiverId: string): Promise<DirectMessage[]> { return []; }
+  async getDirectMessagesForUser(userId: string): Promise<DirectMessage[]> { return []; }
+  async createDirectMessage(data: InsertDirectMessage): Promise<DirectMessage> { throw new Error("Not implemented"); }
+  async markDirectMessageRead(id: number): Promise<DirectMessage | undefined> { return undefined; }
+  
+  // Contact Management Message operations (MemStorage stubs)
+  async getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]> { return []; }
+  async getContactManagementMessagesBySender(senderId: string): Promise<ContactManagementMessage[]> { return []; }
+  async createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage> { throw new Error("Not implemented"); }
+  async updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined> { return undefined; }
+  
+  // CRM Lead operations (MemStorage stubs)
+  async getCrmLead(id: number): Promise<CrmLead | undefined> { return undefined; }
+  async getCrmLeadsByOrganization(organizationId: string): Promise<CrmLead[]> { return []; }
+  async createCrmLead(data: InsertCrmLead): Promise<CrmLead> { throw new Error("Not implemented"); }
+  async updateCrmLead(id: number, updates: Partial<CrmLead>): Promise<CrmLead | undefined> { return undefined; }
+  async deleteCrmLead(id: number): Promise<void> {}
+  
+  // CRM Note operations (MemStorage stubs)
+  async getCrmNotesByLead(leadId: number): Promise<CrmNote[]> { return []; }
+  async getCrmNotesByUser(userId: string): Promise<CrmNote[]> { return []; }
+  async createCrmNote(data: InsertCrmNote): Promise<CrmNote> { throw new Error("Not implemented"); }
+  async deleteCrmNote(id: number): Promise<void> {}
+  
+  // Quote Checkout operations (MemStorage stubs)
+  async getQuoteCheckout(id: string): Promise<QuoteCheckout | undefined> { return undefined; }
+  async getQuoteCheckoutsByOrganization(organizationId: string): Promise<QuoteCheckout[]> { return []; }
+  async createQuoteCheckout(data: InsertQuoteCheckout): Promise<QuoteCheckout> { throw new Error("Not implemented"); }
+  async updateQuoteCheckout(id: string, updates: Partial<QuoteCheckout>): Promise<QuoteCheckout | undefined> { return undefined; }
 }
 
 // =============================================
@@ -5488,6 +5565,147 @@ class DatabaseStorage implements IStorage {
       .where(eq(schema.bugReports.id, id))
       .returning();
     return result as BugReport | undefined;
+  }
+  
+  // Direct Message operations
+  async getDirectMessagesBetweenUsers(senderId: string, receiverId: string): Promise<DirectMessage[]> {
+    const results = await db.select().from(schema.directMessages)
+      .where(
+        or(
+          and(eq(schema.directMessages.senderId, senderId), eq(schema.directMessages.receiverId, receiverId)),
+          and(eq(schema.directMessages.senderId, receiverId), eq(schema.directMessages.receiverId, senderId))
+        )
+      )
+      .orderBy(schema.directMessages.createdAt);
+    return results as DirectMessage[];
+  }
+  
+  async getDirectMessagesForUser(userId: string): Promise<DirectMessage[]> {
+    const results = await db.select().from(schema.directMessages)
+      .where(or(eq(schema.directMessages.senderId, userId), eq(schema.directMessages.receiverId, userId)))
+      .orderBy(desc(schema.directMessages.createdAt));
+    return results as DirectMessage[];
+  }
+  
+  async createDirectMessage(data: InsertDirectMessage): Promise<DirectMessage> {
+    const [result] = await db.insert(schema.directMessages).values(data).returning();
+    return result as DirectMessage;
+  }
+  
+  async markDirectMessageRead(id: number): Promise<DirectMessage | undefined> {
+    const [result] = await db.update(schema.directMessages)
+      .set({ isRead: true })
+      .where(eq(schema.directMessages.id, id))
+      .returning();
+    return result as DirectMessage | undefined;
+  }
+  
+  // Contact Management Message operations
+  async getContactManagementMessages(organizationId: string): Promise<ContactManagementMessage[]> {
+    const results = await db.select().from(schema.contactManagementMessages)
+      .where(eq(schema.contactManagementMessages.organizationId, organizationId))
+      .orderBy(desc(schema.contactManagementMessages.createdAt));
+    return results as ContactManagementMessage[];
+  }
+  
+  async getContactManagementMessagesBySender(senderId: string): Promise<ContactManagementMessage[]> {
+    const results = await db.select().from(schema.contactManagementMessages)
+      .where(eq(schema.contactManagementMessages.senderId, senderId))
+      .orderBy(desc(schema.contactManagementMessages.createdAt));
+    return results as ContactManagementMessage[];
+  }
+  
+  async createContactManagementMessage(data: InsertContactManagementMessage): Promise<ContactManagementMessage> {
+    const [result] = await db.insert(schema.contactManagementMessages).values(data).returning();
+    return result as ContactManagementMessage;
+  }
+  
+  async updateContactManagementMessage(id: number, updates: Partial<ContactManagementMessage>): Promise<ContactManagementMessage | undefined> {
+    const [result] = await db.update(schema.contactManagementMessages)
+      .set(updates)
+      .where(eq(schema.contactManagementMessages.id, id))
+      .returning();
+    return result as ContactManagementMessage | undefined;
+  }
+  
+  // CRM Lead operations
+  async getCrmLead(id: number): Promise<CrmLead | undefined> {
+    const results = await db.select().from(schema.crmLeads).where(eq(schema.crmLeads.id, id));
+    return results[0] as CrmLead | undefined;
+  }
+  
+  async getCrmLeadsByOrganization(organizationId: string): Promise<CrmLead[]> {
+    const results = await db.select().from(schema.crmLeads)
+      .where(eq(schema.crmLeads.organizationId, organizationId))
+      .orderBy(desc(schema.crmLeads.createdAt));
+    return results as CrmLead[];
+  }
+  
+  async createCrmLead(data: InsertCrmLead): Promise<CrmLead> {
+    const [result] = await db.insert(schema.crmLeads).values(data).returning();
+    return result as CrmLead;
+  }
+  
+  async updateCrmLead(id: number, updates: Partial<CrmLead>): Promise<CrmLead | undefined> {
+    const [result] = await db.update(schema.crmLeads)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(schema.crmLeads.id, id))
+      .returning();
+    return result as CrmLead | undefined;
+  }
+  
+  async deleteCrmLead(id: number): Promise<void> {
+    await db.delete(schema.crmLeads).where(eq(schema.crmLeads.id, id));
+  }
+  
+  // CRM Note operations
+  async getCrmNotesByLead(leadId: number): Promise<CrmNote[]> {
+    const results = await db.select().from(schema.crmNotes)
+      .where(eq(schema.crmNotes.leadId, leadId))
+      .orderBy(desc(schema.crmNotes.createdAt));
+    return results as CrmNote[];
+  }
+  
+  async getCrmNotesByUser(userId: string): Promise<CrmNote[]> {
+    const results = await db.select().from(schema.crmNotes)
+      .where(eq(schema.crmNotes.userId, userId))
+      .orderBy(desc(schema.crmNotes.createdAt));
+    return results as CrmNote[];
+  }
+  
+  async createCrmNote(data: InsertCrmNote): Promise<CrmNote> {
+    const [result] = await db.insert(schema.crmNotes).values(data).returning();
+    return result as CrmNote;
+  }
+  
+  async deleteCrmNote(id: number): Promise<void> {
+    await db.delete(schema.crmNotes).where(eq(schema.crmNotes.id, id));
+  }
+  
+  // Quote Checkout operations
+  async getQuoteCheckout(id: string): Promise<QuoteCheckout | undefined> {
+    const results = await db.select().from(schema.quoteCheckouts).where(eq(schema.quoteCheckouts.id, id));
+    return results[0] as QuoteCheckout | undefined;
+  }
+  
+  async getQuoteCheckoutsByOrganization(organizationId: string): Promise<QuoteCheckout[]> {
+    const results = await db.select().from(schema.quoteCheckouts)
+      .where(eq(schema.quoteCheckouts.organizationId, organizationId))
+      .orderBy(desc(schema.quoteCheckouts.createdAt));
+    return results as QuoteCheckout[];
+  }
+  
+  async createQuoteCheckout(data: InsertQuoteCheckout): Promise<QuoteCheckout> {
+    const [result] = await db.insert(schema.quoteCheckouts).values(data).returning();
+    return result as QuoteCheckout;
+  }
+  
+  async updateQuoteCheckout(id: string, updates: Partial<QuoteCheckout>): Promise<QuoteCheckout | undefined> {
+    const [result] = await db.update(schema.quoteCheckouts)
+      .set(updates)
+      .where(eq(schema.quoteCheckouts.id, id))
+      .returning();
+    return result as QuoteCheckout | undefined;
   }
 }
 

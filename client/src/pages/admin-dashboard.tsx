@@ -10974,18 +10974,21 @@ function CRMTab({ organization, users, teams }: any) {
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-500">$</span>
                             <Input
-                              type="number"
-                              step="0.01"
+                              type="text"
+                              inputMode="decimal"
                               className="w-20 h-7 text-sm"
-                              value={(displayPrice / 100).toFixed(2)}
-                              onChange={(e) => {
-                                const newPrice = Math.round(parseFloat(e.target.value || '0') * 100);
+                              defaultValue={(displayPrice / 100).toFixed(2)}
+                              key={`price-${program.id}-${isSelected}`}
+                              onBlur={(e) => {
+                                const val = e.target.value.replace(/[^0-9.]/g, '');
+                                const newPrice = Math.round(parseFloat(val || '0') * 100);
                                 const currentItems = [...quoteForm.getValues('items')];
                                 const idx = currentItems.findIndex((i: any) => i.productId === program.id);
                                 if (idx !== -1) {
                                   currentItems[idx] = { ...currentItems[idx], customPrice: newPrice };
                                   quoteForm.setValue('items', currentItems);
                                 }
+                                e.target.value = (newPrice / 100).toFixed(2);
                               }}
                               data-testid={`input-price-${program.id}`}
                             />

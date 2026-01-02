@@ -9997,15 +9997,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { nanoid } = await import('nanoid');
       const quoteId = nanoid(12);
       
-      // Build items array with prices from programs
+      // Build items array with prices from programs (use customPrice if provided)
       const programs = await storage.getPrograms(req.user.organizationId);
       const items = (req.body.items || []).map((item: any) => {
         const program = programs.find((p: any) => p.id === item.productId);
+        // Use customPrice if provided, otherwise use program's default price
+        const price = item.customPrice !== undefined ? item.customPrice : (program?.price || 0);
         return {
           type: item.type || 'program',
           productId: item.productId,
           productName: program?.name || 'Unknown',
-          price: program?.price || 0,
+          price,
+          originalPrice: program?.price || 0, // Store original for reference
           quantity: item.quantity || 1,
         };
       });

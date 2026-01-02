@@ -10373,11 +10373,11 @@ function CRMTab({ organization, users, teams }: any) {
     },
   });
 
-  // Quote form
+  // Quote form - items can have custom prices
   const quoteForm = useForm({
     defaultValues: {
       leadId: '',
-      items: [] as { type: string; productId: string; quantity: number }[],
+      items: [] as { type: string; productId: string; quantity: number; customPrice?: number }[],
       expiresAt: '',
     },
   });
@@ -10878,28 +10878,74 @@ function CRMTab({ organization, users, teams }: any) {
               
               <div>
                 <FormLabel>Items</FormLabel>
-                <p className="text-sm text-gray-500 mb-2">Select programs or store products to include in the quote</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
-                  {programs.filter((p: any) => p.isActive).map((program: any) => (
-                    <div key={program.id} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`program-${program.id}`}
-                        onCheckedChange={(checked) => {
-                          const items = quoteForm.getValues('items');
-                          if (checked) {
-                            quoteForm.setValue('items', [...items, { type: 'program', productId: program.id, quantity: 1 }]);
-                          } else {
-                            quoteForm.setValue('items', items.filter((i) => i.productId !== program.id));
-                          }
-                        }}
-                        data-testid={`checkbox-program-${program.id}`}
-                      />
-                      <label htmlFor={`program-${program.id}`} className="text-sm flex-1">
-                        {program.name} - ${(program.price / 100).toFixed(2)}
-                      </label>
-                    </div>
-                  ))}
+                <p className="text-sm text-gray-500 mb-2">Select programs and adjust prices if needed</p>
+                <div className="space-y-2 max-h-60 overflow-y-auto border rounded p-2">
+                  {programs.filter((p: any) => p.isActive).map((program: any) => {
+                    const items = quoteForm.watch('items');
+                    const itemIndex = items.findIndex((i: any) => i.productId === program.id);
+                    const isSelected = itemIndex !== -1;
+                    const currentItem = isSelected ? items[itemIndex] : null;
+                    const displayPrice = currentItem?.customPrice !== undefined ? currentItem.customPrice : program.price;
+                    
+                    return (
+                      <div key={program.id} className="flex items-center gap-2 p-2 rounded hover:bg-gray-50">
+                        <Checkbox
+                          id={`program-${program.id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            const currentItems = quoteForm.getValues('items');
+                            if (checked) {
+                              quoteForm.setValue('items', [...currentItems, { type: 'program', productId: program.id, quantity: 1 }]);
+                            } else {
+                              quoteForm.setValue('items', currentItems.filter((i: any) => i.productId !== program.id));
+                            }
+                          }}
+                          data-testid={`checkbox-program-${program.id}`}
+                        />
+                        <label htmlFor={`program-${program.id}`} className="text-sm flex-1">
+                          {program.name}
+                        </label>
+                        {isSelected && (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="w-20 h-7 text-sm"
+                              value={(displayPrice / 100).toFixed(2)}
+                              onChange={(e) => {
+                                const newPrice = Math.round(parseFloat(e.target.value || '0') * 100);
+                                const currentItems = [...quoteForm.getValues('items')];
+                                const idx = currentItems.findIndex((i: any) => i.productId === program.id);
+                                if (idx !== -1) {
+                                  currentItems[idx] = { ...currentItems[idx], customPrice: newPrice };
+                                  quoteForm.setValue('items', currentItems);
+                                }
+                              }}
+                              data-testid={`input-price-${program.id}`}
+                            />
+                          </div>
+                        )}
+                        {!isSelected && (
+                          <span className="text-sm text-gray-400">${(program.price / 100).toFixed(2)}</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+                {/* Show total */}
+                {quoteForm.watch('items').length > 0 && (
+                  <div className="mt-2 p-2 bg-gray-50 rounded flex justify-between">
+                    <span className="font-medium">Total:</span>
+                    <span className="font-bold">
+                      ${(quoteForm.watch('items').reduce((sum: number, item: any) => {
+                        const program = programs.find((p: any) => p.id === item.productId);
+                        const price = item.customPrice !== undefined ? item.customPrice : (program?.price || 0);
+                        return sum + (price * (item.quantity || 1));
+                      }, 0) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <DialogFooter>

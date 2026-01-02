@@ -8616,37 +8616,40 @@ function NotificationsTab({ notifications, users, teams, divisions, organization
                         
                         {/* APNs Environment Toggle - only visible when Push is selected */}
                         {field.value?.includes("push") && (
-                          <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-                            <p className="text-sm font-medium text-amber-800 mb-2">iOS Push Environment (APNs)</p>
-                            <div className="flex gap-4">
-                              <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="mt-3 p-3 bg-amber-50 border-2 border-amber-300 rounded-lg shadow-sm">
+                            <p className="text-sm font-semibold text-amber-800 mb-3">iOS Push Environment</p>
+                            <div className="flex flex-col gap-3">
+                              <label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-amber-100 transition-colors">
                                 <input
                                   type="radio"
                                   name="apnsEnvironment"
                                   value="sandbox"
                                   checked={apnsEnvironment === 'sandbox'}
                                   onChange={() => setApnsEnvironment('sandbox')}
-                                  className="w-4 h-4 text-amber-600"
+                                  className="w-5 h-5 text-amber-600 accent-amber-600"
                                   data-testid="radio-apns-sandbox"
                                 />
-                                <span className="text-sm text-amber-900">Sandbox (Xcode)</span>
+                                <div>
+                                  <span className="text-sm font-medium text-amber-900">Sandbox</span>
+                                  <p className="text-xs text-amber-700">For Xcode debug builds</p>
+                                </div>
                               </label>
-                              <label className="flex items-center gap-2 cursor-pointer">
+                              <label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-amber-100 transition-colors">
                                 <input
                                   type="radio"
                                   name="apnsEnvironment"
                                   value="production"
                                   checked={apnsEnvironment === 'production'}
                                   onChange={() => setApnsEnvironment('production')}
-                                  className="w-4 h-4 text-amber-600"
+                                  className="w-5 h-5 text-amber-600 accent-amber-600"
                                   data-testid="radio-apns-production"
                                 />
-                                <span className="text-sm text-amber-900">Production (TestFlight/App Store)</span>
+                                <div>
+                                  <span className="text-sm font-medium text-amber-900">Production</span>
+                                  <p className="text-xs text-amber-700">For TestFlight & App Store</p>
+                                </div>
                               </label>
                             </div>
-                            <p className="text-xs text-amber-700 mt-2">
-                              Select Sandbox for Xcode debug testing, Production for TestFlight or App Store builds.
-                            </p>
                           </div>
                         )}
                       </div>

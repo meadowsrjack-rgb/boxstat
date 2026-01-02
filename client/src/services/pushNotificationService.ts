@@ -46,9 +46,30 @@ export const initPushNotifications = async () => {
         console.log('[Push Registration] ⚠️ No auth token found in localStorage');
       }
       
-      // For development/Xcode builds, always use sandbox environment
-      // Production builds from App Store should set this to 'production'
-      const apnsEnvironment = 'sandbox'; // TODO: Detect App Store builds and set to 'production'
+      // Detect APNs environment:
+      // 1. Check VITE_APNS_ENVIRONMENT env var (set at build time for control)
+      // 2. Check if running in Vite dev mode (web development)
+      // 3. Default to 'production' for built apps (TestFlight/App Store)
+      // 
+      // For local Xcode debug builds: set VITE_APNS_ENVIRONMENT=sandbox before npm run build
+      // For TestFlight/App Store: leave unset to use 'production' default
+      const envOverride = import.meta.env.VITE_APNS_ENVIRONMENT as string | undefined;
+      const isDevelopmentMode = import.meta.env.DEV;
+      
+      let apnsEnvironment: 'sandbox' | 'production';
+      if (envOverride === 'sandbox' || envOverride === 'production') {
+        apnsEnvironment = envOverride;
+        console.log('[Push Registration] Using env override VITE_APNS_ENVIRONMENT:', apnsEnvironment);
+      } else if (isDevelopmentMode) {
+        apnsEnvironment = 'sandbox';
+        console.log('[Push Registration] Dev mode detected, using sandbox');
+      } else {
+        apnsEnvironment = 'production';
+        console.log('[Push Registration] Production build, using production APNs');
+      }
+      
+      console.log('[Push Registration] Build mode:', import.meta.env.MODE);
+      console.log('[Push Registration] Final APNs environment:', apnsEnvironment);
       
       const response = await fetch(url, {
         method: 'POST',

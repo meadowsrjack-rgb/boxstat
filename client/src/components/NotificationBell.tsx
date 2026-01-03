@@ -48,6 +48,22 @@ export function NotificationBell() {
     },
   });
 
+  // Mark all visible notifications as read when popover closes
+  const handlePopoverChange = async (open: boolean) => {
+    setPopoverOpen(open);
+    
+    // When closing the popover, mark all unread notifications as read
+    if (!open && feed.length > 0) {
+      const unreadNotifications = feed.filter(n => !n.isRead);
+      if (unreadNotifications.length > 0) {
+        // Mark each unread notification as read
+        await Promise.all(
+          unreadNotifications.map(n => markAsRead.mutateAsync(n.recipientId))
+        );
+      }
+    }
+  };
+
   const handleNotificationClick = async (notification: NotificationItem) => {
     // Convert NotificationItem to match NotificationDetailDialog interface
     const detailNotification = {
@@ -72,7 +88,7 @@ export function NotificationBell() {
 
   return (
     <>
-      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <Popover open={popoverOpen} onOpenChange={handlePopoverChange}>
         <PopoverTrigger asChild>
         <Button 
           variant="ghost" 

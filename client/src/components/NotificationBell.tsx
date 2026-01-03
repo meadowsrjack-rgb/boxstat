@@ -36,7 +36,8 @@ export function NotificationBell() {
     refetchInterval: 30000,
   });
 
-  const unreadCount = feed.length;
+  // Count only unread notifications
+  const unreadCount = feed.filter(n => !n.isRead).length;
 
   const markAsRead = useMutation({
     mutationFn: async (recipientId: number) => {

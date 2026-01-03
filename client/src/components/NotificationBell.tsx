@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,13 +27,26 @@ interface NotificationItem {
 }
 
 export function NotificationBell() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<any>(null);
 
+  // Use activeProfileId if set, otherwise fall back to user's own ID
+  const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+
   const { data: feed = [] } = useQuery<NotificationItem[]>({
-    queryKey: ["/api/notifications/feed"],
+    queryKey: ["/api/notifications/feed", profileId],
+    queryFn: async () => {
+      const url = profileId 
+        ? `/api/notifications/feed?profileId=${profileId}`
+        : "/api/notifications/feed";
+      const response = await fetch(url, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch notifications");
+      return response.json();
+    },
+    enabled: !!user,
     refetchInterval: 30000,
   });
 
@@ -44,7 +58,7 @@ export function NotificationBell() {
       return await apiRequest("POST", `/api/notifications/${recipientId}/mark-read`, {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/feed", profileId] });
     },
   });
 

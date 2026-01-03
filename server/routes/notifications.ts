@@ -283,9 +283,12 @@ export function setupNotificationRoutes(app: Express) {
   });
 
   // Get notification feed (last 5 unread notifications from notification_recipients)
+  // Supports optional profileId query param to filter by specific profile
   app.get('/api/notifications/feed', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use profileId query param if provided, otherwise fall back to session user ID
+      const profileId = req.query.profileId as string | undefined;
+      const userId = profileId || req.user.id;
       
       const { db } = await import("../db");
       const { notifications, notificationRecipients } = await import("../../shared/schema");

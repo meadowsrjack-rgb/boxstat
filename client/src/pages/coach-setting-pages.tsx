@@ -28,10 +28,13 @@ export function CoachProfilePage() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
+  // Compute the profile ID (activeProfileId or fallback to user's own ID)
+  const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+
   // Fetch the active profile data
   const { data: activeProfile } = useQuery({
-    queryKey: [`/api/profile/${(user as any)?.activeProfileId}`],
-    enabled: !!(user as any)?.activeProfileId,
+    queryKey: [`/api/profile/${profileId}`],
+    enabled: !!profileId,
   });
 
   const [profile, setProfile] = useState({
@@ -48,21 +51,23 @@ export function CoachProfilePage() {
     philosophy: "",
   });
 
-  // Update profile state when active profile loads
+  // Update profile state when active profile loads or user data is available
   React.useEffect(() => {
-    if (activeProfile) {
+    // Use activeProfile if available, otherwise use user data directly
+    const profileData = activeProfile || user;
+    if (profileData) {
       setProfile({
-        firstName: activeProfile.firstName || "",
-        lastName: activeProfile.lastName || "",
-        phoneNumber: activeProfile.phoneNumber || "",
+        firstName: (profileData as any).firstName || "",
+        lastName: (profileData as any).lastName || "",
+        phoneNumber: (profileData as any).phoneNumber || (profileData as any).phone || "",
         email: (user as any)?.email || "",
-        city: activeProfile.city || activeProfile.address || "",
-        coachingExperience: (activeProfile as any)?.coachingExperience || "",
-        yearsExperience: (activeProfile as any)?.yearsExperience || "",
-        bio: (activeProfile as any)?.bio || "",
-        previousTeams: (activeProfile as any)?.previousTeams || "",
-        playingExperience: (activeProfile as any)?.playingExperience || "",
-        philosophy: (activeProfile as any)?.philosophy || "",
+        city: (profileData as any).city || (profileData as any).address || "",
+        coachingExperience: (profileData as any)?.coachingExperience || "",
+        yearsExperience: (profileData as any)?.yearsExperience || "",
+        bio: (profileData as any)?.bio || "",
+        previousTeams: (profileData as any)?.previousTeams || "",
+        playingExperience: (profileData as any)?.playingExperience || "",
+        philosophy: (profileData as any)?.philosophy || "",
       });
     }
   }, [activeProfile, user]);
@@ -159,7 +164,10 @@ export function CoachProfilePage() {
         address: data.city,
       };
       
-      const response = await fetch(`/api/profile/${(user as any)?.activeProfileId}`, {
+      // Use activeProfileId if set, otherwise fall back to user's own ID
+      const profileId = (user as any)?.activeProfileId || (user as any)?.id;
+      
+      const response = await fetch(`/api/profile/${profileId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -184,16 +192,13 @@ export function CoachProfilePage() {
       });
       
       // Update caches with new data for immediate UI sync
-      const activeProfileId = (user as any)?.activeProfileId;
-      const accountId = (user as any)?.id;
-      
       // Directly set the updated profile data in all relevant caches
-      queryClient.setQueryData([`/api/profile/${activeProfileId}`], updatedProfile);
+      queryClient.setQueryData([`/api/profile/${profileId}`], updatedProfile);
       
       // Force refetch for PlayerCard and other views
-      queryClient.invalidateQueries({ queryKey: [`/api/players/${activeProfileId}/profile`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/players/${profileId}/profile`] });
       queryClient.invalidateQueries({ queryKey: ['/api/profiles/me'] });
-      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${accountId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/profiles/${(user as any)?.id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({ 

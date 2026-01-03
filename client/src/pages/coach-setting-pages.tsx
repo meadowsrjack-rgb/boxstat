@@ -223,7 +223,7 @@ export function CoachProfilePage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setLocation("/unified-account")}
+              onClick={() => setLocation("/coach-settings")}
               className="text-gray-600 hover:text-gray-900"
               data-testid="button-back-to-account"
             >

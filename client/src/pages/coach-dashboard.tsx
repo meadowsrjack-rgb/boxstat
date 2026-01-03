@@ -118,14 +118,14 @@ export default function CoachDashboard() {
   const coachProfileId = currentUser?.role === 'coach' 
     ? currentUser?.id 
     : (coachProfile?.id || (user as any)?.activeProfileId || currentUser?.id);
-  const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "pay" | "hr">(() => {
+  const [activeTab, setActiveTab] = useState<"calendar" | "roster" | "profile" | "hr">(() => {
     if (typeof window === "undefined") return "calendar";
     const stored = localStorage.getItem("coachDashboardTab");
-    // Sanitize legacy "badges" values to default to "calendar"
-    if (stored === "badges" || !["calendar", "roster", "pay", "hr"].includes(stored || "")) {
+    // Sanitize legacy "badges" or "pay" values to default to "calendar"
+    if (stored === "badges" || stored === "pay" || !["calendar", "roster", "profile", "hr"].includes(stored || "")) {
       return "calendar";
     }
-    return stored as "calendar" | "roster" | "pay" | "hr";
+    return stored as "calendar" | "roster" | "profile" | "hr";
   });
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -500,7 +500,7 @@ export default function CoachDashboard() {
           <div className="flex justify-between items-center">
             <TabButton label="calendar" activeTab={activeTab} onClick={setActiveTab} Icon={CalendarIcon} />
             <TabButton label="roster" activeTab={activeTab} onClick={setActiveTab} Icon={Users} />
-            <TabButton label="pay" activeTab={activeTab} onClick={setActiveTab} Icon={DollarSign} />
+            <TabButton label="profile" activeTab={activeTab} onClick={setActiveTab} Icon={User} />
             <TabButton label="hr" activeTab={activeTab} onClick={setActiveTab} Icon={FileText} />
           </div>
         </div>
@@ -650,17 +650,8 @@ export default function CoachDashboard() {
             />
           )}
 
-          {activeTab === "pay" && (
-            <PayTab pay={paySummary || undefined} onOpenPortal={async () => {
-              try {
-                const res = await fetch("/api/coach/pay/portal", { method: "POST", credentials: "include" });
-                const j = await res.json();
-                if (j?.url) window.location.href = j.url;
-                else toast({ title: "Couldn't open portal", variant: "destructive" });
-              } catch (e) {
-                toast({ title: "Portal error", variant: "destructive" });
-              }
-            }} />
+          {activeTab === "profile" && (
+            <ProfileTab currentUser={currentUser} />
           )}
 
           {activeTab === "hr" && (
@@ -1289,23 +1280,103 @@ function PlayerProfileModal({
   );
 }
 
-/* ---------- Pay Tab ---------- */
-function PayTab({ pay, onOpenPortal }: { pay?: CoachPaySummary; onOpenPortal: () => void }) {
+/* ---------- Profile Tab ---------- */
+function ProfileTab({ currentUser }: { currentUser: UserType }) {
+  const [, setLocation] = useLocation();
+  
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">Pay</h2>
-        <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+        <h2 className="text-xl font-bold text-gray-900">Profile</h2>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setLocation("/coach-settings/profile")}
+          data-testid="button-edit-profile"
+        >
+          Edit Profile
+        </Button>
       </div>
 
-      <Card className="border-0 shadow-sm opacity-50">
+      {/* Personal Information Card */}
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="text-center py-8">
-            <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Payroll Portal</h3>
-            <p className="text-sm text-gray-500">
-              Coach payroll and compensation management will be available here soon.
-            </p>
+          <div className="flex items-center gap-2 mb-4">
+            <User className="h-5 w-5 text-red-600" />
+            <h3 className="text-md font-bold text-gray-900">Personal Information</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Name</div>
+                <div className="text-sm text-gray-900">
+                  {currentUser.firstName} {currentUser.lastName}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Email</div>
+                <div className="text-sm text-gray-900">{currentUser.email}</div>
+              </div>
+            </div>
+            {currentUser.phone && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Phone</div>
+                <div className="text-sm text-gray-900">{currentUser.phone}</div>
+              </div>
+            )}
+            {(currentUser as any)?.city && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">City</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).city}</div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Coaching Credentials Card */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="h-5 w-5 text-red-600" />
+            <h3 className="text-md font-bold text-gray-900">Coaching Credentials</h3>
+          </div>
+          <div className="space-y-3">
+            {(currentUser as any)?.yearsExperience && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Experience Level</div>
+                <div className="text-sm text-gray-900">{(currentUser as any).yearsExperience}</div>
+              </div>
+            )}
+            {(currentUser as any)?.bio && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Bio</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).bio}</div>
+              </div>
+            )}
+            {(currentUser as any)?.previousTeams && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Previous Teams</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).previousTeams}</div>
+              </div>
+            )}
+            {(currentUser as any)?.playingExperience && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Playing Experience</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).playingExperience}</div>
+              </div>
+            )}
+            {(currentUser as any)?.philosophy && (
+              <div>
+                <div className="text-xs font-semibold text-gray-600 mb-1">Coaching Philosophy</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{(currentUser as any).philosophy}</div>
+              </div>
+            )}
+            {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                No coaching credentials added yet. Click "Edit Profile" to add your information.
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

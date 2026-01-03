@@ -1282,20 +1282,10 @@ function PlayerProfileModal({
 
 /* ---------- Profile Tab ---------- */
 function ProfileTab({ currentUser }: { currentUser: UserType }) {
-  const [, setLocation] = useLocation();
-  
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Profile</h2>
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={() => setLocation("/coach-settings/profile")}
-          data-testid="button-edit-profile"
-        >
-          Edit Profile
-        </Button>
       </div>
 
       {/* Personal Information Card */}
@@ -1374,7 +1364,7 @@ function ProfileTab({ currentUser }: { currentUser: UserType }) {
             )}
             {!(currentUser as any)?.yearsExperience && !(currentUser as any)?.bio && !(currentUser as any)?.previousTeams && (
               <div className="text-center py-4 text-gray-500 text-sm">
-                No coaching credentials added yet. Click "Edit Profile" to add your information.
+                No coaching credentials added yet. Go to Settings to add your information.
               </div>
             )}
           </div>

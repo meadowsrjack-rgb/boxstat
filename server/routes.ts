@@ -10124,9 +10124,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/account/quotes", requireAuth, async (req: any, res) => {
     try {
       const allQuotes = await storage.getQuoteCheckoutsByOrganization(req.user.organizationId);
-      // Filter quotes for this user (either by userId or by lead that was converted to this user)
+      const currentUser = await storage.getUser(req.user.id);
+      
+      // Get all user IDs that share the same email (handles multi-account scenarios)
+      const allUsers = await storage.getUsersByOrganization(req.user.organizationId);
+      const matchingUserIds = new Set<string>();
+      matchingUserIds.add(req.user.id);
+      
+      // Also add any user accounts with the same email
+      if (currentUser?.email) {
+        allUsers.forEach((u: any) => {
+          if (u.email === currentUser.email) {
+            matchingUserIds.add(u.id);
+          }
+        });
+      }
+      
+      // Filter quotes for any matching user ID
       const userQuotes = allQuotes.filter((q: any) => 
-        q.userId === req.user.id && q.status === 'pending'
+        matchingUserIds.has(q.userId) && q.status === 'pending'
       );
       res.json(userQuotes);
     } catch (error: any) {
